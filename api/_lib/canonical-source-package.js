@@ -48,6 +48,38 @@ function getMimeType(file, artifactsByFileId) {
   ).trim().toLowerCase();
 }
 
+function getArtifactOriginalFilename(artifact) {
+  return String(
+    artifact?.originalFilename ||
+      artifact?.original_filename ||
+      artifact?.filename ||
+      artifact?.fileName ||
+      artifact?.document_name ||
+      artifact?.documentName ||
+      artifact?.name ||
+      artifact?.payload?.originalFilename ||
+      artifact?.payload?.original_filename ||
+      artifact?.payload?.filename ||
+      artifact?.payload?.fileName ||
+      artifact?.payload?.document_name ||
+      artifact?.payload?.documentName ||
+      artifact?.payload?.name ||
+      ""
+  ).trim();
+}
+
+function getArtifactMimeType(artifact) {
+  return String(
+    artifact?.mimeType ||
+      artifact?.mime_type ||
+      artifact?.mime ||
+      artifact?.payload?.mimeType ||
+      artifact?.payload?.mime_type ||
+      artifact?.payload?.mime ||
+      ""
+  ).trim().toLowerCase();
+}
+
 function isSpreadsheetMimeType(mimeType) {
   const normalized = String(mimeType || "").trim().toLowerCase();
   return (
@@ -280,8 +312,9 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
     .filter(Boolean)
     .map((value) => String(value).trim().toLowerCase());
 
-  const filename = normalizeText(originalFilename);
+  const filename = normalizeText(originalFilename).replace(/[_-]+/g, " ");
   const hasAssumptionFilename = /\bassumption(s)?\b/.test(filename);
+  const hasCurrentDebtFilename = /\bcurrent[_\s-]?debt\b|\bcurrent[_\s-]?loan\b|\bmortgage\b|\bdebt statement\b/.test(filename);
   const hasT12Filename = /\bt12\b|\btrailing\b/.test(filename);
   const hasRentRollFilename = /\brent[_\s-]?roll\b|\brentroll\b/.test(filename);
   const hasRenovationFilename = /\breno\b|\brenovation\b|\bcapex\b/.test(filename);
@@ -337,6 +370,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
 
   if (
     positiveCurrentDebtEvidence ||
+    hasCurrentDebtFilename ||
     ((explicitSemanticRole === "current_debt" || explicitDebtBasis === "current_debt") && !explicitPurchaseAssumptionsText)
   ) {
     const extractedFacts = buildExtractedFacts("current_debt_context", text);
@@ -355,11 +389,19 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       sourceAuthorityVersion: "v2",
       provenance: buildProvenance(
         file,
-        positiveCurrentDebtEvidence ? "keyword_match" : explicitDebtBasis === "current_debt" ? "debt_basis_signal" : "parser_semantic",
+        positiveCurrentDebtEvidence
+          ? "keyword_match"
+          : hasCurrentDebtFilename
+            ? "filename_heuristic"
+            : explicitDebtBasis === "current_debt"
+              ? "debt_basis_signal"
+              : "parser_semantic",
         text
       ),
       authorityBasis:
-        explicitDebtBasis === "current_debt"
+        hasCurrentDebtFilename
+          ? "filename_heuristic"
+          : explicitDebtBasis === "current_debt"
           ? "debt_basis_signal"
           : explicitSemanticRole === "current_debt"
             ? "parser_semantic"
@@ -520,6 +562,7 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
   const files = toArray(uploadedFiles).filter((file) => file && typeof file === "object");
   const artifacts = toArray(parsedArtifacts).filter((artifact) => artifact && typeof artifact === "object");
   const artifactsByFileId = new Map();
+  const seenFileIds = new Set();
 
   for (const artifact of artifacts) {
     const fileId = String(artifact?.fileId ?? artifact?.file_id ?? artifact?.uploadedFileId ?? artifact?.uploaded_file_id ?? artifact?.id ?? "").trim();
@@ -536,6 +579,7 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
   for (const file of files) {
     const fileId = getFileId(file);
     if (!fileId) continue;
+    seenFileIds.add(fileId);
     const fileArtifacts = artifactsByFileId.get(fileId) || [];
     const authority = classifySupportDoc(file, fileArtifacts, artifactsByFileId);
     const originalFilename = getOriginalFilename(file, artifactsByFileId);
@@ -602,6 +646,99 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
       provenance: authority.provenance || null,
       authorityBasis: authority.authorityBasis,
     });
+  }
+
+  for (const [fileId, fileArtifacts] of artifactsByFileId.entries()) {
+    if (!fileId || seenFileIds.has(fileId)) continue;
+    const primaryArtifact = fileArtifacts[0] || null;
+    const originalFilename = getArtifactOriginalFilename(primaryArtifact);
+    if (!originalFilename) continue;
+    const syntheticFile = {
+      fileId,
+      id: fileId,
+      originalFilename,
+      mimeType: getArtifactMimeType(primaryArtifact),
+      source_text: primaryArtifact?.source_text || primaryArtifact?.sourceText || primaryArtifact?.payload?.source_text || primaryArtifact?.payload?.sourceText || "",
+      raw_text: primaryArtifact?.raw_text || primaryArtifact?.rawText || primaryArtifact?.payload?.raw_text || primaryArtifact?.payload?.rawText || "",
+      notes: primaryArtifact?.notes || primaryArtifact?.payload?.notes || "",
+      loan_terms_text: primaryArtifact?.loan_terms_text || primaryArtifact?.loanTermsText || primaryArtifact?.payload?.loan_terms_text || primaryArtifact?.payload?.loanTermsText || "",
+      extracted_text: primaryArtifact?.extracted_text || primaryArtifact?.extractedText || primaryArtifact?.payload?.extracted_text || primaryArtifact?.payload?.extractedText || "",
+      text: primaryArtifact?.text || primaryArtifact?.payload?.text || "",
+      excerpt: primaryArtifact?.excerpt || primaryArtifact?.payload?.excerpt || "",
+      document_text_extracted:
+        primaryArtifact?.document_text_extracted ||
+        primaryArtifact?.documentTextExtracted ||
+        primaryArtifact?.payload?.document_text_extracted ||
+        primaryArtifact?.payload?.documentTextExtracted ||
+        "",
+    };
+    const authority = classifySupportDoc(syntheticFile, fileArtifacts, artifactsByFileId);
+    if (authority.role === "core_t12") {
+      if (!coreT12) {
+        coreT12 = {
+          fileId,
+          originalFilename,
+          sourceKind: "core_t12",
+          canonicalRole: "core_t12",
+          canonicalLabel: authority.canonicalLabel,
+          roleLabel: authority.roleLabel,
+          treatment: authority.treatment,
+          use: authority.use,
+          category: authority.category,
+          allowedUses: authority.allowedUses,
+          forbiddenUses: authority.forbiddenUses,
+          extractedFacts: authority.extractedFacts || {},
+          sourceEvidence: authority.sourceEvidence || null,
+          sourceAuthorityVersion: authority.sourceAuthorityVersion || "v2",
+          provenance: authority.provenance || null,
+          role: "core_t12",
+        };
+      }
+      continue;
+    }
+    if (authority.role === "core_rent_roll") {
+      if (!coreRentRoll) {
+        coreRentRoll = {
+          fileId,
+          originalFilename,
+          sourceKind: "core_rent_roll",
+          canonicalRole: "core_rent_roll",
+          canonicalLabel: authority.canonicalLabel,
+          roleLabel: authority.roleLabel,
+          treatment: authority.treatment,
+          use: authority.use,
+          category: authority.category,
+          allowedUses: authority.allowedUses,
+          forbiddenUses: authority.forbiddenUses,
+          extractedFacts: authority.extractedFacts || {},
+          sourceEvidence: authority.sourceEvidence || null,
+          sourceAuthorityVersion: authority.sourceAuthorityVersion || "v2",
+          provenance: authority.provenance || null,
+          role: "core_rent_roll",
+        };
+      }
+      continue;
+    }
+    if (!supportDocs.has(fileId)) {
+      supportDocs.set(fileId, {
+        fileId,
+        originalFilename,
+        sourceKind: authority.sourceKind || "support_doc",
+        canonicalRole: authority.role,
+        canonicalLabel: authority.canonicalLabel || authority.roleLabel,
+        roleLabel: authority.roleLabel,
+        treatment: authority.treatment,
+        use: authority.use,
+        category: authority.category,
+        allowedUses: authority.allowedUses || [],
+        forbiddenUses: authority.forbiddenUses || [],
+        extractedFacts: authority.extractedFacts || {},
+        sourceEvidence: authority.sourceEvidence || null,
+        sourceAuthorityVersion: authority.sourceAuthorityVersion || "v2",
+        provenance: authority.provenance || null,
+        authorityBasis: authority.authorityBasis,
+      });
+    }
   }
 
   return {

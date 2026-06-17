@@ -31,6 +31,68 @@ function buildStonebridgeSourcePackage() {
   return buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts);
 }
 
+function buildRetest6SourcePackage() {
+  const uploadedFiles = [
+    { fileId: "t12-file", originalFilename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    { fileId: "rent-roll-file", originalFilename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+  ];
+
+  const parsedArtifacts = [
+    {
+      fileId: "assumptions-file",
+      original_filename: "Stonebridge_Assumptions.pdf",
+      semantic_doc_role: "purchase_assumptions",
+      debt_basis: "proposed_acquisition",
+      payload: {
+        document_text_extracted: "Purchase assumptions / proposed acquisition financing\nPurchase Price $13,500,000\nNOI Basis $945,000\nProposed Acquisition Loan $9,450,000\nLTV 70.0%\nRate 5.95%\nAmortization 30 years\nFee 0.85%",
+      },
+    },
+    {
+      fileId: "current-debt-file",
+      original_filename: "Current_Debt_Stonebridge.pdf",
+      semantic_doc_role: "current_debt",
+      debt_basis: "current_debt",
+      payload: {
+        document_text_extracted: "Existing Current Debt Statement\nCurrent Outstanding Balance $6,800,000\nInterest Rate 4.85%\nAmortization Remaining 24 years\nMonthly Payment $39,250\nMaturity Date 2029-11-01",
+      },
+    },
+    {
+      fileId: "reno-file",
+      original_filename: "Stonebridge_Reno_Plan.pdf",
+      semantic_doc_role: "renovation_plan",
+      payload: {
+        document_text_extracted: "Structured Renovation / CapEx Plan\nTotal Renovation Budget $1,280,000\nRent lift and phasing details",
+      },
+    },
+    {
+      fileId: "appraisal-file",
+      original_filename: "Stonebridge_Appraisal_Summary.pdf",
+      semantic_doc_role: "appraisal",
+      payload: {
+        document_text_extracted: "Appraisal Summary / Valuation Context\nValuation only; does not represent purchase assumptions.",
+      },
+    },
+    {
+      fileId: "survey-file",
+      original_filename: "Stonebridge_Market_Survey.pdf",
+      semantic_doc_role: "market_survey",
+      payload: {
+        document_text_extracted: "Market Rent Survey Context\nCorroborates market rent; does not override rent roll.",
+      },
+    },
+    {
+      fileId: "phase-file",
+      original_filename: "Stonebridge_Phase_I_ESA.pdf",
+      semantic_doc_role: "phase_i_esa",
+      payload: {
+        document_text_extracted: "Phase I ESA / Environmental Due Diligence Context\nEnvironmental review only.",
+      },
+    },
+  ];
+
+  return buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts);
+}
+
 const sourcePackage = buildStonebridgeSourcePackage();
 const projection = buildAcquisitionMemoProjection(sourcePackage);
 const renderedAcquisitionMemo = renderAcquisitionMemo(projection);
@@ -98,5 +160,77 @@ const forbiddenPatterns = [
 ];
 const forbiddenHit = forbiddenPatterns.find((pattern) => pattern.test(finalHtml));
 assert.equal(Boolean(forbiddenHit), false);
+
+const retest6SourcePackage = buildRetest6SourcePackage();
+assert.equal(retest6SourcePackage.coreT12?.canonicalRole, "core_t12");
+assert.equal(retest6SourcePackage.coreRentRoll?.canonicalRole, "core_rent_roll");
+assert.equal(retest6SourcePackage.supportDocs.get("assumptions-file")?.canonicalRole, "purchase_assumptions");
+assert.equal(retest6SourcePackage.supportDocs.get("current-debt-file")?.canonicalRole, "current_debt_context");
+assert.equal(retest6SourcePackage.supportDocs.get("reno-file")?.canonicalRole, "structured_renovation_capex_plan");
+assert.equal(retest6SourcePackage.supportDocs.get("appraisal-file")?.canonicalRole, "appraisal_context");
+assert.equal(retest6SourcePackage.supportDocs.get("survey-file")?.canonicalRole, "market_survey_context");
+assert.equal(retest6SourcePackage.supportDocs.get("phase-file")?.canonicalRole, "environmental_context");
+
+const retest6Projection = buildAcquisitionMemoProjection(retest6SourcePackage);
+assert.equal(Boolean(retest6Projection.financingReadinessSignals?.hasCurrentDebtContext), true);
+assert.equal(Boolean(retest6Projection.financingReadinessSignals?.hasPurchaseAssumptions), true);
+assert.equal(Boolean(retest6Projection.financingReadinessSignals?.hasStructuredRenovation), true);
+assert.equal(Boolean(retest6Projection.financingReadinessSignals?.hasAppraisalContext), true);
+assert.equal(Boolean(retest6Projection.financingReadinessSignals?.hasMarketSurveyContext), true);
+assert.equal(Boolean(retest6Projection.financingReadinessSignals?.hasEnvironmentalContext), true);
+
+const retest6RenderedAcquisitionMemo = renderAcquisitionMemo(retest6Projection);
+const retest6FinalHtml = renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: retest6Projection,
+  renderedAcquisitionMemo: retest6RenderedAcquisitionMemo,
+  sourcePackage: retest6SourcePackage,
+  coreMetrics: {
+    occupancy: 0.9375,
+    annualInPlaceRent: 1080000,
+    annualMarketRent: 1188000,
+    egi: 1074000,
+    opEx: 414000,
+    noi: 660000,
+    expenseRatio: 0.385,
+    noiMargin: 0.615,
+    breakEvenOccupancy: 0.875,
+    purchasePrice: 13500000,
+    goingInCapRate: 0.07,
+  },
+  reportMeta: {
+    reportType: "underwriting",
+    effectiveReportMode: "v1_core",
+    reportTier: 2,
+    generatedAt: new Date().toISOString(),
+    propertyName: "Stonebridge",
+    propertyAddress: "Stonebridge",
+    propertyTitle: "Stonebridge",
+  },
+  propertyProfile: {
+    propertyName: "Stonebridge",
+    propertyAddress: "Stonebridge",
+    propertyTitle: "Stonebridge",
+  },
+});
+assert.match(retest6FinalHtml, /Acquisition Memo Summary/i);
+assert.match(retest6FinalHtml, /Key Metrics Snapshot/i);
+assert.match(retest6FinalHtml, /Operating Snapshot/i);
+assert.match(retest6FinalHtml, /Unit Mix \/ Rent Positioning/i);
+assert.match(retest6FinalHtml, /Rent Upside \/ Value Sensitivity/i);
+assert.match(retest6FinalHtml, /Preliminary Financing Readiness Summary/i);
+assert.match(retest6FinalHtml, /Data Coverage \/ Source Reliability/i);
+assert.match(retest6FinalHtml, /Source Context \/ Support Document Treatment/i);
+assert.match(retest6FinalHtml, /Methodology \/ Limitations/i);
+assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
+assert.match(retest6FinalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
+assert.match(retest6FinalHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i);
+assert.match(retest6FinalHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,2000}Purchase Assumptions \/ Proposed Acquisition Financing Context/i);
+assert.match(retest6FinalHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,2000}Structured Renovation \/ CapEx Plan/i);
+assert.match(retest6FinalHtml, /Stonebridge_Appraisal_Summary\.pdf[\s\S]{0,2000}Appraisal \/ Valuation Context/i);
+assert.match(retest6FinalHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,2000}Market Rent Survey Context/i);
+assert.match(retest6FinalHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,2000}Environmental Due Diligence \/ Phase I ESA Context/i);
+assert.match(retest6FinalHtml, /Document Treatment Summary/i);
+assert.ok(retest6FinalHtml.indexOf("Document Treatment Summary") < retest6FinalHtml.toLowerCase().indexOf("</body>"));
+assert.ok(retest6FinalHtml.toLowerCase().indexOf("</body>") < retest6FinalHtml.toLowerCase().indexOf("</html>"));
 
 console.log("acquisition-memo-v2-document smoke PASS");
