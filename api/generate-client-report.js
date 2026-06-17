@@ -45,7 +45,6 @@ import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
   assertValidReportPublicationInsert,
-  isValidReportStoragePath,
   sanitizeTypography,
 } from "./_lib/report-delivery-output.js";
 import {
@@ -13257,8 +13256,6 @@ export const __test__ = {
   resolveRenovationDisplayMode,
   buildRenovationDisplayCopy,
   buildFrameworkSensitivityDisplayCopy,
-  buildReportStoragePath,
-  buildDeliveryResponseCompatibilityAliases,
   buildRendererCanonicalState,
   applyFinalSourceReconciliationRenderGuard,
   applyFinalSectionHealRenderGuards,
@@ -13272,8 +13269,6 @@ export const __test__ = {
   buildRenovationExecutionRows,
   buildRenovationExecutionCardHtml,
   buildScreeningDataCoverageSummary,
-  assertValidReportPublicationInsert,
-  isValidReportStoragePath,
   buildT12SummaryHtml,
   resolveCanonicalT12GprValue,
   materiallyDifferent,
@@ -13290,6 +13285,4 @@ export const __test__ = {
   resolveFinalRecommendationSectionVisibility,
   resolveDocumentSourcesSectionVisibility,
   shouldStripDataCoverageSectionByRenderedCopy,
-  buildDeliveryResponseCompatibilityAliases,
-  resolveReportTypeAndTier,
 };

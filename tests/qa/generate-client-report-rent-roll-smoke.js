@@ -8,6 +8,12 @@ process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-run-key";
 const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
 const generateClientReport = (await import("../../api/generate-client-report.js")).default;
 const {
+  buildDeliveryResponseCompatibilityAliases,
+  buildReportStoragePath,
+  assertValidReportPublicationInsert,
+  isValidReportStoragePath,
+} = await import("../../api/_lib/report-delivery-output.js");
+const {
   buildCurrentDebtAssessmentState,
   buildAcquisitionAssumptionState,
   buildFullUnderwritingSectionEligibility,
@@ -425,7 +431,7 @@ assert.equal(canonicalDeliverableDecision.diagnostics.customer_publish_eligible,
 assert.equal(canonicalDeliverableDecision.diagnostics.report_publishable, true);
 assert.equal(canonicalDeliverableDecision.diagnostics.report_blocked, false);
 assert.equal(canonicalDeliverableDecision.legacy_compatibility.customer_delivery_allowed, true);
-const normalizedDeliverableAliases = generatorTest.buildDeliveryResponseCompatibilityAliases(canonicalDeliverableDecision);
+const normalizedDeliverableAliases = buildDeliveryResponseCompatibilityAliases(canonicalDeliverableDecision);
 assert.equal(normalizedDeliverableAliases.report_blocked, false);
 assert.equal(normalizedDeliverableAliases.report_publishable, true);
 assert.equal(normalizedDeliverableAliases.customer_delivery_ready, true);
@@ -5374,17 +5380,17 @@ assert.match(acquisitionOnlyCoverageHtml, /Optional or support documents remain 
 assert.equal(acquisitionOnlyCoverageHtml.includes("mortgagePayload"), false);
 assert.equal(/constrained|stressed|insufficient|shortfall/i.test(acquisitionOnlyCoverageHtml), false);
 
-const publishedReportStoragePath = generatorTest.buildReportStoragePath({
+const publishedReportStoragePath = buildReportStoragePath({
   effectiveUserId: "user_123",
   reportSeed: "report_456",
 });
 assert.equal(publishedReportStoragePath, "user_123/report_456.pdf");
-assert.equal(generatorTest.isValidReportStoragePath(publishedReportStoragePath), true);
-assert.equal(generatorTest.isValidReportStoragePath("pending"), false);
-assert.equal(generatorTest.isValidReportStoragePath(""), false);
-assert.equal(generatorTest.isValidReportStoragePath("user_123/report_456.txt"), false);
+assert.equal(isValidReportStoragePath(publishedReportStoragePath), true);
+assert.equal(isValidReportStoragePath("pending"), false);
+assert.equal(isValidReportStoragePath(""), false);
+assert.equal(isValidReportStoragePath("user_123/report_456.txt"), false);
 assert.doesNotThrow(() =>
-  generatorTest.assertValidReportPublicationInsert({
+  assertValidReportPublicationInsert({
     storagePath: publishedReportStoragePath,
     reportType: "underwriting",
     deliveryGateStatus: "deliverable",
@@ -5406,7 +5412,7 @@ const assertPublicationGuardFailure = (fn, expectedMessage) => {
 
 assertPublicationGuardFailure(
   () =>
-    generatorTest.assertValidReportPublicationInsert({
+    assertValidReportPublicationInsert({
       storagePath: "",
       reportType: "underwriting",
       deliveryGateStatus: "deliverable",
@@ -5417,7 +5423,7 @@ assertPublicationGuardFailure(
 );
 assertPublicationGuardFailure(
   () =>
-    generatorTest.assertValidReportPublicationInsert({
+    assertValidReportPublicationInsert({
       storagePath: null,
       reportType: "underwriting",
       deliveryGateStatus: "deliverable",
@@ -5428,7 +5434,7 @@ assertPublicationGuardFailure(
 );
 assertPublicationGuardFailure(
   () =>
-    generatorTest.assertValidReportPublicationInsert({
+    assertValidReportPublicationInsert({
       storagePath: publishedReportStoragePath,
       reportType: "underwriting",
       deliveryGateStatus: "admin_review_required",
@@ -5439,7 +5445,7 @@ assertPublicationGuardFailure(
 );
 assertPublicationGuardFailure(
   () =>
-    generatorTest.assertValidReportPublicationInsert({
+    assertValidReportPublicationInsert({
       storagePath: publishedReportStoragePath,
       reportType: "underwriting",
       deliveryGateStatus: "user_needs_documents",
@@ -5450,7 +5456,7 @@ assertPublicationGuardFailure(
 );
 assertPublicationGuardFailure(
   () =>
-    generatorTest.assertValidReportPublicationInsert({
+    assertValidReportPublicationInsert({
       storagePath: publishedReportStoragePath,
       reportType: "underwriting",
       deliveryGateStatus: "deliverable",
@@ -5461,7 +5467,7 @@ assertPublicationGuardFailure(
 );
 assertPublicationGuardFailure(
   () =>
-    generatorTest.assertValidReportPublicationInsert({
+    assertValidReportPublicationInsert({
       storagePath: "user_123/report_456.txt",
       reportType: "underwriting",
       deliveryGateStatus: "deliverable",
@@ -5472,7 +5478,7 @@ assertPublicationGuardFailure(
 );
 assertPublicationGuardFailure(
   () =>
-    generatorTest.assertValidReportPublicationInsert({
+    assertValidReportPublicationInsert({
       storagePath: publishedReportStoragePath,
       reportType: "",
       deliveryGateStatus: "deliverable",
@@ -5482,7 +5488,7 @@ assertPublicationGuardFailure(
   /Missing report type/i
 );
 assert.doesNotThrow(() => {
-  const validatedPath = generatorTest.assertValidReportPublicationInsert({
+  const validatedPath = assertValidReportPublicationInsert({
     storagePath: publishedReportStoragePath,
     reportType: "underwriting",
     deliveryGateStatus: "deliverable",
@@ -6091,18 +6097,68 @@ assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}rent-roll parse\/recovery/i
 const attackPrelimHtml = retest4RenderHtml;
 const attackAcquisitionFinancingHtml = retest4RenderHtml;
 const attackDocumentTreatmentHtml = retest4RenderHtml;
+const attackContractSupportDocAuthorityRows = retest4SovereignRows;
+const attackContractSovereignCurrentDebtAuthority = resolveCanonicalSupportDocAuthority({
+  originalFilename: "Current_Debt_Stonebridge.pdf",
+  rawText: "Existing Current Debt Statement. Current Outstanding Balance $6,800,000. Interest rate 4.85%. 24 years remaining. Monthly payment $39,250. Maturity 2029-11-01.",
+  payload: {
+    outstanding_balance: 6800000,
+    interest_rate: 0.0485,
+    amortization_years: 24,
+    monthly_payment: 39250,
+  },
+});
+const attackContractSovereignRenovationAuthority = resolveCanonicalSupportDocAuthority({
+  originalFilename: "Stonebridge_Reno_Plan.pdf",
+  rawText: "Structured Renovation / CapEx Plan. Total Renovation Budget $1,280,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325. Common/exterior/contingency rows included.",
+  payload: {
+    total_budget: 1280000,
+    budget_rows: [
+      { category: "1BR", total_cost: 324000, expected_monthly_rent_lift: 225 },
+    ],
+    execution_rows: [
+      { phase_timing: "Months 1-18", expected_monthly_rent_lift: 225 },
+    ],
+  },
+});
+const attackContractSovereignPurchaseAuthority = resolveCanonicalSupportDocAuthority({
+  originalFilename: "Stonebridge_Assumptions.pdf",
+  rawText: "Purchase Assumptions / Proposed Acquisition Financing. Purchase Price $13,500,000. NOI Basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%. Going-In Cap Reference 7.00%.",
+  payload: {
+    purchase_price: 13500000,
+    going_in_cap_rate: 0.07,
+    noi_basis: 945000,
+    ltv: 0.7,
+    interest_rate: 0.0595,
+    amortization_years: 30,
+    lender_fee_percent: 0.0085,
+  },
+});
+const attackContractSourceTreatmentTableHtml = `
+  <div>
+    <p class="subsection-title">Source Treatment / Quantitative Use</p>
+    <table>
+      <tbody>
+        <tr><td>Stonebridge_Assumptions.pdf</td><td>Purchase Assumptions / Acquisition Context</td><td>Acquisition context / document-derived acquisition context</td><td>Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth.</td></tr>
+        <tr><td>Current_Debt_Stonebridge.pdf</td><td>Debt Support Received / Contextual</td><td>Debt support received / contextual or deferred</td><td>Uploaded existing/current debt context only; not proposed acquisition financing.</td></tr>
+        <tr><td>Stonebridge_Reno_Plan.pdf</td><td>Structured Renovation / CapEx Plan</td><td>Structured renovation / CapEx context</td><td>Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only; ROI/payback/returns are not modeled.</td></tr>
+      </tbody>
+    </table>
+  </div>
+`;
+const attackContractHtml = `${attackContractSourceTreatmentTableHtml}${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`;
 const attackContractQa = buildReportContractQa({
-  html: `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`,
+  html: attackContractHtml,
   reportType: "underwriting",
   reportMode: "v1_core",
   sourceReportCoverageQa: {
-    support_document_authority_rows: supportDocAuthorityRows,
-    document_treatment_canonical_rows: supportDocAuthorityRows,
+    support_document_authority_rows: attackContractSupportDocAuthorityRows,
+    document_treatment_canonical_rows: attackContractSupportDocAuthorityRows,
   },
   canonicalSupportDocMap: new Map([
-    ["Stonebridge_Assumptions.pdf", { ...sovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
-    ["Current_Debt_Stonebridge.pdf", { ...sovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
-    ["Stonebridge_Reno_Plan.pdf", { ...sovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
+    ["Stonebridge_Assumptions.pdf", { ...attackContractSovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
+    ["Current_Debt_Stonebridge.pdf", { ...attackContractSovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
+    ["Stonebridge_Reno_Plan.pdf", { ...attackContractSovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
     ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
     ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
     ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
@@ -6124,13 +6180,13 @@ const contradictoryContractQa = buildReportContractQa({
   reportType: "underwriting",
   reportMode: "v1_core",
   sourceReportCoverageQa: {
-    support_document_authority_rows: supportDocAuthorityRows,
-    document_treatment_canonical_rows: supportDocAuthorityRows,
+    support_document_authority_rows: attackContractSupportDocAuthorityRows,
+    document_treatment_canonical_rows: attackContractSupportDocAuthorityRows,
   },
   canonicalSupportDocMap: new Map([
-    ["Stonebridge_Assumptions.pdf", { ...sovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
-    ["Current_Debt_Stonebridge.pdf", { ...sovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
-    ["Stonebridge_Reno_Plan.pdf", { ...sovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
+    ["Stonebridge_Assumptions.pdf", { ...attackContractSovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
+    ["Current_Debt_Stonebridge.pdf", { ...attackContractSovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
+    ["Stonebridge_Reno_Plan.pdf", { ...attackContractSovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
     ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
     ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
     ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
@@ -6155,8 +6211,8 @@ const tamperedChecklistQa = buildReportContractQa({
   reportType: "underwriting",
   reportMode: "v1_core",
   sourceReportCoverageQa: {
-    support_document_authority_rows: supportDocAuthorityRows,
-    document_treatment_canonical_rows: supportDocAuthorityRows,
+    support_document_authority_rows: attackContractSupportDocAuthorityRows,
+    document_treatment_canonical_rows: attackContractSupportDocAuthorityRows,
   },
 });
 assert.equal(
