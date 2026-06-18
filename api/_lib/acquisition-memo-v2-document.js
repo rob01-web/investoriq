@@ -437,48 +437,73 @@ export function renderCompleteAcquisitionMemoV2Html({
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(`${propertyName} - InvestorIQ Acquisition Memo`)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    :root { --ink:#102033; --muted:#5b6472; --border:#d7dde5; --bg:#f7f8fb; --panel:#ffffff; --accent:#b8860b; }
-    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: Arial, Helvetica, sans-serif; font-size:12px; line-height:1.5; }
-    body { padding:22px 24px 28px; }
-    .report { max-width: 920px; margin: 0 auto; }
-    .cover { background: linear-gradient(180deg, #16263b 0%, #0f1d31 100%); color:#F8FAFC; border-radius:18px; padding:24px 26px 20px; margin-bottom:14px; box-shadow:0 8px 20px rgba(15,23,42,.12); }
-    .cover-shell { border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:18px 18px 16px; background:rgba(255,255,255,.03); }
-    .cover-brand { font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:#E2E8F0; margin-bottom:6px; }
-    .cover-kicker { font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:#D6B35A; margin-bottom:8px; }
-    .cover-title { font-size:30px; line-height:1.1; margin:0 0 6px 0; font-weight:800; }
-    .cover-subtitle { font-size:14px; margin:0 0 4px 0; color:#E5E7EB; }
-    .cover-meta { font-size:12px; margin:0 0 4px 0; color:#CBD5E1; }
-    .cover-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 14px; margin-top:16px; }
-    .cover-grid div { border-top:1px solid rgba(255,255,255,.16); padding-top:8px; }
-    .cover-grid span { display:block; font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:#C7D2FE; margin-bottom:2px; }
-    .cover-grid strong { font-size:12px; color:#fff; }
-    .cover-sources { margin-top:16px; }
+    @page { size: Letter; margin: 36px 36px 48px 36px; }
+    @page :first { margin: 0; }
+    :root {
+      --cover-bg: #0F2318;
+      --gold: #C9A84C;
+      --gold-dark: #9A7A2C;
+      --white: #FFFFFF;
+      --paper-warm: #FAFAF8;
+      --ink: #0C0C0C;
+      --ink-2: #363636;
+      --ink-3: #606060;
+      --ink-4: #9A9A9A;
+      --hairline: #E8E5DF;
+      --hairline-mid: #D0CCC4;
+      --row-alt: #FAFAF8;
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+      --font-mono: 'DM Mono', 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; background:var(--white); color:var(--ink); font-family:var(--font-body); font-size:11px; line-height:1.5; }
+    body { margin:0; padding:0; background:var(--white); color:var(--ink); }
+    .report { width:100%; padding:0.5in 0.55in 0.52in 0.55in; box-sizing:border-box; background:var(--white); }
+    .cover { background:var(--cover-bg); color:var(--white); page-break-after:always; page-break-inside:avoid; margin:0; padding:1.6in 0.52in 0.72in 0.92in; width:100%; min-height:10.5in; position:relative; overflow:hidden; }
+    .cover-shell { position:relative; z-index:1; }
+    .cover-brand { font-family:var(--font-mono); font-size:6pt; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:8pt; }
+    .cover-kicker { font-family:var(--font-mono); font-size:7pt; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); margin-bottom:12pt; }
+    .cover-title { font-family:var(--font-display); font-size:38pt; font-weight:600; line-height:1; letter-spacing:-0.02em; margin:0 0 0.1in 0; color:var(--white); }
+    .cover-subtitle { font-family:var(--font-body); font-size:9pt; font-weight:300; color:rgba(255,255,255,0.35); letter-spacing:0.07em; margin:0 0 0.52in 0; }
+    .cover-meta { font-family:var(--font-body); font-size:8pt; color:rgba(255,255,255,0.3); margin:0 0 4pt 0; }
+    .cover-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 14px; margin-top:16pt; }
+    .cover-grid div { border-top:1px solid rgba(201,168,76,0.3); padding-top:8pt; }
+    .cover-grid span { display:block; font-family:var(--font-mono); font-size:6pt; text-transform:uppercase; letter-spacing:0.16em; color:rgba(255,255,255,0.45); margin-bottom:3pt; }
+    .cover-grid strong { font-family:var(--font-display); font-size:13pt; font-weight:500; color:var(--white); }
+    .cover-sources { margin-top:16pt; }
     .meta-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 18px; margin-top:14px; }
     .summary-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
-    .summary-strip div { border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#FBFCFE; }
-    .summary-strip span { display:block; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
-    .summary-strip strong { font-size:14px; color:var(--ink); }
+    .summary-strip div { border:1px solid var(--hairline); padding:10px 12px; background:var(--paper-warm); }
+    .summary-strip span { display:block; font-family:var(--font-mono); font-size:6.5pt; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-4); margin-bottom:4px; }
+    .summary-strip strong { font-family:var(--font-display); font-size:16pt; font-weight:500; color:var(--ink); }
     .section { margin-bottom:16px; }
-    .section-break { break-before: page; page-break-before: always; }
-    .section-header { border-bottom:1px solid var(--border); margin-bottom:12px; padding-bottom:8px; }
-    .section-header-title { font-size:18px; font-weight:700; }
-    .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px 16px 14px; box-shadow:0 1px 1px rgba(16,32,51,.03); }
+    .section-break { break-before:page; page-break-before:always; }
+    .section-header { border-bottom:1px solid var(--hairline); margin-bottom:12px; padding-bottom:8px; position:relative; }
+    .section-header::after { content:''; position:absolute; left:0; bottom:-1px; width:0.28in; height:1.5px; background:var(--gold); opacity:0.8; }
+    .section-header-title { font-family:var(--font-display); font-size:18pt; font-weight:500; letter-spacing:-0.025em; color:var(--ink); line-height:1.05; }
+    .card { background:var(--white); border:none; border-top:1px solid var(--hairline); padding:10px 0; }
     .no-break { break-inside:avoid; page-break-inside:avoid; }
-    .body-copy { margin:0 0 12px 0; color:var(--muted); }
+    .body-copy { margin:0 0 12px 0; color:var(--ink-3); font-size:10px; line-height:1.6; }
     .subsection-block + .subsection-block { margin-top:14px; }
-    .subsection-title { margin:0 0 8px 0; font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:#6b7280; }
-    .detail-table { width:100%; border-collapse:collapse; font-size:12px; }
-    .detail-table td { border-top:1px solid var(--border); padding:7px 8px; vertical-align:top; }
+    .subsection-title { margin:0 0 8px 0; font-family:var(--font-body); font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-4); font-weight:600; }
+    .detail-table { width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; }
+    .detail-table td { border-bottom:1px solid var(--hairline); padding:6px 8px; vertical-align:top; line-height:1.35; }
     .detail-table tr:first-child td { border-top:none; }
-    .detail-table td:first-child { width:34%; }
-    .readiness-summary { margin-bottom:10px; }
-    .source-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
-    .source-table td { border-top:1px solid var(--border); padding:7px 8px; vertical-align:top; }
-    .source-table tr:first-child td { border-top:none; }
-    .source-table td:first-child { width:55%; }
-    .footer-note { margin-top:16px; color:var(--muted); font-size:11px; }
-    .report-footer { margin-top:18px; text-align:center; color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding-top:10px; border-top:1px solid var(--border); }
+    .detail-table td:first-child { width:44%; color:var(--ink-3); }
+    .detail-table td:last-child { font-weight:600; color:var(--ink); }
+    .readiness-summary { margin-bottom:10px; font-size:10.5px; line-height:1.6; color:var(--ink-3); }
+    .source-table { width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; margin-top:8px; }
+    .source-table th { font-family:var(--font-body); font-size:10px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--ink-3); border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline-mid); padding:0 8px 6px; text-align:left; background:var(--white); }
+    .source-table td { border-bottom:1px solid var(--hairline); padding:6px 8px; vertical-align:top; }
+    .source-table tr:nth-child(even) td { background:var(--row-alt); }
+    .footer-note { margin-top:16px; color:var(--ink-4); font-size:10px; font-style:italic; }
+    .report-footer { margin-top:18px; text-align:center; color:var(--ink-4); font-family:var(--font-mono); font-size:6pt; letter-spacing:0.12em; text-transform:uppercase; padding-top:10px; border-top:1px solid var(--hairline); }
+    .meta-line { display:flex; justify-content:space-between; border-bottom:1px solid var(--hairline); padding:5px 0; font-size:10.5px; }
+    .meta-label { color:var(--ink-3); }
+    .meta-value { font-weight:600; color:var(--ink); text-align:right; }
   </style>
 </head>
 <body>
