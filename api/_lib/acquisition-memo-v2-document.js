@@ -83,37 +83,53 @@ function renderSourceDocRows(sourcePackage = null) {
   return rows;
 }
 
-function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage }) {
-  const sourceRows = renderSourceDocRows(sourcePackage);
+function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics }) {
+  const supportDocCount = getSupportDocs(sourcePackage).length;
   const assetClass = Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
     ? `Multifamily | ${Math.round(Number(sourcePackage.coreRentRoll.extractedFacts.total_units))} Units`
     : "Multifamily";
-  const badge = reportMeta?.reportTier === 2 ? "Tier II Launch Memo" : "Launch Memo";
-  return `<section class="cover">
-    <div class="cover-shell">
-      <div class="cover-brand">INVESTORIQ CONFIDENTIAL</div>
-      <div class="cover-kicker">${escapeHtml(badge)}</div>
-      <h1 class="cover-title">Acquisition Memo</h1>
-      <p class="cover-subtitle">${escapeHtml(propertyName || "Property")}</p>
-      ${propertyTitle ? `<p class="cover-meta">${escapeHtml(propertyTitle)}</p>` : ""}
-      ${propertyAddress ? `<p class="cover-meta">${escapeHtml(propertyAddress)}</p>` : ""}
-      <div class="cover-grid">
-        <div><span>Asset Class</span><strong>${escapeHtml(assetClass)}</strong></div>
-        <div><span>Source Authority</span><strong>V2 Canonical Package</strong></div>
-        <div><span>Memo Status</span><strong>Confidential / Customer Facing</strong></div>
-      </div>
-      ${sourceRows.length ? `<div class="cover-sources"><p class="subsection-title">Core Quantitative Sources</p><table class="source-table"><tbody>${sourceRows.join("")}</tbody></table></div>` : ""}
-    </div>
-  </section>`;
+  const generatedLabel = reportMeta?.generatedAt || reportMeta?.generated_at || "";
+  const coverUnits = Number.isFinite(Number(coreMetrics?.units))
+    ? Math.round(Number(coreMetrics.units))
+    : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
+    ? Math.round(Number(sourcePackage.coreRentRoll.extractedFacts.total_units))
+    : "";
+  const coverNoi = Number.isFinite(Number(coreMetrics?.noi)) ? formatMoney(coreMetrics.noi) : "";
+  const coverExpenseRatio = Number.isFinite(Number(coreMetrics?.expenseRatio)) ? formatPercentDisplay(coreMetrics.expenseRatio) : "";
+  const coverNoiMargin = Number.isFinite(Number(coreMetrics?.noiMargin)) ? formatPercentDisplay(coreMetrics.noiMargin) : "";
+  return `<div class="cover-wrap">
+    <table class="cover-table" width="100%">
+      <tr>
+        <td class="cover-cell">
+          <div class="cover-brand-name">INVESTORIQ</div>
+          <div class="cover-brand-sub">Institutional Real Estate Analysis</div>
+          <div class="cover-prop-name">${escapeHtml(propertyName || "Acquisition Memo")}</div>
+          <div class="cover-prop-sub">Acquisition Memo</div>
+          <div class="cover-verdict-value">CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.</div>
+          <hr class="cover-divider" />
+          <div class="cover-metric-strip">
+            <div class="cover-metric-row">${escapeHtml([coverUnits ? `${coverUnits} Units` : assetClass, coverNoi ? `NOI ${coverNoi}` : "", coverExpenseRatio ? `Expense Ratio ${coverExpenseRatio}` : "", coverNoiMargin ? `NOI Margin ${coverNoiMargin}` : ""].filter(Boolean).join(" \u00a0\u00a0|\u00a0\u00a0 "))}</div>
+          </div>
+          <div class="cover-grid">
+            <div><span>Asset Class</span><strong>${escapeHtml(assetClass)}</strong></div>
+            <div><span>Report Tier</span><strong>${escapeHtml(reportMeta?.reportTier === 2 ? "Acquisition Memo" : "Screening")}</strong></div>
+            <div><span>Documents</span><strong>${escapeHtml(`${supportDocCount + (sourcePackage?.coreT12 ? 1 : 0) + (sourcePackage?.coreRentRoll ? 1 : 0)} uploaded files`)}</strong></div>
+          </div>
+          <div class="cover-footer-row">
+            <span class="cover-footer-text">Confidential &mdash; InvestorIQ Technologies Inc.</span>
+            <span class="cover-footer-text">${escapeHtml(generatedLabel || propertyAddress || propertyTitle || "")}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>`;
 }
 
 function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null } = {}) {
   const supportDocCount = getSupportDocs(sourcePackage).length;
   const rows = [
-    `<tr><td>Source authority version</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.authorityVersion || "v2")}</td></tr>`,
     `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
-    `<tr><td>Support docs classified</td><td style="font-weight:600;">${supportDocCount}</td></tr>`,
     `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
   ];
   const occupancy = Number.isFinite(Number(coreMetrics?.occupancy)) ? formatPercentDisplay(coreMetrics.occupancy) : "Not available";
@@ -123,7 +139,7 @@ function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoPr
     : "Not available";
   return `<div class="card no-break">
     <p class="subsection-title">Executive Summary</p>
-    <p class="body-copy">InvestorIQ Acquisition Memo. This memo is document-driven and source-authority bound: the canonical source package determines document roles, the V2 projection determines readiness and checklist state, and the report shell stays presentation-only.</p>
+    <p class="body-copy">Deal overview, operating profile, and primary risk drivers.</p>
     <table class="detail-table"><tbody>${rows.join("")}</tbody></table>
     <div class="summary-strip">
       <div><span>Occupancy</span><strong>${escapeHtml(occupancy)}</strong></div>
@@ -171,7 +187,7 @@ function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePa
   if (!tableHtml) return "";
   return renderSection(
     "Source Context / Support Document Treatment",
-    `<p class="body-copy">Support documents are treated through the canonical source package and V2 projection. The customer-visible treatment table stays inside the memo body.</p><p class="subsection-title">Document Treatment Summary</p>${tableHtml}`,
+    `<p class="body-copy">Uploaded files are listed for auditability. Support documents are retained as source context and are not used to override modeled outputs.</p><p class="subsection-title">Document Treatment Summary</p>${tableHtml}`,
     { id: "document-treatment-title", pageBreakBefore: true }
   );
 }
@@ -191,7 +207,7 @@ function renderSummarySection({ sourcePackage = null, renderedAcquisitionMemo = 
   const renderedCoreSourceSummary = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   return renderSection(
     "Acquisition Memo Summary",
-    `<p class="body-copy">This memo is document-driven and source-authority bound. The canonical source package identifies document roles, the V2 projection carries readiness state, and the presentation layer remains deterministic.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p>${renderedCoreSourceSummary}</div>` : ""}`,
+    `<p class="body-copy">Source-bound operating and acquisition context.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p>${renderedCoreSourceSummary}</div>` : ""}`,
     { id: "acq-summary-title", pageBreakBefore: false }
   );
 }
@@ -338,7 +354,7 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
   const rows = [
     `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreT12?.originalFilename || "Not present")}</td><td>${escapeHtml(sourcePackage?.coreT12?.roleLabel || sourcePackage?.coreT12?.canonicalLabel || "")}</td></tr>`,
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
-    `<tr><td>Support docs classified</td><td style="font-weight:600;">${supportDocs.length}</td><td>${escapeHtml(sourcePackage?.authorityVersion || "v2")}</td></tr>`,
+    `<tr><td>Classified support documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>Included in source treatment schedule</td></tr>`,
   ];
   const sourceSummaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   const stateRows = [
@@ -359,7 +375,7 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
 function renderMethodologySection() {
   return renderSection(
     "Methodology & Data Transparency",
-    `<p class="body-copy">Acquisition Memo is document-driven, fail-closed, and source-authority bound. The body is rendered directly from the canonical source package and projection so the report does not depend on legacy marker replacement, row mutation, or append-after-HTML fallback behavior.</p><p class="body-copy">The memo is limited to operating context, support-document treatment, and lender-readiness disclosure. It does not add advanced underwriting outputs beyond the source-backed memo shell.</p>`,
+    `<p class="body-copy">This memorandum is prepared from verified source documents and deterministic operating calculations. Unsupported assumptions are omitted and lender-readiness disclosure is limited to the documents provided.</p><p class="body-copy">The report is intended for institutional review alongside the source documents and support-document treatment schedule.</p>`,
     { id: "methodology-title", pageBreakBefore: true }
   );
 }
@@ -415,8 +431,17 @@ export function renderCompleteAcquisitionMemoV2Html({
   const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
   const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
   const generatedLabel = reportMeta?.generatedAt || reportMeta?.generated_at || "";
-  const reportTierLabel = reportMeta?.reportTier === 2 ? "Tier II" : "Tier I";
-  const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage });
+  const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics });
+  const headerStrip = `<div class="header-strip">
+      <div class="header-top">
+        <div>
+          <div class="brand-mark">INVESTORIQ</div>
+          <div class="tagline">Institutional Grade Property Intelligence</div>
+        </div>
+        <div style="text-align:center; font-family:var(--font-body); font-size:7.5pt; font-weight:300; color:var(--ink-3);">${escapeHtml([propertyName, propertyAddress || propertyTitle].filter(Boolean).join(" | "))}</div>
+        <div style="text-align:right; font-family:var(--font-mono); font-size:6.5pt; font-weight:400; color:var(--ink-4); letter-spacing:0.08em;">${escapeHtml(generatedLabel || "")}</div>
+      </div>
+    </div>`;
   const executiveSummarySection = renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
   const summarySection = renderSummarySection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
   const metricsSection = renderMetricsSnapshotSection(coreMetrics, sourcePackage);
@@ -429,14 +454,14 @@ export function renderCompleteAcquisitionMemoV2Html({
   const dataCoverageSection = renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
   const treatmentSection = renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage);
   const methodologySection = renderMethodologySection();
-  const footerSection = `<div class="report-footer">InvestorIQ Confidential | ${escapeHtml(reportTierLabel)} | Acquisition Memo | Source-backed presentation only.${generatedLabel ? ` | Generated ${escapeHtml(generatedLabel)}` : ""}</div>`;
+  const footerSection = `<div class="report-footer"><div class="report-footer-inner"><span>InvestorIQ Capital Intelligence Memorandum | Confidential</span><span>&copy; InvestorIQ Technologies Inc.</span></div></div>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(`${propertyName} - InvestorIQ Acquisition Memo`)}</title>
+  <title>${escapeHtml(`InvestorIQ Capital Intelligence Memorandum - ${propertyName}`)}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     @page { size: Letter; margin: 36px 36px 48px 36px; }
@@ -460,33 +485,41 @@ export function renderCompleteAcquisitionMemoV2Html({
     }
     * { box-sizing: border-box; }
     html, body { margin:0; padding:0; background:var(--white); color:var(--ink); font-family:var(--font-body); font-size:11px; line-height:1.5; }
-    body { margin:0; padding:0; background:var(--white); color:var(--ink); }
-    .report { width:100%; padding:0.5in 0.55in 0.52in 0.55in; box-sizing:border-box; background:var(--white); }
-    .cover { background:var(--cover-bg); color:var(--white); page-break-after:always; page-break-inside:avoid; margin:0; padding:1.6in 0.52in 0.72in 0.92in; width:100%; min-height:10.5in; position:relative; overflow:hidden; }
-    .cover-shell { position:relative; z-index:1; }
-    .cover-brand { font-family:var(--font-mono); font-size:6pt; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:8pt; }
-    .cover-kicker { font-family:var(--font-mono); font-size:7pt; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); margin-bottom:12pt; }
-    .cover-title { font-family:var(--font-display); font-size:38pt; font-weight:600; line-height:1; letter-spacing:-0.02em; margin:0 0 0.1in 0; color:var(--white); }
-    .cover-subtitle { font-family:var(--font-body); font-size:9pt; font-weight:300; color:rgba(255,255,255,0.35); letter-spacing:0.07em; margin:0 0 0.52in 0; }
-    .cover-meta { font-family:var(--font-body); font-size:8pt; color:rgba(255,255,255,0.3); margin:0 0 4pt 0; }
+    body { margin:0; padding:0; background:var(--white); color:var(--ink); font-family:var(--font-body); font-size:11px; line-height:1.5; }
+    .report-container { width:100%; padding:0.5in 0.55in 0.52in 0.55in; box-sizing:border-box; background:var(--white); }
+    .cover-wrap { page-break-after:always; page-break-inside:avoid; margin:0; padding:0; width:100%; height:10.5in; overflow:hidden; position:relative; background:var(--cover-bg); }
+    .cover-wrap::before { content:''; position:absolute; top:0; bottom:0; left:0.6in; width:1px; background:linear-gradient(to bottom, transparent 0%, rgba(201,168,76,0.45) 12%, rgba(201,168,76,0.45) 88%, transparent 100%); }
+    .cover-wrap::after { content:''; position:absolute; top:0.6in; right:0.52in; width:1in; height:1in; border-top:1px solid rgba(201,168,76,0.1); border-right:1px solid rgba(201,168,76,0.1); }
+    .cover-table { width:100%; border-collapse:collapse; height:100%; table-layout:fixed; }
+    .cover-cell { background:var(--cover-bg); padding:1.6in 0.52in 0.72in 0.92in; vertical-align:top; width:100%; height:100%; overflow:hidden; position:relative; }
+    .cover-brand-name { position:absolute; top:0.2in; left:0.52in; font-family:var(--font-display); font-size:13pt; font-weight:600; color:var(--gold); letter-spacing:0.02em; white-space:nowrap; hyphens:none; text-transform:uppercase; margin:0; }
+    .cover-brand-sub { position:absolute; top:0.24in; right:0.52in; font-family:var(--font-mono); font-size:6pt; font-weight:400; color:rgba(201,168,76,0.28); letter-spacing:0.2em; white-space:nowrap; hyphens:none; text-transform:uppercase; margin:0; }
+    .cover-prop-name { font-family:var(--font-display); font-size:38pt; font-weight:600; color:var(--white); line-height:1; letter-spacing:-0.02em; max-width:100%; white-space:normal; overflow-wrap:break-word; word-break:normal; hyphens:none; margin:0 0 0.1in 0; }
+    .cover-prop-sub { font-family:var(--font-body); font-size:9pt; font-weight:300; color:rgba(255,255,255,0.35); letter-spacing:0.07em; margin:0 0 0.52in 0; }
+    .cover-divider { border:none; width:0.52in; height:1.5px; background:var(--gold); opacity:0.65; margin:0 0 0.18in 0; }
+    .cover-verdict-value { font-family:var(--font-display); font-size:22pt; font-weight:500; color:var(--gold); text-transform:none; letter-spacing:-0.01em; margin:0 0 0.22in 0; line-height:1.05; }
+    .cover-metric-strip { margin:0 0 0.22in 0; padding:0 0 0.18in 0; border-bottom:1px solid rgba(201,168,76,0.15); }
+    .cover-metric-row { color:rgba(255,255,255,0.52); font-family:var(--font-body); font-size:8pt; font-weight:300; letter-spacing:0.02em; text-align:left; line-height:1.7; }
     .cover-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 14px; margin-top:16pt; }
     .cover-grid div { border-top:1px solid rgba(201,168,76,0.3); padding-top:8pt; }
     .cover-grid span { display:block; font-family:var(--font-mono); font-size:6pt; text-transform:uppercase; letter-spacing:0.16em; color:rgba(255,255,255,0.45); margin-bottom:3pt; }
     .cover-grid strong { font-family:var(--font-display); font-size:13pt; font-weight:500; color:var(--white); }
-    .cover-sources { margin-top:16pt; }
-    .meta-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 18px; margin-top:14px; }
-    .summary-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
-    .summary-strip div { border:1px solid var(--hairline); padding:10px 12px; background:var(--paper-warm); }
-    .summary-strip span { display:block; font-family:var(--font-mono); font-size:6.5pt; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-4); margin-bottom:4px; }
-    .summary-strip strong { font-family:var(--font-display); font-size:16pt; font-weight:500; color:var(--ink); }
-    .section { margin-bottom:16px; }
+    .cover-footer-row { display:flex; justify-content:space-between; align-items:center; position:absolute; bottom:0; left:0; right:0; height:0.46in; padding:0 0.52in; background:rgba(0,0,0,0.2); border-top:1px solid rgba(201,168,76,0.07); }
+    .cover-footer-text { font-family:var(--font-mono); font-size:6pt; color:rgba(255,255,255,0.12); letter-spacing:0.12em; text-transform:uppercase; }
+    .cover-footer-row .cover-footer-text:last-child { color:rgba(201,168,76,0.25); letter-spacing:0.14em; }
+    .header-strip { position:relative; border-top:none; border-bottom:1px solid var(--hairline); padding:0 0 0.12in 0; margin:-0.5in -0.55in 0.38in -0.55in; background:var(--white); }
+    .header-strip::before { content:''; position:absolute; top:0; left:0; right:0; height:1.5px; background:var(--gold); opacity:0.55; }
+    .header-top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0.12in 0.55in 0 0.55in; }
+    .brand-mark { font-family:var(--font-display); font-size:8pt; font-weight:600; color:var(--ink); letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; hyphens:none; }
+    .tagline { font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:var(--ink-4); margin-top:6px; }
+    .section { margin-top:18px; padding:24px 0; background:var(--white); }
     .section-break { break-before:page; page-break-before:always; }
-    .section-header { border-bottom:1px solid var(--hairline); margin-bottom:12px; padding-bottom:8px; position:relative; }
+    .section-header { position:relative; margin-top:0; margin-bottom:0.38in; padding-bottom:0.14in; border-bottom:1px solid var(--hairline); }
     .section-header::after { content:''; position:absolute; left:0; bottom:-1px; width:0.28in; height:1.5px; background:var(--gold); opacity:0.8; }
-    .section-header-title { font-family:var(--font-display); font-size:18pt; font-weight:500; letter-spacing:-0.025em; color:var(--ink); line-height:1.05; }
-    .card { background:var(--white); border:none; border-top:1px solid var(--hairline); padding:10px 0; }
+    .section-header-title { display:block; font-family:var(--font-display); font-size:18pt; font-weight:500; letter-spacing:-0.025em; color:var(--ink); line-height:1.05; word-break:keep-all; overflow-wrap:normal; hyphens:none; margin-bottom:4pt; }
+    .card { background:var(--white); border:1px solid var(--border-soft, var(--hairline)); border-top:1px solid var(--hairline); padding:12px 14px; }
     .no-break { break-inside:avoid; page-break-inside:avoid; }
-    .body-copy { margin:0 0 12px 0; color:var(--ink-3); font-size:10px; line-height:1.6; }
+    .body-copy { margin:3px 0 8px 0; color:var(--ink-3); font-size:10px; line-height:1.6; }
     .subsection-block + .subsection-block { margin-top:14px; }
     .subsection-title { margin:0 0 8px 0; font-family:var(--font-body); font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-4); font-weight:600; }
     .detail-table { width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; }
@@ -494,21 +527,30 @@ export function renderCompleteAcquisitionMemoV2Html({
     .detail-table tr:first-child td { border-top:none; }
     .detail-table td:first-child { width:44%; color:var(--ink-3); }
     .detail-table td:last-child { font-weight:600; color:var(--ink); }
+    .summary-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .summary-strip div { border:1px solid var(--hairline); padding:10px 12px; background:var(--paper-warm); }
+    .summary-strip span { display:block; font-family:var(--font-mono); font-size:6.5pt; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-4); margin-bottom:4px; }
+    .summary-strip strong { font-family:var(--font-display); font-size:16pt; font-weight:500; color:var(--ink); }
     .readiness-summary { margin-bottom:10px; font-size:10.5px; line-height:1.6; color:var(--ink-3); }
     .source-table { width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; margin-top:8px; }
     .source-table th { font-family:var(--font-body); font-size:10px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--ink-3); border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline-mid); padding:0 8px 6px; text-align:left; background:var(--white); }
     .source-table td { border-bottom:1px solid var(--hairline); padding:6px 8px; vertical-align:top; }
     .source-table tr:nth-child(even) td { background:var(--row-alt); }
+    .grid-2-balanced { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
     .footer-note { margin-top:16px; color:var(--ink-4); font-size:10px; font-style:italic; }
-    .report-footer { margin-top:18px; text-align:center; color:var(--ink-4); font-family:var(--font-mono); font-size:6pt; letter-spacing:0.12em; text-transform:uppercase; padding-top:10px; border-top:1px solid var(--hairline); }
+    .report-footer { margin-top:18px; padding-top:10px; border-top:1px solid var(--hairline); }
+    .report-footer-inner { width:100%; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .report-footer-inner span:first-child { font-family:var(--font-mono); font-size:6pt; color:var(--ink-4); letter-spacing:0.1em; text-transform:uppercase; }
+    .report-footer-inner span:last-child { font-family:var(--font-body); font-size:6.5pt; color:var(--ink-4); letter-spacing:0.02em; }
     .meta-line { display:flex; justify-content:space-between; border-bottom:1px solid var(--hairline); padding:5px 0; font-size:10.5px; }
     .meta-label { color:var(--ink-3); }
     .meta-value { font-weight:600; color:var(--ink); text-align:right; }
   </style>
 </head>
 <body>
-  <main class="report">
-    ${coverSection}
+  ${coverSection}
+  <div class="report-container">
+    ${headerStrip}
     <section class="section">
       <div class="section-header"><span class="section-header-title">Executive Summary</span></div>
       ${executiveSummarySection}
@@ -525,7 +567,7 @@ export function renderCompleteAcquisitionMemoV2Html({
     ${treatmentSection}
     ${methodologySection}
     ${footerSection}
-  </main>
+  </div>
 </body>
 </html>`;
 }
