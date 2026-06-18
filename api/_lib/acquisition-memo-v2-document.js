@@ -18,7 +18,8 @@ function stripDocumentTreatmentSummaryMarkers(html) {
 function formatMoney(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
-  return `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  const normalized = Object.is(n, -0) ? 0 : n;
+  return `$${normalized.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function formatPercentDisplay(value) {
@@ -234,11 +235,27 @@ function renderCapRateValueSection({ acquisitionMemoProjection = null, coreMetri
   </div>`;
 }
 
-function renderMetricsSnapshotSection(coreMetrics = null) {
+function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null) {
   const rows = [];
+  const units = Number.isFinite(Number(coreMetrics?.units))
+    ? Number(coreMetrics.units)
+    : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
+    ? Number(sourcePackage.coreRentRoll.extractedFacts.total_units)
+    : null;
+  const annualInPlace = Number(coreMetrics?.annualInPlaceRent);
+  const annualMarket = Number(coreMetrics?.annualMarketRent);
+  const annualUpside = Number.isFinite(annualInPlace) && Number.isFinite(annualMarket) ? annualMarket - annualInPlace : null;
+  const rentGapPct = Number.isFinite(annualUpside) && Number.isFinite(annualInPlace) && annualInPlace > 0 ? annualUpside / annualInPlace : null;
+  const purchasePrice = Number(coreMetrics?.purchasePrice);
+  const noi = Number(coreMetrics?.noi);
+  const pricePerUnit = Number.isFinite(purchasePrice) && Number.isFinite(units) && units > 0 ? purchasePrice / units : null;
+  const noiPerUnit = Number.isFinite(noi) && Number.isFinite(units) && units > 0 ? noi / units : null;
+  if (Number.isFinite(units) && units > 0) rows.push(`<tr><td>Units</td><td style="font-weight:600;">${Math.round(units)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.occupancy))) rows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.annualInPlaceRent))) rows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualInPlaceRent)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.annualMarketRent))) rows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualMarketRent)}</td></tr>`);
+  if (Number.isFinite(annualUpside)) rows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatMoney(annualUpside)}</td></tr>`);
+  if (Number.isFinite(rentGapPct)) rows.push(`<tr><td>Rent Gap %</td><td style="font-weight:600;">${formatPercentDisplay(rentGapPct)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.egi))) rows.push(`<tr><td>EGI</td><td style="font-weight:600;">${formatMoney(coreMetrics.egi)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.opEx))) rows.push(`<tr><td>Operating Expenses</td><td style="font-weight:600;">${formatMoney(coreMetrics.opEx)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.noi))) rows.push(`<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(coreMetrics.noi)}</td></tr>`);
@@ -247,6 +264,8 @@ function renderMetricsSnapshotSection(coreMetrics = null) {
   if (Number.isFinite(Number(coreMetrics?.breakEvenOccupancy))) rows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.breakEvenOccupancy)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.purchasePrice))) rows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(coreMetrics.purchasePrice)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.goingInCapRate))) rows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.goingInCapRate)}</td></tr>`);
+  if (Number.isFinite(pricePerUnit)) rows.push(`<tr><td>Price per Unit</td><td style="font-weight:600;">${formatMoney(pricePerUnit)}</td></tr>`);
+  if (Number.isFinite(noiPerUnit)) rows.push(`<tr><td>NOI per Unit</td><td style="font-weight:600;">${formatMoney(noiPerUnit)}</td></tr>`);
   return renderSection(
     "Key Metrics Snapshot",
     rows.length ? `<table class="detail-table"><tbody>${rows.join("")}</tbody></table>` : `<p class="body-copy">No core metrics were available for snapshot rendering.</p>`,
@@ -290,6 +309,9 @@ function renderValueSensitivitySection({ coreMetrics = null } = {}) {
   const annualRentUpside = Number.isFinite(Number(coreMetrics?.annualMarketRent)) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent))
     ? Number(coreMetrics.annualMarketRent) - Number(coreMetrics.annualInPlaceRent)
     : null;
+  const rentGapPct = Number.isFinite(annualRentUpside) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent)) && Number(coreMetrics.annualInPlaceRent) > 0
+    ? annualRentUpside / Number(coreMetrics.annualInPlaceRent)
+    : null;
   const capRate = toCapRatio(coreMetrics?.goingInCapRate);
   const impliedValue = Number.isFinite(Number(coreMetrics?.noi)) && Number.isFinite(capRate) && capRate > 0
     ? Number(coreMetrics.noi) / capRate
@@ -297,10 +319,12 @@ function renderValueSensitivitySection({ coreMetrics = null } = {}) {
   const valueDelta = Number.isFinite(impliedValue) && Number.isFinite(Number(coreMetrics?.purchasePrice))
     ? impliedValue - Number(coreMetrics.purchasePrice)
     : null;
+  const normalizedValueDelta = Number.isFinite(valueDelta) && Math.abs(valueDelta) < 0.5 ? 0 : valueDelta;
   const rows = [
     `<tr><td>Annual rent upside</td><td style="font-weight:600;">${Number.isFinite(annualRentUpside) ? formatMoney(annualRentUpside) : "Not available"}</td></tr>`,
+    `<tr><td>Rent gap %</td><td style="font-weight:600;">${Number.isFinite(rentGapPct) ? formatPercentDisplay(rentGapPct) : "Not available"}</td></tr>`,
     `<tr><td>Implied value at going-in cap rate</td><td style="font-weight:600;">${Number.isFinite(impliedValue) ? formatMoney(impliedValue) : "Not available"}</td></tr>`,
-    `<tr><td>Value delta vs purchase price</td><td style="font-weight:600;">${Number.isFinite(valueDelta) ? formatMoney(valueDelta) : "Not available"}</td></tr>`,
+    `<tr><td>Value delta vs purchase price</td><td style="font-weight:600;">${Number.isFinite(normalizedValueDelta) ? formatMoney(normalizedValueDelta) : "Not available"}</td></tr>`,
   ];
   return renderSection(
     "Rent Upside / Value Sensitivity",
@@ -395,6 +419,7 @@ export function renderCompleteAcquisitionMemoV2Html({
   const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage });
   const executiveSummarySection = renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
   const summarySection = renderSummarySection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
+  const metricsSection = renderMetricsSnapshotSection(coreMetrics, sourcePackage);
   const operatingStatementSection = renderOperatingStatementSection({ sourcePackage, coreMetrics, acquisitionMemoProjection });
   const operatingSection = renderOperatingSnapshotSection({ sourcePackage, coreMetrics });
   const unitMixSection = renderUnitMixSection({ sourcePackage, coreMetrics });
@@ -464,6 +489,7 @@ export function renderCompleteAcquisitionMemoV2Html({
       ${executiveSummarySection}
     </section>
     ${summarySection}
+    ${metricsSection}
     ${operatingSection}
     ${unitMixSection}
     ${valueSensitivitySection}

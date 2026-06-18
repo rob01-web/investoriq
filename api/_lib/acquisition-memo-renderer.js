@@ -20,20 +20,62 @@ function renderTable(rows) {
 
   const renderFacts = (row) => {
     const facts = row?.extractedFacts && typeof row.extractedFacts === "object" ? row.extractedFacts : {};
+    const role = String(row?.canonicalRole || row?.role || "").trim();
+    const isCurrentDebt = role === "current_debt_context";
+    const isPurchaseAssumptions = role === "purchase_assumptions";
+    const isRenovation = role === "structured_renovation_capex_plan";
+    const sourceText = `${row?.sourceEvidence?.textSnippet || ""} ${row?.sourceEvidence?.filename || ""}`;
+    const findMoney = (patterns) => {
+      for (const pattern of patterns) {
+        const match = String(sourceText || "").match(pattern);
+        if (!match) continue;
+        const raw = String(match[1] ?? match[0]).replace(/[$,]/g, "").trim();
+        const value = Number(raw);
+        if (Number.isFinite(value)) return value;
+      }
+      return null;
+    };
+    const findPercentFraction = (patterns) => {
+      const value = findMoney(patterns);
+      return Number.isFinite(value) ? value / 100 : null;
+    };
     const parts = [];
-    if (Number.isFinite(facts.purchase_price)) parts.push(`Purchase Price: $${Number(facts.purchase_price).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
-    if (Number.isFinite(facts.noi_basis)) parts.push(`NOI Basis: $${Number(facts.noi_basis).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
-    if (Number.isFinite(facts.going_in_cap_rate)) parts.push(`Going-In Cap Rate: ${(Number(facts.going_in_cap_rate) * 100).toFixed(1)}%`);
-    if (Number.isFinite(facts.proposed_loan_amount)) parts.push(`Proposed Loan Amount: $${Number(facts.proposed_loan_amount).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
-    if (Number.isFinite(facts.ltv)) parts.push(`LTV: ${(Number(facts.ltv) * 100).toFixed(0)}%`);
-    if (Number.isFinite(facts.interest_rate)) parts.push(`Interest Rate: ${(Number(facts.interest_rate) * 100).toFixed(2)}%`);
-    if (Number.isFinite(facts.amortization_years)) parts.push(`Amortization: ${Number(facts.amortization_years).toFixed(0)} years`);
-    if (Number.isFinite(facts.lender_fee_percent)) parts.push(`Lender Fee: ${(Number(facts.lender_fee_percent) * 100).toFixed(2)}%`);
-    if (Number.isFinite(facts.current_outstanding_balance)) parts.push(`Current Outstanding Balance: $${Number(facts.current_outstanding_balance).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
-    if (Number.isFinite(facts.amortization_remaining_years)) parts.push(`Amortization Remaining: ${Number(facts.amortization_remaining_years).toFixed(0)} years`);
-    if (Number.isFinite(facts.monthly_payment)) parts.push(`Monthly Payment: $${Number(facts.monthly_payment).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
-    if (facts.maturity_date) parts.push(`Maturity Date: ${facts.maturity_date}`);
-    if (Number.isFinite(facts.total_renovation_budget)) parts.push(`Total Renovation Budget: $${Number(facts.total_renovation_budget).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    const purchasePrice = Number.isFinite(facts.purchase_price) ? Number(facts.purchase_price) : findMoney([/\bpurchase price[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bproposed acquisition price[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i]);
+    const noiBasis = Number.isFinite(facts.noi_basis) ? Number(facts.noi_basis) : findMoney([/\bnoi basis[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bnoi[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i]);
+    const goingInCapRate = Number.isFinite(facts.going_in_cap_rate) ? Number(facts.going_in_cap_rate) : findPercentFraction([/\bgoing[-\s]*in cap(?: rate| reference)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i, /\bcap rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i]);
+    const proposedLoanAmount = Number.isFinite(facts.proposed_loan_amount)
+      ? Number(facts.proposed_loan_amount)
+      : findMoney([/\bproposed loan amount[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bproposed acquisition loan[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bloan amount[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bloan[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i]);
+    const ltv = Number.isFinite(facts.ltv) ? Number(facts.ltv) : findPercentFraction([/\bltv[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i, /\bloanto[-\s]*value[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i]);
+    const interestRate = Number.isFinite(facts.interest_rate) ? Number(facts.interest_rate) : findPercentFraction([/\binterest rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i, /\brate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i]);
+    const amortizationYears = Number.isFinite(facts.amortization_years) ? Number(facts.amortization_years) : null;
+    const lenderFeePercent = Number.isFinite(facts.lender_fee_percent)
+      ? Number(facts.lender_fee_percent)
+      : findPercentFraction([/\blender fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i, /\bfinancing fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i, /\borigination fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i, /\bfee[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i]);
+    const outstandingBalance = Number.isFinite(facts.current_outstanding_balance)
+      ? Number(facts.current_outstanding_balance)
+      : findMoney([/\bcurrent outstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bcurrent debt balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\boutstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bprincipal balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bbalance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i]);
+    const amortRemaining = Number.isFinite(facts.amortization_remaining_years) ? Number(facts.amortization_remaining_years) : null;
+    const monthlyPayment = Number.isFinite(facts.monthly_payment)
+      ? Number(facts.monthly_payment)
+      : findMoney([/\bmonthly payment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bmonthly debt service[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bpayment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i]);
+    const maturityDate = facts.maturity_date || (String(sourceText).match(/\bmaturity date[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i)?.[1] || String(sourceText).match(/\bmatures?[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i)?.[1] || null);
+    const totalRenovationBudget = Number.isFinite(facts.total_renovation_budget)
+      ? Number(facts.total_renovation_budget)
+      : findMoney([/\btotal renovation budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\breno budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\brenovation budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bcapex budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i, /\bbudget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i]);
+    if (Number.isFinite(purchasePrice)) parts.push(`Purchase Price: $${Number(purchasePrice).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(noiBasis)) parts.push(`NOI Basis: $${Number(noiBasis).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(goingInCapRate)) parts.push(`Going-In Cap Rate: ${(Number(goingInCapRate) * 100).toFixed(1)}%`);
+    if (Number.isFinite(proposedLoanAmount)) parts.push(`${isPurchaseAssumptions ? "Proposed Acquisition Loan" : "Proposed Loan Amount"}: $${Number(proposedLoanAmount).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(ltv)) parts.push(`LTV: ${(Number(ltv) * 100).toFixed(1)}%`);
+    if (Number.isFinite(outstandingBalance)) parts.push(`Current Debt Balance: $${Number(outstandingBalance).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (Number.isFinite(interestRate)) parts.push(`${isCurrentDebt ? "Current Debt Rate" : isPurchaseAssumptions ? "Proposed Rate" : "Interest Rate"}: ${(Number(interestRate) * 100).toFixed(2)}%`);
+    if (Number.isFinite(amortRemaining)) parts.push(`Current Debt Amortization Remaining: ${Number(amortRemaining).toFixed(0)} years`);
+    if (Number.isFinite(monthlyPayment)) parts.push(`Current Debt Monthly Payment: $${Number(monthlyPayment).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
+    if (maturityDate) parts.push(`Current Debt Maturity: ${maturityDate}`);
+    if (Number.isFinite(amortizationYears)) parts.push(`${isPurchaseAssumptions ? "Proposed Amortization" : "Amortization"}: ${Number(amortizationYears).toFixed(0)} years`);
+    if (Number.isFinite(lenderFeePercent)) parts.push(`${isPurchaseAssumptions ? "Lender / Origination Fee" : "Lender Fee"}: ${(Number(lenderFeePercent) * 100).toFixed(2)}%`);
+    if (Number.isFinite(totalRenovationBudget)) parts.push(`${isRenovation ? "Reno Budget" : "Total Renovation Budget"}: $${Number(totalRenovationBudget).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);
     if (facts.has_rent_lift) parts.push("Rent Lift: Yes");
     if (facts.has_phasing) parts.push("Phasing: Yes");
     if (Number.isFinite(facts.appraisal_value)) parts.push(`Appraisal Value: $${Number(facts.appraisal_value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`);

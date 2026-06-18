@@ -198,7 +198,9 @@ function buildExtractedFacts(role, text) {
     ]);
     const proposedLoanAmount = extractMoney(text, [
       /\bproposed loan amount[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\bproposed acquisition loan[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /\bloan amount[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\bloan[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
     ]);
     const ltv = extractPercentFraction(text, [
       /\bltv[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
@@ -216,6 +218,7 @@ function buildExtractedFacts(role, text) {
       /\blender fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
       /\bfinancing fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
       /\borigination fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+      /\bfee[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
       /\blender fee(?: percent)?\s+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
       /\bfinancing fee(?: percent)?\s+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
       /\borigination fee(?: percent)?\s+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
@@ -232,8 +235,10 @@ function buildExtractedFacts(role, text) {
   } else if (role === "current_debt_context") {
     const outstandingBalance = extractMoney(text, [
       /\bcurrent outstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\bcurrent debt balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /\boutstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /\bprincipal balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\bbalance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
     ]);
     const interestRate = extractPercentFraction(text, [
       /\binterest rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
@@ -248,6 +253,7 @@ function buildExtractedFacts(role, text) {
     const monthlyPayment = extractMoney(text, [
       /\bmonthly payment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /\bmonthly debt service[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\bpayment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
     ]);
     const maturityDate = extractDate(text, [
       /\bmaturity date[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
@@ -262,8 +268,10 @@ function buildExtractedFacts(role, text) {
   } else if (role === "structured_renovation_capex_plan") {
     const totalRenovationBudget = extractMoney(text, [
       /\btotal renovation budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\breno budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /\brenovation budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /\bcapex budget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\bbudget[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
     ]);
     if (totalRenovationBudget != null) facts.total_renovation_budget = totalRenovationBudget;
     facts.has_rent_lift = /(rent lift|expected rent lift|expected monthly rent lift|monthly rent lift)/i.test(text);
