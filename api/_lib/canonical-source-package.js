@@ -196,6 +196,12 @@ function buildExtractedFacts(role, text) {
       /\bgoing[-\s]*in cap(?: rate| reference)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
       /\bcap rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
     ]);
+    const goingInCapRateFallback = extractPercentFraction(text, [
+      /\bgoing[-\s]*in cap(?: rate| reference)?\s*([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+      /\bgoing[-\s]*cap(?: rate| reference)?\s*([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+      /\bgoing[-\s]*in\s*cap\s*([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+      /\bgoing[-\s]*cap\s*([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    ]);
     const proposedLoanAmount = extractMoney(text, [
       /\bproposed loan amount[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       /\bproposed acquisition loan[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
@@ -225,7 +231,7 @@ function buildExtractedFacts(role, text) {
     ]);
     if (purchasePrice != null) facts.purchase_price = purchasePrice;
     if (noiBasis != null) facts.noi_basis = noiBasis;
-    if (goingInCapRate != null) facts.going_in_cap_rate = goingInCapRate;
+    if (goingInCapRate != null || goingInCapRateFallback != null) facts.going_in_cap_rate = goingInCapRate ?? goingInCapRateFallback;
     if (proposedLoanAmount != null) facts.proposed_loan_amount = proposedLoanAmount;
     if (ltv != null) facts.ltv = ltv;
     if (interestRate != null) facts.interest_rate = interestRate;

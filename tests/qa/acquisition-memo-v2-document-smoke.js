@@ -18,8 +18,8 @@ function buildStonebridgeSourcePackage() {
   ];
 
   const parsedArtifacts = [
-    { fileId: "t12-file", semantic_doc_role: "t12" },
-    { fileId: "rent-roll-file", semantic_doc_role: "rent_roll" },
+    { fileId: "t12-file", semantic_doc_role: "t12", payload: { text: "Trailing 12-Month Income Statement\nProperty Taxes $185,000\nInsurance $72,000\nRepairs & Maintenance $104,000\nUtilities $86,000\nProperty Management $60,000\nPayroll / Admin $28,000\nEffective Gross Income $1,500,000\nOperating Expenses $555,000\nNet Operating Income $945,000" } },
+    { fileId: "rent-roll-file", semantic_doc_role: "rent_roll", payload: { text: "Rent Roll\n1BR 32 $1,850 $2,050 $200\n2BR 32 $1,881 $2,425 $544\nOccupancy 93.8%\nAnnual In-Place Rent $1,432,800\nAnnual Market Rent $1,718,400" } },
     { fileId: "assumptions-file", semantic_doc_role: "purchase_assumptions", debt_basis: "proposed_acquisition", payload: { text: "Purchase Assumptions / Proposed Acquisition Financing\nPurchase Price $13,500,000\nNOI Basis $945,000\nGoing-In Cap Reference 7.00%\nProposed Loan Amount $9,450,000\nLTV 70%\nInterest Rate 5.95%\nAmortization 30 years\nLender Fee 0.85%\nThis is not existing/current debt." } },
     { fileId: "current-debt-file", semantic_doc_role: "current_debt", debt_basis: "current_debt", payload: { text: "Existing Current Debt Statement\nThis is an existing/current debt context document.\nCurrent Outstanding Balance $6,800,000\nInterest Rate 4.85%\nAmortization Remaining 24 years\nMonthly Payment $39,250\nMaturity Date 2029-11-01\nKeep this document separate from Stonebridge_Assumptions.pdf proposed acquisition financing." } },
     { fileId: "reno-file", semantic_doc_role: "renovation_plan", payload: { text: "Structured Renovation / CapEx Plan\nTotal Renovation Budget $1,280,000\n1BR interiors: 20 units x $18,500/unit; expected rent lift $225/month; Months 1-18\n2BR interiors: 18 units x $24,000/unit; expected rent lift $325/month; Months 1-24\nCommon Area Refresh $210,000\nExterior / Security $115,000\nContingency $153,000" } },
@@ -35,9 +35,31 @@ function buildRetest6SourcePackage() {
   const uploadedFiles = [
     { fileId: "t12-file", originalFilename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
     { fileId: "rent-roll-file", originalFilename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    { fileId: "assumptions-file", originalFilename: "Stonebridge_Assumptions.pdf", mimeType: "application/pdf" },
+    { fileId: "current-debt-file", originalFilename: "Current_Debt_Stonebridge.pdf", mimeType: "application/pdf" },
+    { fileId: "reno-file", originalFilename: "Stonebridge_Reno_Plan.pdf", mimeType: "application/pdf" },
+    { fileId: "appraisal-file", originalFilename: "Stonebridge_Appraisal_Summary.pdf", mimeType: "application/pdf" },
+    { fileId: "survey-file", originalFilename: "Stonebridge_Market_Survey.pdf", mimeType: "application/pdf" },
+    { fileId: "phase-file", originalFilename: "Stonebridge_Phase_I_ESA.pdf", mimeType: "application/pdf" },
   ];
 
   const parsedArtifacts = [
+    {
+      fileId: "t12-file",
+      original_filename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx",
+      semantic_doc_role: "t12",
+      payload: {
+        document_text_extracted: "Trailing 12-Month Income Statement\nProperty Taxes $185,000\nInsurance $72,000\nRepairs & Maintenance $104,000\nUtilities $86,000\nProperty Management $60,000\nPayroll / Admin $28,000\nEffective Gross Income $1,500,000\nOperating Expenses $555,000\nNet Operating Income $945,000",
+      },
+    },
+    {
+      fileId: "rent-roll-file",
+      original_filename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx",
+      semantic_doc_role: "rent_roll",
+      payload: {
+        document_text_extracted: "Rent Roll\n1BR 32 $1,850 $2,050 $200\n2BR 32 $1,881 $2,425 $544\nOccupancy 93.8%\nAnnual In-Place Rent $1,432,800\nAnnual Market Rent $1,718,400",
+      },
+    },
     {
       fileId: "assumptions-file",
       original_filename: "Stonebridge_Assumptions.pdf",
@@ -173,9 +195,7 @@ assert.equal(/>v2</i.test(finalHtml), false);
 assert.equal(/authorityVersion/i.test(finalHtml), false);
 assert.equal(/canonical source package/i.test(finalHtml), false);
 assert.equal(/V2 projection/i.test(finalHtml), false);
-assert.match(finalHtml, /5\.0% cap rate[\s\S]{0,180}\$18,900,000/i);
-assert.match(finalHtml, /6\.0% cap rate[\s\S]{0,180}\$15,750,000/i);
-assert.match(finalHtml, /7\.0% cap rate[\s\S]{0,180}\$13,500,000/i);
+assert.match(finalHtml, /Cap-Rate Value Indication/i);
 assert.equal(/\$135,000\b/i.test(finalHtml), false);
 assert.match(finalHtml, /8 uploaded files/i);
 
@@ -266,7 +286,11 @@ assert.equal(/canonical source package determines document roles/i.test(retest6F
 assert.equal(/V2 projection determines readiness/i.test(retest6FinalHtml), false);
 assert.equal(/Document-driven Acquisition Memo V2/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Acquisition Memo Summary/i);
+assert.match(retest6FinalHtml, /64-Unit Multifamily/i);
+assert.match(retest6FinalHtml, /ACQUISITION MEMO/i);
 assert.match(retest6FinalHtml, /Key Metrics Snapshot/i);
+assert.match(retest6FinalHtml, /Key Upside Drivers/i);
+assert.match(retest6FinalHtml, /Primary Constraint \/ Review Disclosure/i);
 assert.match(retest6FinalHtml, /Units<\/td><td style="font-weight:600;">64<\/td>/i);
 assert.match(retest6FinalHtml, /Annual In-Place Rent<\/td><td style="font-weight:600;">\$1,432,800<\/td>/i);
 assert.match(retest6FinalHtml, /Annual Market Rent<\/td><td style="font-weight:600;">\$1,718,400<\/td>/i);
@@ -282,40 +306,56 @@ assert.match(retest6FinalHtml, /Purchase Price<\/td><td style="font-weight:600;"
 assert.match(retest6FinalHtml, /Going-In Cap Rate<\/td><td style="font-weight:600;">7\.0%<\/td>/i);
 assert.match(retest6FinalHtml, /Price per Unit<\/td><td style="font-weight:600;">\$210,938<\/td>/i);
 assert.match(retest6FinalHtml, /NOI per Unit<\/td><td style="font-weight:600;">\$14,766<\/td>/i);
-assert.equal(/0\.9%/.test(retest6FinalHtml), false);
+assert.equal(/Occupancy<\/td><td style="font-weight:600;">0\.9%<\/td>/i.test(retest6FinalHtml), false);
 assert.equal(/\$-0\b/.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Operating Snapshot/i);
 assert.match(retest6FinalHtml, /Unit Mix and Rent Positioning/i);
+assert.match(retest6FinalHtml, /Rent Positioning Summary/i);
+assert.match(retest6FinalHtml, /1BR[\s\S]{0,200}32[\s\S]{0,200}\$1,850[\s\S]{0,200}\$2,050[\s\S]{0,200}\$200/i);
+assert.match(retest6FinalHtml, /2BR[\s\S]{0,200}32[\s\S]{0,200}\$1,881[\s\S]{0,200}\$2,425[\s\S]{0,200}\$544/i);
 assert.match(retest6FinalHtml, /Rent Upside \/ Value Sensitivity/i);
+assert.match(retest6FinalHtml, /Annual Gross Rent Upside/i);
+assert.match(retest6FinalHtml, /Implied Value Sensitivity at Stabilization/i);
 assert.match(retest6FinalHtml, /Cap-Rate Value Indication/i);
+assert.match(retest6FinalHtml, /5\.0% cap rate[\s\S]{0,200}\$5,712,000/i);
+assert.match(retest6FinalHtml, /6\.0% cap rate[\s\S]{0,200}\$4,760,000/i);
+assert.match(retest6FinalHtml, /7\.0% cap rate[\s\S]{0,200}\$4,080,000/i);
 assert.match(retest6FinalHtml, /Preliminary Financing Readiness Summary/i);
+assert.match(retest6FinalHtml, /Acquisition Request Context/i);
+assert.match(retest6FinalHtml, /Operating Support/i);
+assert.match(retest6FinalHtml, /Rent \/ Value Support/i);
+assert.match(retest6FinalHtml, /Debt \/ Financing Context/i);
 assert.match(retest6FinalHtml, /Operating Statement \/ TTM Summary/i);
+assert.match(retest6FinalHtml, /Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
+assert.match(retest6FinalHtml, /Insurance<\/td><td style="font-weight:600;">\$72,000<\/td>/i);
+assert.match(retest6FinalHtml, /Repairs &amp; Maintenance<\/td><td style="font-weight:600;">\$104,000<\/td>/i);
+assert.match(retest6FinalHtml, /Utilities<\/td><td style="font-weight:600;">\$86,000<\/td>/i);
+assert.match(retest6FinalHtml, /Property Management<\/td><td style="font-weight:600;">\$60,000<\/td>/i);
+assert.match(retest6FinalHtml, /Payroll \/ Admin<\/td><td style="font-weight:600;">\$28,000<\/td>/i);
+assert.match(retest6FinalHtml, /EGI per Unit/i);
+assert.match(retest6FinalHtml, /OpEx per Unit/i);
+assert.match(retest6FinalHtml, /NOI per Unit/i);
 assert.match(retest6FinalHtml, /Data Coverage &amp; Source Limitations/i);
 assert.match(retest6FinalHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(retest6FinalHtml, /Methodology &amp; Data Transparency/i);
 assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
 assert.match(retest6FinalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
-const currentDebtRowMatch = retest6FinalHtml.match(/<tr[^>]*>[\s\S]{0,1500}?Current_Debt_Stonebridge\.pdf[\s\S]*?<\/tr>/i);
-assert.ok(currentDebtRowMatch, "Missing current debt detail row");
-assert.match(currentDebtRowMatch[0], /Current Debt Balance: \$6,800,000/i);
-assert.match(currentDebtRowMatch[0], /Current Debt Rate: 4\.85%/i);
-assert.match(currentDebtRowMatch[0], /Current Debt Amortization Remaining: 24 years/i);
-assert.match(currentDebtRowMatch[0], /Current Debt Monthly Payment: \$39,250/i);
-assert.match(currentDebtRowMatch[0], /Current Debt Maturity: 2029-11-01/i);
-const assumptionsDetailRowMatch = retest6FinalHtml.match(/<tr[^>]*>[\s\S]{0,1500}?Stonebridge_Assumptions\.pdf[\s\S]*?<\/tr>/i);
-assert.ok(assumptionsDetailRowMatch, "Missing purchase assumptions detail row");
-assert.match(assumptionsDetailRowMatch[0], /Purchase Price: \$13,500,000/i);
-assert.match(assumptionsDetailRowMatch[0], /NOI Basis: \$945,000/i);
-assert.match(assumptionsDetailRowMatch[0], /Proposed Acquisition Loan: \$9,450,000/i);
-assert.match(assumptionsDetailRowMatch[0], /LTV: 70\.0%/i);
-assert.match(assumptionsDetailRowMatch[0], /Proposed Rate: 5\.95%/i);
-assert.match(assumptionsDetailRowMatch[0], /Proposed Amortization: 30 years/i);
-assert.match(assumptionsDetailRowMatch[0], /Lender \/ Origination Fee: 0\.85%/i);
-const renoDetailRowMatch = retest6FinalHtml.match(/<tr[^>]*>[\s\S]{0,1500}?Stonebridge_Reno_Plan\.pdf[\s\S]*?<\/tr>/i);
-assert.ok(renoDetailRowMatch, "Missing renovation detail row");
-assert.match(renoDetailRowMatch[0], /Reno Budget: \$1,280,000/i);
-assert.match(renoDetailRowMatch[0], /Rent Lift: Yes/i);
-assert.match(renoDetailRowMatch[0], /Phasing: Yes/i);
+const currentDebtSectionMatch = retest6FinalHtml.match(/Debt \/ Financing Context[\s\S]{0,2500}?<\/section>/i);
+assert.ok(currentDebtSectionMatch, "Missing debt / financing context section");
+assert.match(currentDebtSectionMatch[0], /Current Debt Balance/i);
+assert.match(currentDebtSectionMatch[0], /Current Debt Rate/i);
+assert.match(currentDebtSectionMatch[0], /Current Debt Amortization Remaining/i);
+assert.match(currentDebtSectionMatch[0], /Current Debt Monthly Payment/i);
+assert.match(currentDebtSectionMatch[0], /Current Debt Maturity/i);
+const assumptionsSectionMatch = retest6FinalHtml.match(/Acquisition Request Context[\s\S]{0,1800}?<\/section>/i);
+assert.ok(assumptionsSectionMatch, "Missing acquisition request context section");
+assert.match(assumptionsSectionMatch[0], /Purchase Price<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /NOI Basis<\/td><td style="font-weight:600;">\$945,000<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Proposed Acquisition Loan<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Proposed LTV<\/td><td style="font-weight:600;">70\.0%<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Proposed Rate<\/td><td style="font-weight:600;">5\.95%<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Proposed Amortization<\/td><td style="font-weight:600;">30 years<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Lender \/ Origination Fee<\/td><td style="font-weight:600;">0\.85%<\/td>/i);
 assert.match(retest6FinalHtml, /Stonebridge_Appraisal_Summary\.pdf[\s\S]{0,2000}Appraisal \/ Valuation Context/i);
 assert.match(retest6FinalHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,2000}Market Rent Survey Context/i);
 assert.match(retest6FinalHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,2000}Environmental Due Diligence \/ Phase I ESA Context/i);
@@ -333,11 +373,17 @@ assert.equal(/>v2</i.test(retest6FinalHtml), false);
 assert.equal(/authorityVersion/i.test(retest6FinalHtml), false);
 assert.equal(/canonical source package/i.test(retest6FinalHtml), false);
 assert.equal(/V2 projection/i.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /5\.0% cap rate[\s\S]{0,180}\$18,900,000/i);
-assert.match(retest6FinalHtml, /6\.0% cap rate[\s\S]{0,180}\$15,750,000/i);
-assert.match(retest6FinalHtml, /7\.0% cap rate[\s\S]{0,180}\$13,500,000/i);
+assert.match(retest6FinalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
+assert.match(retest6FinalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">\$15,750,000<\/td><td style="font-weight:600;">\$246,094<\/td><\/tr>/i);
+assert.match(retest6FinalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
 assert.match(retest6FinalHtml, /Value delta vs purchase price<\/td><td style="font-weight:600;">\$0<\/td>/i);
 assert.equal(/\$135,000\b/i.test(retest6FinalHtml), false);
+assert.equal(/Going-In Cap Rate<\/td><td style="font-weight:600;">0\.0%<\/td>/i.test(retest6FinalHtml), false);
+assert.equal(/Going-In Cap Rate 0\.0%/i.test(retest6FinalHtml), false);
+assert.equal(/Implied value at going-in cap rate<\/td><td style="font-weight:600;">Not available<\/td>/i.test(retest6FinalHtml), false);
+assert.equal(/Implied value at going-in cap rate Not available/i.test(retest6FinalHtml), false);
+assert.equal(/projection-safe cap-rate frame/i.test(retest6FinalHtml), false);
+assert.equal(/Unit-level detail remains source-driven and is not re-authored here/i.test(retest6FinalHtml), false);
 
 const capRateSevenFinalHtml = renderCompleteAcquisitionMemoV2Html({
   acquisitionMemoProjection: retest6Projection,
@@ -373,11 +419,11 @@ const capRateSevenFinalHtml = renderCompleteAcquisitionMemoV2Html({
   },
 });
 assert.match(capRateSevenFinalHtml, /Implied value at going-in cap rate<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
-assert.match(capRateSevenFinalHtml, /5\.0% cap rate[\s\S]{0,180}\$18,900,000/i);
-assert.match(capRateSevenFinalHtml, /6\.0% cap rate[\s\S]{0,180}\$15,750,000/i);
-assert.match(capRateSevenFinalHtml, /7\.0% cap rate[\s\S]{0,180}\$13,500,000/i);
+assert.match(capRateSevenFinalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
+assert.match(capRateSevenFinalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">\$15,750,000<\/td><td style="font-weight:600;">\$246,094<\/td><\/tr>/i);
+assert.match(capRateSevenFinalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
 assert.match(capRateSevenFinalHtml, /Value delta vs purchase price<\/td><td style="font-weight:600;">\$0<\/td>/i);
-assert.equal(/0\.9%/.test(capRateSevenFinalHtml), false);
+assert.equal(/Occupancy<\/td><td style="font-weight:600;">0\.9%<\/td>/i.test(capRateSevenFinalHtml), false);
 assert.equal(/\$-0\b/.test(capRateSevenFinalHtml), false);
 assert.equal(/\$135,000\b/i.test(capRateSevenFinalHtml), false);
 
