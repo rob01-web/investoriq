@@ -12283,6 +12283,8 @@ if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acqu
 }
 // --- V2 SOURCE AUTHORITY BRIDGE END ---
   let qaHtml = sanitizeTypography(dedupeDataNotAvailableBySection(htmlString));
+const isAcqMemoV2FinalHtml = effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && Boolean(acquisitionMemoV2Bridge?.acquisitionMemoProjection);
+if (!isAcqMemoV2FinalHtml) {
 const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
 const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
   qaHtmlBeforeFinalSourceReconciliationGuard,
@@ -12356,6 +12358,7 @@ if (finalSourceReconciliationGuard.replaced_or_suppressed) {
     matched_snippets_after: finalSourceReconciliationGuard.matched_snippets_after,
     renderable: Boolean(finalSourceReconciliationGuard.render_state?.renderable),
   });
+}
 }
 let docHtml = qaHtml;
 let sourceCoverageQaResult = null;
@@ -13049,45 +13052,47 @@ if (docraptorMode === "production" && !allowProductionPdf) {
 }
 try {
   docHtml = sanitizeTypography(qaHtml);
-  const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
-    docHtml,
-    sourceReconciliationState
-  );
-  docHtml = docFinalSourceReconciliationGuard.html;
-  docHtml = applyFinalSectionHealRenderGuards(docHtml, {
-    effectiveReportMode,
-    reportType,
-    currentDebtAssessmentState,
-    mortgagePayload,
-    loanTermSheetTermsPayload,
-    financials,
-    t12Payload,
-  });
-  const docFinalSourceReconciliationGuardHasMismatch =
-    docFinalSourceReconciliationGuard.render_state?.renderable
-      ? docFinalSourceReconciliationGuard.matched_displays_after.some((display) => display !== docFinalSourceReconciliationGuard.render_state?.variance_display) ||
-        (docFinalSourceReconciliationGuard.matched_displays_after.length === 0 &&
-          (
-            /Rent Roll vs T12 GPR Variance/i.test(docHtml) ||
-            /Rent roll annualized rent is/i.test(docHtml) ||
-            /Source reconciliation variance of/i.test(docHtml)
-          ))
-      : docFinalSourceReconciliationGuard.matched_displays_after.length > 0;
-  if (docFinalSourceReconciliationGuardHasMismatch) {
-    console.error("source_reconciliation_final_guard_postcheck_failed_docraptor", {
-      canonical_display: docFinalSourceReconciliationGuard.render_state?.variance_display || null,
-      stale_minus_48_count_before: docFinalSourceReconciliationGuard.stale_minus_48_count_before,
-      stale_minus_48_count_after: docFinalSourceReconciliationGuard.stale_minus_48_count_after,
-      matched_snippets_before: docFinalSourceReconciliationGuard.matched_snippets_before,
-      matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
+  if (!isAcqMemoV2FinalHtml) {
+    const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
+      docHtml,
+      sourceReconciliationState
+    );
+    docHtml = docFinalSourceReconciliationGuard.html;
+    docHtml = applyFinalSectionHealRenderGuards(docHtml, {
+      effectiveReportMode,
+      reportType,
+      currentDebtAssessmentState,
+      mortgagePayload,
+      loanTermSheetTermsPayload,
+      financials,
+      t12Payload,
     });
-    console.warn("Final DocRaptor HTML reconciliation guard fell back to disclosure-only suppression", {
-      canonical_display: docFinalSourceReconciliationGuard.render_state?.variance_display || null,
-      stale_minus_48_count_before: docFinalSourceReconciliationGuard.stale_minus_48_count_before,
-      stale_minus_48_count_after: docFinalSourceReconciliationGuard.stale_minus_48_count_after,
-      matched_snippets_before: docFinalSourceReconciliationGuard.matched_snippets_before,
-      matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
-    });
+    const docFinalSourceReconciliationGuardHasMismatch =
+      docFinalSourceReconciliationGuard.render_state?.renderable
+        ? docFinalSourceReconciliationGuard.matched_displays_after.some((display) => display !== docFinalSourceReconciliationGuard.render_state?.variance_display) ||
+          (docFinalSourceReconciliationGuard.matched_displays_after.length === 0 &&
+            (
+              /Rent Roll vs T12 GPR Variance/i.test(docHtml) ||
+              /Rent roll annualized rent is/i.test(docHtml) ||
+              /Source reconciliation variance of/i.test(docHtml)
+            ))
+        : docFinalSourceReconciliationGuard.matched_displays_after.length > 0;
+    if (docFinalSourceReconciliationGuardHasMismatch) {
+      console.error("source_reconciliation_final_guard_postcheck_failed_docraptor", {
+        canonical_display: docFinalSourceReconciliationGuard.render_state?.variance_display || null,
+        stale_minus_48_count_before: docFinalSourceReconciliationGuard.stale_minus_48_count_before,
+        stale_minus_48_count_after: docFinalSourceReconciliationGuard.stale_minus_48_count_after,
+        matched_snippets_before: docFinalSourceReconciliationGuard.matched_snippets_before,
+        matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
+      });
+      console.warn("Final DocRaptor HTML reconciliation guard fell back to disclosure-only suppression", {
+        canonical_display: docFinalSourceReconciliationGuard.render_state?.variance_display || null,
+        stale_minus_48_count_before: docFinalSourceReconciliationGuard.stale_minus_48_count_before,
+        stale_minus_48_count_after: docFinalSourceReconciliationGuard.stale_minus_48_count_after,
+        matched_snippets_before: docFinalSourceReconciliationGuard.matched_snippets_before,
+        matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
+      });
+    }
   }
   pdfResponse = await axios.post(
     "https://docraptor.com/docs",

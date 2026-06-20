@@ -1,4 +1,4 @@
-import { toCapRatio } from "./report-number-helpers.js";
+import { toCapRatio, toRateRatio } from "./report-number-helpers.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -13,6 +13,51 @@ function stripDocumentTreatmentSummaryMarkers(html) {
   return String(html || "")
     .replace(/<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->/gi, "")
     .replace(/<!-- END DOCUMENT_TREATMENT_SUMMARY -->/gi, "");
+}
+
+function normalizePercentFraction(value) {
+  return toRateRatio(value);
+}
+
+function extractFirstMatchValue(text, patterns, transform = (value) => value) {
+  const source = String(text || "");
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (!match || match.length < 2) continue;
+    const value = transform(match[1], match);
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+  return null;
+}
+
+function extractPercentFraction(text, patterns) {
+  return extractFirstMatchValue(text, patterns, (value) => normalizePercentFraction(value));
+}
+
+function extractYears(text, patterns) {
+  return extractFirstMatchValue(text, patterns, (value) => {
+    const n = Number(String(value).replace(/[$,\s]/g, ""));
+    return Number.isFinite(n) ? n : null;
+  });
+}
+
+function extractDate(text, patterns) {
+  return extractFirstMatchValue(text, patterns, (value) => String(value || "").trim());
+}
+
+function resolveValidGoingInCapRate({ coreMetrics = null, acquisitionMemoProjection = null, sourcePackage = null } = {}) {
+  const purchaseAssumptionsDoc = getSupportDocByRole(sourcePackage, "purchase_assumptions");
+  const candidates = [
+    coreMetrics?.goingInCapRate,
+    acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.going_in_cap_rate,
+    acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.going_in_cap_rate,
+    purchaseAssumptionsDoc?.extractedFacts?.going_in_cap_rate,
+  ];
+  for (const candidate of candidates) {
+    const normalized = toCapRatio(candidate);
+    if (Number.isFinite(normalized) && normalized > 0 && normalized <= 0.5) return normalized;
+  }
+  return null;
 }
 
 function formatMoney(value) {
@@ -81,6 +126,117 @@ function renderSection(title, bodyHtml, { id = "", pageBreakBefore = false } = {
     id ? `aria-labelledby="${escapeHtml(id)}"` : "",
   ].filter(Boolean).join(" ");
   return `<section ${attrs}><div class="section-header"><span${id ? ` id="${escapeHtml(id)}"` : ""} class="section-header-title">${escapeHtml(title)}</span></div><div class="card no-break">${bodyHtml}</div></section>`;
+}
+
+function renderSectionCollapseHtml() {
+  return `<p class="body-copy">This section was omitted because the uploaded support context did not provide display-ready detail. Core report outputs remain based on the uploaded T12 and Rent Roll.</p>`;
+}
+
+function renderSafely(sectionName, rendererFn, { pageBreakBefore = true, fallbackHtml = "" } = {}) {
+  try {
+    const rendered = rendererFn();
+    return typeof rendered === "string" ? rendered : fallbackHtml;
+  } catch (err) {
+    console.warn("[investoriq] acquisition memo v2 section collapsed", {
+      section: sectionName,
+      message: err?.message || String(err || ""),
+    });
+    return fallbackHtml || renderSection(sectionName, renderSectionCollapseHtml(), { pageBreakBefore });
+  }
+}
+
+function buildMinimalAcquisitionMemoV2Html({
+  acquisitionMemoProjection = null,
+  renderedAcquisitionMemo = null,
+  sourcePackage = null,
+  coreMetrics = null,
+  reportMeta = null,
+  propertyProfile = null,
+} = {}) {
+  const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
+  const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
+  const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
+  const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
+  const units = Number.isFinite(Number(coreMetrics?.units))
+    ? Number(coreMetrics.units)
+    : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
+    ? Number(sourcePackage.coreRentRoll.extractedFacts.total_units)
+    : null;
+  const annualInPlace = Number(coreMetrics?.annualInPlaceRent);
+  const annualMarket = Number(coreMetrics?.annualMarketRent);
+  const annualUpside = Number.isFinite(annualInPlace) && Number.isFinite(annualMarket) ? annualMarket - annualInPlace : null;
+  const purchasePrice = Number(coreMetrics?.purchasePrice);
+  const noi = Number(coreMetrics?.noi);
+  const goingInCapRate = resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage });
+  const fallbackRows = [
+    Number.isFinite(units) && units > 0 ? `<tr><td>Units</td><td style="font-weight:600;">${Math.round(units)}</td></tr>` : "",
+    Number.isFinite(Number(coreMetrics?.occupancy)) ? `<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>` : "",
+    Number.isFinite(annualInPlace) ? `<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(annualInPlace)}</td></tr>` : "",
+    Number.isFinite(annualMarket) ? `<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatMoney(annualMarket)}</td></tr>` : "",
+    Number.isFinite(annualUpside) ? `<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatMoney(annualUpside)}</td></tr>` : "",
+    Number.isFinite(Number(coreMetrics?.expenseRatio)) ? `<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.expenseRatio)}</td></tr>` : "",
+    Number.isFinite(Number(coreMetrics?.noiMargin)) ? `<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.noiMargin)}</td></tr>` : "",
+    Number.isFinite(Number(coreMetrics?.egi)) ? `<tr><td>EGI</td><td style="font-weight:600;">${formatMoney(coreMetrics.egi)}</td></tr>` : "",
+    Number.isFinite(Number(coreMetrics?.opEx)) ? `<tr><td>Operating Expenses</td><td style="font-weight:600;">${formatMoney(coreMetrics.opEx)}</td></tr>` : "",
+    Number.isFinite(noi) ? `<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(noi)}</td></tr>` : "",
+    Number.isFinite(purchasePrice) ? `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(purchasePrice)}</td></tr>` : "",
+    Number.isFinite(goingInCapRate) ? `<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercentDisplay(goingInCapRate)}</td></tr>` : "",
+  ].filter(Boolean).join("");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(`InvestorIQ Capital Intelligence Memorandum - ${propertyName}`)}</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 24px; color: #102033; }
+    .report { max-width: 900px; margin: 0 auto; }
+    .section { margin-bottom: 16px; }
+    .section-header { border-bottom: 1px solid #d7dde5; margin-bottom: 12px; padding-bottom: 8px; }
+    .section-header-title { font-size: 18px; font-weight: 600; }
+    .card { border: 1px solid #d7dde5; padding: 12px 14px; background: #fff; }
+    .body-copy { margin: 0 0 10px 0; line-height: 1.5; }
+    .detail-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .detail-table td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; vertical-align: top; }
+    .detail-table td:first-child { width: 44%; color: #5b6472; }
+    .detail-table td:last-child { font-weight: 600; }
+    .report-footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #d7dde5; font-size: 11px; color: #5b6472; }
+  </style>
+</head>
+<body>
+  <div class="report">
+    <div class="section">
+      <div class="section-header"><span class="section-header-title">InvestorIQ</span></div>
+      <div class="card">
+        <div class="body-copy">Institutional Real Estate Analysis</div>
+        <div class="body-copy">${escapeHtml(propertyName)}</div>
+        <div class="body-copy">ACQUISITION MEMO</div>
+        <div class="body-copy">CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.</div>
+        <div class="body-copy">${escapeHtml(propertyAddress || propertyTitle || generatedLabel || "")}</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-header-title">Key Metrics Snapshot</span></div>
+      <div class="card">
+        <table class="detail-table"><tbody>${fallbackRows || `<tr><td>Core facts</td><td style="font-weight:600;">Available in source documents</td></tr>`}</tbody></table>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-header-title">Methodology &amp; Data Transparency</span></div>
+      <div class="card">
+        <p class="body-copy">InvestorIQ does not assume or gap-fill missing data.</p>
+        <p class="body-copy">Document-Backed Acquisition Memo Outputs are built from verified source documents, deterministic operating calculations, and explicit source treatment.</p>
+        <p class="body-copy">Methodology Notes: unsupported assumptions are omitted; lender-readiness disclosure is limited to the documents provided; data limitations and missing inputs remain visible to the reader.</p>
+      </div>
+    </div>
+    ${renderedAcquisitionMemo?.documentTreatmentSummaryHtml ? `
+    <div class="section">
+      <div class="section-header"><span class="section-header-title">Source Context / Support Document Treatment</span></div>
+      <div class="card">${stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo.documentTreatmentSummaryHtml)}</div>
+    </div>` : ""}
+  </div>
+</body>
+</html>`;
 }
 
 function renderMetaLine(label, value) {
@@ -414,14 +570,14 @@ function renderReadinessSection({ renderedAcquisitionMemo = null, acquisitionMem
 
 function renderAcquisitionRequestContextSection({ acquisitionMemoProjection = null, sourcePackage = null, coreMetrics = null } = {}) {
   const purchaseAssumptionsDoc = getSupportDocByRole(sourcePackage, "purchase_assumptions");
-  const purchasePrice = Number(coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.purchase_price ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price ?? purchaseAssumptionsDoc?.extractedFacts?.purchase_price ?? NaN);
-  const noiBasis = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? purchaseAssumptionsDoc?.extractedFacts?.noi_basis ?? NaN);
-  const goingInCapRate = Number(coreMetrics?.goingInCapRate ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.going_in_cap_rate ?? purchaseAssumptionsDoc?.extractedFacts?.going_in_cap_rate ?? NaN);
-  const proposedLoan = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.proposed_loan_amount ?? NaN);
-  const ltv = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.ltv ?? NaN);
-  const interestRate = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.interest_rate ?? NaN);
-  const amortization = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_years ?? NaN);
-  const lenderFee = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.lender_fee_percent ?? NaN);
+  const purchasePrice = toFiniteNumber(coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.purchase_price ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price ?? purchaseAssumptionsDoc?.extractedFacts?.purchase_price ?? NaN);
+  const noiBasis = toFiniteNumber(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? purchaseAssumptionsDoc?.extractedFacts?.noi_basis ?? NaN);
+  const goingInCapRate = resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage });
+  const proposedLoan = toFiniteNumber(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.proposed_loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.loan_amount ?? NaN);
+  const ltv = normalizePercentFraction(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.ltv);
+  const interestRate = normalizePercentFraction(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.interest_rate);
+  const amortization = toFiniteNumber(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_remaining_years ?? NaN);
+  const lenderFee = normalizePercentFraction(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.lender_fee_percent);
   const interestRateDisplay = Number.isFinite(interestRate) ? `${(interestRate * 100).toFixed(2)}%` : null;
   const lenderFeeDisplay = Number.isFinite(lenderFee) ? `${(lenderFee * 100).toFixed(2)}%` : null;
   const rows = [
@@ -474,31 +630,33 @@ function renderDebtFinancingContextSection({ acquisitionMemoProjection = null, s
   const currentDebt = acquisitionMemoProjection?.currentDebtContext || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || sourcePackageCurrentDebt || null;
   const facts = currentDebt?.extractedFacts || {};
   const currentDebtText = getSourceEvidenceText(currentDebt);
-  const outstandingBalance = Number.isFinite(Number(facts?.outstanding_balance))
-    ? Number(facts.outstanding_balance)
+  const outstandingBalance = Number.isFinite(toFiniteNumber(facts?.current_outstanding_balance))
+    ? toFiniteNumber(facts.current_outstanding_balance)
+    : Number.isFinite(toFiniteNumber(facts?.outstanding_balance))
+    ? toFiniteNumber(facts.outstanding_balance)
     : extractCurrencyFromText(currentDebtText, [
         /\bcurrent outstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
         /\bcurrent debt balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
         /\boutstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
         /\bprincipal balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       ]);
-  const currentDebtRate = Number.isFinite(Number(facts?.interest_rate)) ? Number(facts.interest_rate) : extractPercentFraction(currentDebtText, [
+  const currentDebtRate = normalizePercentFraction(facts?.interest_rate) ?? extractPercentFraction(currentDebtText, [
     /\binterest rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
     /\bnote rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
     /\bcoupon rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
   ]);
   const currentDebtRateDisplay = Number.isFinite(currentDebtRate) ? `${(currentDebtRate * 100).toFixed(2)}%` : null;
-  const currentDebtAmortYears = Number.isFinite(Number(facts?.amortization_remaining_years))
-    ? Number(facts.amortization_remaining_years)
-    : Number.isFinite(Number(facts?.amortization_years))
-    ? Number(facts.amortization_years)
+  const currentDebtAmortYears = Number.isFinite(toFiniteNumber(facts?.amortization_remaining_years))
+    ? toFiniteNumber(facts.amortization_remaining_years)
+    : Number.isFinite(toFiniteNumber(facts?.amortization_years))
+    ? toFiniteNumber(facts.amortization_years)
     : extractYears(currentDebtText, [
         /\bamortization remaining[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
         /\bamortization remaining years[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
         /\bamortization[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
       ]);
-  const currentDebtMonthlyPayment = Number.isFinite(Number(facts?.monthly_payment))
-    ? Number(facts.monthly_payment)
+  const currentDebtMonthlyPayment = Number.isFinite(toFiniteNumber(facts?.monthly_payment))
+    ? toFiniteNumber(facts.monthly_payment)
     : extractCurrencyFromText(currentDebtText, [
         /\bmonthly payment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
         /\bmonthly debt service[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
@@ -630,7 +788,6 @@ function renderCapRateValueSection({ acquisitionMemoProjection = null, sourcePac
 
 function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null) {
   const rows = [];
-  const purchaseAssumptionsDoc = getSupportDocByRole(sourcePackage, "purchase_assumptions");
   const units = Number.isFinite(Number(coreMetrics?.units))
     ? Number(coreMetrics.units)
     : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
@@ -657,11 +814,7 @@ function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null) 
   if (Number.isFinite(Number(coreMetrics?.noiMargin))) rows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.noiMargin)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.breakEvenOccupancy))) rows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.breakEvenOccupancy)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.purchasePrice))) rows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(coreMetrics.purchasePrice)}</td></tr>`);
-  const goingInCapRate = Number.isFinite(Number(coreMetrics?.goingInCapRate))
-    ? Number(coreMetrics.goingInCapRate)
-    : Number.isFinite(Number(purchaseAssumptionsDoc?.extractedFacts?.going_in_cap_rate))
-    ? Number(purchaseAssumptionsDoc.extractedFacts.going_in_cap_rate)
-    : null;
+  const goingInCapRate = resolveValidGoingInCapRate({ coreMetrics, sourcePackage });
   if (Number.isFinite(goingInCapRate)) rows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercentDisplay(goingInCapRate)}</td></tr>`);
   if (Number.isFinite(pricePerUnit)) rows.push(`<tr><td>Price per Unit</td><td style="font-weight:600;">${formatMoney(pricePerUnit)}</td></tr>`);
   if (Number.isFinite(noiPerUnit)) rows.push(`<tr><td>NOI per Unit</td><td style="font-weight:600;">${formatMoney(noiPerUnit)}</td></tr>`);
@@ -748,12 +901,7 @@ function renderValueSensitivitySection({ sourcePackage = null, acquisitionMemoPr
   const rentGapPct = Number.isFinite(annualRentUpside) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent)) && Number(coreMetrics.annualInPlaceRent) > 0
     ? annualRentUpside / Number(coreMetrics.annualInPlaceRent)
     : null;
-  const purchaseAssumptionsDoc = getSupportDocByRole(sourcePackage, "purchase_assumptions");
-  const capRate = toCapRatio(
-    coreMetrics?.goingInCapRate ??
-      acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.going_in_cap_rate ??
-      purchaseAssumptionsDoc?.extractedFacts?.going_in_cap_rate
-  );
+  const capRate = resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage });
   const impliedValue = Number.isFinite(Number(coreMetrics?.noi)) && Number.isFinite(capRate) && capRate > 0
     ? Number(coreMetrics.noi) / capRate
     : null;
@@ -852,12 +1000,13 @@ export function renderCompleteAcquisitionMemoV2Html({
   reportMeta = null,
   propertyProfile = null,
 } = {}) {
-  const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
-  const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
-  const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
-  const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
-  const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics });
-  const headerStrip = `<div class="header-strip">
+  try {
+    const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
+    const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
+    const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
+    const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
+    const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics });
+    const headerStrip = `<div class="header-strip">
       <div class="header-top">
         <div>
           <div class="brand-mark">INVESTORIQ</div>
@@ -867,27 +1016,27 @@ export function renderCompleteAcquisitionMemoV2Html({
         <div style="text-align:right; font-family:var(--font-mono); font-size:6.5pt; font-weight:400; color:var(--ink-4); letter-spacing:0.08em;">${escapeHtml(generatedLabel || "")}</div>
       </div>
     </div>`;
-  const executiveSummarySection = renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
-  const metricsSection = renderMetricsSnapshotSection(coreMetrics, sourcePackage);
-  const keyUpsideDriversSection = renderKeyUpsideDriversSection({ sourcePackage, coreMetrics, acquisitionMemoProjection });
-  const primaryConstraintSection = renderPrimaryConstraintSection({ sourcePackage, acquisitionMemoProjection });
-  const acquisitionMemoSummarySection = renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, renderedAcquisitionMemo });
-  const operatingStatementSection = renderOperatingStatementSection({ sourcePackage, coreMetrics, acquisitionMemoProjection });
-  const operatingSection = renderOperatingSnapshotSection({ sourcePackage, coreMetrics });
-  const unitMixSection = renderUnitMixSection({ sourcePackage, coreMetrics });
-  const valueSensitivitySection = renderValueSensitivitySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
-  const capRateValueSection = renderCapRateValueSection({ acquisitionMemoProjection, sourcePackage, coreMetrics });
-  const readinessSection = renderReadinessSection({ renderedAcquisitionMemo, acquisitionMemoProjection });
-  const acquisitionRequestContextSection = renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, coreMetrics });
-  const operatingSupportSection = renderOperatingSupportSection({ coreMetrics });
-  const rentValueSupportSection = renderRentValueSupportSection({ coreMetrics });
-  const debtFinancingContextSection = renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage });
-  const dataCoverageSection = renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
-  const treatmentSection = renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage);
-  const methodologySection = renderMethodologySection();
-  const footerSection = `<div class="report-footer"><div class="report-footer-inner"><span>InvestorIQ Capital Intelligence Memorandum | Confidential</span><span>&copy; InvestorIQ Technologies Inc.</span></div></div>`;
+    const executiveSummarySection = renderSafely("Executive Summary", () => renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics }), { pageBreakBefore: true });
+    const metricsSection = renderSafely("Key Metrics Snapshot", () => renderMetricsSnapshotSection(coreMetrics, sourcePackage), { pageBreakBefore: true });
+    const keyUpsideDriversSection = renderSafely("Key Upside Drivers", () => renderKeyUpsideDriversSection({ sourcePackage, coreMetrics, acquisitionMemoProjection }), { pageBreakBefore: true });
+    const primaryConstraintSection = renderSafely("Primary Constraint / Review Disclosure", () => renderPrimaryConstraintSection({ sourcePackage, acquisitionMemoProjection }), { pageBreakBefore: true });
+    const acquisitionMemoSummarySection = renderSafely("Acquisition Memo Summary", () => renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, renderedAcquisitionMemo }), { pageBreakBefore: true });
+    const operatingSection = renderSafely("Operating Snapshot", () => renderOperatingSnapshotSection({ sourcePackage, coreMetrics }), { pageBreakBefore: true });
+    const unitMixSection = renderSafely("Unit Mix and Rent Positioning", () => renderUnitMixSection({ sourcePackage, coreMetrics }), { pageBreakBefore: true });
+    const valueSensitivitySection = renderSafely("Rent Upside / Value Sensitivity", () => renderValueSensitivitySection({ sourcePackage, acquisitionMemoProjection, coreMetrics }), { pageBreakBefore: true });
+    const capRateValueSection = renderSafely("Cap-Rate Value Indication", () => renderCapRateValueSection({ acquisitionMemoProjection, sourcePackage, coreMetrics }), { pageBreakBefore: true });
+    const readinessSection = renderSafely("Preliminary Financing Readiness Summary", () => renderReadinessSection({ renderedAcquisitionMemo, acquisitionMemoProjection }), { pageBreakBefore: true });
+    const acquisitionRequestContextSection = renderSafely("Acquisition Request Context", () => renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, coreMetrics }), { pageBreakBefore: true });
+    const operatingSupportSection = renderSafely("Operating Support", () => renderOperatingSupportSection({ coreMetrics }), { pageBreakBefore: true });
+    const rentValueSupportSection = renderSafely("Rent / Value Support", () => renderRentValueSupportSection({ coreMetrics }), { pageBreakBefore: true });
+    const debtFinancingContextSection = renderSafely("Debt / Financing Context", () => renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage }), { pageBreakBefore: true });
+    const operatingStatementSection = renderSafely("Operating Statement / TTM Summary", () => renderOperatingStatementSection({ sourcePackage, coreMetrics, acquisitionMemoProjection }), { pageBreakBefore: true });
+    const dataCoverageSection = renderSafely("Data Coverage & Source Limitations", () => renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection }), { pageBreakBefore: true });
+    const treatmentSection = renderSafely("Source Context / Support Document Treatment", () => renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage), { pageBreakBefore: true });
+    const methodologySection = renderSafely("Methodology & Data Transparency", () => renderMethodologySection(), { pageBreakBefore: true });
+    const footerSection = `<div class="report-footer"><div class="report-footer-inner"><span>InvestorIQ Capital Intelligence Memorandum | Confidential</span><span>&copy; InvestorIQ Technologies Inc.</span></div></div>`;
 
-  return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -1020,4 +1169,17 @@ export function renderCompleteAcquisitionMemoV2Html({
   </div>
 </body>
 </html>`;
+  } catch (err) {
+    console.warn("[investoriq] acquisition memo v2 render fallback", {
+      message: err?.message || String(err || ""),
+    });
+    return buildMinimalAcquisitionMemoV2Html({
+      acquisitionMemoProjection,
+      renderedAcquisitionMemo,
+      sourcePackage,
+      coreMetrics,
+      reportMeta,
+      propertyProfile,
+    });
+  }
 }
