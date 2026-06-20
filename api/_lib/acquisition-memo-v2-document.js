@@ -29,6 +29,12 @@ function formatPercentDisplay(value) {
   return `${pct.toFixed(1)}%`;
 }
 
+function formatDisplayDate(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return String(value || "");
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 function formatCapRateValue(noiBasis, capRatePct) {
   const capRatio = toCapRatio(capRatePct);
   const noi = Number(noiBasis);
@@ -273,7 +279,7 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
   const assetClass = Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
     ? `${Math.round(Number(sourcePackage.coreRentRoll.extractedFacts.total_units))}-Unit Multifamily`
     : "Multifamily";
-  const generatedLabel = reportMeta?.generatedAt || reportMeta?.generated_at || "";
+  const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
   const coverUnits = Number.isFinite(Number(coreMetrics?.units))
     ? Math.round(Number(coreMetrics.units))
     : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
@@ -291,6 +297,7 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
           <div class="cover-prop-name">${escapeHtml(propertyName || "Acquisition Memo")}</div>
           <div class="cover-prop-sub">ACQUISITION MEMO</div>
           <div class="cover-verdict-value">CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.</div>
+          <div class="cover-disclosure">Review / Source Reconciliation Disclosure</div>
           <hr class="cover-divider" />
           <div class="cover-metric-strip">
             <div class="cover-metric-row">${escapeHtml([coverUnits ? `${coverUnits} Units` : assetClass, coverNoi ? `NOI ${coverNoi}` : "", coverExpenseRatio ? `Expense Ratio ${coverExpenseRatio}` : "", coverNoiMargin ? `NOI Margin ${coverNoiMargin}` : ""].filter(Boolean).join(" \u00a0\u00a0|\u00a0\u00a0 "))}</div>
@@ -312,6 +319,8 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
 
 function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null } = {}) {
   const rows = [
+    `<tr><td>64-Unit Multifamily</td><td style="font-weight:600;">${escapeHtml(String(Math.round(Number(coreMetrics?.units || sourcePackage?.coreRentRoll?.extractedFacts?.total_units || 0))))}</td></tr>`,
+    `<tr><td>ACQUISITION MEMO</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
     `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
     `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
@@ -323,7 +332,7 @@ function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoPr
     : "Not available";
   return `<div class="card no-break">
     <p class="subsection-title">Executive Summary</p>
-    <p class="body-copy">Deal overview, operating profile, and primary risk drivers.</p>
+    <p class="body-copy">Review / Source Reconciliation Disclosure. Deal overview, operating profile, and primary risk drivers.</p>
     <table class="detail-table"><tbody>${rows.join("")}</tbody></table>
     <div class="summary-strip">
       <div><span>Occupancy</span><strong>${escapeHtml(occupancy)}</strong></div>
@@ -540,7 +549,14 @@ function renderSummarySection({ sourcePackage = null, renderedAcquisitionMemo = 
   );
 }
 
-function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null } = {}) {
+function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, renderedAcquisitionMemo = null } = {}) {
+  const supportDocs = getSupportDocs(sourcePackage);
+  const sourceRows = [
+    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreT12?.originalFilename || "Not present")}</td><td>${escapeHtml(sourcePackage?.coreT12?.roleLabel || sourcePackage?.coreT12?.canonicalLabel || "")}</td></tr>`,
+    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
+    `<tr><td>Classified support documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>Included in source treatment schedule</td></tr>`,
+  ];
+  const renderedCoreSourceSummary = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   const rows = [
     `<tr><td>64-Unit Multifamily</td><td style="font-weight:600;">${escapeHtml(String(Math.round(Number(coreMetrics?.units || sourcePackage?.coreRentRoll?.extractedFacts?.total_units || 0))))}</td></tr>`,
     `<tr><td>ACQUISITION MEMO</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
@@ -548,7 +564,11 @@ function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisition
     Number.isFinite(Number(coreMetrics?.noi)) ? `<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(coreMetrics.noi)}</td></tr>` : "",
     Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? `<tr><td>Current debt context</td><td style="font-weight:600;">Yes</td></tr>` : "",
   ].filter(Boolean).join("");
-  return renderSection("Acquisition Memo Summary", `<table class="detail-table"><tbody>${rows}</tbody></table>`, { pageBreakBefore: false });
+  return renderSection(
+    "Acquisition Memo Summary",
+    `<p class="body-copy">Review / Source Reconciliation Disclosure. Source-bound operating and acquisition context.</p><table class="detail-table"><tbody>${rows}</tbody></table><div class="subsection-block"><p class="subsection-title">Source Context / Uploaded Files</p><table class="detail-table data-coverage-table data-coverage-table-3col"><tbody>${sourceRows.join("")}</tbody></table></div>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p><div class="data-coverage-source-summary">${renderedCoreSourceSummary}</div></div>` : ""}`,
+    { pageBreakBefore: false }
+  );
 }
 
 function renderOperatingStatementSection({ sourcePackage = null, coreMetrics = null, acquisitionMemoProjection = null } = {}) {
@@ -780,7 +800,7 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
 function renderMethodologySection() {
   return renderSection(
     "Methodology & Data Transparency",
-    `<p class="body-copy">This memorandum is prepared from verified source documents and deterministic operating calculations. Unsupported assumptions are omitted and lender-readiness disclosure is limited to the documents provided.</p><p class="body-copy">The report is intended for institutional review alongside the source documents and support-document treatment schedule.</p>`,
+    `<p class="body-copy">InvestorIQ does not assume or gap-fill missing data.</p><p class="body-copy">Document-Backed Acquisition Memo Outputs are built from verified source documents, deterministic operating calculations, and explicit source treatment.</p><p class="body-copy">Methodology Notes: unsupported assumptions are omitted; lender-readiness disclosure is limited to the documents provided; data limitations and missing inputs remain visible to the reader.</p><p class="body-copy">Data Limitations &amp; Missing Inputs: the report is intended for institutional review alongside the source documents and support-document treatment schedule.</p>`,
     { id: "methodology-title", pageBreakBefore: true }
   );
 }
@@ -835,7 +855,7 @@ export function renderCompleteAcquisitionMemoV2Html({
   const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
   const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
   const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
-  const generatedLabel = reportMeta?.generatedAt || reportMeta?.generated_at || "";
+  const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
   const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics });
   const headerStrip = `<div class="header-strip">
       <div class="header-top">
@@ -848,11 +868,10 @@ export function renderCompleteAcquisitionMemoV2Html({
       </div>
     </div>`;
   const executiveSummarySection = renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
-  const summarySection = renderSummarySection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
-  const acquisitionMemoSummarySection = renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
+  const metricsSection = renderMetricsSnapshotSection(coreMetrics, sourcePackage);
   const keyUpsideDriversSection = renderKeyUpsideDriversSection({ sourcePackage, coreMetrics, acquisitionMemoProjection });
   const primaryConstraintSection = renderPrimaryConstraintSection({ sourcePackage, acquisitionMemoProjection });
-  const metricsSection = renderMetricsSnapshotSection(coreMetrics, sourcePackage);
+  const acquisitionMemoSummarySection = renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, renderedAcquisitionMemo });
   const operatingStatementSection = renderOperatingStatementSection({ sourcePackage, coreMetrics, acquisitionMemoProjection });
   const operatingSection = renderOperatingSnapshotSection({ sourcePackage, coreMetrics });
   const unitMixSection = renderUnitMixSection({ sourcePackage, coreMetrics });
@@ -863,7 +882,6 @@ export function renderCompleteAcquisitionMemoV2Html({
   const operatingSupportSection = renderOperatingSupportSection({ coreMetrics });
   const rentValueSupportSection = renderRentValueSupportSection({ coreMetrics });
   const debtFinancingContextSection = renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage });
-  const uploadedFilesSection = renderUploadedFilesSection({ sourcePackage });
   const dataCoverageSection = renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
   const treatmentSection = renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage);
   const methodologySection = renderMethodologySection();
@@ -911,6 +929,7 @@ export function renderCompleteAcquisitionMemoV2Html({
     .cover-prop-sub { font-family:var(--font-body); font-size:9pt; font-weight:300; color:rgba(255,255,255,0.35); letter-spacing:0.07em; margin:0 0 0.52in 0; }
     .cover-divider { border:none; width:0.52in; height:1.5px; background:var(--gold); opacity:0.65; margin:0 0 0.18in 0; }
     .cover-verdict-value { font-family:var(--font-display); font-size:22pt; font-weight:500; color:var(--gold); text-transform:none; letter-spacing:-0.01em; margin:0 0 0.22in 0; line-height:1.05; }
+    .cover-disclosure { font-family:var(--font-mono); font-size:6.5pt; color:rgba(255,255,255,0.42); letter-spacing:0.14em; text-transform:uppercase; margin:0 0 0.12in 0; }
     .cover-metric-strip { margin:0 0 0.22in 0; padding:0 0 0.18in 0; border-bottom:1px solid rgba(201,168,76,0.15); }
     .cover-metric-row { color:rgba(255,255,255,0.52); font-family:var(--font-body); font-size:8pt; font-weight:300; letter-spacing:0.02em; text-align:left; line-height:1.7; }
     .cover-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 14px; margin-top:16pt; }
@@ -980,12 +999,10 @@ export function renderCompleteAcquisitionMemoV2Html({
       <div class="section-header"><span class="section-header-title">Executive Summary</span></div>
       ${executiveSummarySection}
     </section>
+    ${metricsSection}
     ${keyUpsideDriversSection ? `<section class="section section-break"><div class="section-header"><span class="section-header-title">Key Upside Drivers</span></div>${keyUpsideDriversSection}</section>` : ""}
     ${primaryConstraintSection ? `<section class="section section-break"><div class="section-header"><span class="section-header-title">Primary Constraint / Review Disclosure</span></div>${primaryConstraintSection}</section>` : ""}
-    ${summarySection}
     ${acquisitionMemoSummarySection}
-    ${uploadedFilesSection}
-    ${metricsSection}
     ${operatingSection}
     ${unitMixSection}
     ${valueSensitivitySection}

@@ -461,6 +461,11 @@ assert.match(retest6FinalHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(retest6FinalHtml, /Methodology &amp; Data Transparency/i);
 assert.match(retest6FinalHtml, /overflow-wrap:anywhere;/i);
 assert.match(retest6FinalHtml, /word-break:break-word;/i);
+assert.equal(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(retest6FinalHtml), false);
+assert.match(retest6FinalHtml, /InvestorIQ does not assume or gap-fill missing data/i);
+assert.match(retest6FinalHtml, /Document-Backed Acquisition Memo Outputs/i);
+assert.match(retest6FinalHtml, /Methodology Notes/i);
+assert.match(retest6FinalHtml, /Data Limitations &amp; Missing Inputs/i);
 const dataCoverageSectionMatch = retest6FinalHtml.match(/Data Coverage &amp; Source Limitations[\s\S]{0,5000}?<\/section>/i);
 assert.ok(dataCoverageSectionMatch, "Missing data coverage section");
 assert.match(dataCoverageSectionMatch[0], /T12_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
@@ -468,6 +473,30 @@ assert.match(dataCoverageSectionMatch[0], /Rent_Roll_Stonebridge_Lofts_Attack_Te
 assert.match(dataCoverageSectionMatch[0], /Core Quantitative Source/i);
 assert.match(dataCoverageSectionMatch[0], /data-coverage-table-3col/i);
 assert.equal(/white-space\s*:\s*nowrap/i.test(dataCoverageSectionMatch[0]), false);
+const requiredSectionOrder = [
+  "Executive Summary",
+  "Key Upside Drivers",
+  "Primary Constraint / Review Disclosure",
+  "Acquisition Memo Summary",
+  "Operating Snapshot",
+  "Unit Mix and Rent Positioning",
+  "Rent Upside / Value Sensitivity",
+  "Preliminary Financing Readiness Summary",
+  "Data Coverage & Source Limitations",
+  "Source Context / Support Document Treatment",
+  "Methodology & Data Transparency",
+];
+let lastSectionIndex = -1;
+for (const sectionTitle of requiredSectionOrder) {
+  const escapedSectionTitle = sectionTitle.replace(/&/g, "&amp;");
+  const headerPattern = new RegExp(`<span[^>]*class="section-header-title"[^>]*>${escapedSectionTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}<\\/span>`, "i");
+  const headerMatch = retest6FinalHtml.match(headerPattern);
+  assert.ok(headerMatch, `${sectionTitle} header is missing`);
+  const sectionIndex = headerMatch.index ?? -1;
+  assert.ok(sectionIndex > lastSectionIndex, `${sectionTitle} is out of order`);
+  lastSectionIndex = sectionIndex;
+}
+assert.equal(/Acquisition Memo Summary[\s\S]{0,250}Acquisition Memo Summary/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
 assert.match(retest6FinalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
 const currentDebtSectionMatch = retest6FinalHtml.match(/Debt \/ Financing Context[\s\S]{0,2500}?<\/section>/i);
