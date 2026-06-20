@@ -19,6 +19,18 @@ const FORBIDDEN_SURFACES = Object.freeze([
 const GENERIC_COLLAPSE_TEXT =
   "This section was omitted because the uploaded support context did not provide display-ready detail. Core report outputs remain based on the uploaded T12 and Rent Roll.";
 
+const ALLOWED_SECTION_STATUSES = new Set(["required", "optional", "required_if_source_present", "collapsed"]);
+
+const REQUIRED_SECTION_ASSERTION_CODES = {
+  acquisitionRequestContext: ["ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED"],
+  operatingStatementTTMSummary: ["T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT"],
+  unitMix: ["UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS", "UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT"],
+  capRateValueIndication: ["CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST", "NO_ZERO_CAP_RATE"],
+  currentDebtContext: ["CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED"],
+  proposedFinancingContext: ["PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED"],
+  documentTreatment: ["DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED"],
+};
+
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -46,6 +58,104 @@ function truthyObject(value) {
   return isPlainObject(value) ? value : null;
 }
 
+function toArrayLike(value) {
+  if (Array.isArray(value)) return value;
+  if (value instanceof Map) return Array.from(value.values());
+  if (isPlainObject(value)) return Object.values(value);
+  return [];
+}
+
+function uniqueKeyForSupportDoc(doc) {
+  return [
+    String(doc?.fileId || "").trim(),
+    String(doc?.originalFilename || "").trim(),
+    String(doc?.canonicalRole || doc?.role || "").trim(),
+    String(doc?.sourceKind || "").trim(),
+  ].join("|");
+}
+
+function normalizeSupportDocRecord(doc, sourceLabel = null) {
+  const source = truthyObject(doc);
+  if (!source) return null;
+  return normalizeBossContractFact({
+    fileId: source.fileId || source.file_id || source.id || null,
+    originalFilename: source.originalFilename || source.original_filename || source.filename || null,
+    canonicalRole: source.canonicalRole || source.role || source.semantic_doc_role || null,
+    roleLabel: source.roleLabel || source.role_label || null,
+    canonicalLabel: source.canonicalLabel || source.canonical_label || null,
+    treatment: source.treatment || null,
+    use: source.use || null,
+    sourceKind: source.sourceKind || source.kind || sourceLabel || "support_doc",
+    authorityBasis: source.authorityBasis || source.authority_basis || null,
+    allowedUses: Array.isArray(source.allowedUses) ? source.allowedUses : Array.isArray(source.allowed_uses) ? source.allowed_uses : [],
+    forbiddenUses: Array.isArray(source.forbiddenUses) ? source.forbiddenUses : Array.isArray(source.forbidden_uses) ? source.forbidden_uses : [],
+    extractedFacts: normalizeBossContractFact(source.extractedFacts || source.extracted_facts || {}),
+    sourceEvidence: normalizeBossContractFact(source.sourceEvidence || source.source_evidence || {}),
+  });
+}
+
+function collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection) {
+  const collected = [];
+  const push = (doc, sourceLabel) => {
+    const normalized = normalizeSupportDocRecord(doc, sourceLabel);
+    if (normalized) collected.push(normalized);
+  };
+
+  for (const doc of toArrayLike(canonicalSourcePackage?.supportDocs)) {
+    push(doc, "canonical_source_package");
+  }
+
+  const supportDocProjection = acquisitionMemoProjection?.supportDocProjection;
+  if (supportDocProjection) {
+    for (const doc of toArrayLike(supportDocProjection.allSupportDocs)) {
+      push(doc, "acquisition_memo_projection");
+    }
+    for (const doc of toArrayLike(supportDocProjection.otherSupportDocs)) {
+      push(doc, "acquisition_memo_projection");
+    }
+    for (const doc of toArrayLike(supportDocProjection.purchaseAssumptions)) {
+      push(doc, "acquisition_memo_projection");
+    }
+    for (const doc of toArrayLike(supportDocProjection.currentDebtContext)) {
+      push(doc, "acquisition_memo_projection");
+    }
+    for (const doc of toArrayLike(supportDocProjection.structuredRenovation)) {
+      push(doc, "acquisition_memo_projection");
+    }
+    for (const doc of toArrayLike(supportDocProjection.appraisalContext)) {
+      push(doc, "acquisition_memo_projection");
+    }
+    for (const doc of toArrayLike(supportDocProjection.marketSurveyContext)) {
+      push(doc, "acquisition_memo_projection");
+    }
+    for (const doc of toArrayLike(supportDocProjection.environmentalContext)) {
+      push(doc, "acquisition_memo_projection");
+    }
+  }
+
+  const rows = [];
+  const seen = new Set();
+  for (const doc of collected) {
+    const key = uniqueKeyForSupportDoc(doc);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push(doc);
+  }
+  return rows;
+}
+
+function factAvailability(requiredFacts, availableFacts, sourceBacked = false) {
+  const required = Array.from(new Set((Array.isArray(requiredFacts) ? requiredFacts : []).filter(Boolean).map(String)));
+  const available = Array.from(new Set((Array.isArray(availableFacts) ? availableFacts : []).filter(Boolean).map(String)));
+  const missing = required.filter((fact) => !available.includes(fact));
+  return {
+    required,
+    available,
+    missing,
+    sourceBacked: Boolean(sourceBacked),
+  };
+}
+
 function buildBossContractAssertion(code, description, severity = "critical", section = null) {
   return {
     code,
@@ -63,6 +173,7 @@ function buildSectionContract({
   forbiddenFallbackText = [],
   renderRequirements = [],
   postRenderAssertions = [],
+  factAvailability = null,
 }) {
   return {
     status,
@@ -72,6 +183,7 @@ function buildSectionContract({
     forbiddenFallbackText: cloneArray(forbiddenFallbackText),
     renderRequirements: cloneArray(renderRequirements),
     postRenderAssertions: cloneArray(postRenderAssertions),
+    factAvailability: factAvailability ? normalizeBossContractFact(factAvailability) : null,
   };
 }
 
@@ -95,28 +207,8 @@ function summarizeCoreSource(coreSource, defaultRole, defaultLabel) {
   });
 }
 
-function summarizeSupportDoc(doc) {
-  const source = truthyObject(doc);
-  if (!source) return null;
-  return normalizeBossContractFact({
-    fileId: source.fileId || null,
-    originalFilename: source.originalFilename || null,
-    canonicalRole: source.canonicalRole || source.role || null,
-    roleLabel: source.roleLabel || null,
-    canonicalLabel: source.canonicalLabel || null,
-    treatment: source.treatment || null,
-    use: source.use || null,
-    sourceKind: source.sourceKind || "support_doc",
-    authorityBasis: source.authorityBasis || null,
-    allowedUses: Array.isArray(source.allowedUses) ? source.allowedUses : [],
-    forbiddenUses: Array.isArray(source.forbiddenUses) ? source.forbiddenUses : [],
-    extractedFacts: normalizeBossContractFact(source.extractedFacts || {}),
-    sourceEvidence: normalizeBossContractFact(source.sourceEvidence || {}),
-  });
-}
-
 function isValidCoreDoc(doc) {
-  return truthyObject(doc) && Boolean(doc.role || doc.canonicalLabel || doc.sourceKind);
+  return Boolean(truthyObject(doc) && Boolean(doc.role || doc.canonicalLabel || doc.sourceKind));
 }
 
 function hasStructuredValues(value) {
@@ -143,11 +235,17 @@ function buildAcquisitionMemoBossContract({
   reportMeta = null,
   reportMode = null,
 } = {}) {
-  const coreT12 = summarizeCoreSource(canonicalSourcePackage?.coreT12, "core_t12", "Core Quantitative Source — Trailing 12-Month Income Statement");
-  const coreRentRoll = summarizeCoreSource(canonicalSourcePackage?.coreRentRoll, "core_rent_roll", "Core Quantitative Source — Rent Roll");
-  const supportDocs = cloneArray(acquisitionMemoProjection?.supportDocProjection?.allSupportDocs)
-    .map(summarizeSupportDoc)
-    .filter(Boolean);
+  const coreT12 = summarizeCoreSource(
+    canonicalSourcePackage?.coreT12,
+    "core_t12",
+    "Core Quantitative Source - Trailing 12-Month Income Statement"
+  );
+  const coreRentRoll = summarizeCoreSource(
+    canonicalSourcePackage?.coreRentRoll,
+    "core_rent_roll",
+    "Core Quantitative Source - Rent Roll"
+  );
+  const supportDocs = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection);
 
   const t12Valid = isValidCoreDoc(coreT12);
   const rentRollValid = isValidCoreDoc(coreRentRoll);
@@ -169,6 +267,42 @@ function buildAcquisitionMemoBossContract({
   const purchaseAssumptionsAvailable =
     Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ||
     hasStructuredValues(purchaseFacts);
+  const supportDocsAvailable = supportDocs.length > 0;
+  const currentDebtRequiredFacts = [
+    "current_outstanding_balance",
+    "interest_rate",
+    "amortization_remaining_years",
+    "monthly_payment",
+    "maturity_date",
+  ];
+  const proposedFinancingRequiredFacts = [
+    "proposed_loan_amount",
+    "ltv",
+    "interest_rate",
+    "amortization_years",
+    "lender_fee_percent",
+  ];
+  const unitMixRequiredFacts = ["unit_mix", "units", "total_units", "occupancy"];
+  const capRateRequiredFacts = ["purchase_price", "going_in_cap_rate", "total_units", "units", "noi"];
+  const t12RequiredFacts = [
+    "income_lines",
+    "expense_lines",
+    "effective_gross_income",
+    "total_operating_expenses",
+    "net_operating_income",
+    "gross_potential_rent",
+  ];
+  const acquisitionRequestRequiredFacts = [
+    "purchase_price",
+    "noi_basis",
+    "going_in_cap_rate",
+    "proposed_loan_amount",
+    "ltv",
+    "interest_rate",
+    "amortization_years",
+    "lender_fee_percent",
+  ];
+  const documentTreatmentRequiredFacts = ["support_docs", "treatments", "uses"];
 
   const sections = {
     executiveSummary: buildSectionContract({
@@ -210,7 +344,7 @@ function buildAcquisitionMemoBossContract({
     }),
     unitMix: buildSectionContract({
       status: unitMixAvailable ? "required" : "collapsed",
-      requiredFacts: ["unit_mix", "units", "total_units", "occupancy"],
+      requiredFacts: unitMixRequiredFacts,
       sourceBindings: buildSectionBindings("core_rent_roll", ["unit_mix", "units", "total_units", "occupancy"]),
       collapseInstructions: [
         "If structured unit mix or unit rows are unavailable, collapse the section with a customer-safe note.",
@@ -221,6 +355,20 @@ function buildAcquisitionMemoBossContract({
         "Prefer structured unit_mix or units before any text fallback.",
         "If total units are available, render per-unit values rather than dashes.",
       ],
+      factAvailability: factAvailability(
+        unitMixRequiredFacts,
+        [
+          ...(hasStructuredValues(rentRollFacts?.unit_mix) ? ["unit_mix"] : []),
+          ...(hasStructuredValues(rentRollFacts?.units) ? ["units"] : []),
+          ...(Number.isFinite(Number(rentRollFacts?.total_units)) ? ["total_units"] : []),
+          ...(Number.isFinite(Number(rentRollFacts?.occupancy)) ? ["occupancy"] : []),
+        ],
+        unitMixAvailable
+      ),
+      postRenderAssertions: [
+        buildBossContractAssertion("UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS", "Unit mix is required when structured rent roll evidence exists.", "critical", "unitMix"),
+        buildBossContractAssertion("UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT", "False missing-row fallback text is forbidden when structured unit evidence exists.", "critical", "unitMix"),
+      ],
     }),
     rentUpsideValueSensitivity: buildSectionContract({
       status: "required_if_source_present",
@@ -229,7 +377,7 @@ function buildAcquisitionMemoBossContract({
     }),
     capRateValueIndication: buildSectionContract({
       status: totalUnitsAvailable ? "required" : "required_if_source_present",
-      requiredFacts: ["purchase_price", "going_in_cap_rate", "total_units", "units", "noi"],
+      requiredFacts: capRateRequiredFacts,
       sourceBindings: [
         { sourceRole: "core_t12", factPaths: ["net_operating_income", "effective_gross_income"], notes: [] },
         { sourceRole: "core_rent_roll", factPaths: ["total_units"], notes: [] },
@@ -238,6 +386,21 @@ function buildAcquisitionMemoBossContract({
       collapseInstructions: ["If total units are missing, omit per-unit values rather than fabricating them."],
       forbiddenFallbackText: ["-"],
       renderRequirements: ["Per-unit values are required when total units are available."],
+      factAvailability: factAvailability(
+        capRateRequiredFacts,
+        [
+          ...(Number.isFinite(Number(coreMetrics?.purchasePrice)) || Number.isFinite(Number(purchaseFacts?.purchase_price)) ? ["purchase_price"] : []),
+          ...(Number.isFinite(Number(coreMetrics?.goingInCapRate)) || Number.isFinite(Number(purchaseFacts?.going_in_cap_rate)) ? ["going_in_cap_rate"] : []),
+          ...(Number.isFinite(Number(rentRollFacts?.total_units)) || Number.isFinite(Number(coreMetrics?.units)) ? ["total_units"] : []),
+          ...(Number.isFinite(Number(coreMetrics?.units)) || Number.isFinite(Number(rentRollFacts?.total_units)) ? ["units"] : []),
+          ...(Number.isFinite(Number(coreMetrics?.noi)) || Number.isFinite(Number(t12Facts?.net_operating_income)) ? ["noi"] : []),
+        ],
+        totalUnitsAvailable
+      ),
+      postRenderAssertions: [
+        buildBossContractAssertion("CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST", "Per-unit cap-rate values are required when units exist.", "critical", "capRateValueIndication"),
+        buildBossContractAssertion("NO_ZERO_CAP_RATE", "Zero cap-rate display is forbidden when a valid source-backed cap exists.", "critical", "capRateValueIndication"),
+      ],
     }),
     preliminaryFinancingReadinessSummary: buildSectionContract({
       status: "required_if_source_present",
@@ -249,13 +412,31 @@ function buildAcquisitionMemoBossContract({
     }),
     acquisitionRequestContext: buildSectionContract({
       status: purchaseAssumptionsAvailable ? "required" : "collapsed",
-      requiredFacts: ["purchase_price", "noi_basis", "going_in_cap_rate", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"],
+      requiredFacts: acquisitionRequestRequiredFacts,
       sourceBindings: buildSectionBindings("purchase_assumptions", ["purchase_price", "noi_basis", "going_in_cap_rate", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"]),
       collapseInstructions: ["If purchase assumptions are absent, collapse the acquisition request context instead of inventing terms."],
+      factAvailability: factAvailability(
+        acquisitionRequestRequiredFacts,
+        [
+          ...(Number.isFinite(Number(purchaseFacts?.purchase_price)) ? ["purchase_price"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.noi_basis)) ? ["noi_basis"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.going_in_cap_rate)) ? ["going_in_cap_rate"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.proposed_loan_amount)) ? ["proposed_loan_amount"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.ltv)) ? ["ltv"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.interest_rate)) ? ["interest_rate"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.lender_fee_percent)) ? ["lender_fee_percent"] : []),
+        ],
+        purchaseAssumptionsAvailable
+      ),
+      postRenderAssertions: [
+        buildBossContractAssertion("ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Acquisition request facts are required when purchase assumptions are source-backed.", "critical", "acquisitionRequestContext"),
+        buildBossContractAssertion("PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Proposed financing facts are required when purchase assumptions are source-backed.", "critical", "acquisitionRequestContext"),
+      ],
     }),
     operatingSupport: buildSectionContract({
       status: "required_if_source_present",
-      requiredFacts: ["income_lines", "expense_lines", "effective_gross_income", "total_operating_expenses", "net_operating_income"],
+      requiredFacts: t12RequiredFacts,
       sourceBindings: buildSectionBindings("core_t12", ["income_lines", "expense_lines", "effective_gross_income", "total_operating_expenses", "net_operating_income"]),
     }),
     rentValueSupport: buildSectionContract({
@@ -265,16 +446,44 @@ function buildAcquisitionMemoBossContract({
     }),
     currentDebtContext: buildSectionContract({
       status: currentDebtAvailable ? "required" : "collapsed",
-      requiredFacts: ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"],
+      requiredFacts: currentDebtRequiredFacts,
       sourceBindings: buildSectionBindings("current_debt_context", ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"]),
       collapseInstructions: ["If current debt facts are unavailable or unusable, collapse the debt context section with a customer-safe note."],
       renderRequirements: ["Render source-backed current debt facts when available.", "Do not treat proposed acquisition financing as current debt."],
+      factAvailability: factAvailability(
+        currentDebtRequiredFacts,
+        [
+          ...(Number.isFinite(Number(currentDebtFacts?.current_outstanding_balance)) ? ["current_outstanding_balance"] : []),
+          ...(Number.isFinite(Number(currentDebtFacts?.interest_rate)) ? ["interest_rate"] : []),
+          ...(Number.isFinite(Number(currentDebtFacts?.amortization_remaining_years)) ? ["amortization_remaining_years"] : []),
+          ...(Number.isFinite(Number(currentDebtFacts?.monthly_payment)) ? ["monthly_payment"] : []),
+          ...(currentDebtFacts?.maturity_date ? ["maturity_date"] : []),
+        ],
+        currentDebtAvailable
+      ),
+      postRenderAssertions: [
+        buildBossContractAssertion("CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Current debt facts are required when current debt is source-backed.", "critical", "currentDebtContext"),
+      ],
     }),
     proposedFinancingContext: buildSectionContract({
       status: purchaseAssumptionsAvailable ? "required" : "collapsed",
-      requiredFacts: ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"],
+      requiredFacts: proposedFinancingRequiredFacts,
       sourceBindings: buildSectionBindings("purchase_assumptions", ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"]),
       collapseInstructions: ["If proposed financing facts are unavailable, collapse the proposed financing context section rather than borrowing current debt facts."],
+      factAvailability: factAvailability(
+        proposedFinancingRequiredFacts,
+        [
+          ...(Number.isFinite(Number(purchaseFacts?.proposed_loan_amount)) ? ["proposed_loan_amount"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.ltv)) ? ["ltv"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.interest_rate)) ? ["interest_rate"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),
+          ...(Number.isFinite(Number(purchaseFacts?.lender_fee_percent)) ? ["lender_fee_percent"] : []),
+        ],
+        purchaseAssumptionsAvailable
+      ),
+      postRenderAssertions: [
+        buildBossContractAssertion("PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Proposed financing facts are required when purchase assumptions are source-backed.", "critical", "proposedFinancingContext"),
+      ],
     }),
     debtFinancingContext: buildSectionContract({
       status: "required_if_source_present",
@@ -291,9 +500,24 @@ function buildAcquisitionMemoBossContract({
     }),
     operatingStatementTTMSummary: buildSectionContract({
       status: t12ExpenseLinesAvailable ? "required" : "required_if_source_present",
-      requiredFacts: ["income_lines", "expense_lines", "effective_gross_income", "total_operating_expenses", "net_operating_income", "gross_potential_rent"],
+      requiredFacts: t12RequiredFacts,
       sourceBindings: buildSectionBindings("core_t12", ["income_lines", "expense_lines", "effective_gross_income", "total_operating_expenses", "net_operating_income", "gross_potential_rent"]),
       collapseInstructions: ["If T12 line items are unavailable, collapse the detailed operating statement rather than showing a summary-only approximation."],
+      factAvailability: factAvailability(
+        t12RequiredFacts,
+        [
+          ...(hasStructuredValues(t12Facts?.income_lines) ? ["income_lines"] : []),
+          ...(hasStructuredValues(t12Facts?.expense_lines) ? ["expense_lines"] : []),
+          ...(Number.isFinite(Number(t12Facts?.effective_gross_income)) ? ["effective_gross_income"] : []),
+          ...(Number.isFinite(Number(t12Facts?.total_operating_expenses)) ? ["total_operating_expenses"] : []),
+          ...(Number.isFinite(Number(t12Facts?.net_operating_income)) ? ["net_operating_income"] : []),
+          ...(Number.isFinite(Number(t12Facts?.gross_potential_rent)) ? ["gross_potential_rent"] : []),
+        ],
+        t12ExpenseLinesAvailable
+      ),
+      postRenderAssertions: [
+        buildBossContractAssertion("T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT", "T12 expense lines are required when structured expense detail exists.", "critical", "operatingStatementTTMSummary"),
+      ],
     }),
     dataCoverageSourceLimitations: buildSectionContract({
       status: "required",
@@ -307,9 +531,21 @@ function buildAcquisitionMemoBossContract({
     }),
     documentTreatment: buildSectionContract({
       status: "required",
-      requiredFacts: ["support_docs", "treatments", "uses"],
+      requiredFacts: documentTreatmentRequiredFacts,
       sourceBindings: buildSectionBindings("acquisition_memo_projection", ["supportDocProjection", "documentTreatmentRows"]),
       renderRequirements: ["Render the source treatment schedule as customer-safe context, not as implementation commentary."],
+      factAvailability: factAvailability(
+        documentTreatmentRequiredFacts,
+        [
+          ...(supportDocsAvailable ? ["support_docs"] : []),
+          ...(supportDocs.some((doc) => doc?.treatment) ? ["treatments"] : []),
+          ...(supportDocs.some((doc) => doc?.use) ? ["uses"] : []),
+        ],
+        supportDocsAvailable
+      ),
+      postRenderAssertions: [
+        buildBossContractAssertion("DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED", "Core source treatment schedule must be present when support docs exist.", "critical", "documentTreatment"),
+      ],
     }),
     methodologyDataTransparency: buildSectionContract({
       status: "required",
@@ -346,6 +582,8 @@ function buildAcquisitionMemoBossContract({
     ],
     postRenderAssertions: [
       buildBossContractAssertion("NO_FORBIDDEN_SURFACES", "Forbidden underwriting surfaces must never appear.", "critical", "global"),
+      buildBossContractAssertion("CORE_VALID_PUBLISH_ALLOWED", "Core-valid publish must be allowed when T12 and Rent Roll are valid.", "critical", "global"),
+      buildBossContractAssertion("OPTIONAL_SUPPORT_COLLAPSE_NOT_FATAL", "Optional/support collapse must not become a full-report failure.", "critical", "global"),
       buildBossContractAssertion("NO_FAKE_UNIT_MIX_FALLBACK", "Unit mix fallback text must not appear when structured unit evidence exists.", "critical", "unitMix"),
       buildBossContractAssertion("NO_ZERO_CAP_RATE", "Going-in cap rate must not render as zero when a valid source-backed cap exists.", "critical", "capRateValueIndication"),
       buildBossContractAssertion("NO_PER_UNIT_DASH_WITH_UNITS", "Per-unit cap-rate values are required when total units are known.", "critical", "capRateValueIndication"),
@@ -414,15 +652,35 @@ function validateAcquisitionMemoBossContract(contract) {
       "lenderDiligenceChecklist",
     ];
     for (const key of requiredSectionKeys) {
-      if (!isPlainObject(contract.sections[key])) {
+      const section = contract.sections[key];
+      if (!isPlainObject(section)) {
         pushIssue("SECTION_MISSING", `${key} section is required.`, "critical", `sections.${key}`);
         continue;
       }
-      for (const prop of ["status", "requiredFacts", "sourceBindings", "collapseInstructions", "forbiddenFallbackText", "renderRequirements", "postRenderAssertions"]) {
-        if (prop === "status" && typeof contract.sections[key][prop] !== "string") {
-          pushIssue("SECTION_STATUS_MISSING", `${key}.status must be a string.`, "critical", `sections.${key}.status`);
-        } else if (prop !== "status" && !Array.isArray(contract.sections[key][prop])) {
+      if (typeof section.status !== "string" || !ALLOWED_SECTION_STATUSES.has(section.status)) {
+        pushIssue("SECTION_STATUS_INVALID", `${key}.status must be one of ${Array.from(ALLOWED_SECTION_STATUSES).join(", ")}.`, "critical", `sections.${key}.status`);
+      }
+      for (const prop of ["requiredFacts", "sourceBindings", "collapseInstructions", "forbiddenFallbackText", "renderRequirements", "postRenderAssertions"]) {
+        if (!Array.isArray(section[prop])) {
           pushIssue("SECTION_ARRAY_MISSING", `${key}.${prop} must be an array.`, "critical", `sections.${key}.${prop}`);
+        }
+      }
+      if ((section.status === "required" || section.status === "required_if_source_present") && Array.isArray(section.requiredFacts) && section.requiredFacts.length === 0) {
+        pushIssue("SECTION_REQUIRED_FACTS_EMPTY", `${key} requires explicit requiredFacts.`, "critical", `sections.${key}.requiredFacts`);
+      }
+      if ((section.status === "required" || section.status === "required_if_source_present") && Array.isArray(section.sourceBindings) && section.sourceBindings.length === 0) {
+        pushIssue("SECTION_SOURCE_BINDINGS_EMPTY", `${key} requires source bindings.`, "critical", `sections.${key}.sourceBindings`);
+      }
+      if ((section.status === "required" || section.status === "required_if_source_present") && isPlainObject(section.factAvailability) && Array.isArray(section.factAvailability.missing) && section.factAvailability.missing.length > 0) {
+        if (!Array.isArray(section.collapseInstructions) || section.collapseInstructions.length === 0) {
+          pushIssue("SECTION_MISSING_FACTS_WITHOUT_COLLAPSE", `${key} has missing required facts but no collapse instructions.`, "critical", `sections.${key}.factAvailability`);
+        }
+      }
+      const requiredCodes = REQUIRED_SECTION_ASSERTION_CODES[key] || [];
+      for (const code of requiredCodes) {
+        const found = Array.isArray(section.postRenderAssertions) && section.postRenderAssertions.some((assertion) => assertion?.code === code);
+        if (!found) {
+          pushIssue("SECTION_ASSERTION_CODE_MISSING", `${key} must include assertion code ${code}.`, "critical", `sections.${key}.postRenderAssertions`);
         }
       }
     }
@@ -430,6 +688,11 @@ function validateAcquisitionMemoBossContract(contract) {
 
   if (!Array.isArray(contract.forbiddenSurfaces) || contract.forbiddenSurfaces.length === 0) {
     pushIssue("FORBIDDEN_SURFACES_MISSING", "forbiddenSurfaces must be a non-empty array.", "critical", "forbiddenSurfaces");
+  } else {
+    const requiredForbidden = FORBIDDEN_SURFACES.filter((surface) => !contract.forbiddenSurfaces.includes(surface));
+    if (requiredForbidden.length > 0) {
+      pushIssue("FORBIDDEN_SURFACES_INCOMPLETE", `forbiddenSurfaces is missing: ${requiredForbidden.join(", ")}.`, "critical", "forbiddenSurfaces");
+    }
   }
 
   if (!Array.isArray(contract.renderRequirements)) {

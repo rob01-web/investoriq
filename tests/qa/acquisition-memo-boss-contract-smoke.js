@@ -206,23 +206,43 @@ assert.ok(contract.sections.unitMix.requiredFacts.includes("unit_mix"));
 assert.ok(contract.sections.unitMix.requiredFacts.includes("units"));
 assert.ok(contract.sections.unitMix.forbiddenFallbackText.includes("No parsed unit mix rows were available from the canonical rent roll evidence."));
 assert.ok(contract.sections.unitMix.renderRequirements.includes("Prefer structured unit_mix or units before any text fallback."));
+assert.equal(contract.sections.unitMix.factAvailability.sourceBacked, true);
+assert.ok(contract.sections.unitMix.factAvailability.available.includes("unit_mix"));
+assert.ok(contract.sections.unitMix.factAvailability.available.includes("units"));
+assert.deepStrictEqual(contract.sections.unitMix.factAvailability.missing, []);
+assert.ok(contract.sections.unitMix.postRenderAssertions.some((item) => item.code === "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS"));
+assert.ok(contract.sections.unitMix.postRenderAssertions.some((item) => item.code === "UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT"));
 
 assert.ok(contract.sections.capRateValueIndication.requiredFacts.includes("total_units"));
 assert.ok(contract.sections.capRateValueIndication.requiredFacts.includes("going_in_cap_rate"));
 assert.ok(contract.sections.capRateValueIndication.renderRequirements.includes("Per-unit values are required when total units are available."));
 assert.equal(contract.sections.capRateValueIndication.forbiddenFallbackText.includes("-"), true);
+assert.equal(contract.sections.capRateValueIndication.factAvailability.sourceBacked, true);
+assert.ok(contract.sections.capRateValueIndication.factAvailability.available.includes("total_units"));
+assert.ok(contract.sections.capRateValueIndication.factAvailability.available.includes("units"));
+assert.ok(contract.sections.capRateValueIndication.postRenderAssertions.some((item) => item.code === "CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST"));
+assert.ok(contract.sections.capRateValueIndication.postRenderAssertions.some((item) => item.code === "NO_ZERO_CAP_RATE"));
 
 assert.ok(contract.sections.currentDebtContext.requiredFacts.includes("current_outstanding_balance"));
 assert.ok(contract.sections.currentDebtContext.requiredFacts.includes("maturity_date"));
 assert.equal(contract.sections.currentDebtContext.sourceBindings[0].sourceRole, "current_debt_context");
+assert.equal(contract.sections.currentDebtContext.factAvailability.sourceBacked, true);
+assert.ok(contract.sections.currentDebtContext.factAvailability.available.includes("current_outstanding_balance"));
+assert.ok(contract.sections.currentDebtContext.postRenderAssertions.some((item) => item.code === "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED"));
 
 assert.ok(contract.sections.proposedFinancingContext.requiredFacts.includes("proposed_loan_amount"));
 assert.ok(contract.sections.proposedFinancingContext.requiredFacts.includes("lender_fee_percent"));
 assert.equal(contract.sections.proposedFinancingContext.sourceBindings[0].sourceRole, "purchase_assumptions");
 assert.equal(contract.sections.proposedFinancingContext.requiredFacts.includes("current_outstanding_balance"), false);
+assert.equal(contract.sections.proposedFinancingContext.factAvailability.sourceBacked, true);
+assert.ok(contract.sections.proposedFinancingContext.factAvailability.available.includes("proposed_loan_amount"));
+assert.ok(contract.sections.proposedFinancingContext.postRenderAssertions.some((item) => item.code === "PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED"));
 
 assert.ok(contract.sections.operatingStatementTTMSummary.requiredFacts.includes("expense_lines"));
 assert.ok(contract.sections.operatingStatementTTMSummary.requiredFacts.includes("net_operating_income"));
+assert.equal(contract.sections.operatingStatementTTMSummary.factAvailability.sourceBacked, true);
+assert.ok(contract.sections.operatingStatementTTMSummary.factAvailability.available.includes("expense_lines"));
+assert.ok(contract.sections.operatingStatementTTMSummary.postRenderAssertions.some((item) => item.code === "T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT"));
 
 assert.ok(contract.forbiddenSurfaces.includes("DSCR"));
 assert.ok(contract.forbiddenSurfaces.includes("refinance"));
@@ -239,7 +259,11 @@ assert.ok(contract.forbiddenSurfaces.includes("lender commitment"));
 
 assert.ok(contract.sections.acquisitionRequestContext.requiredFacts.includes("proposed_loan_amount"));
 assert.equal(contract.sections.acquisitionRequestContext.collapseInstructions.length > 0, true);
+assert.equal(contract.sections.acquisitionRequestContext.factAvailability.sourceBacked, true);
+assert.ok(contract.sections.acquisitionRequestContext.factAvailability.available.includes("purchase_price"));
 assert.equal(contract.sections.documentTreatment.status, "required");
+assert.equal(contract.sections.documentTreatment.factAvailability.sourceBacked, true);
+assert.ok(contract.sections.documentTreatment.factAvailability.available.includes("support_docs"));
 assert.equal(contract.sections.dataCoverageSourceLimitations.status, "required");
 assert.equal(contract.sections.methodologyDataTransparency.status, "required");
 
