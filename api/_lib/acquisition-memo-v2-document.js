@@ -145,6 +145,116 @@ function parseT12LineItemsFromText(text) {
   return rows;
 }
 
+function toFiniteNumber(value) {
+  const normalized = String(value ?? "").replace(/[$,\s]/g, "").trim();
+  if (!normalized) return null;
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeStructuredUnitMixRow(row) {
+  if (!row || typeof row !== "object") return null;
+  const rawLabel = String(
+    row.label ??
+      row.unit_label ??
+      row.unitLabel ??
+      row.unit_type ??
+      row.unitType ??
+      row.type ??
+      row.bedroom_type ??
+      row.bedroomType ??
+      row.bedrooms ??
+      row.bedroom_count ??
+      ""
+  ).trim();
+  const label = rawLabel
+    ? /^\d+$/.test(rawLabel)
+      ? `${rawLabel}BR`
+      : rawLabel
+    : "";
+  const count = toFiniteNumber(row.count ?? row.unit_count ?? row.units ?? row.quantity);
+  const inPlace = toFiniteNumber(
+    row.current_rent ??
+      row.currentRent ??
+      row.in_place_rent ??
+      row.inPlaceRent ??
+      row.inplace_rent ??
+      row.inPlace ??
+      row.rent
+  );
+  const market = toFiniteNumber(row.market_rent ?? row.marketRent ?? row.market_rent_monthly ?? row.marketRentMonthly ?? row.market);
+  const gap = toFiniteNumber(row.gap ?? row.rent_gap ?? row.monthly_rent_gap ?? row.monthlyRentGap);
+  if (!label && !Number.isFinite(count) && !Number.isFinite(inPlace) && !Number.isFinite(market) && !Number.isFinite(gap)) return null;
+  const normalizedGap = Number.isFinite(gap) ? gap : Number.isFinite(inPlace) && Number.isFinite(market) ? market - inPlace : null;
+  return {
+    label: label || "Unit Mix",
+    count: Number.isFinite(count) ? count : null,
+    inPlace: Number.isFinite(inPlace) ? inPlace : null,
+    market: Number.isFinite(market) ? market : null,
+    gap: Number.isFinite(normalizedGap) ? normalizedGap : null,
+  };
+}
+
+function deriveStructuredUnitMixRowsFromUnits(units) {
+  const groups = new Map();
+  for (const unit of Array.isArray(units) ? units : []) {
+    if (!unit || typeof unit !== "object") continue;
+    const rawLabel = String(
+      unit.label ??
+        unit.unit_label ??
+        unit.unitLabel ??
+        unit.unit_type ??
+        unit.unitType ??
+        unit.type ??
+        unit.bedroom_type ??
+        unit.bedroomType ??
+        unit.bedrooms ??
+        unit.bedroom_count ??
+        ""
+    ).trim();
+    const label = rawLabel
+      ? /^\d+$/.test(rawLabel)
+        ? `${rawLabel}BR`
+        : rawLabel
+      : "";
+    const key = label || String(unit.unit_number ?? unit.unitNumber ?? unit.id ?? groups.size);
+    const group = groups.get(key) || { label: label || "Unit Mix", count: 0, inPlace: null, market: null, gap: null };
+    group.count += 1;
+    const inPlace = toFiniteNumber(
+      unit.current_rent ??
+        unit.currentRent ??
+        unit.in_place_rent ??
+        unit.inPlaceRent ??
+        unit.inplace_rent ??
+        unit.rent
+    );
+    const market = toFiniteNumber(unit.market_rent ?? unit.marketRent ?? unit.market_rent_monthly ?? unit.marketRentMonthly);
+    const gap = toFiniteNumber(unit.gap ?? unit.rent_gap ?? unit.monthly_rent_gap ?? unit.monthlyRentGap);
+    if (!Number.isFinite(group.inPlace) && Number.isFinite(inPlace)) group.inPlace = inPlace;
+    if (!Number.isFinite(group.market) && Number.isFinite(market)) group.market = market;
+    if (!Number.isFinite(group.gap) && Number.isFinite(gap)) group.gap = gap;
+    groups.set(key, group);
+  }
+  return Array.from(groups.values()).map((group) => {
+    const normalizedGap = Number.isFinite(group.gap) ? group.gap : Number.isFinite(group.inPlace) && Number.isFinite(group.market) ? group.market - group.inPlace : null;
+    return {
+      label: group.label,
+      count: Number.isFinite(group.count) ? group.count : null,
+      inPlace: Number.isFinite(group.inPlace) ? group.inPlace : null,
+      market: Number.isFinite(group.market) ? group.market : null,
+      gap: Number.isFinite(normalizedGap) ? normalizedGap : null,
+    };
+  });
+}
+
+function normalizeStructuredT12LineItem(row) {
+  if (!row || typeof row !== "object") return null;
+  const label = String(row.label ?? row.line_label ?? row.lineLabel ?? row.name ?? row.description ?? row.category ?? "").trim();
+  const amount = toFiniteNumber(row.amount ?? row.value ?? row.total ?? row.annual_amount ?? row.annualAmount ?? row.monthly_amount ?? row.monthlyAmount);
+  if (!label || !Number.isFinite(amount)) return null;
+  return { label, amount };
+}
+
 function renderSourceDocRows(sourcePackage = null) {
   const rows = [];
   const t12 = sourcePackage?.coreT12 || null;
@@ -350,8 +460,9 @@ function renderRentValueSupportSection({ coreMetrics = null } = {}) {
   );
 }
 
-function renderDebtFinancingContextSection({ acquisitionMemoProjection = null } = {}) {
-  const currentDebt = acquisitionMemoProjection?.currentDebtContext || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || null;
+function renderDebtFinancingContextSection({ acquisitionMemoProjection = null, sourcePackage = null } = {}) {
+  const sourcePackageCurrentDebt = getSupportDocByRole(sourcePackage, "current_debt_context");
+  const currentDebt = acquisitionMemoProjection?.currentDebtContext || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || sourcePackageCurrentDebt || null;
   const facts = currentDebt?.extractedFacts || {};
   const currentDebtText = getSourceEvidenceText(currentDebt);
   const outstandingBalance = Number.isFinite(Number(facts?.outstanding_balance))
@@ -362,19 +473,38 @@ function renderDebtFinancingContextSection({ acquisitionMemoProjection = null } 
         /\boutstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
         /\bprincipal balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
       ]);
-  const currentDebtRate = Number.isFinite(Number(facts?.interest_rate)) ? Number(facts.interest_rate) : null;
+  const currentDebtRate = Number.isFinite(Number(facts?.interest_rate)) ? Number(facts.interest_rate) : extractPercentFraction(currentDebtText, [
+    /\binterest rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bnote rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bcoupon rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+  ]);
   const currentDebtRateDisplay = Number.isFinite(currentDebtRate) ? `${(currentDebtRate * 100).toFixed(2)}%` : null;
   const currentDebtAmortYears = Number.isFinite(Number(facts?.amortization_remaining_years))
     ? Number(facts.amortization_remaining_years)
     : Number.isFinite(Number(facts?.amortization_years))
     ? Number(facts.amortization_years)
-    : null;
+    : extractYears(currentDebtText, [
+        /\bamortization remaining[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+        /\bamortization remaining years[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+        /\bamortization[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+      ]);
+  const currentDebtMonthlyPayment = Number.isFinite(Number(facts?.monthly_payment))
+    ? Number(facts.monthly_payment)
+    : extractCurrencyFromText(currentDebtText, [
+        /\bmonthly payment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+        /\bmonthly debt service[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+        /\bpayment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      ]);
+  const maturityDate = String(facts?.maturity_date || facts?.maturityDate || extractDate(currentDebtText, [
+    /\bmaturity date[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+    /\bmatures?[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+  ]) || "").trim();
   const rows = [
-    Number.isFinite(outstandingBalance) ? `<tr><td>Current Debt Balance</td><td style="font-weight:600;">${formatMoney(outstandingBalance)}</td></tr>` : "",
-    currentDebtRateDisplay ? `<tr><td>Current Debt Rate</td><td style="font-weight:600;">${currentDebtRateDisplay}</td></tr>` : "",
-    Number.isFinite(currentDebtAmortYears) ? `<tr><td>Current Debt Amortization Remaining</td><td style="font-weight:600;">${Math.round(currentDebtAmortYears)} years</td></tr>` : "",
-    Number.isFinite(Number(facts?.monthly_payment)) ? `<tr><td>Current Debt Monthly Payment</td><td style="font-weight:600;">${formatMoney(facts.monthly_payment)}</td></tr>` : "",
-    currentDebt?.sourceEvidence?.filename ? `<tr><td>Current Debt Maturity</td><td style="font-weight:600;">${escapeHtml(facts?.maturity_date || facts?.maturityDate || "Not available")}</td></tr>` : "",
+    Number.isFinite(outstandingBalance) ? `<tr><td>Current Outstanding Balance</td><td style="font-weight:600;">${formatMoney(outstandingBalance)}</td></tr>` : "",
+    currentDebtRateDisplay ? `<tr><td>Interest Rate</td><td style="font-weight:600;">${currentDebtRateDisplay}</td></tr>` : "",
+    Number.isFinite(currentDebtAmortYears) ? `<tr><td>Amortization Remaining</td><td style="font-weight:600;">${Math.round(currentDebtAmortYears)} years</td></tr>` : "",
+    Number.isFinite(currentDebtMonthlyPayment) ? `<tr><td>Monthly Payment</td><td style="font-weight:600;">${formatMoney(currentDebtMonthlyPayment)}</td></tr>` : "",
+    (currentDebt?.sourceEvidence?.filename || maturityDate) ? `<tr><td>Maturity Date</td><td style="font-weight:600;">${escapeHtml(maturityDate || "Not available")}</td></tr>` : "",
   ].filter(Boolean).join("");
   if (!rows) return "";
   return renderSection("Debt / Financing Context", `<table class="detail-table"><tbody>${rows}</tbody></table>`, { pageBreakBefore: true });
@@ -426,7 +556,12 @@ function renderOperatingStatementSection({ sourcePackage = null, coreMetrics = n
   const t12Name = sourcePackage?.coreT12?.originalFilename || "Not present";
   const rentRollName = sourcePackage?.coreRentRoll?.originalFilename || "Not present";
   const t12Snippet = getSourceEvidenceText(sourcePackage?.coreT12);
-  const t12LineItems = parseT12LineItemsFromText(t12Snippet);
+  const t12Facts = sourcePackage?.coreT12?.extractedFacts || {};
+  const structuredT12LineItems = [
+    ...(Array.isArray(t12Facts?.income_lines) ? t12Facts.income_lines : []),
+    ...(Array.isArray(t12Facts?.expense_lines) ? t12Facts.expense_lines : []),
+  ].map(normalizeStructuredT12LineItem).filter(Boolean);
+  const t12LineItems = structuredT12LineItems.length ? structuredT12LineItems : parseT12LineItemsFromText(t12Snippet);
   if (Number.isFinite(Number(coreMetrics?.annualInPlaceRent))) rows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualInPlaceRent)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.annualMarketRent))) rows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualMarketRent)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.egi))) rows.push(`<tr><td>Effective Gross Income</td><td style="font-weight:600;">${formatMoney(coreMetrics.egi)}</td></tr>`);
@@ -452,10 +587,10 @@ function renderOperatingStatementSection({ sourcePackage = null, coreMetrics = n
   </div>`;
 }
 
-function renderCapRateValueSection({ acquisitionMemoProjection = null, coreMetrics = null } = {}) {
+function renderCapRateValueSection({ acquisitionMemoProjection = null, sourcePackage = null, coreMetrics = null } = {}) {
   const noiBasis = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? NaN);
   const capRates = [5.0, 6.0, 7.0];
-  const units = Number(coreMetrics?.units);
+  const units = Number(coreMetrics?.units ?? sourcePackage?.coreRentRoll?.extractedFacts?.total_units ?? sourcePackage?.coreRentRoll?.extractedFacts?.units?.length ?? NaN);
   const rows = capRates.map((cap) => {
     const value = Number.isFinite(noiBasis) ? noiBasis / (cap / 100) : NaN;
     const perUnit = Number.isFinite(value) && Number.isFinite(units) && units > 0 ? value / units : null;
@@ -537,7 +672,12 @@ function renderOperatingSnapshotSection({ sourcePackage = null, coreMetrics = nu
 
 function renderUnitMixSection({ sourcePackage = null, coreMetrics = null } = {}) {
   const rentRollSnippet = sourcePackage?.coreRentRoll?.sourceEvidence?.textSnippet || "";
-  const unitMixRows = parseUnitMixRowsFromText(rentRollSnippet);
+  const rentRollFacts = sourcePackage?.coreRentRoll?.extractedFacts || {};
+  const structuredUnitMixRows = [
+    ...(Array.isArray(rentRollFacts?.unit_mix) ? rentRollFacts.unit_mix : []),
+  ].map(normalizeStructuredUnitMixRow).filter(Boolean);
+  const structuredUnitRows = structuredUnitMixRows.length ? structuredUnitMixRows : deriveStructuredUnitMixRowsFromUnits(rentRollFacts?.units);
+  const unitMixRows = structuredUnitRows.length ? structuredUnitRows : parseUnitMixRowsFromText(rentRollSnippet);
   const annualInPlace = Number(coreMetrics?.annualInPlaceRent);
   const annualMarket = Number(coreMetrics?.annualMarketRent);
   const annualUpside = Number.isFinite(annualInPlace) && Number.isFinite(annualMarket) ? annualMarket - annualInPlace : null;
@@ -632,7 +772,7 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
   ];
   return renderSection(
     "Data Coverage & Source Limitations",
-    `<table class="detail-table"><tbody>${rows.join("")}</tbody></table><div class="subsection-block"><p class="subsection-title">Source Reliability Snapshot</p><table class="detail-table"><tbody>${stateRows.join("")}</tbody></table></div>${sourceSummaryHtml ? `<div class="subsection-block"><p class="subsection-title">Core Source Summary</p>${sourceSummaryHtml}</div>` : ""}`,
+    `<table class="detail-table data-coverage-table data-coverage-table-3col"><tbody>${rows.join("")}</tbody></table><div class="subsection-block"><p class="subsection-title">Source Reliability Snapshot</p><table class="detail-table data-coverage-table data-coverage-table-2col"><tbody>${stateRows.join("")}</tbody></table></div>${sourceSummaryHtml ? `<div class="subsection-block"><p class="subsection-title">Core Source Summary</p><div class="data-coverage-source-summary">${sourceSummaryHtml}</div></div>` : ""}`,
     { id: "data-coverage-title", pageBreakBefore: true }
   );
 }
@@ -664,7 +804,7 @@ export function renderAcquisitionMemo(acquisitionMemoProjection) {
     coreRentRoll: acquisitionMemoProjection?.coreSourceSummary?.rentRoll || null,
   });
   const coreSourceSummaryHtml = coreSourceRows.length
-    ? `<table class="detail-table"><tbody>${coreSourceRows.join("")}</tbody></table>`
+    ? `<table class="detail-table data-coverage-table data-coverage-table-3col"><tbody>${coreSourceRows.join("")}</tbody></table>`
     : "";
   const financingReadinessSummaryHtml = renderReadinessBodyHtml({
     acquisitionMemoProjection,
@@ -717,12 +857,12 @@ export function renderCompleteAcquisitionMemoV2Html({
   const operatingSection = renderOperatingSnapshotSection({ sourcePackage, coreMetrics });
   const unitMixSection = renderUnitMixSection({ sourcePackage, coreMetrics });
   const valueSensitivitySection = renderValueSensitivitySection({ sourcePackage, acquisitionMemoProjection, coreMetrics });
-  const capRateValueSection = renderCapRateValueSection({ acquisitionMemoProjection, coreMetrics });
+  const capRateValueSection = renderCapRateValueSection({ acquisitionMemoProjection, sourcePackage, coreMetrics });
   const readinessSection = renderReadinessSection({ renderedAcquisitionMemo, acquisitionMemoProjection });
   const acquisitionRequestContextSection = renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, coreMetrics });
   const operatingSupportSection = renderOperatingSupportSection({ coreMetrics });
   const rentValueSupportSection = renderRentValueSupportSection({ coreMetrics });
-  const debtFinancingContextSection = renderDebtFinancingContextSection({ acquisitionMemoProjection });
+  const debtFinancingContextSection = renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage });
   const uploadedFilesSection = renderUploadedFilesSection({ sourcePackage });
   const dataCoverageSection = renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection });
   const treatmentSection = renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage);
@@ -800,6 +940,14 @@ export function renderCompleteAcquisitionMemoV2Html({
     .detail-table tr:first-child td { border-top:none; }
     .detail-table td:first-child { width:44%; color:var(--ink-3); }
     .detail-table td:last-child { font-weight:600; color:var(--ink); }
+    .data-coverage-table { width:100%; table-layout:fixed; }
+    .data-coverage-table td { white-space:normal; overflow-wrap:anywhere; word-break:break-word; hyphens:auto; }
+    .data-coverage-table-3col td:nth-child(1) { width:26%; }
+    .data-coverage-table-3col td:nth-child(2) { width:39%; }
+    .data-coverage-table-3col td:nth-child(3) { width:35%; }
+    .data-coverage-table-2col td:nth-child(1) { width:74%; }
+    .data-coverage-table-2col td:nth-child(2) { width:26%; text-align:right; }
+    .data-coverage-source-summary { margin-top:2px; }
     .unit-mix-table { width:100%; border-collapse:collapse; font-size:10px; table-layout:fixed; }
     .unit-mix-table th { font-family:var(--font-body); font-size:10px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--ink-3); border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline-mid); padding:0 8px 6px; text-align:left; background:var(--white); }
     .unit-mix-table td { border-bottom:1px solid var(--hairline); padding:6px 8px; vertical-align:top; }

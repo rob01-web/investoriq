@@ -115,6 +115,127 @@ function buildRetest6SourcePackage() {
   return buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts);
 }
 
+function buildStructuredStonebridgeSourcePackage() {
+  const uploadedFiles = [
+    { fileId: "t12-file", originalFilename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    { fileId: "rent-roll-file", originalFilename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    { fileId: "assumptions-file", originalFilename: "Stonebridge_Assumptions.pdf", mimeType: "application/pdf" },
+    { fileId: "current-debt-file", originalFilename: "Current_Debt_Stonebridge.pdf", mimeType: "application/pdf" },
+    { fileId: "reno-file", originalFilename: "Stonebridge_Reno_Plan.pdf", mimeType: "application/pdf" },
+    { fileId: "appraisal-file", originalFilename: "Stonebridge_Appraisal_Summary.pdf", mimeType: "application/pdf" },
+    { fileId: "survey-file", originalFilename: "Stonebridge_Market_Survey.pdf", mimeType: "application/pdf" },
+    { fileId: "phase-file", originalFilename: "Stonebridge_Phase_I_ESA.pdf", mimeType: "application/pdf" },
+  ];
+
+  const structuredUnitRows = [
+    ...Array.from({ length: 32 }, (_, index) => ({
+      label: "1BR",
+      unit_number: `1-${index + 1}`,
+      current_rent: 1850,
+      market_rent: 2050,
+    })),
+    ...Array.from({ length: 32 }, (_, index) => ({
+      label: "2BR",
+      unit_number: `2-${index + 1}`,
+      current_rent: 1881,
+      market_rent: 2425,
+    })),
+  ];
+
+  const parsedArtifacts = [
+    {
+      fileId: "t12-file",
+      semantic_doc_role: "t12",
+      payload: {
+        t12_parsed: {
+          income_lines: [{ label: "Effective Gross Income", amount: 1500000 }],
+          expense_lines: [
+            { label: "Property Taxes", amount: 185000 },
+            { label: "Insurance", amount: 72000 },
+            { label: "Repairs & Maintenance", amount: 104000 },
+            { label: "Utilities", amount: 86000 },
+            { label: "Property Management", amount: 60000 },
+            { label: "Payroll / Admin", amount: 28000 },
+          ],
+          effective_gross_income: 1500000,
+          total_operating_expenses: 555000,
+          net_operating_income: 945000,
+          gross_potential_rent: 1718400,
+        },
+      },
+    },
+    {
+      fileId: "rent-roll-file",
+      semantic_doc_role: "rent_roll",
+      payload: {
+        rent_roll_parsed: {
+          total_units: 64,
+          occupancy: 0.9375,
+          unit_mix: [
+            { label: "1BR", count: 32, current_rent: 1850, market_rent: 2050 },
+            { label: "2BR", count: 32, current_rent: 1881, market_rent: 2425 },
+          ],
+          units: structuredUnitRows,
+          annual_in_place_rent: 1432800,
+          annual_market_rent: 1718400,
+        },
+      },
+    },
+    {
+      fileId: "assumptions-file",
+      original_filename: "Stonebridge_Assumptions.pdf",
+      semantic_doc_role: "purchase_assumptions",
+      debt_basis: "proposed_acquisition",
+      payload: {
+        document_text_extracted: "Purchase assumptions / proposed acquisition financing\nPurchase Price $13,500,000\nNOI Basis $945,000\nGoing-In Cap Reference 7.00%\nProposed Acquisition Loan $9,450,000\nLTV 70.0%\nRate 5.95%\nAmortization 30 years\nFee 0.85%",
+      },
+    },
+    {
+      fileId: "current-debt-file",
+      original_filename: "Current_Debt_Stonebridge.pdf",
+      semantic_doc_role: "current_debt",
+      debt_basis: "current_debt",
+      payload: {
+        document_text_extracted: "Existing Current Debt Statement\nCurrent Outstanding Balance $6,800,000\nInterest Rate 4.85%\nAmortization Remaining 24 years\nMonthly Payment $39,250\nMaturity Date 2029-11-01",
+      },
+    },
+    {
+      fileId: "reno-file",
+      original_filename: "Stonebridge_Reno_Plan.pdf",
+      semantic_doc_role: "renovation_plan",
+      payload: {
+        document_text_extracted: "Structured Renovation / CapEx Plan\nTotal Renovation Budget $1,280,000\nRent lift and phasing details",
+      },
+    },
+    {
+      fileId: "appraisal-file",
+      original_filename: "Stonebridge_Appraisal_Summary.pdf",
+      semantic_doc_role: "appraisal",
+      payload: {
+        document_text_extracted: "Appraisal Summary / Valuation Context\nValuation only; does not represent purchase assumptions.",
+      },
+    },
+    {
+      fileId: "survey-file",
+      original_filename: "Stonebridge_Market_Survey.pdf",
+      semantic_doc_role: "market_survey",
+      payload: {
+        document_text_extracted: "Market Rent Survey Context\nCorroborates market rent; does not override rent roll.",
+      },
+    },
+    {
+      fileId: "phase-file",
+      original_filename: "Stonebridge_Phase_I_ESA.pdf",
+      semantic_doc_role: "phase_i_esa",
+      payload: {
+        document_text_extracted: "Phase I ESA / Environmental Due Diligence Context\nEnvironmental review only.",
+      },
+    },
+  ];
+
+  return buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts);
+}
+
 const sourcePackage = buildStonebridgeSourcePackage();
 const projection = buildAcquisitionMemoProjection(sourcePackage);
 const renderedAcquisitionMemo = renderAcquisitionMemo(projection);
@@ -338,15 +459,30 @@ assert.match(retest6FinalHtml, /NOI per Unit/i);
 assert.match(retest6FinalHtml, /Data Coverage &amp; Source Limitations/i);
 assert.match(retest6FinalHtml, /Source Context \/ Support Document Treatment/i);
 assert.match(retest6FinalHtml, /Methodology &amp; Data Transparency/i);
+assert.match(retest6FinalHtml, /overflow-wrap:anywhere;/i);
+assert.match(retest6FinalHtml, /word-break:break-word;/i);
+const dataCoverageSectionMatch = retest6FinalHtml.match(/Data Coverage &amp; Source Limitations[\s\S]{0,5000}?<\/section>/i);
+assert.ok(dataCoverageSectionMatch, "Missing data coverage section");
+assert.match(dataCoverageSectionMatch[0], /T12_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
+assert.match(dataCoverageSectionMatch[0], /Rent_Roll_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
+assert.match(dataCoverageSectionMatch[0], /Core Quantitative Source/i);
+assert.match(dataCoverageSectionMatch[0], /data-coverage-table-3col/i);
+assert.equal(/white-space\s*:\s*nowrap/i.test(dataCoverageSectionMatch[0]), false);
 assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
 assert.match(retest6FinalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
 const currentDebtSectionMatch = retest6FinalHtml.match(/Debt \/ Financing Context[\s\S]{0,2500}?<\/section>/i);
 assert.ok(currentDebtSectionMatch, "Missing debt / financing context section");
-assert.match(currentDebtSectionMatch[0], /Current Debt Balance/i);
-assert.match(currentDebtSectionMatch[0], /Current Debt Rate/i);
-assert.match(currentDebtSectionMatch[0], /Current Debt Amortization Remaining/i);
-assert.match(currentDebtSectionMatch[0], /Current Debt Monthly Payment/i);
-assert.match(currentDebtSectionMatch[0], /Current Debt Maturity/i);
+assert.match(currentDebtSectionMatch[0], /Current Outstanding Balance/i);
+assert.match(currentDebtSectionMatch[0], /Interest Rate/i);
+assert.match(currentDebtSectionMatch[0], /Amortization Remaining/i);
+assert.match(currentDebtSectionMatch[0], /Monthly Payment/i);
+assert.match(currentDebtSectionMatch[0], /Maturity Date/i);
+assert.match(currentDebtSectionMatch[0], /Current Outstanding Balance<\/td><td style="font-weight:600;">\$6,800,000<\/td>/i);
+assert.match(currentDebtSectionMatch[0], /Interest Rate<\/td><td style="font-weight:600;">4\.85%<\/td>/i);
+assert.match(currentDebtSectionMatch[0], /Amortization Remaining<\/td><td style="font-weight:600;">24 years<\/td>/i);
+assert.match(currentDebtSectionMatch[0], /Monthly Payment<\/td><td style="font-weight:600;">\$39,250<\/td>/i);
+assert.match(currentDebtSectionMatch[0], /Maturity Date<\/td><td style="font-weight:600;">2029-11-01<\/td>/i);
+assert.equal(/Current Debt Maturity Not available/i.test(currentDebtSectionMatch[0]), false);
 const assumptionsSectionMatch = retest6FinalHtml.match(/Acquisition Request Context[\s\S]{0,1800}?<\/section>/i);
 assert.ok(assumptionsSectionMatch, "Missing acquisition request context section");
 assert.match(assumptionsSectionMatch[0], /Purchase Price<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
@@ -378,6 +514,57 @@ assert.match(retest6FinalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">
 assert.match(retest6FinalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
 assert.match(retest6FinalHtml, /Value delta vs purchase price<\/td><td style="font-weight:600;">\$0<\/td>/i);
 assert.equal(/\$135,000\b/i.test(retest6FinalHtml), false);
+assert.equal(/Cap-Rate Value Indication[\s\S]{0,700}>-<\/td>/i.test(retest6FinalHtml), false);
+
+const structuredSourcePackage = buildStructuredStonebridgeSourcePackage();
+const structuredProjection = buildAcquisitionMemoProjection(structuredSourcePackage);
+const structuredRenderedAcquisitionMemo = renderAcquisitionMemo(structuredProjection);
+const structuredFinalHtml = renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: structuredProjection,
+  renderedAcquisitionMemo: structuredRenderedAcquisitionMemo,
+  sourcePackage: structuredSourcePackage,
+  coreMetrics: {
+    units: 64,
+    occupancy: 0.9375,
+    annualInPlaceRent: 1432800,
+    annualMarketRent: 1718400,
+    egi: 1500000,
+    opEx: 555000,
+    noi: 945000,
+    expenseRatio: 0.37,
+    noiMargin: 0.63,
+    breakEvenOccupancy: 0.37,
+    purchasePrice: 13500000,
+    goingInCapRate: 0.07,
+  },
+  reportMeta: {
+    reportType: "underwriting",
+    effectiveReportMode: "v1_core",
+    reportTier: 2,
+    generatedAt: new Date().toISOString(),
+    propertyName: "Stonebridge",
+    propertyAddress: "Stonebridge",
+    propertyTitle: "Stonebridge",
+  },
+  propertyProfile: {
+    propertyName: "Stonebridge",
+    propertyAddress: "Stonebridge",
+    propertyTitle: "Stonebridge",
+  },
+});
+assert.match(structuredFinalHtml, /1BR[\s\S]{0,200}32[\s\S]{0,200}\$1,850[\s\S]{0,200}\$2,050[\s\S]{0,200}\$200/i);
+assert.match(structuredFinalHtml, /2BR[\s\S]{0,200}32[\s\S]{0,200}\$1,881[\s\S]{0,200}\$2,425[\s\S]{0,200}\$544/i);
+assert.equal(structuredFinalHtml.includes("No parsed unit mix rows were available"), false);
+assert.match(structuredFinalHtml, /Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
+assert.match(structuredFinalHtml, /Insurance<\/td><td style="font-weight:600;">\$72,000<\/td>/i);
+assert.match(structuredFinalHtml, /Repairs &amp; Maintenance<\/td><td style="font-weight:600;">\$104,000<\/td>/i);
+assert.match(structuredFinalHtml, /Utilities<\/td><td style="font-weight:600;">\$86,000<\/td>/i);
+assert.match(structuredFinalHtml, /Property Management<\/td><td style="font-weight:600;">\$60,000<\/td>/i);
+assert.match(structuredFinalHtml, /Payroll \/ Admin<\/td><td style="font-weight:600;">\$28,000<\/td>/i);
+assert.match(structuredFinalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
+assert.match(structuredFinalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">\$15,750,000<\/td><td style="font-weight:600;">\$246,094<\/td><\/tr>/i);
+assert.match(structuredFinalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
+assert.equal(/Cap-Rate Value Indication[\s\S]{0,700}>-<\/td>/i.test(structuredFinalHtml), false);
 assert.equal(/Going-In Cap Rate<\/td><td style="font-weight:600;">0\.0%<\/td>/i.test(retest6FinalHtml), false);
 assert.equal(/Going-In Cap Rate 0\.0%/i.test(retest6FinalHtml), false);
 assert.equal(/Implied value at going-in cap rate<\/td><td style="font-weight:600;">Not available<\/td>/i.test(retest6FinalHtml), false);

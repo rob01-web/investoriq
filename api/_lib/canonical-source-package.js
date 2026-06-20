@@ -171,6 +171,352 @@ function extractDate(text, patterns) {
   return null;
 }
 
+function cloneStructuredValue(value) {
+  if (Array.isArray(value)) return value.map((item) => cloneStructuredValue(item));
+  if (value && typeof value === "object") {
+    const cloned = {};
+    for (const [key, nestedValue] of Object.entries(value)) {
+      cloned[key] = cloneStructuredValue(nestedValue);
+    }
+    return cloned;
+  }
+  return value;
+}
+
+function readStructuredValueFromRoots(roots, path) {
+  for (const root of roots) {
+    let current = root;
+    let matched = true;
+    for (const segment of path) {
+      if (current == null || typeof current !== "object" || !(segment in current)) {
+        matched = false;
+        break;
+      }
+      current = current[segment];
+    }
+    if (matched && current !== undefined && current !== null) return cloneStructuredValue(current);
+  }
+  return null;
+}
+
+function readStructuredArtifactValue(artifacts, pathOptions) {
+  for (const artifact of artifacts) {
+    const roots = [artifact, artifact?.payload];
+    for (const path of pathOptions) {
+      const value = readStructuredValueFromRoots(roots, path);
+      if (value !== null) return value;
+    }
+  }
+  return null;
+}
+
+function toFiniteNumber(value) {
+  const normalized = String(value ?? "").replace(/[$,\s]/g, "").trim();
+  if (!normalized) return null;
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeStructuredLineItem(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const label = String(
+    entry.label ??
+      entry.line_label ??
+      entry.lineLabel ??
+      entry.name ??
+      entry.description ??
+      entry.category ??
+      ""
+  ).trim();
+  const amount = toFiniteNumber(
+    entry.amount ??
+      entry.value ??
+      entry.total ??
+      entry.annual_amount ??
+      entry.annualAmount ??
+      entry.monthly_amount ??
+      entry.monthlyAmount
+  );
+  if (!label || !Number.isFinite(amount)) return null;
+  return { label, amount };
+}
+
+function normalizeStructuredUnitMixRow(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const rawLabel = String(
+    entry.label ??
+      entry.unit_label ??
+      entry.unitLabel ??
+      entry.unit_type ??
+      entry.unitType ??
+      entry.type ??
+      entry.bedroom_type ??
+      entry.bedroomType ??
+      entry.bedrooms ??
+      entry.bedroom_count ??
+      ""
+  ).trim();
+  const label = rawLabel
+    ? /^\d+$/.test(rawLabel)
+      ? `${rawLabel}BR`
+      : rawLabel
+    : "";
+  const count = toFiniteNumber(entry.count ?? entry.unit_count ?? entry.units ?? entry.quantity);
+  const inPlace = toFiniteNumber(
+    entry.current_rent ??
+      entry.currentRent ??
+      entry.in_place_rent ??
+      entry.inPlaceRent ??
+      entry.inplace_rent ??
+      entry.inPlace ??
+      entry.rent
+  );
+  const market = toFiniteNumber(entry.market_rent ?? entry.marketRent ?? entry.market_rent_monthly ?? entry.marketRentMonthly);
+  const gap = toFiniteNumber(entry.gap ?? entry.rent_gap ?? entry.monthly_rent_gap ?? entry.monthlyRentGap);
+  if (!label && !Number.isFinite(count) && !Number.isFinite(inPlace) && !Number.isFinite(market) && !Number.isFinite(gap)) return null;
+  const normalizedGap = Number.isFinite(gap) ? gap : Number.isFinite(inPlace) && Number.isFinite(market) ? market - inPlace : null;
+  return {
+    label: label || "Unit Mix",
+    count: Number.isFinite(count) ? count : null,
+    inPlace: Number.isFinite(inPlace) ? inPlace : null,
+    market: Number.isFinite(market) ? market : null,
+    gap: Number.isFinite(normalizedGap) ? normalizedGap : null,
+  };
+}
+
+function deriveStructuredUnitMixRowsFromUnits(units) {
+  const rows = [];
+  const groups = new Map();
+  for (const unit of toArray(units)) {
+    if (!unit || typeof unit !== "object") continue;
+    const rawLabel = String(
+      unit.label ??
+        unit.unit_label ??
+        unit.unitLabel ??
+        unit.unit_type ??
+        unit.unitType ??
+        unit.type ??
+        unit.bedroom_type ??
+        unit.bedroomType ??
+        unit.bedrooms ??
+        unit.bedroom_count ??
+        ""
+    ).trim();
+    const label = rawLabel
+      ? /^\d+$/.test(rawLabel)
+        ? `${rawLabel}BR`
+        : rawLabel
+      : "";
+    const key = label || String(unit.unit_number ?? unit.unitNumber ?? unit.id ?? groups.size);
+    const group = groups.get(key) || { label: label || "Unit Mix", count: 0, inPlace: null, market: null, gap: null };
+    group.count += 1;
+    const inPlace = toFiniteNumber(
+      unit.current_rent ??
+        unit.currentRent ??
+        unit.in_place_rent ??
+        unit.inPlaceRent ??
+        unit.inplace_rent ??
+        unit.rent
+    );
+    const market = toFiniteNumber(unit.market_rent ?? unit.marketRent ?? unit.market_rent_monthly ?? unit.marketRentMonthly);
+    const gap = toFiniteNumber(unit.gap ?? unit.rent_gap ?? unit.monthly_rent_gap ?? unit.monthlyRentGap);
+    if (!Number.isFinite(group.inPlace) && Number.isFinite(inPlace)) group.inPlace = inPlace;
+    if (!Number.isFinite(group.market) && Number.isFinite(market)) group.market = market;
+    if (!Number.isFinite(group.gap) && Number.isFinite(gap)) group.gap = gap;
+    groups.set(key, group);
+  }
+  for (const group of groups.values()) {
+    if (!Number.isFinite(group.gap) && Number.isFinite(group.inPlace) && Number.isFinite(group.market)) {
+      group.gap = group.market - group.inPlace;
+    }
+    rows.push({
+      label: group.label,
+      count: Number.isFinite(group.count) ? group.count : null,
+      inPlace: Number.isFinite(group.inPlace) ? group.inPlace : null,
+      market: Number.isFinite(group.market) ? group.market : null,
+      gap: Number.isFinite(group.gap) ? group.gap : null,
+    });
+  }
+  return rows;
+}
+
+function buildStructuredT12Facts(artifacts) {
+  const facts = {};
+  const incomeLines = readStructuredArtifactValue(artifacts, [
+    ["income_lines"],
+    ["t12_parsed", "income_lines"],
+    ["payload", "income_lines"],
+    ["payload", "t12_parsed", "income_lines"],
+  ]);
+  const expenseLines = readStructuredArtifactValue(artifacts, [
+    ["expense_lines"],
+    ["t12_parsed", "expense_lines"],
+    ["payload", "expense_lines"],
+    ["payload", "t12_parsed", "expense_lines"],
+  ]);
+  const egi = readStructuredArtifactValue(artifacts, [
+    ["effective_gross_income"],
+    ["effectiveGrossIncome"],
+    ["egi"],
+    ["payload", "effective_gross_income"],
+    ["payload", "effectiveGrossIncome"],
+    ["payload", "egi"],
+    ["t12_parsed", "effective_gross_income"],
+    ["t12_parsed", "effectiveGrossIncome"],
+    ["t12_parsed", "egi"],
+    ["payload", "t12_parsed", "effective_gross_income"],
+    ["payload", "t12_parsed", "effectiveGrossIncome"],
+    ["payload", "t12_parsed", "egi"],
+  ]);
+  const totalExpenses = readStructuredArtifactValue(artifacts, [
+    ["total_operating_expenses"],
+    ["totalOperatingExpenses"],
+    ["opEx"],
+    ["opex"],
+    ["payload", "total_operating_expenses"],
+    ["payload", "totalOperatingExpenses"],
+    ["payload", "opEx"],
+    ["payload", "opex"],
+    ["t12_parsed", "total_operating_expenses"],
+    ["t12_parsed", "totalOperatingExpenses"],
+    ["t12_parsed", "opEx"],
+    ["t12_parsed", "opex"],
+    ["payload", "t12_parsed", "total_operating_expenses"],
+    ["payload", "t12_parsed", "totalOperatingExpenses"],
+    ["payload", "t12_parsed", "opEx"],
+    ["payload", "t12_parsed", "opex"],
+  ]);
+  const noi = readStructuredArtifactValue(artifacts, [
+    ["net_operating_income"],
+    ["netOperatingIncome"],
+    ["noi"],
+    ["payload", "net_operating_income"],
+    ["payload", "netOperatingIncome"],
+    ["payload", "noi"],
+    ["t12_parsed", "net_operating_income"],
+    ["t12_parsed", "netOperatingIncome"],
+    ["t12_parsed", "noi"],
+    ["payload", "t12_parsed", "net_operating_income"],
+    ["payload", "t12_parsed", "netOperatingIncome"],
+    ["payload", "t12_parsed", "noi"],
+  ]);
+  const gpr = readStructuredArtifactValue(artifacts, [
+    ["gross_potential_rent"],
+    ["grossPotentialRent"],
+    ["gpr"],
+    ["payload", "gross_potential_rent"],
+    ["payload", "grossPotentialRent"],
+    ["payload", "gpr"],
+    ["t12_parsed", "gross_potential_rent"],
+    ["t12_parsed", "grossPotentialRent"],
+    ["t12_parsed", "gpr"],
+    ["payload", "t12_parsed", "gross_potential_rent"],
+    ["payload", "t12_parsed", "grossPotentialRent"],
+    ["payload", "t12_parsed", "gpr"],
+  ]);
+  if (Array.isArray(incomeLines) && incomeLines.length) facts.income_lines = incomeLines.map(normalizeStructuredLineItem).filter(Boolean);
+  if (Array.isArray(expenseLines) && expenseLines.length) facts.expense_lines = expenseLines.map(normalizeStructuredLineItem).filter(Boolean);
+  if (Number.isFinite(toFiniteNumber(egi))) facts.effective_gross_income = toFiniteNumber(egi);
+  if (Number.isFinite(toFiniteNumber(totalExpenses))) facts.total_operating_expenses = toFiniteNumber(totalExpenses);
+  if (Number.isFinite(toFiniteNumber(noi))) facts.net_operating_income = toFiniteNumber(noi);
+  if (Number.isFinite(toFiniteNumber(gpr))) facts.gross_potential_rent = toFiniteNumber(gpr);
+  return facts;
+}
+
+function buildStructuredRentRollFacts(artifacts) {
+  const facts = {};
+  const unitMix = readStructuredArtifactValue(artifacts, [
+    ["unit_mix"],
+    ["unitMix"],
+    ["rent_roll_parsed", "unit_mix"],
+    ["rent_roll_parsed", "unitMix"],
+    ["payload", "unit_mix"],
+    ["payload", "unitMix"],
+    ["payload", "rent_roll_parsed", "unit_mix"],
+    ["payload", "rent_roll_parsed", "unitMix"],
+  ]);
+  const units = readStructuredArtifactValue(artifacts, [
+    ["units"],
+    ["rent_roll_parsed", "units"],
+    ["rent_roll_parsed", "unit_rows"],
+    ["rent_roll_parsed", "unitRows"],
+    ["payload", "units"],
+    ["payload", "rent_roll_parsed", "units"],
+    ["payload", "rent_roll_parsed", "unit_rows"],
+    ["payload", "rent_roll_parsed", "unitRows"],
+  ]);
+  const totalUnits = readStructuredArtifactValue(artifacts, [
+    ["total_units"],
+    ["totalUnits"],
+    ["rent_roll_parsed", "total_units"],
+    ["rent_roll_parsed", "totalUnits"],
+    ["payload", "total_units"],
+    ["payload", "totalUnits"],
+    ["payload", "rent_roll_parsed", "total_units"],
+    ["payload", "rent_roll_parsed", "totalUnits"],
+  ]);
+  const occupancy = readStructuredArtifactValue(artifacts, [
+    ["occupancy"],
+    ["occupancy_rate"],
+    ["occupancyRate"],
+    ["rent_roll_parsed", "occupancy"],
+    ["rent_roll_parsed", "occupancy_rate"],
+    ["rent_roll_parsed", "occupancyRate"],
+    ["payload", "occupancy"],
+    ["payload", "occupancy_rate"],
+    ["payload", "occupancyRate"],
+    ["payload", "rent_roll_parsed", "occupancy"],
+    ["payload", "rent_roll_parsed", "occupancy_rate"],
+    ["payload", "rent_roll_parsed", "occupancyRate"],
+  ]);
+  const annualInPlaceRent = readStructuredArtifactValue(artifacts, [
+    ["annual_in_place_rent"],
+    ["annualInPlaceRent"],
+    ["in_place_rent_total"],
+    ["inPlaceRentTotal"],
+    ["rent_roll_parsed", "annual_in_place_rent"],
+    ["rent_roll_parsed", "annualInPlaceRent"],
+    ["rent_roll_parsed", "in_place_rent_total"],
+    ["rent_roll_parsed", "inPlaceRentTotal"],
+    ["payload", "annual_in_place_rent"],
+    ["payload", "annualInPlaceRent"],
+    ["payload", "in_place_rent_total"],
+    ["payload", "inPlaceRentTotal"],
+    ["payload", "rent_roll_parsed", "annual_in_place_rent"],
+    ["payload", "rent_roll_parsed", "annualInPlaceRent"],
+    ["payload", "rent_roll_parsed", "in_place_rent_total"],
+    ["payload", "rent_roll_parsed", "inPlaceRentTotal"],
+  ]);
+  const annualMarketRent = readStructuredArtifactValue(artifacts, [
+    ["annual_market_rent"],
+    ["annualMarketRent"],
+    ["market_rent_total"],
+    ["marketRentTotal"],
+    ["rent_roll_parsed", "annual_market_rent"],
+    ["rent_roll_parsed", "annualMarketRent"],
+    ["rent_roll_parsed", "market_rent_total"],
+    ["rent_roll_parsed", "marketRentTotal"],
+    ["payload", "annual_market_rent"],
+    ["payload", "annualMarketRent"],
+    ["payload", "market_rent_total"],
+    ["payload", "marketRentTotal"],
+    ["payload", "rent_roll_parsed", "annual_market_rent"],
+    ["payload", "rent_roll_parsed", "annualMarketRent"],
+    ["payload", "rent_roll_parsed", "market_rent_total"],
+    ["payload", "rent_roll_parsed", "marketRentTotal"],
+  ]);
+  const normalizedUnitMix = Array.isArray(unitMix) ? unitMix.map(normalizeStructuredUnitMixRow).filter(Boolean) : [];
+  const normalizedUnits = Array.isArray(units) ? deriveStructuredUnitMixRowsFromUnits(units) : [];
+  if (normalizedUnitMix.length) facts.unit_mix = normalizedUnitMix;
+  if (normalizedUnits.length) facts.units = cloneStructuredValue(units);
+  if (Number.isFinite(toFiniteNumber(totalUnits))) facts.total_units = toFiniteNumber(totalUnits);
+  else if (Array.isArray(units) && units.length) facts.total_units = units.length;
+  if (Number.isFinite(toFiniteNumber(occupancy))) facts.occupancy = toFiniteNumber(occupancy);
+  if (Number.isFinite(toFiniteNumber(annualInPlaceRent))) facts.annual_in_place_rent = toFiniteNumber(annualInPlaceRent);
+  if (Number.isFinite(toFiniteNumber(annualMarketRent))) facts.annual_market_rent = toFiniteNumber(annualMarketRent);
+  return facts;
+}
+
 function buildProvenance(file, authorityBasis, text) {
   return {
     authorityBasis,
@@ -181,8 +527,16 @@ function buildProvenance(file, authorityBasis, text) {
   };
 }
 
-function buildExtractedFacts(role, text) {
+function buildExtractedFacts(role, text, artifacts = []) {
   const facts = {};
+  if (role === "core_t12") {
+    const structuredFacts = buildStructuredT12Facts(artifacts);
+    return structuredFacts;
+  }
+  if (role === "core_rent_roll") {
+    const structuredFacts = buildStructuredRentRollFacts(artifacts);
+    return structuredFacts;
+  }
   if (role === "purchase_assumptions") {
     const purchasePrice = extractMoney(text, [
       /\bpurchase price[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
@@ -345,6 +699,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
   const explicitAppraisalText = /(appraisal summary|valuation context|appraisal \/ valuation|appraisal)/i.test(text);
   const explicitMarketSurveyText = /(market survey|rent survey|market rent survey)/i.test(text);
   if (hasT12Filename || (isSpreadsheetMimeType(mimeType) && explicitSemanticRole === "t12")) {
+    const extractedFacts = buildExtractedFacts("core_t12", text, artifacts);
     return {
       role: "core_t12",
       roleLabel: "Core Quantitative Source — Trailing 12-Month Income Statement",
@@ -356,7 +711,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       canonicalLabel: "Core Quantitative Source — Trailing 12-Month Income Statement",
       allowedUses: ["core_quantitative_input"],
       forbiddenUses: ["support_doc"],
-      extractedFacts: {},
+      extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
       provenance: buildProvenance(file, hasT12Filename ? "filename_heuristic" : "parser_semantic", text),
@@ -364,6 +719,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
   }
 
   if (hasRentRollFilename || (isSpreadsheetMimeType(mimeType) && explicitSemanticRole === "rent_roll")) {
+    const extractedFacts = buildExtractedFacts("core_rent_roll", text, artifacts);
     return {
       role: "core_rent_roll",
       roleLabel: "Core Quantitative Source — Rent Roll",
@@ -375,7 +731,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       canonicalLabel: "Core Quantitative Source — Rent Roll",
       allowedUses: ["core_quantitative_input"],
       forbiddenUses: ["support_doc"],
-      extractedFacts: {},
+      extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
       provenance: buildProvenance(file, hasRentRollFilename ? "filename_heuristic" : "parser_semantic", text),
