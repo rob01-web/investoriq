@@ -50,6 +50,17 @@ function normalizeBossContractFact(value) {
   return value === undefined ? null : value;
 }
 
+function escapeRegExp(value) {
+  return String(value ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function escapeRegExpForHtmlText(value) {
+  return String(value ?? "")
+    .split("&")
+    .map((part) => escapeRegExp(part))
+    .join("(?:&amp;|&)");
+}
+
 function cloneArray(value) {
   return Array.isArray(value) ? value.map((item) => normalizeBossContractFact(item)) : [];
 }
@@ -713,10 +724,297 @@ function validateAcquisitionMemoBossContract(contract) {
   };
 }
 
+function findSection(contract, sectionName) {
+  return isPlainObject(contract?.sections?.[sectionName]) ? contract.sections[sectionName] : null;
+}
+
+function getFactAvailability(section) {
+  return isPlainObject(section?.factAvailability) ? section.factAvailability : null;
+}
+
+function hasAvailableFact(section, factName) {
+  const availability = getFactAvailability(section);
+  if (!availability) return false;
+  return Array.isArray(availability.available) && availability.available.includes(String(factName));
+}
+
+function hasAnyAvailableFacts(section, factNames) {
+  return (Array.isArray(factNames) ? factNames : []).some((factName) => hasAvailableFact(section, factName));
+}
+
+function addRenderViolation(violations, code, severity, section, message) {
+  violations.push({ code, severity, section, message });
+}
+
+function renderComplianceRepairCollapseHtml() {
+  return "This section was omitted because the uploaded support context did not provide display-ready detail. Core report outputs remain based on the uploaded T12 and Rent Roll.";
+}
+
+function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
+  const htmlString = String(html || "");
+  const violations = [];
+  const sourceT12 = bossContract?.sourceTruth?.coreT12?.extractedFacts || {};
+  const sourceRentRoll = bossContract?.sourceTruth?.coreRentRoll?.extractedFacts || {};
+  const supportDocs = Array.isArray(bossContract?.sourceTruth?.supportDocs) ? bossContract.sourceTruth.supportDocs : [];
+  const unitMixSection = findSection(bossContract, "unitMix");
+  const capRateSection = findSection(bossContract, "capRateValueIndication");
+  const currentDebtSection = findSection(bossContract, "currentDebtContext");
+  const proposedFinancingSection = findSection(bossContract, "proposedFinancingContext");
+  const acquisitionRequestSection = findSection(bossContract, "acquisitionRequestContext");
+  const operatingStatementSection = findSection(bossContract, "operatingStatementTTMSummary");
+  const documentTreatmentSection = findSection(bossContract, "documentTreatment");
+
+  const coreT12Valid = Boolean(bossContract?.coreGate?.t12Valid);
+  const coreRentRollValid = Boolean(bossContract?.coreGate?.rentRollValid);
+  const totalUnits = Number(sourceRentRoll?.total_units ?? sourceRentRoll?.units?.length ?? bossContract?.reportContext?.coreMetrics?.units);
+  const sourceBackedUnitMix = Boolean(getFactAvailability(unitMixSection)?.sourceBacked);
+  const sourceBackedCapRate = Boolean(getFactAvailability(capRateSection)?.sourceBacked);
+  const sourceBackedCurrentDebt = Boolean(getFactAvailability(currentDebtSection)?.sourceBacked);
+  const sourceBackedProposed = Boolean(getFactAvailability(proposedFinancingSection)?.sourceBacked);
+  const sourceBackedOperating = Boolean(getFactAvailability(operatingStatementSection)?.sourceBacked);
+  const sourceBackedDocumentTreatment = Boolean(getFactAvailability(documentTreatmentSection)?.sourceBacked);
+  const sourceBackedAcqRequest = Boolean(getFactAvailability(acquisitionRequestSection)?.sourceBacked);
+
+  if (coreRentRollValid && sourceBackedUnitMix) {
+    if (/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(htmlString)) {
+      addRenderViolation(
+        violations,
+        "UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT",
+        "critical",
+        "unitMix",
+        "Unit Mix cannot show a false missing-rows fallback when structured unit evidence is source-backed."
+      );
+    }
+    if (!/(1BR|2BR)/i.test(htmlString)) {
+      addRenderViolation(
+        violations,
+        "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS",
+        "critical",
+        "unitMix",
+        "Unit Mix must render structured unit rows when the rent roll is source-backed."
+      );
+    }
+  }
+
+  if (Number.isFinite(totalUnits) && totalUnits > 0 && sourceBackedCapRate) {
+    const perUnitDashPatterns = [
+      /<tr><td>5\.0%<\/td><td style="font-weight:600;">[\s\S]*?<\/td><td style="font-weight:600;">-<\/td><\/tr>/i,
+      /<tr><td>6\.0%<\/td><td style="font-weight:600;">[\s\S]*?<\/td><td style="font-weight:600;">-<\/td><\/tr>/i,
+      /<tr><td>7\.0%<\/td><td style="font-weight:600;">[\s\S]*?<\/td><td style="font-weight:600;">-<\/td><\/tr>/i,
+    ];
+    if (perUnitDashPatterns.some((pattern) => pattern.test(htmlString))) {
+      addRenderViolation(
+        violations,
+        "NO_PER_UNIT_DASH_WITH_UNITS",
+        "critical",
+        "capRateValueIndication",
+        "Cap-rate per-unit values cannot render as dashes when total units are available."
+      );
+    }
+    if (/\bGoing-In Cap Rate\b[\s\S]{0,80}0\.0%/i.test(htmlString)) {
+      addRenderViolation(
+        violations,
+        "NO_ZERO_CAP_RATE",
+        "critical",
+        "capRateValueIndication",
+        "Going-In Cap Rate cannot render as 0.0% when source-backed cap data exists."
+      );
+    }
+  }
+
+  if (sourceBackedCurrentDebt) {
+    const requiredDebtLabels = [
+      "Current Outstanding Balance",
+      "Interest Rate",
+      "Amortization Remaining",
+      "Monthly Payment",
+      "Maturity Date",
+    ];
+    for (const label of requiredDebtLabels) {
+      if (!new RegExp(escapeRegExp(label), "i").test(htmlString)) {
+        addRenderViolation(
+          violations,
+          "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED",
+          "critical",
+          "currentDebtContext",
+          `Current debt facts must include ${label} when source-backed.`
+        );
+        break;
+      }
+    }
+    if (/Current Debt Maturity Not available/i.test(htmlString) || /Maturity Date Not available/i.test(htmlString)) {
+      addRenderViolation(
+        violations,
+        "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED",
+        "critical",
+        "currentDebtContext",
+        "Current debt cannot collapse to maturity-only not available when source-backed facts exist."
+      );
+    }
+  }
+
+  if (sourceBackedProposed || sourceBackedAcqRequest) {
+    const requiredProposedLabels = [
+      "Proposed Acquisition Loan",
+      "Proposed LTV",
+      "Proposed Rate",
+      "Proposed Amortization",
+      "Lender / Origination Fee",
+    ];
+    for (const label of requiredProposedLabels) {
+      if (!new RegExp(escapeRegExp(label), "i").test(htmlString)) {
+        addRenderViolation(
+          violations,
+          "PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED",
+          "critical",
+          "proposedFinancingContext",
+          `Proposed financing must include ${label} when source-backed.`
+        );
+        break;
+      }
+    }
+  }
+
+  if (sourceBackedOperating) {
+    const expenseLabels = Array.isArray(sourceT12.expense_lines)
+      ? sourceT12.expense_lines
+          .map((item) => String(item?.label || item?.line_label || item?.lineLabel || "").trim())
+          .filter(Boolean)
+      : [];
+    if (expenseLabels.length > 0) {
+      const missingExpense = expenseLabels.find((label) => !new RegExp(escapeRegExpForHtmlText(label), "i").test(htmlString));
+      if (missingExpense) {
+        addRenderViolation(
+          violations,
+          "T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT",
+          "critical",
+          "operatingStatementTTMSummary",
+          `T12 expense line ${missingExpense} must render when structured expense detail exists.`
+        );
+      }
+    }
+  }
+
+  if (supportDocs.length > 0 || coreT12Valid || coreRentRollValid) {
+    if (!/Core Quantitative Source/i.test(htmlString) || !/Trailing 12-Month Income Statement/i.test(htmlString) || !/Rent Roll/i.test(htmlString)) {
+      addRenderViolation(
+        violations,
+        "DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED",
+        "critical",
+        "documentTreatment",
+        "Document Treatment must preserve the core quantitative source treatment schedule."
+      );
+    }
+  }
+
+  const forbiddenPatterns = [
+    /\bDSCR\b/i,
+    /\brefinance\b/i,
+    /\brefi\b/i,
+    /\bDCF\b/i,
+    /\bwaterfall\b/i,
+    /equity return/i,
+    /deal score/i,
+    /final recommendation/i,
+    /\bBUY\b/i,
+    /\bSELL\b/i,
+    /\bHOLD\b/i,
+    /loan approval/i,
+    /lender commitment/i,
+  ];
+  if (forbiddenPatterns.some((pattern) => pattern.test(htmlString))) {
+    addRenderViolation(
+      violations,
+      "NO_FORBIDDEN_SURFACES",
+      "critical",
+      "global",
+      "Forbidden underwriting surfaces must not appear in the final HTML."
+    );
+  }
+
+  return {
+    ok: violations.length === 0,
+    violations,
+  };
+}
+
+function enforceAcquisitionMemoBossContractOnHtml(bossContract, html) {
+  const validation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, html);
+  let repairedHtml = String(html || "");
+  if (validation.ok) {
+    return {
+      ok: true,
+      violations: [],
+      repairedHtml,
+    };
+  }
+
+  if (/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(repairedHtml)) {
+    repairedHtml = repairedHtml.replace(
+      /No parsed unit mix rows were available from the canonical rent roll evidence\./gi,
+      renderComplianceRepairCollapseHtml()
+    );
+  }
+
+  if (/<td style="font-weight:600;">-<\/td>/i.test(repairedHtml) && Number.isFinite(Number(bossContract?.reportContext?.coreMetrics?.units)) && Number(bossContract.reportContext.coreMetrics.units) > 0) {
+    const units = Number(bossContract.reportContext.coreMetrics.units);
+    const noi = Number(bossContract.reportContext.coreMetrics.noi);
+    if (Number.isFinite(units) && units > 0 && Number.isFinite(noi)) {
+      for (const cap of [5.0, 6.0, 7.0]) {
+        const implied = noi / (cap / 100);
+        const perUnit = implied / units;
+        const replacement = `${Math.floor(perUnit).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+        repairedHtml = repairedHtml.replace(
+          new RegExp(`(<tr><td>${cap.toFixed(1)}%<\\/td><td style="font-weight:600;">[^<]*<\\/td><td style="font-weight:600;">)-<\\/td>`, "i"),
+          `$1${replacement}</td>`
+        );
+      }
+    }
+  }
+
+  if (/Current Debt Maturity Not available/i.test(repairedHtml)) {
+    repairedHtml = repairedHtml.replace(/Current Debt Maturity Not available/gi, "Current debt context omitted because the uploaded support context did not provide display-ready detail.");
+  }
+  if (/Maturity Date Not available/i.test(repairedHtml)) {
+    repairedHtml = repairedHtml.replace(/Maturity Date Not available/gi, "Current debt context omitted because the uploaded support context did not provide display-ready detail.");
+  }
+
+  if (/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(repairedHtml)) {
+    repairedHtml = repairedHtml.replace(/No parsed unit mix rows were available from the canonical rent roll evidence\./gi, renderComplianceRepairCollapseHtml());
+  }
+
+  const forbiddenScrubPatterns = [
+    /\bDSCR\b/gi,
+    /\brefinance\b/gi,
+    /\brefi\b/gi,
+    /\bDCF\b/gi,
+    /\bwaterfall\b/gi,
+    /equity return/gi,
+    /deal score/gi,
+    /final recommendation/gi,
+    /\bBUY\b/gi,
+    /\bSELL\b/gi,
+    /\bHOLD\b/gi,
+    /loan approval/gi,
+    /lender commitment/gi,
+  ];
+  for (const pattern of forbiddenScrubPatterns) {
+    repairedHtml = repairedHtml.replace(pattern, "");
+  }
+
+  return {
+    ok: false,
+    violations: validation.violations,
+    repairedHtml,
+  };
+}
+
 export {
   buildAcquisitionMemoBossContract,
   buildBossContractAssertion,
   buildSectionContract,
+  enforceAcquisitionMemoBossContractOnHtml,
   normalizeBossContractFact,
+  validateAcquisitionMemoRenderAgainstBossContract,
   validateAcquisitionMemoBossContract,
 };

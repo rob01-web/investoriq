@@ -42,6 +42,11 @@ import { buildAcquisitionMemoProjection } from "./_lib/acquisition-memo-projecti
 import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
 import { renderCompleteAcquisitionMemoV2Html } from "./_lib/acquisition-memo-v2-document.js";
 import {
+  buildAcquisitionMemoBossContract,
+  enforceAcquisitionMemoBossContractOnHtml,
+  validateAcquisitionMemoBossContract,
+} from "./_lib/acquisition-memo-boss-contract.js";
+import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
   assertValidReportPublicationInsert,
@@ -9394,6 +9399,39 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         renderedAcquisitionMemo,
       };
     }
+    const acquisitionMemoBossContract =
+      effectiveReportMode === "v1_core" &&
+      acqMemoV2SourceAuthorityEnabled &&
+      acquisitionMemoV2Bridge?.acquisitionMemoProjection
+        ? buildAcquisitionMemoBossContract({
+            canonicalSourcePackage: acquisitionMemoV2Bridge.canonicalSourcePackage,
+            acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
+            coreMetrics: acquisitionMemoRenderContext,
+            propertyProfile: {
+              propertyName: propertyNameDisplay,
+              propertyAddress: displayPropertyAddress,
+              propertyTitle: displayPropertyTitle,
+            },
+            reportMeta: {
+              reportType,
+              reportMode: effectiveReportMode,
+              reportTier,
+              generatedAt: new Date().toISOString(),
+              propertyName: propertyNameDisplay,
+              propertyAddress: displayPropertyAddress,
+              propertyTitle: displayPropertyTitle,
+            },
+            reportMode: effectiveReportMode,
+          })
+        : null;
+    const acquisitionMemoBossContractValidation = acquisitionMemoBossContract
+      ? validateAcquisitionMemoBossContract(acquisitionMemoBossContract)
+      : null;
+    if (acquisitionMemoBossContract && acquisitionMemoBossContractValidation && !acquisitionMemoBossContractValidation.ok) {
+      console.warn("[investoriq] acquisition memo boss contract validation warning", {
+        issues: acquisitionMemoBossContractValidation.issues || [],
+      });
+    }
     // --- V2 SOURCE AUTHORITY BRIDGE END ---
     const supportFileRows = Array.isArray(coverageFiles)
       ? coverageFiles.filter((file) => {
@@ -9748,6 +9786,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       acquisitionMemoProjection: acquisitionMemoV2Bridge?.acquisitionMemoProjection || null,
       renderedAcquisitionMemo: acquisitionMemoV2Bridge?.renderedAcquisitionMemo || null,
       sourcePackage: acquisitionMemoV2Bridge?.canonicalSourcePackage || null,
+      bossContract: acquisitionMemoBossContract,
       coreMetrics: {
         occupancy: execOccupancy,
         annualInPlaceRent: execAnnualInPlace,
@@ -9775,6 +9814,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyAddress: displayPropertyAddress,
         propertyTitle: displayPropertyTitle,
       },
+    };
+    const renderAcquisitionMemoV2FinalHtml = () => {
+      const renderedHtml = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
+      if (!acquisitionMemoBossContract) return renderedHtml;
+      const compliance = enforceAcquisitionMemoBossContractOnHtml(acquisitionMemoBossContract, renderedHtml);
+      return compliance?.repairedHtml || renderedHtml;
     };
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
@@ -11706,7 +11751,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
       if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-        htmlString = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
+        htmlString = renderAcquisitionMemoV2FinalHtml();
       } else if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
           /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
@@ -12279,7 +12324,7 @@ if (jobId) {
 }
 // --- V2 SOURCE AUTHORITY BRIDGE START ---
 if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-  htmlString = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
+  htmlString = renderAcquisitionMemoV2FinalHtml();
 }
 // --- V2 SOURCE AUTHORITY BRIDGE END ---
   let qaHtml = sanitizeTypography(dedupeDataNotAvailableBySection(htmlString));
@@ -12442,7 +12487,7 @@ try {
   }
   sourceCoverageQaResult = sourceCoverageQa;
   if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-    finalHtml = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
+    finalHtml = renderAcquisitionMemoV2FinalHtml();
   }
   if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
