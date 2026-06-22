@@ -1,6 +1,8 @@
 import assert from "assert";
 import fs from "fs";
 
+process.env.NODE_ENV = process.env.NODE_ENV || "test";
+process.env.INVESTORIQ_ENABLE_TEST_HOOKS = process.env.INVESTORIQ_ENABLE_TEST_HOOKS || "true";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-run-key";

@@ -261,7 +261,7 @@ assert.match(finalHtml, /<td>Property Management<\/td><td style="font-weight:600
 assert.match(finalHtml, /<td>Payroll \/ Admin<\/td><td style="font-weight:600;">\$28,000<\/td>/i);
 
 assert.equal(/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(finalHtml), false);
-assert.equal(/Going-In Cap Rate[^<]*0\.0%/i.test(finalHtml), false);
+assert.equal(/<td[^>]*>\s*Going-In Cap Rate\s*<\/td>\s*<td[^>]*>\s*0\.0%\s*<\/td>/i.test(finalHtml), false);
 assert.equal(/Implied value at going-in cap rate[^<]*Not available/i.test(finalHtml), false);
 assert.equal(/Current Debt Maturity Not available/i.test(finalHtml), false);
 assert.equal(/Maturity Date Not available/i.test(finalHtml), false);

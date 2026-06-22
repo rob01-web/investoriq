@@ -1,5 +1,7 @@
 import assert from "assert";
 
+process.env.NODE_ENV ||= "test";
+process.env.INVESTORIQ_ENABLE_TEST_HOOKS ||= "true";
 process.env.SUPABASE_URL ||= "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-key";
 process.env.ADMIN_RUN_KEY ||= "test-admin-run-key";

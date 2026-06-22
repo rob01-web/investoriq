@@ -811,7 +811,7 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
         "Cap-rate per-unit values cannot render as dashes when total units are available."
       );
     }
-    if (/\bGoing-In Cap Rate\b[\s\S]{0,80}0\.0%/i.test(htmlString)) {
+    if (/<td[^>]*>\s*Going-In Cap Rate\s*<\/td>\s*<td[^>]*>\s*0\.0%\s*<\/td>/i.test(htmlString)) {
       addRenderViolation(
         violations,
         "NO_ZERO_CAP_RATE",

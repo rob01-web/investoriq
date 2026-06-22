@@ -94,6 +94,13 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+function isTestHarnessAllowed() {
+  return process.env.NODE_ENV === "test" || process.env.INVESTORIQ_ENABLE_TEST_HOOKS === "true";
+}
+
+function hasTestHarnessFields(body = {}) {
+  return Boolean(body) && typeof body === "object" && Object.keys(body).some((key) => key.startsWith("__test_"));
+}
 function normalizeVisibleReportClassification({
   baseClass = null,
   effectiveReportMode = "screening_v1",
@@ -7564,6 +7571,11 @@ export default async function handler(req, res) {
   let effectiveUserId = null;
   try {
     const body = req.body || {};
+    if (hasTestHarnessFields(body) && !isTestHarnessAllowed()) {
+      return res.status(403).json({
+        error: "Test-only request fields are not allowed unless the local test harness is enabled.",
+      });
+    }
     const isFullRenderHarness = body?.__test_return_final_html === true;
     const isAdminRegen = body?.admin_regen === true;
     if (isAdminRegen) {
@@ -9390,7 +9402,15 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     let acquisitionMemoV2Bridge = null;
     // --- V2 SOURCE AUTHORITY BRIDGE START ---
     if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled) {
-      const canonicalSourcePackage = buildCanonicalSourcePackage(coverageFiles, coverageArtifacts);
+      const testAcqMemoV2SourcePackage =
+        body?.__test_acq_memo_v2_source_package &&
+        typeof body.__test_acq_memo_v2_source_package === "object" &&
+        !Array.isArray(body.__test_acq_memo_v2_source_package)
+          ? body.__test_acq_memo_v2_source_package
+          : null;
+      const canonicalSourcePackage =
+        testAcqMemoV2SourcePackage ||
+        buildCanonicalSourcePackage(coverageFiles, coverageArtifacts);
       const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage);
       const renderedAcquisitionMemo = renderAcquisitionMemo(acquisitionMemoProjection);
       acquisitionMemoV2Bridge = {
@@ -9399,40 +9419,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         renderedAcquisitionMemo,
       };
     }
-    const acquisitionMemoBossContract =
-      effectiveReportMode === "v1_core" &&
-      acqMemoV2SourceAuthorityEnabled &&
-      acquisitionMemoV2Bridge?.acquisitionMemoProjection
-        ? buildAcquisitionMemoBossContract({
-            canonicalSourcePackage: acquisitionMemoV2Bridge.canonicalSourcePackage,
-            acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
-            coreMetrics: acquisitionMemoRenderContext,
-            propertyProfile: {
-              propertyName: propertyNameDisplay,
-              propertyAddress: displayPropertyAddress,
-              propertyTitle: displayPropertyTitle,
-            },
-            reportMeta: {
-              reportType,
-              reportMode: effectiveReportMode,
-              reportTier,
-              generatedAt: new Date().toISOString(),
-              propertyName: propertyNameDisplay,
-              propertyAddress: displayPropertyAddress,
-              propertyTitle: displayPropertyTitle,
-            },
-            reportMode: effectiveReportMode,
-          })
-        : null;
-    const acquisitionMemoBossContractValidation = acquisitionMemoBossContract
-      ? validateAcquisitionMemoBossContract(acquisitionMemoBossContract)
-      : null;
-    if (acquisitionMemoBossContract && acquisitionMemoBossContractValidation && !acquisitionMemoBossContractValidation.ok) {
-      console.warn("[investoriq] acquisition memo boss contract validation warning", {
-        issues: acquisitionMemoBossContractValidation.issues || [],
-      });
-    }
-    // --- V2 SOURCE AUTHORITY BRIDGE END ---
     const supportFileRows = Array.isArray(coverageFiles)
       ? coverageFiles.filter((file) => {
         const text = String([
@@ -9568,6 +9554,49 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       supportDocAuthorityRows: canonicalSupportDocAuthorityRows,
       canonical_support_doc_authority_map: canonicalSupportDocAuthorityMapArtifact,
     };
+    const testAcqMemoV2RenderContext =
+      body?.__test_acq_memo_v2_render_context &&
+      typeof body.__test_acq_memo_v2_render_context === "object" &&
+      !Array.isArray(body.__test_acq_memo_v2_render_context)
+        ? body.__test_acq_memo_v2_render_context
+        : null;
+    if (testAcqMemoV2RenderContext && Number.isFinite(coerceNumber(testAcqMemoV2RenderContext.goingInCapRate))) {
+      acquisitionMemoRenderContext.goingInCapRate = coerceNumber(testAcqMemoV2RenderContext.goingInCapRate);
+    }
+    const acquisitionMemoBossContract =
+      effectiveReportMode === "v1_core" &&
+      acqMemoV2SourceAuthorityEnabled &&
+      acquisitionMemoV2Bridge?.acquisitionMemoProjection
+        ? buildAcquisitionMemoBossContract({
+            canonicalSourcePackage: acquisitionMemoV2Bridge.canonicalSourcePackage,
+            acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
+            coreMetrics: acquisitionMemoRenderContext,
+            propertyProfile: {
+              propertyName: propertyNameDisplay,
+              propertyAddress: displayPropertyAddress,
+              propertyTitle: displayPropertyTitle,
+            },
+            reportMeta: {
+              reportType,
+              reportMode: effectiveReportMode,
+              reportTier,
+              generatedAt: new Date().toISOString(),
+              propertyName: propertyNameDisplay,
+              propertyAddress: displayPropertyAddress,
+              propertyTitle: displayPropertyTitle,
+            },
+            reportMode: effectiveReportMode,
+          })
+        : null;
+    const acquisitionMemoBossContractValidation = acquisitionMemoBossContract
+      ? validateAcquisitionMemoBossContract(acquisitionMemoBossContract)
+      : null;
+    if (acquisitionMemoBossContract && acquisitionMemoBossContractValidation && !acquisitionMemoBossContractValidation.ok) {
+      console.warn("[investoriq] acquisition memo boss contract validation warning", {
+        issues: acquisitionMemoBossContractValidation.issues || [],
+      });
+    }
+    // --- V2 SOURCE AUTHORITY BRIDGE END ---
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
         { name: "Stable",     er: "< 55%",   nm: "> 45%",  beo: "< 75%" },
