@@ -40,11 +40,8 @@ import {
 import { buildCanonicalSourcePackage } from "./_lib/canonical-source-package.js";
 import { buildAcquisitionMemoProjection } from "./_lib/acquisition-memo-projection.js";
 import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
-import { renderCompleteAcquisitionMemoV2Html } from "./_lib/acquisition-memo-v2-document.js";
 import {
   buildAcquisitionMemoBossContract,
-  enforceAcquisitionMemoBossContractOnHtml,
-  validateAcquisitionMemoRenderAgainstBossContract,
   validateAcquisitionMemoBossContract,
 } from "./_lib/acquisition-memo-boss-contract.js";
 import {
@@ -9401,6 +9398,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY === "true" ||
       body?.__test_enable_acq_memo_v2_source_authority === true;
     let acquisitionMemoV2Bridge = null;
+    let acquisitionMemoV2Orchestrator = null;
+    let acquisitionMemoV2Finalization = null;
     // --- V2 SOURCE AUTHORITY BRIDGE START ---
     if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled) {
       const testAcqMemoV2SourcePackage =
@@ -9419,6 +9418,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         acquisitionMemoProjection,
         renderedAcquisitionMemo,
       };
+      acquisitionMemoV2Orchestrator = await import("./_lib/acquisition-memo-v2-orchestrator.js");
     }
     const supportFileRows = Array.isArray(coverageFiles)
       ? coverageFiles.filter((file) => {
@@ -9572,6 +9572,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
             canonicalSourcePackage: acquisitionMemoV2Bridge.canonicalSourcePackage,
             acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
             coreMetrics: acquisitionMemoRenderContext,
+            t12Payload,
             propertyProfile: {
               propertyName: propertyNameDisplay,
               propertyAddress: displayPropertyAddress,
@@ -9817,6 +9818,10 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       renderedAcquisitionMemo: acquisitionMemoV2Bridge?.renderedAcquisitionMemo || null,
       sourcePackage: acquisitionMemoV2Bridge?.canonicalSourcePackage || null,
       bossContract: acquisitionMemoBossContract,
+      t12Payload,
+      acquisitionTermsPayload,
+      loanTermSheetTermsPayload,
+      mortgagePayload,
       coreMetrics: {
         occupancy: execOccupancy,
         annualInPlaceRent: execAnnualInPlace,
@@ -9845,28 +9850,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTitle: displayPropertyTitle,
       },
     };
-    const renderAcquisitionMemoV2FinalHtml = () => {
-      const renderedHtml = renderCompleteAcquisitionMemoV2Html(acquisitionMemoV2DocumentArgs);
-      if (!acquisitionMemoBossContract) return renderedHtml;
-      const compliance = enforceAcquisitionMemoBossContractOnHtml(acquisitionMemoBossContract, renderedHtml);
-      return compliance?.repairedHtml || renderedHtml;
-    };
-    const finalizeAcquisitionMemoV2Html = (html) => {
-      const baseHtml = String(html || "");
-      if (!acquisitionMemoBossContract) {
-        return {
-          html: baseHtml,
-          compliance: { ok: true, violations: [] },
-        };
-      }
-      const compliance = enforceAcquisitionMemoBossContractOnHtml(acquisitionMemoBossContract, baseHtml);
-      const repairedHtml = compliance?.repairedHtml || baseHtml;
-      const validation = validateAcquisitionMemoRenderAgainstBossContract(acquisitionMemoBossContract, repairedHtml);
-      return {
-        html: repairedHtml,
-        compliance: validation.ok ? { ok: true, violations: [] } : validation,
-      };
-    };
+    if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+      acquisitionMemoV2Finalization = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({
+        acquisitionMemoV2DocumentArgs,
+        acquisitionMemoBossContract,
+      }) || null;
+    }
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
     }
@@ -11797,7 +11786,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
       if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-        htmlString = renderAcquisitionMemoV2FinalHtml();
+        htmlString = acquisitionMemoV2Finalization?.html || htmlString;
       } else if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
           /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
@@ -11805,16 +11794,22 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         );
       }
       if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-        const finalHarnessBossCompliance = finalizeAcquisitionMemoV2Html(htmlString);
+        const finalHarnessBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({
+          acquisitionMemoV2DocumentArgs,
+          acquisitionMemoBossContract,
+        }) || {
+          html: htmlString,
+          compliance: { ok: true, violations: [] },
+        };
         htmlString = finalHarnessBossCompliance.html;
         if (!finalHarnessBossCompliance.compliance?.ok) {
-          return res.status(200).json({
+          return res.status(500).json({
             success: false,
             report_type: reportType,
             report_mode: effectiveReportMode,
             error: "Final Acquisition Memo V2 HTML failed Boss compliance",
             boss_compliance: finalHarnessBossCompliance.compliance || null,
-            final_html: htmlString,
+            final_html: null,
           });
         }
       }
@@ -12384,7 +12379,7 @@ if (jobId) {
 }
 // --- V2 SOURCE AUTHORITY BRIDGE START ---
 if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-  htmlString = renderAcquisitionMemoV2FinalHtml();
+  htmlString = acquisitionMemoV2Finalization?.html || htmlString;
 }
 // --- V2 SOURCE AUTHORITY BRIDGE END ---
   let qaHtml = sanitizeTypography(dedupeDataNotAvailableBySection(htmlString));
@@ -12547,7 +12542,7 @@ try {
   }
   sourceCoverageQaResult = sourceCoverageQa;
   if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-    finalHtml = renderAcquisitionMemoV2FinalHtml();
+    finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;
   }
   if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
@@ -13199,8 +13194,14 @@ try {
       });
     }
   }
-  if (isAcqMemoV2FinalHtml) {
-    const finalBossCompliance = finalizeAcquisitionMemoV2Html(docHtml);
+if (isAcqMemoV2FinalHtml) {
+  const finalBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({
+    acquisitionMemoV2DocumentArgs,
+    acquisitionMemoBossContract,
+  }) || {
+    html: docHtml,
+      compliance: { ok: true, violations: [] },
+    };
     docHtml = finalBossCompliance.html;
     if (!finalBossCompliance.compliance?.ok) {
       console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {

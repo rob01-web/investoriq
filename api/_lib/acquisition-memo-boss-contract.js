@@ -155,6 +155,271 @@ function collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection) {
   return rows;
 }
 
+function getSupportDocEvidenceText(doc) {
+  if (!isPlainObject(doc)) return "";
+  return String(
+    doc?.sourceEvidence?.textSnippet ||
+      doc?.sourceEvidence?.text ||
+      doc?.source_text ||
+      doc?.text ||
+      doc?.document_text_extracted ||
+      doc?.payload?.document_text_extracted ||
+      doc?.payload?.text ||
+      ""
+  ).trim();
+}
+
+function findSupportDocByRole(supportDocs, role) {
+  const normalizedRole = String(role || "").trim().toLowerCase();
+  if (!normalizedRole) return null;
+  return (Array.isArray(supportDocs) ? supportDocs : []).find((doc) => String(doc?.canonicalRole || doc?.role || "").trim().toLowerCase() === normalizedRole) || null;
+}
+
+function extractMoneyFromText(text, patterns = []) {
+  const source = String(text || "");
+  for (const pattern of Array.isArray(patterns) ? patterns : []) {
+    const match = source.match(pattern);
+    if (!match) continue;
+    const value = Number(String(match[1] || "").replace(/,/g, ""));
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function extractPercentFractionFromText(text, patterns = []) {
+  const source = String(text || "");
+  for (const pattern of Array.isArray(patterns) ? patterns : []) {
+    const match = source.match(pattern);
+    if (!match) continue;
+    const rawValue = Number(String(match[1] || "").replace(/,/g, ""));
+    if (!Number.isFinite(rawValue)) continue;
+    if (rawValue > 1) return rawValue / 100;
+    return rawValue;
+  }
+  return null;
+}
+
+function extractYearsFromText(text, patterns = []) {
+  const source = String(text || "");
+  for (const pattern of Array.isArray(patterns) ? patterns : []) {
+    const match = source.match(pattern);
+    if (!match) continue;
+    const value = Number(String(match[1] || "").replace(/,/g, ""));
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function extractDateFromText(text, patterns = []) {
+  const source = String(text || "");
+  for (const pattern of Array.isArray(patterns) ? patterns : []) {
+    const match = source.match(pattern);
+    if (!match) continue;
+    const value = String(match[1] || "").trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function normalizeT12ExpenseLine(line) {
+  if (!isPlainObject(line)) return null;
+  const label = String(line.label || line.line_label || line.lineLabel || line.name || line.description || "").trim();
+  const amount = Number(line.amount ?? line.value ?? line.total ?? line.expense ?? NaN);
+  if (!label || !Number.isFinite(amount)) return null;
+  return { label, amount };
+}
+
+function parseT12LineItemsFromText(text) {
+  const lines = String(text || "")
+    .split(/\r?\n+/)
+    .map((line) => String(line || "").trim())
+    .filter(Boolean);
+  const items = [];
+  for (const line of lines) {
+    const match = line.match(/^(.+?)\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)$/);
+    if (!match) continue;
+    const label = String(match[1] || "").trim();
+    const amount = Number(String(match[2] || "").replace(/,/g, ""));
+    if (label && Number.isFinite(amount)) {
+      items.push({ label, amount });
+    }
+  }
+  return items;
+}
+
+function supplementPurchaseFactsFromEvidence(baseFacts, supportDoc) {
+  const facts = normalizeBossContractFact(baseFacts || {});
+  const text = getSupportDocEvidenceText(supportDoc);
+  if (!text) return facts;
+  const purchasePrice = extractMoneyFromText(text, [
+    /\bpurchase price[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bproposed acquisition price[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+  ]);
+  const noiBasis = extractMoneyFromText(text, [
+    /\bnoi basis[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bnoi[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+  ]);
+  const goingInCapRate = extractPercentFractionFromText(text, [
+    /\bgoing[-\s]*cap(?: rate| reference)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bgoing[-\s]*in cap(?: rate| reference)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bcap rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+  ]);
+  const proposedLoanAmount = extractMoneyFromText(text, [
+    /\bproposed loan amount[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bproposed acquisition loan[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bloan amount[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bloan[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+  ]);
+  const ltv = extractPercentFractionFromText(text, [
+    /\bltv[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bloanto[-\s]*value[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+  ]);
+  const interestRate = extractPercentFractionFromText(text, [
+    /\binterest rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\brate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+  ]);
+  const amortizationYears = extractYearsFromText(text, [
+    /\bamortization(?: years?| remaining years?)?[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+    /\bamort(?: years?)?[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+  ]);
+  const lenderFeePercent = extractPercentFractionFromText(text, [
+    /\blender fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bfinancing fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\borigination fee(?: percent)?[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bfee[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+  ]);
+  if (facts.purchase_price == null && purchasePrice != null) facts.purchase_price = purchasePrice;
+  if (facts.noi_basis == null && noiBasis != null) facts.noi_basis = noiBasis;
+  if (facts.going_in_cap_rate == null && goingInCapRate != null) facts.going_in_cap_rate = goingInCapRate;
+  if (facts.proposed_loan_amount == null && proposedLoanAmount != null) facts.proposed_loan_amount = proposedLoanAmount;
+  if (facts.loan_amount == null && proposedLoanAmount != null) facts.loan_amount = proposedLoanAmount;
+  if (facts.ltv == null && ltv != null) facts.ltv = ltv;
+  if (facts.interest_rate == null && interestRate != null) facts.interest_rate = interestRate;
+  if (facts.amortization_years == null && amortizationYears != null) facts.amortization_years = amortizationYears;
+  if (facts.lender_fee_percent == null && lenderFeePercent != null) facts.lender_fee_percent = lenderFeePercent;
+  if (facts.has_proposed_acquisition_financing == null) facts.has_proposed_acquisition_financing = true;
+  return facts;
+}
+
+function supplementCurrentDebtFactsFromEvidence(baseFacts, supportDoc) {
+  const facts = normalizeBossContractFact(baseFacts || {});
+  const text = getSupportDocEvidenceText(supportDoc);
+  if (!text) return facts;
+  const outstandingBalance = extractMoneyFromText(text, [
+    /\bcurrent outstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bcurrent debt balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\boutstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bprincipal balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bbalance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+  ]);
+  const interestRate = extractPercentFractionFromText(text, [
+    /\binterest rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bnote rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+    /\bcoupon rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
+  ]);
+  const amortizationYears = extractYearsFromText(text, [
+    /\bamortization remaining[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+    /\bamortization remaining years[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+    /\bamortization[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
+  ]);
+  const monthlyPayment = extractMoneyFromText(text, [
+    /\bmonthly payment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bmonthly debt service[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    /\bpayment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+  ]);
+  const maturityDate = extractDateFromText(text, [
+    /\bmaturity date[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+    /\bmatures?[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+  ]);
+  if (facts.current_outstanding_balance == null && outstandingBalance != null) facts.current_outstanding_balance = outstandingBalance;
+  if (facts.outstanding_balance == null && outstandingBalance != null) facts.outstanding_balance = outstandingBalance;
+  if (facts.interest_rate == null && interestRate != null) facts.interest_rate = interestRate;
+  if (facts.amortization_remaining_years == null && amortizationYears != null) facts.amortization_remaining_years = amortizationYears;
+  if (facts.amortization_years == null && amortizationYears != null) facts.amortization_years = amortizationYears;
+  if (facts.monthly_payment == null && monthlyPayment != null) facts.monthly_payment = monthlyPayment;
+  if (facts.maturity_date == null && maturityDate != null) facts.maturity_date = maturityDate;
+  if (facts.has_current_debt_context == null) facts.has_current_debt_context = true;
+  return facts;
+}
+
+function supplementT12FactsFromEvidence(baseFacts, supportDoc) {
+  const facts = normalizeBossContractFact(baseFacts || {});
+  const text = getSupportDocEvidenceText(supportDoc);
+  if (!text) return facts;
+  const parsedLineItems = parseT12LineItemsFromText(text);
+  if (!Array.isArray(facts.income_lines) || facts.income_lines.length === 0) {
+    const incomeLines = parsedLineItems.filter((item) => /effective gross income|gross potential rent|noi|net operating income/i.test(item.label));
+    if (incomeLines.length > 0) facts.income_lines = incomeLines.map((item) => ({ label: item.label, amount: item.amount }));
+  }
+  if (!Array.isArray(facts.expense_lines) || facts.expense_lines.length === 0) {
+    const expenseLines = parsedLineItems.filter((item) => !/effective gross income|gross potential rent|noi|net operating income/i.test(item.label));
+    if (expenseLines.length > 0) facts.expense_lines = expenseLines.map((item) => ({ label: item.label, amount: item.amount }));
+  }
+  if (facts.effective_gross_income == null) {
+    const egi = extractMoneyFromText(text, [
+      /\beffective gross income[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\begi[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ]);
+    if (egi != null) facts.effective_gross_income = egi;
+  }
+  if (facts.total_operating_expenses == null) {
+    const opEx = extractMoneyFromText(text, [
+      /\btotal operating expenses[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\boperating expenses[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\btotal op(?:erating)? ex(?:penses?)?[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ]);
+    if (opEx != null) facts.total_operating_expenses = opEx;
+  }
+  if (facts.net_operating_income == null) {
+    const noi = extractMoneyFromText(text, [
+      /\bnet operating income[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+      /\bnoi[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ]);
+    if (noi != null) facts.net_operating_income = noi;
+  }
+  if (facts.gross_potential_rent == null) {
+    const gpr = extractMoneyFromText(text, [
+      /\bgross potential rent[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
+    ]);
+    if (gpr != null) facts.gross_potential_rent = gpr;
+  }
+  return facts;
+}
+
+function supplementT12FactsFromPayload(baseFacts, t12Payload) {
+  const facts = normalizeBossContractFact(baseFacts || {});
+  const payload = isPlainObject(t12Payload) ? t12Payload : null;
+  if (!payload) return facts;
+  const structuredPayload = isPlainObject(payload.t12_parsed) ? payload.t12_parsed : payload;
+  const incomeLines = Array.isArray(structuredPayload.income_lines) ? structuredPayload.income_lines : [];
+  const expenseLines = Array.isArray(structuredPayload.expense_lines) ? structuredPayload.expense_lines : [];
+  if (!Array.isArray(facts.income_lines) || facts.income_lines.length === 0) {
+    const normalizedIncome = incomeLines.map((item) => normalizeBossContractFact(item)).filter((item) => isPlainObject(item) && String(item.label || item.line_label || item.lineLabel || item.name || item.description || "").trim());
+    if (normalizedIncome.length > 0) facts.income_lines = normalizedIncome;
+  }
+  if (!Array.isArray(facts.expense_lines) || facts.expense_lines.length === 0) {
+    const normalizedExpense = expenseLines.map((item) => normalizeBossContractFact(item)).filter((item) => isPlainObject(item) && String(item.label || item.line_label || item.lineLabel || item.name || item.description || "").trim());
+    if (normalizedExpense.length > 0) facts.expense_lines = normalizedExpense;
+  }
+  if (facts.effective_gross_income == null) {
+    const egi = structuredPayload.effective_gross_income ?? structuredPayload.effectiveGrossIncome ?? structuredPayload.egi;
+    if (Number.isFinite(Number(egi))) facts.effective_gross_income = Number(egi);
+  }
+  if (facts.total_operating_expenses == null) {
+    const totalOpEx = structuredPayload.total_operating_expenses ?? structuredPayload.totalOperatingExpenses ?? structuredPayload.opEx ?? structuredPayload.opex;
+    if (Number.isFinite(Number(totalOpEx))) facts.total_operating_expenses = Number(totalOpEx);
+  }
+  if (facts.net_operating_income == null) {
+    const noi = structuredPayload.net_operating_income ?? structuredPayload.netOperatingIncome ?? structuredPayload.noi;
+    if (Number.isFinite(Number(noi))) facts.net_operating_income = Number(noi);
+  }
+  if (facts.gross_potential_rent == null) {
+    const gpr = structuredPayload.gross_potential_rent ?? structuredPayload.grossPotentialRent ?? structuredPayload.gpr;
+    if (Number.isFinite(Number(gpr))) facts.gross_potential_rent = Number(gpr);
+  }
+  return facts;
+}
+
 function factAvailability(requiredFacts, availableFacts, sourceBacked = false) {
   const required = Array.from(new Set((Array.isArray(requiredFacts) ? requiredFacts : []).filter(Boolean).map(String)));
   const available = Array.from(new Set((Array.isArray(availableFacts) ? availableFacts : []).filter(Boolean).map(String)));
@@ -242,6 +507,7 @@ function buildAcquisitionMemoBossContract({
   canonicalSourcePackage = null,
   acquisitionMemoProjection = null,
   coreMetrics = null,
+  t12Payload = null,
   propertyProfile = null,
   reportMeta = null,
   reportMode = null,
@@ -257,6 +523,33 @@ function buildAcquisitionMemoBossContract({
     "Core Quantitative Source - Rent Roll"
   );
   const supportDocs = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection);
+  const coreT12Source = findSupportDocByRole(supportDocs, "core_t12") || coreT12;
+  const purchaseAssumptionsDoc = findSupportDocByRole(supportDocs, "purchase_assumptions") || acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions || null;
+  const currentDebtDoc = findSupportDocByRole(supportDocs, "current_debt_context") || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || null;
+  const supplementedCoreT12Facts = supplementT12FactsFromEvidence(normalizeBossContractFact(coreT12?.extractedFacts || {}), coreT12Source);
+  const supplementedCoreT12FactsFromPayload = supplementT12FactsFromPayload(supplementedCoreT12Facts, t12Payload);
+  const supplementedPurchaseFacts = supplementPurchaseFactsFromEvidence(
+    normalizeBossContractFact(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts || {}),
+    purchaseAssumptionsDoc
+  );
+  const supplementedCurrentDebtFacts = supplementCurrentDebtFactsFromEvidence(
+    normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || {}),
+    currentDebtDoc
+  );
+  const coreT12SourceTruth = coreT12 ? { ...coreT12, extractedFacts: supplementedCoreT12FactsFromPayload } : null;
+  const supportDocsWithSupplementedFacts = supportDocs.map((doc) => {
+    const role = String(doc?.canonicalRole || doc?.role || "").trim().toLowerCase();
+    if (role === "purchase_assumptions" || role === "proposed_acquisition_financing") {
+      return { ...doc, extractedFacts: supplementedPurchaseFacts };
+    }
+    if (role === "current_debt_context") {
+      return { ...doc, extractedFacts: supplementedCurrentDebtFacts };
+    }
+    if (role === "core_t12") {
+      return { ...doc, extractedFacts: supplementedCoreT12FactsFromPayload };
+    }
+    return doc;
+  });
 
   const t12Valid = isValidCoreDoc(coreT12);
   const rentRollValid = isValidCoreDoc(coreRentRoll);
@@ -265,9 +558,9 @@ function buildAcquisitionMemoBossContract({
   if (!rentRollValid) fatalReasons.push("core_rent_roll_unusable");
 
   const rentRollFacts = normalizeBossContractFact(coreRentRoll?.extractedFacts || {});
-  const t12Facts = normalizeBossContractFact(coreT12?.extractedFacts || {});
-  const purchaseFacts = normalizeBossContractFact(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts || {});
-  const currentDebtFacts = normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || {});
+  const t12Facts = normalizeBossContractFact(coreT12SourceTruth?.extractedFacts || supplementedCoreT12FactsFromPayload || {});
+  const purchaseFacts = supplementedPurchaseFacts;
+  const currentDebtFacts = supplementedCurrentDebtFacts;
 
   const unitMixAvailable = hasStructuredValues(rentRollFacts?.unit_mix) || hasStructuredValues(rentRollFacts?.units);
   const totalUnitsAvailable = Number.isFinite(Number(rentRollFacts?.total_units)) || Number.isFinite(Number(coreMetrics?.units));
@@ -575,10 +868,10 @@ function buildAcquisitionMemoBossContract({
       fatalReasons,
     },
     sourceTruth: {
-      coreT12,
-      coreRentRoll,
-      supportDocs,
-    },
+    coreT12: coreT12SourceTruth,
+    coreRentRoll,
+    supportDocs: supportDocsWithSupplementedFacts,
+  },
     reportContext: normalizeBossContractFact({
       propertyProfile,
       reportMeta,
