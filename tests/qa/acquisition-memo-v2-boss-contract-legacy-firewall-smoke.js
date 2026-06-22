@@ -15,6 +15,7 @@ const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-s
 const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
 const {
   buildAcquisitionMemoBossContract,
+  enforceAcquisitionMemoBossContractOnHtml,
   validateAcquisitionMemoBossContract,
   validateAcquisitionMemoRenderAgainstBossContract,
 } = await import("../../api/_lib/acquisition-memo-boss-contract.js");
@@ -303,6 +304,20 @@ assert.equal(/Maturity Date Not available/i.test(finalHtml), false);
 assert.equal(/DSCR|refi|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalHtml), false);
 assert.equal(/\b(V2 Canonical Package|Source Authority|Boss Contract|canonical source package|V2 projection|report shell stays presentation-only)\b/i.test(finalHtml), false);
 assert.equal(/ReferenceError|TypeError|is not defined|stack trace/i.test(finalHtml), false);
+
+const hostileLateMutationHtml = finalHtml
+  .replace(
+    /<tr>\s*<td>1BR<\/td>[\s\S]*?<\/tr>/i,
+    ""
+  ) + "\n<p>DSCR</p>\n";
+const hostileLateMutationCompliance = validateAcquisitionMemoRenderAgainstBossContract(bossContract, hostileLateMutationHtml);
+assert.equal(hostileLateMutationCompliance.ok, false);
+assert.ok(hostileLateMutationCompliance.violations.some((item) => item.code === "NO_FORBIDDEN_SURFACES"));
+
+const hostileLateMutationRepaired = enforceAcquisitionMemoBossContractOnHtml(bossContract, hostileLateMutationHtml);
+assert.equal(typeof hostileLateMutationRepaired.repairedHtml, "string");
+assert.equal(/DSCR/i.test(hostileLateMutationRepaired.repairedHtml), false);
+assert.equal(validateAcquisitionMemoRenderAgainstBossContract(bossContract, hostileLateMutationRepaired.repairedHtml).ok, true);
 
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 const docHtmlAnchor = reportSource.indexOf("docHtml = sanitizeTypography(qaHtml);");
