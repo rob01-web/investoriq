@@ -44,6 +44,7 @@ import { renderCompleteAcquisitionMemoV2Html } from "./_lib/acquisition-memo-v2-
 import {
   buildAcquisitionMemoBossContract,
   enforceAcquisitionMemoBossContractOnHtml,
+  validateAcquisitionMemoRenderAgainstBossContract,
   validateAcquisitionMemoBossContract,
 } from "./_lib/acquisition-memo-boss-contract.js";
 import {
@@ -9850,6 +9851,22 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       const compliance = enforceAcquisitionMemoBossContractOnHtml(acquisitionMemoBossContract, renderedHtml);
       return compliance?.repairedHtml || renderedHtml;
     };
+    const finalizeAcquisitionMemoV2Html = (html) => {
+      const baseHtml = String(html || "");
+      if (!acquisitionMemoBossContract) {
+        return {
+          html: baseHtml,
+          compliance: { ok: true, violations: [] },
+        };
+      }
+      const compliance = enforceAcquisitionMemoBossContractOnHtml(acquisitionMemoBossContract, baseHtml);
+      const repairedHtml = compliance?.repairedHtml || baseHtml;
+      const validation = validateAcquisitionMemoRenderAgainstBossContract(acquisitionMemoBossContract, repairedHtml);
+      return {
+        html: repairedHtml,
+        compliance: validation.ok ? { ok: true, violations: [] } : validation,
+      };
+    };
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
     }
@@ -11787,6 +11804,20 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
         );
       }
+      if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+        const finalHarnessBossCompliance = finalizeAcquisitionMemoV2Html(htmlString);
+        htmlString = finalHarnessBossCompliance.html;
+        if (!finalHarnessBossCompliance.compliance?.ok) {
+          return res.status(200).json({
+            success: false,
+            report_type: reportType,
+            report_mode: effectiveReportMode,
+            error: "Final Acquisition Memo V2 HTML failed Boss compliance",
+            boss_compliance: finalHarnessBossCompliance.compliance || null,
+            final_html: htmlString,
+          });
+        }
+      }
       return res.status(200).json({
         success: true,
         report_type: reportType,
@@ -13166,6 +13197,19 @@ try {
         matched_snippets_before: docFinalSourceReconciliationGuard.matched_snippets_before,
         matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
       });
+    }
+  }
+  if (isAcqMemoV2FinalHtml) {
+    const finalBossCompliance = finalizeAcquisitionMemoV2Html(docHtml);
+    docHtml = finalBossCompliance.html;
+    if (!finalBossCompliance.compliance?.ok) {
+      console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {
+        violations: finalBossCompliance.compliance?.violations || [],
+      });
+      const finalBossError = new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+      finalBossError.code = "REPORT_GENERATION_FAILED";
+      finalBossError.context = finalBossCompliance.compliance || null;
+      throw finalBossError;
     }
   }
   pdfResponse = await axios.post(
