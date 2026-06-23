@@ -68,7 +68,7 @@ function buildFixture() {
       fileId: "assumptions-file",
       original_filename: "Stonebridge_Assumptions.pdf",
       semantic_doc_role: "purchase_assumptions",
-      debt_basis: "proposed_acquisition",
+      debt_basis: "acquisition_financing_assumption",
       payload: {
         document_text_extracted:
           "Purchase assumptions / proposed acquisition financing\n" +
@@ -402,6 +402,12 @@ assert.equal(model.supportSourcesByRole.appraisal_context.canonicalRole, "apprai
 assert.equal(model.supportSourcesByRole.structured_renovation_capex_plan.canonicalRole, "structured_renovation_capex_plan");
 assert.equal(model.supportSourcesByRole.market_survey_context.canonicalRole, "market_survey_context");
 assert.equal(model.supportSourcesByRole.environmental_context.canonicalRole, "environmental_context");
+assert.equal(model.supportSourcesByRole.purchase_assumptions.acceptedSemanticDocRole, "purchase_assumptions");
+assert.equal(model.supportSourcesByRole.purchase_assumptions.acceptedDebtBasis, "acquisition_financing_assumption");
+assert.equal(model.supportSourcesByRole.current_debt_context.acceptedSemanticDocRole, "current_debt");
+assert.equal(model.supportSourcesByRole.current_debt_context.acceptedDebtBasis, "current_debt");
+assert.equal(model.sourceTruth.accepted.purchaseAssumptionsPresent, true);
+assert.equal(model.sourceTruth.accepted.currentDebtPresent, true);
 
 assert.equal(model.supportSourcesByRole.purchase_assumptions.visibleLabel.toLowerCase().includes("current debt"), false);
 assert.equal(model.supportSourcesByRole.current_debt_context.visibleLabel.toLowerCase().includes("purchase assumptions"), false);

@@ -169,6 +169,33 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
       source.payload?.source_evidence ||
       {}
   );
+  const acceptedSemanticDocRole = String(
+    source.acceptedSemanticDocRole ||
+      source.accepted_semantic_doc_role ||
+      source.semantic_doc_role ||
+      source.payload?.acceptedSemanticDocRole ||
+      source.payload?.accepted_semantic_doc_role ||
+      source.payload?.semantic_doc_role ||
+      ""
+  ).trim().toLowerCase();
+  const acceptedDebtBasis = String(
+    source.acceptedDebtBasis ||
+      source.accepted_debt_basis ||
+      source.debt_basis ||
+      source.payload?.acceptedDebtBasis ||
+      source.payload?.accepted_debt_basis ||
+      source.payload?.debt_basis ||
+      ""
+  ).trim().toLowerCase();
+  const acceptedSemanticDocDisplayLabel = String(
+    source.acceptedSemanticDocDisplayLabel ||
+      source.accepted_semantic_doc_display_label ||
+      source.semantic_doc_display_label ||
+      source.payload?.acceptedSemanticDocDisplayLabel ||
+      source.payload?.accepted_semantic_doc_display_label ||
+      source.payload?.semantic_doc_display_label ||
+      ""
+  ).trim();
   const canonicalRole = String(
     source.canonicalRole ||
       source.role ||
@@ -212,6 +239,28 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
     extractedFacts,
     sourceEvidence,
     visibleLabel: String(source.visibleLabel || source.roleLabel || source.canonicalLabel || source.canonicalRole || originalFilename || "").trim(),
+    acceptedSemanticDocRole: acceptedSemanticDocRole || null,
+    acceptedDebtBasis: acceptedDebtBasis || null,
+    acceptedSemanticDocDisplayLabel: acceptedSemanticDocDisplayLabel || null,
+    acceptedPurchaseAssumptionsTruth: Boolean(
+      source.acceptedPurchaseAssumptionsTruth === true ||
+        source.accepted_purchase_assumptions_truth === true ||
+        acceptedSemanticDocRole === "purchase_assumptions" ||
+        acceptedDebtBasis === "acquisition_financing_assumption" ||
+        /purchase assumptions|proposed acquisition financing/i.test(acceptedSemanticDocDisplayLabel)
+    ),
+    acceptedCurrentDebtTruth: Boolean(
+      source.acceptedCurrentDebtTruth === true ||
+        source.accepted_current_debt_truth === true ||
+        acceptedSemanticDocRole === "current_debt" ||
+        acceptedSemanticDocRole === "current_debt_context" ||
+        acceptedSemanticDocRole === "current_mortgage_statement" ||
+        acceptedSemanticDocRole === "current_debt_terms" ||
+        acceptedSemanticDocRole === "mortgage_statement" ||
+        acceptedDebtBasis === "current_debt" ||
+        acceptedDebtBasis === "current_debt_context" ||
+        /current debt|current mortgage|debt statement/i.test(acceptedSemanticDocDisplayLabel)
+    ),
   };
 }
 
@@ -1039,6 +1088,10 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
   for (const [key, section] of Object.entries(sectionMap)) {
     sections[key] = buildSectionRoleModel(section, supportSourcesByRole, coreSources, valueSemantics);
   }
+  const acceptedSourceTruth = {
+    purchaseAssumptionsPresent: supportSources.some((doc) => Boolean(doc?.acceptedPurchaseAssumptionsTruth)),
+    currentDebtPresent: supportSources.some((doc) => Boolean(doc?.acceptedCurrentDebtTruth)),
+  };
 
   return {
     modelVersion: MODEL_VERSION,
@@ -1058,6 +1111,11 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     supportSourceCounts: {
       rawInputCount: toArrayLike(canonicalSourcePackage?.supportDocs).length + toArrayLike(acquisitionMemoProjection?.supportDocProjection?.allSupportDocs).length + toArrayLike(bossContract?.sourceTruth?.supportDocs).length,
       uniqueUploadedFileCount: supportSources.length,
+    },
+    sourceTruth: {
+      accepted: acceptedSourceTruth,
+      coreT12: coreT12,
+      coreRentRoll: coreRentRoll,
     },
     supportSourcesByRole,
     sections,
@@ -1080,8 +1138,8 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     diagnostics: {
       coreGatePublishAllowed: Boolean(bossContract?.coreGate?.publishAllowed),
       supportDocCount: supportSources.length,
-      hasPurchaseAssumptions: Boolean(supportSourcesByRole.purchase_assumptions),
-      hasCurrentDebtContext: Boolean(supportSourcesByRole.current_debt_context),
+      hasPurchaseAssumptions: Boolean(supportSourcesByRole.purchase_assumptions) || Boolean(acceptedSourceTruth.purchaseAssumptionsPresent),
+      hasCurrentDebtContext: Boolean(supportSourcesByRole.current_debt_context) || Boolean(acceptedSourceTruth.currentDebtPresent),
       hasAppraisalContext: Boolean(supportSourcesByRole.appraisal_context),
       hasRenovationContext: Boolean(supportSourcesByRole.structured_renovation_capex_plan),
       hasMarketSurveyContext: Boolean(supportSourcesByRole.market_survey_context),
@@ -1197,6 +1255,7 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
   const renovation = supportSourcesByRole.structured_renovation_capex_plan || supportSourcesByRole.renovation_capex_budget_context || null;
   const marketSurvey = supportSourcesByRole.market_survey_context || null;
   const environmental = supportSourcesByRole.environmental_context || null;
+  const acceptedSourceTruth = model.sourceTruth?.accepted || {};
 
   if (purchaseAssumptions) {
     const label = normalizeText(purchaseAssumptions.visibleLabel || purchaseAssumptions.roleLabel || purchaseAssumptions.canonicalLabel);
@@ -1213,6 +1272,21 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
     if (label.includes("purchase assumptions") || label.includes("proposed acquisition")) {
       pushIssue("CURRENT_DEBT_ROLE_CONTAMINATED", "Current debt must not be relabeled as purchase assumptions or proposed acquisition.", "critical", "model.supportSourcesByRole.current_debt_context");
     }
+  }
+
+  const acceptedPurchaseAssumptionsPresent = Boolean(
+    acceptedSourceTruth?.purchaseAssumptionsPresent === true ||
+    supportSources.some((doc) => Boolean(doc?.acceptedPurchaseAssumptionsTruth))
+  );
+  const acceptedCurrentDebtPresent = Boolean(
+    acceptedSourceTruth?.currentDebtPresent === true ||
+    supportSources.some((doc) => Boolean(doc?.acceptedCurrentDebtTruth))
+  );
+  if (acceptedPurchaseAssumptionsPresent && !purchaseAssumptions) {
+    pushIssue("ACCEPTED_PURCHASE_ASSUMPTIONS_LOST", "Accepted purchase assumptions truth must reach the model.", "fatal_core", "model.sourceTruth.accepted.purchaseAssumptionsPresent");
+  }
+  if (acceptedCurrentDebtPresent && !currentDebt) {
+    pushIssue("ACCEPTED_CURRENT_DEBT_LOST", "Accepted current debt truth must reach the model.", "fatal_core", "model.sourceTruth.accepted.currentDebtPresent");
   }
 
   if (appraisal) {
@@ -1311,6 +1385,14 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
   }
 
   const expected = expectedSurfaceValuesFromModel(model);
+  const acceptedPurchaseAssumptionsPresent = Boolean(model?.sourceTruth?.accepted?.purchaseAssumptionsPresent);
+  const acceptedCurrentDebtPresent = Boolean(model?.sourceTruth?.accepted?.currentDebtPresent);
+  if (acceptedPurchaseAssumptionsPresent && /no purchase assumptions uploaded|purchase assumptions provided\s+no/i.test(htmlText)) {
+    pushIssue("HTML_PURCHASE_ASSUMPTIONS_FALSE_MISSING", "Accepted purchase assumptions truth cannot be rendered as missing.", "critical", "html.purchaseAssumptions");
+  }
+  if (acceptedCurrentDebtPresent && /no current debt|current debt maturity not available|current debt.*not available/i.test(htmlText)) {
+    pushIssue("HTML_CURRENT_DEBT_FALSE_MISSING", "Accepted current debt truth cannot be rendered as missing.", "critical", "html.currentDebtContext");
+  }
   const labelChecks = [
     {
       label: expected.coreT12Label,

@@ -3265,27 +3265,75 @@ function buildDocumentTreatmentSummaryHtml({
     : [];
   if (canonicalSupportDocEntries.length > 0) {
     const normalizeCanonicalSupportDocAuthorityRow = (authority = {}, fileId = "") => {
+      const acceptedSemanticDocRole = String(
+        authority?.acceptedSemanticDocRole ||
+        authority?.semantic_doc_role ||
+        authority?.parser_role ||
+        ""
+      ).trim().toLowerCase();
+      const acceptedDebtBasis = String(
+        authority?.acceptedDebtBasis ||
+        authority?.debt_basis ||
+        ""
+      ).trim().toLowerCase();
+      const acceptedDisplayLabel = String(
+        authority?.acceptedSemanticDocDisplayLabel ||
+        authority?.semantic_doc_display_label ||
+        authority?.parser_display_label ||
+        ""
+      ).trim();
+      const acceptedPurchaseAssumptionsTruth =
+        acceptedSemanticDocRole === "purchase_assumptions" ||
+        acceptedDebtBasis === "acquisition_financing_assumption" ||
+        /purchase assumptions|proposed acquisition financing/i.test(acceptedDisplayLabel);
+      const acceptedCurrentDebtTruth =
+        acceptedSemanticDocRole === "current_debt" ||
+        acceptedSemanticDocRole === "current_debt_context" ||
+        acceptedSemanticDocRole === "current_mortgage_statement" ||
+        acceptedSemanticDocRole === "current_debt_terms" ||
+        acceptedSemanticDocRole === "mortgage_statement" ||
+        acceptedDebtBasis === "current_debt" ||
+        acceptedDebtBasis === "current_debt_context" ||
+        /current debt|current mortgage|debt statement/i.test(acceptedDisplayLabel);
       const canonicalRole = String(
         authority?.role ||
         authority?.canonical_support_doc_role ||
-        authority?.semantic_doc_role ||
+        (acceptedPurchaseAssumptionsTruth
+          ? "purchase_assumptions"
+          : acceptedCurrentDebtTruth
+            ? "current_debt_context"
+            : acceptedSemanticDocRole) ||
         ""
       ).trim();
       const roleLabel = String(
         authority?.displayLabel ||
         authority?.document_role_label ||
-        authority?.semantic_doc_display_label ||
+        (acceptedPurchaseAssumptionsTruth
+          ? "Purchase Assumptions / Proposed Acquisition Financing Context"
+          : acceptedCurrentDebtTruth
+            ? "Existing Debt Context / Current Mortgage / Debt Statement"
+            : acceptedDisplayLabel) ||
         ""
       ).trim() || "Other Support Document";
       const treatmentLabel = String(
         authority?.treatment ||
         authority?.treatment_label ||
+        (acceptedPurchaseAssumptionsTruth
+          ? "Acquisition context received"
+          : acceptedCurrentDebtTruth
+            ? "Debt support received / contextual"
+            : "") ||
         ""
       ).trim() || "Context only";
       const useLabel = String(
         authority?.use ||
         authority?.use_label ||
         (Array.isArray(authority?.allowed_uses) ? authority.allowed_uses[0] : "") ||
+        (acceptedPurchaseAssumptionsTruth
+          ? "Proposed acquisition financing terms and purchase assumptions; not existing/current debt."
+          : acceptedCurrentDebtTruth
+            ? "Uploaded existing/current debt context only; not proposed acquisition financing."
+            : "") ||
         ""
       ).trim() || "Listed for auditability only; not used quantitatively.";
       const category = String(
@@ -3319,8 +3367,13 @@ function buildDocumentTreatmentSummaryHtml({
           authority?.loan_terms_text ||
           ""
         ).trim(),
-        parserRole: String(authority?.semantic_doc_role || authority?.parser_role || "").trim(),
-        parserDisplayLabel: String(authority?.semantic_doc_display_label || authority?.parser_display_label || "").trim(),
+        parserRole: String(acceptedSemanticDocRole || authority?.semantic_doc_role || authority?.parser_role || "").trim(),
+        parserDisplayLabel: String(acceptedDisplayLabel || authority?.semantic_doc_display_label || authority?.parser_display_label || "").trim(),
+        acceptedSemanticDocRole: acceptedSemanticDocRole || null,
+        acceptedDebtBasis: acceptedDebtBasis || null,
+        acceptedSemanticDocDisplayLabel: acceptedDisplayLabel || null,
+        acceptedPurchaseAssumptionsTruth,
+        acceptedCurrentDebtTruth,
         outstanding_balance: authority?.outstanding_balance ?? authority?.current_outstanding_balance ?? authority?.current_loan_balance ?? null,
         purchase_price: authority?.purchase_price ?? authority?.acquisition_price ?? authority?.asking_price ?? null,
         total_budget: authority?.total_budget ?? authority?.total_capex ?? authority?.renovation_budget ?? null,

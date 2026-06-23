@@ -228,6 +228,9 @@ function buildNormalPathPayload() {
           payload: {
             source_file_id: "assumptions-file",
             source_original_filename: "Stonebridge_Assumptions.pdf",
+            semantic_doc_role: "purchase_assumptions",
+            semantic_doc_display_label: "Purchase Assumptions / Proposed Acquisition Financing Context",
+            debt_basis: "acquisition_financing_assumption",
             document_text_extracted:
               "Purchase assumptions / proposed acquisition financing\nPurchase Price $13,500,000\nNOI Basis $945,000\nGoing-In Cap Reference 7.00%\nProposed Acquisition Loan $9,450,000\nLTV 70.0%\nInterest Rate 5.95%\nAmortization 30 years\nLender Fee 0.85%",
           },
@@ -619,6 +622,8 @@ assert.equal(handlerResponse.body?.report_mode, "v1_core");
 assert.equal(handlerResponse.body?.customer_surface_model_validation?.ok, true);
 assert.equal(handlerResponse.body?.customer_surface_html_validation?.ok, true);
 assert.equal(localCustomerSurfaceValidation.ok, true);
+assert.equal(localCustomerSurfaceModel.sourceTruth.accepted.purchaseAssumptionsPresent, true);
+assert.equal(localCustomerSurfaceModel.sourceTruth.accepted.currentDebtPresent, true);
 assert.equal("__test_acq_memo_v2_source_package" in requestBody, false);
 assert.equal("__test_acq_memo_v2_render_context" in requestBody, false);
 if (!localBossRenderValidation.ok) {
@@ -649,6 +654,8 @@ assert.equal(finalPdfHandoffHtml.includes("Proposed Amortization"), true);
 assert.equal(finalPdfHandoffHtml.includes("30 years"), true);
 assert.equal(finalPdfHandoffHtml.includes("Lender / Origination Fee"), true);
 assert.equal(finalPdfHandoffHtml.includes("0.85%"), true);
+assert.equal(finalPdfHandoffHtml.includes("Purchase Assumptions / Proposed Acquisition Financing Context"), true);
+assert.equal(/No purchase assumptions uploaded|Purchase assumptions provided\s+No/i.test(finalPdfHandoffHtml), false);
 assertNormalizedVisibleTextContains({
   finalHtml: finalPdfHandoffHtml,
   normalizedText: normalizedFinalVisibleText,

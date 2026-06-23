@@ -191,6 +191,51 @@ function extractDate(text, patterns) {
   return null;
 }
 
+function collectAcceptedSupportDocTruth(artifacts = []) {
+  const truth = {
+    semanticDocRole: null,
+    debtBasis: null,
+    semanticDocDisplayLabel: null,
+    hasPurchaseAssumptions: false,
+    hasCurrentDebt: false,
+  };
+  for (const artifact of toArray(artifacts)) {
+    if (!artifact || typeof artifact !== "object") continue;
+    const semanticDocRole = String(artifact?.semantic_doc_role ?? artifact?.payload?.semantic_doc_role ?? "").trim().toLowerCase();
+    const debtBasis = String(artifact?.debt_basis ?? artifact?.payload?.debt_basis ?? "").trim().toLowerCase();
+    const semanticDocDisplayLabel = String(
+      artifact?.semantic_doc_display_label ??
+        artifact?.payload?.semantic_doc_display_label ??
+        artifact?.document_role_label ??
+        artifact?.payload?.document_role_label ??
+        ""
+    ).trim();
+    if (!truth.semanticDocRole && semanticDocRole) truth.semanticDocRole = semanticDocRole;
+    if (!truth.debtBasis && debtBasis) truth.debtBasis = debtBasis;
+    if (!truth.semanticDocDisplayLabel && semanticDocDisplayLabel) truth.semanticDocDisplayLabel = semanticDocDisplayLabel;
+    if (
+      semanticDocRole === "purchase_assumptions" ||
+      debtBasis === "acquisition_financing_assumption" ||
+      /purchase assumptions|proposed acquisition financing/i.test(semanticDocDisplayLabel)
+    ) {
+      truth.hasPurchaseAssumptions = true;
+    }
+    if (
+      semanticDocRole === "current_debt" ||
+      semanticDocRole === "current_debt_context" ||
+      semanticDocRole === "current_mortgage_statement" ||
+      semanticDocRole === "current_debt_terms" ||
+      semanticDocRole === "mortgage_statement" ||
+      debtBasis === "current_debt" ||
+      debtBasis === "current_debt_context" ||
+      /current debt|current mortgage|debt statement/i.test(semanticDocDisplayLabel)
+    ) {
+      truth.hasCurrentDebt = true;
+    }
+  }
+  return truth;
+}
+
 function cloneStructuredValue(value) {
   if (Array.isArray(value)) return value.map((item) => cloneStructuredValue(item));
   if (value && typeof value === "object") {
@@ -718,6 +763,24 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
   const explicitPhaseIText = /(phase i esa|phase i environmental site assessment|environmental due diligence|phase i)/i.test(text);
   const explicitAppraisalText = /(appraisal summary|valuation context|appraisal \/ valuation|appraisal)/i.test(text);
   const explicitMarketSurveyText = /(market survey|rent survey|market rent survey)/i.test(text);
+  const acceptedTruth = collectAcceptedSupportDocTruth(artifacts);
+  const acceptedPurchaseAssumptionsTruth = Boolean(
+    acceptedTruth.hasPurchaseAssumptions ||
+    acceptedTruth.semanticDocRole === "purchase_assumptions" ||
+    acceptedTruth.debtBasis === "acquisition_financing_assumption" ||
+    /purchase assumptions|proposed acquisition financing/i.test(acceptedTruth.semanticDocDisplayLabel)
+  );
+  const acceptedCurrentDebtTruth = Boolean(
+    acceptedTruth.hasCurrentDebt ||
+    acceptedTruth.semanticDocRole === "current_debt" ||
+    acceptedTruth.semanticDocRole === "current_debt_context" ||
+    acceptedTruth.semanticDocRole === "current_mortgage_statement" ||
+    acceptedTruth.semanticDocRole === "current_debt_terms" ||
+    acceptedTruth.semanticDocRole === "mortgage_statement" ||
+    acceptedTruth.debtBasis === "current_debt" ||
+    acceptedTruth.debtBasis === "current_debt_context" ||
+    /current debt|current mortgage|debt statement/i.test(acceptedTruth.semanticDocDisplayLabel)
+  );
   if (hasT12Filename || (isSpreadsheetMimeType(mimeType) && explicitSemanticRole === "t12")) {
     const extractedFacts = buildExtractedFacts("core_t12", text, artifacts);
     return {
@@ -759,9 +822,10 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
   }
 
   if (
-    positiveCurrentDebtEvidence ||
-    hasCurrentDebtFilename ||
-    ((explicitSemanticRole === "current_debt" || explicitDebtBasis === "current_debt") && !explicitPurchaseAssumptionsText)
+    acceptedCurrentDebtTruth ||
+    (positiveCurrentDebtEvidence && !acceptedPurchaseAssumptionsTruth) ||
+    (hasCurrentDebtFilename && !acceptedPurchaseAssumptionsTruth) ||
+    ((explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context" || explicitDebtBasis === "current_debt" || explicitDebtBasis === "current_debt_context") && !acceptedPurchaseAssumptionsTruth)
   ) {
     const extractedFacts = buildExtractedFacts("current_debt_context", text);
     return {
@@ -777,33 +841,48 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
+      acceptedSemanticDocRole: acceptedTruth.semanticDocRole || explicitSemanticRole || "current_debt_context",
+      acceptedDebtBasis: acceptedTruth.debtBasis || explicitDebtBasis || "current_debt_context",
+      acceptedSemanticDocDisplayLabel: acceptedTruth.semanticDocDisplayLabel || "Existing Debt Context / Current Mortgage / Debt Statement",
+      acceptedSourceTruth: {
+        hasPurchaseAssumptions: acceptedPurchaseAssumptionsTruth,
+        hasCurrentDebt: true,
+      },
       provenance: buildProvenance(
         file,
-        positiveCurrentDebtEvidence
-          ? "keyword_match"
-          : hasCurrentDebtFilename
-            ? "filename_heuristic"
-            : explicitDebtBasis === "current_debt"
-              ? "debt_basis_signal"
-              : "parser_semantic",
+        acceptedTruth.semanticDocRole === "current_debt" || acceptedTruth.semanticDocRole === "current_debt_context"
+          ? "parser_semantic"
+          : acceptedTruth.debtBasis === "current_debt" || acceptedTruth.debtBasis === "current_debt_context"
+            ? "debt_basis_signal"
+            : hasCurrentDebtFilename
+              ? "filename_heuristic"
+              : positiveCurrentDebtEvidence
+                ? "keyword_match"
+                : "parser_semantic",
         text
       ),
       authorityBasis:
-        hasCurrentDebtFilename
-          ? "filename_heuristic"
-          : explicitDebtBasis === "current_debt"
-          ? "debt_basis_signal"
-          : explicitSemanticRole === "current_debt"
-            ? "parser_semantic"
-            : "keyword_match",
+        acceptedTruth.semanticDocRole === "current_debt" || acceptedTruth.semanticDocRole === "current_debt_context"
+          ? "parser_semantic"
+          : acceptedTruth.debtBasis === "current_debt" || acceptedTruth.debtBasis === "current_debt_context"
+            ? "debt_basis_signal"
+            : hasCurrentDebtFilename
+              ? "filename_heuristic"
+              : explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context"
+                ? "parser_semantic"
+                : "keyword_match",
     };
   }
 
   if (
-    (explicitSemanticRole === "purchase_assumptions" && !explicitAppraisalText && !explicitMarketSurveyText && !explicitPhaseIText) ||
-    explicitDebtBasis === "proposed_acquisition" ||
-    hasAssumptionFilename ||
-    (explicitPurchaseAssumptionsText && !explicitAppraisalText && !explicitMarketSurveyText && !explicitPhaseIText)
+    acceptedPurchaseAssumptionsTruth ||
+    ((explicitSemanticRole === "purchase_assumptions" || explicitDebtBasis === "acquisition_financing_assumption" || explicitDebtBasis === "proposed_acquisition") &&
+      !acceptedCurrentDebtTruth &&
+      !explicitAppraisalText &&
+      !explicitMarketSurveyText &&
+      !explicitPhaseIText) ||
+    (hasAssumptionFilename && !acceptedCurrentDebtTruth) ||
+    (explicitPurchaseAssumptionsText && !explicitAppraisalText && !explicitMarketSurveyText && !explicitPhaseIText && !acceptedCurrentDebtTruth)
   ) {
     const extractedFacts = buildExtractedFacts("purchase_assumptions", text);
     return {
@@ -819,25 +898,38 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
+      acceptedSemanticDocRole: acceptedTruth.semanticDocRole || explicitSemanticRole || "purchase_assumptions",
+      acceptedDebtBasis: acceptedTruth.debtBasis || explicitDebtBasis || "acquisition_financing_assumption",
+      acceptedSemanticDocDisplayLabel: acceptedTruth.semanticDocDisplayLabel || "Purchase Assumptions / Proposed Acquisition Financing Context",
+      acceptedSourceTruth: {
+        hasPurchaseAssumptions: true,
+        hasCurrentDebt: acceptedCurrentDebtTruth,
+      },
       provenance: buildProvenance(
         file,
-        explicitSemanticRole === "purchase_assumptions"
+        acceptedTruth.semanticDocRole === "purchase_assumptions"
           ? "parser_semantic"
-          : explicitDebtBasis === "proposed_acquisition"
+          : acceptedTruth.debtBasis === "acquisition_financing_assumption"
             ? "debt_basis_signal"
-            : hasAssumptionFilename
-              ? "filename_heuristic"
-              : "keyword_match",
+            : explicitDebtBasis === "proposed_acquisition"
+              ? "debt_basis_signal"
+              : hasAssumptionFilename
+                ? "filename_heuristic"
+                : "keyword_match",
         text
       ),
       authorityBasis:
-        explicitSemanticRole === "purchase_assumptions"
+        acceptedTruth.semanticDocRole === "purchase_assumptions"
           ? "parser_semantic"
-          : explicitDebtBasis === "proposed_acquisition"
+          : acceptedTruth.debtBasis === "acquisition_financing_assumption"
             ? "debt_basis_signal"
-            : hasAssumptionFilename
-              ? "filename_heuristic"
-              : "keyword_match",
+            : explicitSemanticRole === "purchase_assumptions"
+              ? "parser_semantic"
+              : explicitDebtBasis === "proposed_acquisition"
+                ? "debt_basis_signal"
+                : hasAssumptionFilename
+                  ? "filename_heuristic"
+                  : "keyword_match",
     };
   }
 
@@ -1035,6 +1127,10 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
       sourceAuthorityVersion: authority.sourceAuthorityVersion || "v2",
       provenance: authority.provenance || null,
       authorityBasis: authority.authorityBasis,
+      acceptedSemanticDocRole: authority.acceptedSemanticDocRole || null,
+      acceptedDebtBasis: authority.acceptedDebtBasis || null,
+      acceptedSemanticDocDisplayLabel: authority.acceptedSemanticDocDisplayLabel || null,
+      acceptedSourceTruth: authority.acceptedSourceTruth || null,
     });
   }
 
@@ -1110,11 +1206,11 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
       continue;
     }
     if (!supportDocs.has(fileId)) {
-      supportDocs.set(fileId, {
-        fileId,
-        originalFilename,
-        sourceKind: authority.sourceKind || "support_doc",
-        canonicalRole: authority.role,
+        supportDocs.set(fileId, {
+          fileId,
+          originalFilename,
+          sourceKind: authority.sourceKind || "support_doc",
+          canonicalRole: authority.role,
         canonicalLabel: authority.canonicalLabel || authority.roleLabel,
         roleLabel: authority.roleLabel,
         treatment: authority.treatment,
@@ -1122,13 +1218,17 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
         category: authority.category,
         allowedUses: authority.allowedUses || [],
         forbiddenUses: authority.forbiddenUses || [],
-        extractedFacts: authority.extractedFacts || {},
-        sourceEvidence: authority.sourceEvidence || null,
-        sourceAuthorityVersion: authority.sourceAuthorityVersion || "v2",
-        provenance: authority.provenance || null,
-        authorityBasis: authority.authorityBasis,
-      });
-    }
+          extractedFacts: authority.extractedFacts || {},
+          sourceEvidence: authority.sourceEvidence || null,
+          sourceAuthorityVersion: authority.sourceAuthorityVersion || "v2",
+          provenance: authority.provenance || null,
+          authorityBasis: authority.authorityBasis,
+          acceptedSemanticDocRole: authority.acceptedSemanticDocRole || null,
+          acceptedDebtBasis: authority.acceptedDebtBasis || null,
+          acceptedSemanticDocDisplayLabel: authority.acceptedSemanticDocDisplayLabel || null,
+          acceptedSourceTruth: authority.acceptedSourceTruth || null,
+        });
+      }
   }
 
   return {
