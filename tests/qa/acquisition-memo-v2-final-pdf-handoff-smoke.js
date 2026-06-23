@@ -758,5 +758,9 @@ assert.ok(genericSummaryIdentity, "generic summary identity must be present");
 assert.equal(genericCoverIdentity, genericSummaryIdentity);
 assert.equal(/64-Unit Multifamily/i.test(genericCoverIdentity), false);
 assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(genericFinalPdfHandoffHtml), false);
+const tamperedMissingFactHtml = genericFinalPdfHandoffHtml.replace("Property Taxes", "Property Tax");
+assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(tamperedMissingFactHtml, genericLocalCustomerSurfaceModel).ok, false);
+assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(`${genericFinalPdfHandoffHtml}\nDSCR`, genericLocalCustomerSurfaceModel).ok, false);
+assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(`${genericFinalPdfHandoffHtml}\nBoss Contract`, genericLocalCustomerSurfaceModel).ok, false);
 
 console.log("acquisition-memo-v2-final-pdf-handoff-smoke: ok");
