@@ -363,6 +363,35 @@ function supplementPurchaseFactsFromEvidence(baseFacts, supportDoc) {
   return facts;
 }
 
+function hasCurrentDebtEvidence(text) {
+  const source = String(text || "");
+  return Boolean(source) && (
+    /(existing current debt statement|current debt context|current debt terms|current mortgage|existing mortgage|current outstanding balance|current debt balance|outstanding balance|principal balance|monthly payment|maturity date|amortization remaining|amortization remaining years)/i.test(source) ||
+    /(current outstanding balance|interest rate|amortization remaining|monthly payment|maturity date)/i.test(source)
+  );
+}
+
+function promoteCurrentDebtSupportDoc(doc) {
+  if (!isPlainObject(doc)) return null;
+  const evidenceText = getSupportDocEvidenceText(doc);
+  if (!hasCurrentDebtEvidence(evidenceText) && !hasStructuredValues(doc?.extractedFacts?.current_outstanding_balance) && !hasStructuredValues(doc?.extractedFacts?.monthly_payment)) {
+    return null;
+  }
+  return normalizeBossContractFact({
+    ...doc,
+    canonicalRole: "current_debt_context",
+    role: "current_debt_context",
+    canonicalLabel: "Existing Debt Context — Current Mortgage / Debt Statement",
+    roleLabel: "Existing Debt Context — Current Mortgage / Debt Statement",
+    treatment: "Debt support received / contextual",
+    use: "Uploaded existing/current debt context only; not proposed acquisition financing.",
+    category: "Existing Debt — Contextual",
+    sourceKind: doc?.sourceKind || "support_doc",
+    allowedUses: ["current_debt_context"],
+    forbiddenUses: ["purchase_assumptions", "proposed_acquisition_financing_context"],
+  });
+}
+
 function supplementCurrentDebtFactsFromEvidence(baseFacts, supportDoc) {
   const facts = normalizeBossContractFact(baseFacts || {});
   const text = getSupportDocEvidenceText(supportDoc);
@@ -873,7 +902,12 @@ function buildAcquisitionMemoBossContract({
   const supportDocs = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection);
   const coreT12Source = findSupportDocByRole(supportDocs, "core_t12") || coreT12;
   const purchaseAssumptionsDoc = findSupportDocByRole(supportDocs, "purchase_assumptions") || acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions || null;
-  const currentDebtDoc = findSupportDocByRole(supportDocs, "current_debt_context") || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || null;
+  const promotedCurrentDebtDoc =
+    findSupportDocByRole(supportDocs, "current_debt_context") ||
+    promoteCurrentDebtSupportDoc(findSupportDocByRole(supportDocs, "purchase_assumptions")) ||
+    promoteCurrentDebtSupportDoc(acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions) ||
+    promoteCurrentDebtSupportDoc(acquisitionMemoProjection?.supportDocProjection?.currentDebtContext) ||
+    null;
   const supplementedCoreT12Facts = supplementT12FactsFromEvidence(normalizeBossContractFact(coreT12?.extractedFacts || {}), coreT12Source);
   const supplementedCoreT12FactsFromPayload = supplementT12FactsFromPayload(supplementedCoreT12Facts, t12Payload);
   const supplementedPurchaseFacts = supplementPurchaseFactsFromEvidence(
@@ -881,8 +915,8 @@ function buildAcquisitionMemoBossContract({
     purchaseAssumptionsDoc
   );
   const supplementedCurrentDebtFacts = supplementCurrentDebtFactsFromEvidence(
-    normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || {}),
-    currentDebtDoc
+    normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || promotedCurrentDebtDoc?.extractedFacts || {}),
+    promotedCurrentDebtDoc
   );
   const coreT12SourceTruth = coreT12 ? { ...coreT12, extractedFacts: supplementedCoreT12FactsFromPayload } : null;
   const supportDocsWithSupplementedFacts = supportDocs.map((doc) => {
@@ -898,6 +932,12 @@ function buildAcquisitionMemoBossContract({
     }
     return doc;
   });
+  if (promotedCurrentDebtDoc && !supportDocsWithSupplementedFacts.some((doc) => String(doc?.canonicalRole || doc?.role || "").trim().toLowerCase() === "current_debt_context")) {
+    supportDocsWithSupplementedFacts.push({
+      ...promotedCurrentDebtDoc,
+      extractedFacts: supplementedCurrentDebtFacts,
+    });
+  }
 
   const t12Valid = isValidCoreDoc(coreT12);
   const rentRollValid = isValidCoreDoc(coreRentRoll);

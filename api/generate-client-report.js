@@ -99,6 +99,10 @@ function isTestHarnessAllowed() {
 function hasTestHarnessFields(body = {}) {
   return Boolean(body) && typeof body === "object" && Object.keys(body).some((key) => key.startsWith("__test_"));
 }
+function sanitizeReportIdentityTitle(value) {
+  const raw = sanitizePropertyNameDisplayText(value)?.trim() || String(value || "").trim();
+  return raw.replace(/^(?:generation failed|report generation failed|report failed|render failed|generation error|error|failed)\s*[-:–—]\s*/i, "").trim() || raw || "Property";
+}
 function normalizeVisibleReportClassification({
   baseClass = null,
   effectiveReportMode = "screening_v1",
@@ -8062,7 +8066,7 @@ export default async function handler(req, res) {
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
-    const propertyName = property_name || jobPropertyName || "";
+    const propertyName = sanitizeReportIdentityTitle(property_name || jobPropertyName || "");
     const propertyAddress = property_address || "";
     const propertyTitle = property_title || "";
     const displayPropertyName =
@@ -13292,7 +13296,7 @@ if (isAcqMemoV2FinalHtml) {
       .from("reports")
       .insert({
         user_id: effectiveUserId,
-        property_name: property_name || "Property",
+        property_name: propertyNameDisplay || propertyName || "Property",
         report_type: reportType,
         storage_path: validatedStoragePath,
       })

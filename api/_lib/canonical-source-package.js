@@ -59,11 +59,31 @@ function getArtifactOriginalFilename(artifact) {
       artifact?.name ||
       artifact?.payload?.originalFilename ||
       artifact?.payload?.original_filename ||
+      artifact?.payload?.source_original_filename ||
+      artifact?.payload?.sourceOriginalFilename ||
       artifact?.payload?.filename ||
       artifact?.payload?.fileName ||
       artifact?.payload?.document_name ||
       artifact?.payload?.documentName ||
       artifact?.payload?.name ||
+      ""
+  ).trim();
+}
+
+function getArtifactFileId(artifact) {
+  return String(
+    artifact?.fileId ??
+      artifact?.file_id ??
+      artifact?.uploadedFileId ??
+      artifact?.uploaded_file_id ??
+      artifact?.payload?.fileId ??
+      artifact?.payload?.file_id ??
+      artifact?.payload?.uploadedFileId ??
+      artifact?.payload?.uploaded_file_id ??
+      artifact?.payload?.source_file_id ??
+      artifact?.payload?.sourceFileId ??
+      artifact?.payload?.source_fileId ??
+      artifact?.id ??
       ""
   ).trim();
 }
@@ -935,7 +955,7 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
   const seenFileIds = new Set();
 
   for (const artifact of artifacts) {
-    const fileId = String(artifact?.fileId ?? artifact?.file_id ?? artifact?.uploadedFileId ?? artifact?.uploaded_file_id ?? artifact?.id ?? "").trim();
+    const fileId = getArtifactFileId(artifact);
     if (!fileId) continue;
     const bucket = artifactsByFileId.get(fileId) || [];
     bucket.push(artifact);
