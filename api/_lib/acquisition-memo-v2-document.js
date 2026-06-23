@@ -496,9 +496,8 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
   const supportDocCount = Number.isFinite(Number(customerSurfaceModel?.supportSourceCounts?.uniqueUploadedFileCount))
     ? Number(customerSurfaceModel.supportSourceCounts.uniqueUploadedFileCount)
     : getSupportDocs(sourcePackage).length;
-  const assetClass = String(modelIdentity?.assetClass || "").trim() || (Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
-    ? `${Math.round(Number(sourcePackage.coreRentRoll.extractedFacts.total_units))}-Unit Multifamily`
-    : "Multifamily");
+  const assetIdentity = formatAssetIdentityForSurface({ customerSurfaceModel, sourcePackage, coreMetrics });
+  const assetClass = String(modelIdentity?.assetClass || "").trim() || assetIdentity;
   const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
   const coverUnits = Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
     ? Math.round(Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units))
@@ -526,10 +525,10 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
           <div class="cover-disclosure">Review / Source Reconciliation Disclosure</div>
           <hr class="cover-divider" />
           <div class="cover-metric-strip">
-            <div class="cover-metric-row">${escapeHtml([coverUnits ? `${coverUnits} Units` : assetClass, coverNoi ? `NOI ${coverNoi}` : "", coverExpenseRatio ? `Expense Ratio ${coverExpenseRatio}` : "", coverNoiMargin ? `NOI Margin ${coverNoiMargin}` : ""].filter(Boolean).join(" \u00a0\u00a0|\u00a0\u00a0 "))}</div>
+            <div class="cover-metric-row">${escapeHtml([assetIdentity || (coverUnits ? `${coverUnits} Units` : "Property Identity"), coverNoi ? `NOI ${coverNoi}` : "", coverExpenseRatio ? `Expense Ratio ${coverExpenseRatio}` : "", coverNoiMargin ? `NOI Margin ${coverNoiMargin}` : ""].filter(Boolean).join(" \u00a0\u00a0|\u00a0\u00a0 "))}</div>
           </div>
           <div class="cover-grid">
-            <div><span>Asset Class</span><strong>${escapeHtml(assetClass)}</strong></div>
+            <div><span>Asset Class</span><strong>${escapeHtml(assetIdentity)}</strong></div>
             <div><span>Report Tier</span><strong>${escapeHtml(reportMeta?.reportTier === 2 ? "Acquisition Memo" : "Screening")}</strong></div>
             <div><span>Documents</span><strong>${escapeHtml(`${supportDocCount + (sourcePackage?.coreT12 ? 1 : 0) + (sourcePackage?.coreRentRoll ? 1 : 0)} uploaded files`)}</strong></div>
           </div>

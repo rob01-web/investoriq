@@ -749,6 +749,14 @@ assert.equal(genericBossRenderValidation.ok, true);
 assert.equal(genericCustomerSurfaceValidation.ok, true);
 assert.equal(genericCustomerSurfaceHtmlValidation.ok, true);
 assert.equal(genericFinalPdfHandoffHtml.includes("64-Unit Multifamily"), false);
+assert.equal(/64-Unit|64 Unit|64-unit/i.test(genericFinalPdfHandoffHtml), false);
+assert.equal(/Stonebridge/i.test(genericFinalPdfHandoffHtml), false);
+const genericCoverIdentity = (genericFinalPdfHandoffHtml.match(/<div><span>Asset Class<\/span><strong>(.*?)<\/strong><\/div>/i) || [null, ""])[1];
+const genericSummaryIdentity = (genericFinalPdfHandoffHtml.match(/<tr><td>Asset Identity<\/td><td style="font-weight:600;">(.*?)<\/td><\/tr>/i) || [null, ""])[1];
+assert.ok(genericCoverIdentity, "generic cover identity must be present");
+assert.ok(genericSummaryIdentity, "generic summary identity must be present");
+assert.equal(genericCoverIdentity, genericSummaryIdentity);
+assert.equal(/64-Unit Multifamily/i.test(genericCoverIdentity), false);
 assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(genericFinalPdfHandoffHtml), false);
 
 console.log("acquisition-memo-v2-final-pdf-handoff-smoke: ok");
