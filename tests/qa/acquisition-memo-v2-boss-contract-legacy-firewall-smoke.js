@@ -346,7 +346,7 @@ assert.equal(assessAcquisitionMemoBossCompliance(bossContract, hostileLateMutati
 
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 const docHtmlAnchor = reportSource.indexOf("docHtml = sanitizeTypography(qaHtml);");
-const finalGuardAnchor = reportSource.indexOf("const finalBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({", docHtmlAnchor);
+const finalGuardAnchor = reportSource.indexOf("const finalBossCompliance = acquisitionMemoV2Finalization ||", docHtmlAnchor);
 const pdfAnchor = reportSource.indexOf("pdfResponse = await axios.post(", finalGuardAnchor);
 assert.ok(docHtmlAnchor >= 0, "Expected docHtml sanitization anchor not found");
 assert.ok(finalGuardAnchor > docHtmlAnchor, "Expected final Boss compliance guard after docHtml sanitization");

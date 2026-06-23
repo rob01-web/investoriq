@@ -115,6 +115,15 @@ assert.equal(/renderCompleteAcquisitionMemoV2Html\(/.test(screeningBranchSource)
 assert.equal(/Preliminary Financing Readiness Summary/i.test(screeningBranchSource), false);
 assert.equal(/Source Context \/ Support Document Treatment/i.test(screeningBranchSource), false);
 
+const screeningLaneOutputAnchor = reportSource.indexOf("const screeningLaneOutput =");
+const acquisitionDocTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({");
+const v2FinalizationAnchor = reportSource.indexOf('if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection)', screeningLaneOutputAnchor);
+assert.ok(screeningLaneOutputAnchor >= 0, "Missing screening lane output anchor");
+assert.ok(acquisitionDocTreatmentAnchor >= 0, "Missing acquisition document-treatment anchor");
+assert.ok(v2FinalizationAnchor >= 0, "Missing acquisition V2 finalization anchor");
+assert.ok(screeningLaneOutputAnchor < acquisitionDocTreatmentAnchor, "Screening lane output must be established before document-treatment mutation");
+assert.ok(screeningLaneOutputAnchor < v2FinalizationAnchor, "Screening lane output must be established before V2 finalization mutation");
+
 assert.match(reportSource, /buildScreeningDataCoverageSummary\(/);
 assert.match(reportSource, /buildScreeningIncomeForensicsHtml\(/);
 assert.match(reportSource, /buildScreeningExpenseStructureHtml\(/);

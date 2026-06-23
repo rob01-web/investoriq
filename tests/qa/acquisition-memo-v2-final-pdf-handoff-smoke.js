@@ -533,10 +533,10 @@ function assertNormalizedVisibleTextContains({ finalHtml, normalizedText, patter
 
 function assertFinalHandoffIsCurrent(fileSource) {
   const harnessStart = fileSource.indexOf("if (isFullRenderHarness) {");
-  const harnessFinalize = fileSource.indexOf("const finalHarnessBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({", harnessStart);
+  const harnessFinalize = fileSource.indexOf("const finalHarnessBossCompliance = acquisitionMemoV2Finalization || await runAcquisitionMemoV2Pipeline({", harnessStart);
   const harnessReturn = fileSource.indexOf("return res.status(200).json({", harnessFinalize);
   const docRaptorStart = fileSource.indexOf("// 9. Send to DocRaptor (STILL IN TEST MODE)", harnessReturn);
-  const pdfFinalize = fileSource.indexOf("const finalBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({", docRaptorStart);
+  const pdfFinalize = fileSource.indexOf("const finalBossCompliance = acquisitionMemoV2Finalization ||", docRaptorStart);
   assert.ok(harnessStart >= 0, "missing full render harness block");
   assert.ok(harnessFinalize >= 0, "missing harness boss compliance finalize");
   assert.ok(harnessReturn >= 0, "missing harness return");

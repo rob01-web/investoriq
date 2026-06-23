@@ -44,6 +44,8 @@ import {
   buildAcquisitionMemoBossContract,
   validateAcquisitionMemoBossContract,
 } from "./_lib/acquisition-memo-boss-contract.js";
+import { runAcquisitionMemoV2Pipeline } from "./_lib/acquisition-memo-v2-pipeline.js";
+import { runScreeningReportPipeline } from "./_lib/screening-report-pipeline.js";
 import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
@@ -9455,7 +9457,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY === "true" ||
       body?.__test_enable_acq_memo_v2_source_authority === true;
     let acquisitionMemoV2Bridge = null;
-    let acquisitionMemoV2Orchestrator = null;
     let acquisitionMemoV2Finalization = null;
     // --- V2 SOURCE AUTHORITY BRIDGE START ---
     if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled) {
@@ -9475,7 +9476,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         acquisitionMemoProjection,
         renderedAcquisitionMemo,
       };
-      acquisitionMemoV2Orchestrator = await import("./_lib/acquisition-memo-v2-orchestrator.js");
     }
     const supportFileRows = Array.isArray(coverageFiles)
       ? coverageFiles.filter((file) => {
@@ -9911,12 +9911,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTitle: displayPropertyTitle,
       },
     };
-    if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
-      acquisitionMemoV2Finalization = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({
-        acquisitionMemoV2DocumentArgs,
-        acquisitionMemoBossContract,
-      }) || null;
-    }
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
     }
@@ -11857,13 +11851,14 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         );
       }
       if (acquisitionMemoV2OwnsFinalHtml) {
-        const finalHarnessBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({
+        const finalHarnessBossCompliance = acquisitionMemoV2Finalization || await runAcquisitionMemoV2Pipeline({
           acquisitionMemoV2DocumentArgs,
           acquisitionMemoBossContract,
         }) || {
           html: htmlString,
           compliance: { ok: true, violations: [] },
         };
+        acquisitionMemoV2Finalization = finalHarnessBossCompliance;
         htmlString = finalHarnessBossCompliance.html;
         if (!finalHarnessBossCompliance.compliance?.ok) {
           return res.status(500).json({
@@ -12607,10 +12602,28 @@ try {
     sourceCoverageQa.rendered_text_signals = renderedSignals;
   }
   sourceCoverageQaResult = sourceCoverageQa;
+  const screeningLaneOutput =
+    effectiveReportMode === "screening_v1"
+      ? runScreeningReportPipeline({
+          finalHtml,
+          qaHtml,
+          reportMode: effectiveReportMode,
+          sourceCoverageQa: sourceCoverageQaResult,
+          deliveryGateDecisionResult,
+        })
+      : null;
+  if (screeningLaneOutput?.html) {
+    finalHtml = screeningLaneOutput.html;
+  }
   if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
     finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;
   }
-  if (!(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) && typeof finalHtml === "string" && finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+  if (
+    effectiveReportMode !== "screening_v1" &&
+    !(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) &&
+    typeof finalHtml === "string" &&
+    finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")
+  ) {
     const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
       reportMode: effectiveReportMode,
       documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
@@ -13237,7 +13250,9 @@ try {
     });
     const docFinalSourceReconciliationGuardHasMismatch =
       docFinalSourceReconciliationGuard.render_state?.renderable
-        ? docFinalSourceReconciliationGuard.matched_displays_after.some((display) => display !== docFinalSourceReconciliationGuard.render_state?.variance_display) ||
+        ? docFinalSourceReconciliationGuard.matched_displays_after.some(
+            (display) => display !== docFinalSourceReconciliationGuard.render_state?.variance_display
+          ) ||
           (docFinalSourceReconciliationGuard.matched_displays_after.length === 0 &&
             (
               /Rent Roll vs T12 GPR Variance/i.test(docHtml) ||
@@ -13261,15 +13276,16 @@ try {
         matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
       });
     }
-  }
-if (isAcqMemoV2FinalHtml) {
-  const finalBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({
-    acquisitionMemoV2DocumentArgs,
-    acquisitionMemoBossContract,
-  }) || {
-    html: docHtml,
-      compliance: { ok: true, violations: [] },
-    };
+  } else {
+    const finalBossCompliance = acquisitionMemoV2Finalization ||
+      (await runAcquisitionMemoV2Pipeline({
+        acquisitionMemoV2DocumentArgs,
+        acquisitionMemoBossContract,
+      })) || {
+        html: docHtml,
+        compliance: { ok: true, violations: [] },
+      };
+    acquisitionMemoV2Finalization = finalBossCompliance;
     docHtml = finalBossCompliance.html;
     if (!finalBossCompliance.compliance?.ok) {
       console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {
