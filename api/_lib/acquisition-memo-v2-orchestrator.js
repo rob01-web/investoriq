@@ -1,6 +1,6 @@
 import {
+  assessAcquisitionMemoBossCompliance,
   enforceAcquisitionMemoBossContractOnHtml,
-  validateAcquisitionMemoRenderAgainstBossContract,
 } from "./acquisition-memo-boss-contract.js";
 import { renderCompleteAcquisitionMemoV2Html } from "./acquisition-memo-v2-document.js";
 
@@ -21,16 +21,16 @@ export function runAcquisitionMemoV2Orchestrator({
     baseHtml
   );
   const repairedHtml = enforcement?.repairedHtml || baseHtml;
-  const validation = validateAcquisitionMemoRenderAgainstBossContract(
+  const compliance = assessAcquisitionMemoBossCompliance(
     acquisitionMemoBossContract,
-    repairedHtml
+    repairedHtml,
+    enforcement?.validation || null
   );
 
   return {
     html: repairedHtml,
-    compliance: validation?.ok
-      ? { ok: true, violations: [] }
-      : validation || { ok: false, violations: [] },
+    compliance,
+    enforcement,
   };
 }
 

@@ -14,6 +14,7 @@ const { default: generateClientReport } = await import("../../api/generate-clien
 const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
 const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
 const {
+  assessAcquisitionMemoBossCompliance,
   buildAcquisitionMemoBossContract,
   enforceAcquisitionMemoBossContractOnHtml,
   validateAcquisitionMemoBossContract,
@@ -317,7 +318,7 @@ assert.ok(hostileLateMutationCompliance.violations.some((item) => item.code === 
 const hostileLateMutationRepaired = enforceAcquisitionMemoBossContractOnHtml(bossContract, hostileLateMutationHtml);
 assert.equal(typeof hostileLateMutationRepaired.repairedHtml, "string");
 assert.equal(/DSCR/i.test(hostileLateMutationRepaired.repairedHtml), false);
-assert.equal(validateAcquisitionMemoRenderAgainstBossContract(bossContract, hostileLateMutationRepaired.repairedHtml).ok, true);
+assert.equal(assessAcquisitionMemoBossCompliance(bossContract, hostileLateMutationRepaired.repairedHtml).ok, true);
 
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
 const docHtmlAnchor = reportSource.indexOf("docHtml = sanitizeTypography(qaHtml);");

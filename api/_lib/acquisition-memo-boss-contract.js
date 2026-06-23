@@ -16,6 +16,59 @@ const FORBIDDEN_SURFACES = Object.freeze([
   "lender commitment",
 ]);
 
+const HARD_FATAL_FORBIDDEN_SURFACE_PATTERNS = Object.freeze([
+  /\bfinal recommendation\b/i,
+  /\bBUY\b/i,
+  /\bSELL\b/i,
+  /\bHOLD\b/i,
+  /\blender commitment\b/i,
+]);
+
+const COLLAPSEABLE_FORBIDDEN_SURFACE_PATTERNS = Object.freeze([
+  /\bDSCR\b/i,
+  /\brefinance\b/i,
+  /\brefi\b/i,
+  /\bDCF\b/i,
+  /\bwaterfall\b/i,
+  /\bequity return\b/i,
+  /\bdeal score\b/i,
+  /\bloan approval\b/i,
+]);
+
+const COLLAPSEABLE_BOSS_VIOLATION_CODES = Object.freeze([
+  "UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT",
+  "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS",
+  "CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST",
+  "NO_ZERO_CAP_RATE",
+  "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED",
+  "PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED",
+  "ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED",
+  "T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT",
+  "DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED",
+  "UNSUPPORTED_RENOVATION_MODELING_SURFACE",
+  "UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE",
+]);
+
+const HARD_FATAL_BOSS_VIOLATION_CODES = Object.freeze([
+  "CONTRACT_NOT_OBJECT",
+  "CONTRACT_VERSION_MISMATCH",
+  "CORE_GATE_MISSING",
+  "CORE_GATE_BOOL_MISSING",
+  "CORE_GATE_FATAL_REASONS_MISSING",
+  "SOURCE_TRUTH_MISSING",
+  "SOURCE_TRUTH_CORE_MISSING",
+  "SOURCE_TRUTH_SUPPORT_DOCS_MISSING",
+  "SECTION_STATUS_MISSING",
+  "SECTION_STATUS_INVALID",
+  "SECTION_SOURCE_BINDINGS_MISSING",
+  "SECTION_REQUIRED_FACTS_MISSING",
+  "SECTION_ASSERTION_CODE_MISSING",
+  "FORBIDDEN_SURFACES_MISSING",
+  "FORBIDDEN_SURFACES_INCOMPLETE",
+  "RENDER_REQUIREMENTS_MISSING",
+  "POST_RENDER_ASSERTIONS_MISSING",
+]);
+
 const GENERIC_COLLAPSE_TEXT =
   "This section was omitted because the uploaded support context did not provide display-ready detail. Core report outputs remain based on the uploaded T12 and Rent Roll.";
 
@@ -59,6 +112,15 @@ function escapeRegExpForHtmlText(value) {
     .split("&")
     .map((part) => escapeRegExp(part))
     .join("(?:&amp;|&)");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function cloneArray(value) {
@@ -501,6 +563,292 @@ function buildSectionBindings(role, factPaths, notes = []) {
       notes: cloneArray(notes),
     },
   ];
+}
+
+function collapseSectionByTitle(html, sectionTitle, collapseText = GENERIC_COLLAPSE_TEXT) {
+  const source = String(html || "");
+  const title = String(sectionTitle || "").trim();
+  if (!source || !title) return source;
+  const pattern = new RegExp(
+    `<section\\b[^>]*>[\\s\\S]*?<span[^>]*class="section-header-title"[^>]*>\\s*${escapeRegExp(title)}\\s*<\\/span>[\\s\\S]*?<\\/section>`,
+    "i"
+  );
+  if (!pattern.test(source)) return source;
+  return source.replace(
+    pattern,
+    `<section class="section section-break"><div class="section-header"><span class="section-header-title">${escapeHtml(title)}</span></div><div class="card no-break"><p class="body-copy">${escapeHtml(collapseText)}</p></div></section>`
+  );
+}
+
+function isAdvisoryViolation(violation) {
+  const severity = String(violation?.severity || "").trim().toLowerCase();
+  return severity === "advisory" || severity === "warning";
+}
+
+function isCollapseableViolationCode(code) {
+  return COLLAPSEABLE_BOSS_VIOLATION_CODES.includes(String(code || ""));
+}
+
+function isHardFatalViolationCode(code) {
+  return HARD_FATAL_BOSS_VIOLATION_CODES.includes(String(code || ""));
+}
+
+function getCollapseTargetSectionTitleByViolationCode(code) {
+  switch (String(code || "")) {
+    case "UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT":
+    case "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS":
+      return "Unit Mix and Rent Positioning";
+    case "CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST":
+    case "NO_ZERO_CAP_RATE":
+      return "Cap-Rate Value Indication";
+    case "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED":
+      return "Debt / Financing Context";
+    case "PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED":
+    case "ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED":
+      return "Acquisition Request Context";
+    case "T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT":
+      return "Operating Statement / TTM Summary";
+    case "DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED":
+      return "Source Context / Support Document Treatment";
+    case "NO_FORBIDDEN_SURFACES":
+      return "Debt / Financing Context";
+    case "UNSUPPORTED_RENOVATION_MODELING_SURFACE":
+      return "Key Upside Drivers";
+    case "UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE":
+      return "Primary Constraint / Review Disclosure";
+    default:
+      return null;
+  }
+}
+
+function getCollapsedReasonForViolationCode(code) {
+  switch (String(code || "")) {
+    case "UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT":
+    case "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS":
+      return "The unit mix evidence was not display-ready, so the section was collapsed rather than showing a false missing-rows fallback.";
+    case "CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST":
+    case "NO_ZERO_CAP_RATE":
+      return "Cap-rate support was not display-ready, so the value-indication section was collapsed rather than fabricating per-unit math.";
+    case "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED":
+      return "Current debt evidence was not display-ready, so the debt context was collapsed rather than borrowing proposed financing facts.";
+    case "PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED":
+    case "ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED":
+      return "Purchase-assumption or proposed financing support was not display-ready, so the acquisition request context was collapsed.";
+    case "T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT":
+      return "T12 expense-line detail was not display-ready, so the operating statement was collapsed rather than showing a summary-only approximation.";
+    case "DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED":
+      return "Source treatment detail was not display-ready, so the source context section was collapsed to a neutral disclosure.";
+    case "NO_FORBIDDEN_SURFACES":
+      return "Unsupported debt/refi terminology was collapsed from the debt and financing context rather than published as customer-facing output.";
+    case "UNSUPPORTED_RENOVATION_MODELING_SURFACE":
+      return "Unsupported renovation modeling was collapsed rather than presented as customer-facing underwriting output.";
+    case "UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE":
+      return "Unsupported appraisal or market-survey quantitative reliance was collapsed rather than presented as customer-facing underwriting output.";
+    default:
+      return GENERIC_COLLAPSE_TEXT;
+  }
+}
+
+function normalizeAcquisitionMemoBossViolations(validationOrViolations) {
+  if (Array.isArray(validationOrViolations)) return validationOrViolations.filter(Boolean);
+  if (Array.isArray(validationOrViolations?.violations)) return validationOrViolations.violations.filter(Boolean);
+  return [];
+}
+
+function routeAcquisitionMemoBossViolations(bossContract, validationOrViolations = null, html = "") {
+  const htmlString = String(html || "");
+  const routed = {
+    fatal_core: [],
+    collapseable_surface: [],
+    advisory_only: [],
+    decision: "publish",
+    coreGate: normalizeBossContractFact(bossContract?.coreGate || {}),
+    publishAllowed: Boolean(bossContract?.coreGate?.publishAllowed),
+  };
+  const push = (bucket, violation, extra = {}) => {
+    routed[bucket].push(
+      normalizeBossContractFact({
+        code: violation?.code || null,
+        description: violation?.description || violation?.message || null,
+        severity: violation?.severity || null,
+        section: violation?.section || null,
+        routing: bucket,
+        ...extra,
+      })
+    );
+  };
+
+  if (!routed.publishAllowed) {
+    for (const reason of Array.isArray(routed.coreGate?.fatalReasons) ? routed.coreGate.fatalReasons : []) {
+      push("fatal_core", { code: reason, severity: "critical", section: "coreGate", description: "Core gate is not publishable." }, { routingReason: reason });
+    }
+    if (routed.fatal_core.length === 0) {
+      push(
+        "fatal_core",
+        {
+          code: "CORE_GATE_NOT_PUBLISHABLE",
+          severity: "critical",
+          section: "coreGate",
+          description: "Core gate is not publishable.",
+        },
+        { routingReason: "core_gate_not_publishable" }
+      );
+    }
+  }
+
+  for (const violation of normalizeAcquisitionMemoBossViolations(validationOrViolations)) {
+    if (isAdvisoryViolation(violation)) {
+      push("advisory_only", violation);
+      continue;
+    }
+
+    const code = String(violation?.code || "");
+    if (isHardFatalViolationCode(code)) {
+      push("fatal_core", violation);
+      continue;
+    }
+
+    if (code === "NO_FORBIDDEN_SURFACES") {
+      const hasHardFatalSurface = HARD_FATAL_FORBIDDEN_SURFACE_PATTERNS.some((pattern) => pattern.test(htmlString));
+      const hasCollapseableSurface = COLLAPSEABLE_FORBIDDEN_SURFACE_PATTERNS.some((pattern) => pattern.test(htmlString));
+      if (hasHardFatalSurface || (!hasCollapseableSurface && !hasHardFatalSurface)) {
+        push("fatal_core", violation, {
+          routingReason: hasHardFatalSurface ? "hard_fatal_forbidden_surface" : "forbidden_surface_unresolved",
+        });
+      } else {
+        push("collapseable_surface", violation, {
+          routingReason: "collapseable_forbidden_surface",
+          section: "debtFinancingContext",
+        });
+      }
+      continue;
+    }
+
+    if (isCollapseableViolationCode(code)) {
+      push("collapseable_surface", violation);
+      continue;
+    }
+
+    push("fatal_core", violation);
+  }
+
+  const unsupportedRenovationModelingPattern = /\b(renovation roi|payback|noi impact|value impact|refi impact|implementation modeling)\b/i;
+  if (unsupportedRenovationModelingPattern.test(htmlString) && !routed.collapseable_surface.some((violation) => violation?.code === "UNSUPPORTED_RENOVATION_MODELING_SURFACE")) {
+    push(
+      "collapseable_surface",
+      {
+        code: "UNSUPPORTED_RENOVATION_MODELING_SURFACE",
+        severity: "critical",
+        section: "keyUpsideDrivers",
+        description: "Unsupported renovation modeling surfaces should collapse instead of publishing as underwriting output.",
+      },
+      { routingReason: "html_pattern" }
+    );
+  }
+
+  const unsupportedAppraisalMarketSurveyPattern = /\b(appraisal|market survey)[\s\S]{0,80}\b(quantitative|quantitative reliance|value impact|rent impact|cap rate impact)\b/i;
+  if (unsupportedAppraisalMarketSurveyPattern.test(htmlString) && !routed.collapseable_surface.some((violation) => violation?.code === "UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE")) {
+    push(
+      "collapseable_surface",
+      {
+        code: "UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE",
+        severity: "critical",
+        section: "primaryConstraintReviewDisclosure",
+        description: "Unsupported appraisal or market-survey quantitative reliance should collapse instead of publishing as underwriting output.",
+      },
+      { routingReason: "html_pattern" }
+    );
+  }
+
+  routed.decision = routed.fatal_core.length > 0
+    ? "fail"
+    : routed.collapseable_surface.length > 0
+      ? "collapse"
+      : "publish";
+  routed.publishAllowed = Boolean(routed.publishAllowed) && routed.fatal_core.length === 0;
+  routed.summary = {
+    fatal_core_count: routed.fatal_core.length,
+    collapseable_surface_count: routed.collapseable_surface.length,
+    advisory_only_count: routed.advisory_only.length,
+  };
+  return routed;
+}
+
+function collapseAcquisitionMemoBossViolationsHtml(bossContract, html, routing = null) {
+  const routed = routing || routeAcquisitionMemoBossViolations(bossContract, validateAcquisitionMemoRenderAgainstBossContract(bossContract, html), html);
+  let repairedHtml = String(html || "");
+
+  for (const violation of Array.isArray(routed.collapseable_surface) ? routed.collapseable_surface : []) {
+    const code = String(violation?.code || "");
+    const sectionTitle = getCollapseTargetSectionTitleByViolationCode(code);
+    const collapseText = getCollapsedReasonForViolationCode(code);
+    if (sectionTitle) {
+      repairedHtml = collapseSectionByTitle(repairedHtml, sectionTitle, collapseText);
+    }
+  }
+
+  if (/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(repairedHtml)) {
+    repairedHtml = repairedHtml.replace(
+      /No parsed unit mix rows were available from the canonical rent roll evidence\./gi,
+      renderComplianceRepairCollapseHtml()
+    );
+  }
+
+  if (/Current Debt Maturity Not available/i.test(repairedHtml)) {
+    repairedHtml = repairedHtml.replace(/Current Debt Maturity Not available/gi, "Current debt context omitted because the uploaded support context did not provide display-ready detail.");
+  }
+  if (/Maturity Date Not available/i.test(repairedHtml)) {
+    repairedHtml = repairedHtml.replace(/Maturity Date Not available/gi, "Current debt context omitted because the uploaded support context did not provide display-ready detail.");
+  }
+
+  if (/<td style="font-weight:600;">-<\/td>/i.test(repairedHtml) && Number.isFinite(Number(bossContract?.reportContext?.coreMetrics?.units)) && Number(bossContract.reportContext.coreMetrics.units) > 0) {
+    const units = Number(bossContract.reportContext.coreMetrics.units);
+    const noi = Number(bossContract.reportContext.coreMetrics.noi);
+    if (Number.isFinite(units) && units > 0 && Number.isFinite(noi)) {
+      for (const cap of [5.0, 6.0, 7.0]) {
+        const implied = noi / (cap / 100);
+        const perUnit = implied / units;
+        const replacement = `${Math.floor(perUnit).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+        repairedHtml = repairedHtml.replace(
+          new RegExp(`(<tr><td>${cap.toFixed(1)}%<\\/td><td style="font-weight:600;">[^<]*<\\/td><td style="font-weight:600;">)-<\\/td>`, "i"),
+          `$1${replacement}</td>`
+        );
+      }
+    }
+  }
+
+  const collapseableForbiddenScrubPatterns = [
+    /\bDSCR\b/gi,
+    /\brefinance\b/gi,
+    /\brefi\b/gi,
+    /\bDCF\b/gi,
+    /\bwaterfall\b/gi,
+    /equity return/gi,
+    /deal score/gi,
+    /loan approval/gi,
+  ];
+  for (const pattern of collapseableForbiddenScrubPatterns) {
+    repairedHtml = repairedHtml.replace(pattern, "");
+  }
+
+  return repairedHtml;
+}
+
+function assessAcquisitionMemoBossCompliance(bossContract, html, validationOrViolations = null) {
+  const validation = validationOrViolations && Array.isArray(validationOrViolations.violations)
+    ? validationOrViolations
+    : validateAcquisitionMemoRenderAgainstBossContract(bossContract, html);
+  const routing = routeAcquisitionMemoBossViolations(bossContract, validation, html);
+  const ok = Boolean(bossContract?.coreGate?.publishAllowed) && routing.fatal_core.length === 0;
+  return {
+    ok,
+    validation,
+    routing,
+    violations: Array.isArray(validation?.violations) ? validation.violations : [],
+    fatal_core: routing.fatal_core,
+    collapseable_surface: routing.collapseable_surface,
+    advisory_only: routing.advisory_only,
+  };
 }
 
 function buildAcquisitionMemoBossContract({
@@ -1228,26 +1576,24 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
   return {
     ok: violations.length === 0,
     violations,
+    routing: routeAcquisitionMemoBossViolations(bossContract, violations, htmlString),
   };
 }
 
 function enforceAcquisitionMemoBossContractOnHtml(bossContract, html) {
   const validation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, html);
+  const initialRouting = validation.routing || routeAcquisitionMemoBossViolations(bossContract, validation, html);
   let repairedHtml = String(html || "");
-  if (validation.ok) {
+  if (validation.ok || (initialRouting.fatal_core.length === 0 && initialRouting.collapseable_surface.length === 0)) {
     return {
-      ok: true,
+      ok: initialRouting.fatal_core.length === 0,
       violations: [],
+      routing: initialRouting,
       repairedHtml,
     };
   }
 
-  if (/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(repairedHtml)) {
-    repairedHtml = repairedHtml.replace(
-      /No parsed unit mix rows were available from the canonical rent roll evidence\./gi,
-      renderComplianceRepairCollapseHtml()
-    );
-  }
+  repairedHtml = collapseAcquisitionMemoBossViolationsHtml(bossContract, repairedHtml, initialRouting);
 
   if (/<td style="font-weight:600;">-<\/td>/i.test(repairedHtml) && Number.isFinite(Number(bossContract?.reportContext?.coreMetrics?.units)) && Number(bossContract.reportContext.coreMetrics.units) > 0) {
     const units = Number(bossContract.reportContext.coreMetrics.units);
@@ -1265,49 +1611,29 @@ function enforceAcquisitionMemoBossContractOnHtml(bossContract, html) {
     }
   }
 
-  if (/Current Debt Maturity Not available/i.test(repairedHtml)) {
-    repairedHtml = repairedHtml.replace(/Current Debt Maturity Not available/gi, "Current debt context omitted because the uploaded support context did not provide display-ready detail.");
-  }
-  if (/Maturity Date Not available/i.test(repairedHtml)) {
-    repairedHtml = repairedHtml.replace(/Maturity Date Not available/gi, "Current debt context omitted because the uploaded support context did not provide display-ready detail.");
-  }
-
-  if (/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(repairedHtml)) {
-    repairedHtml = repairedHtml.replace(/No parsed unit mix rows were available from the canonical rent roll evidence\./gi, renderComplianceRepairCollapseHtml());
-  }
-
-  const forbiddenScrubPatterns = [
-    /\bDSCR\b/gi,
-    /\brefinance\b/gi,
-    /\brefi\b/gi,
-    /\bDCF\b/gi,
-    /\bwaterfall\b/gi,
-    /equity return/gi,
-    /deal score/gi,
-    /final recommendation/gi,
-    /\bBUY\b/gi,
-    /\bSELL\b/gi,
-    /\bHOLD\b/gi,
-    /loan approval/gi,
-    /lender commitment/gi,
-  ];
-  for (const pattern of forbiddenScrubPatterns) {
-    repairedHtml = repairedHtml.replace(pattern, "");
-  }
+  const postValidation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, repairedHtml);
+  const postRouting = postValidation.routing || routeAcquisitionMemoBossViolations(bossContract, postValidation, repairedHtml);
 
   return {
-    ok: false,
-    violations: validation.violations,
+    ok: Boolean(bossContract?.coreGate?.publishAllowed) && postRouting.fatal_core.length === 0,
+    violations: postValidation.violations,
+    routing: postRouting,
     repairedHtml,
   };
 }
 
 export {
+  assessAcquisitionMemoBossCompliance,
   buildAcquisitionMemoBossContract,
   buildBossContractAssertion,
   buildSectionContract,
+  collapseAcquisitionMemoBossViolationsHtml,
+  collapseSectionByTitle,
   enforceAcquisitionMemoBossContractOnHtml,
+  getCollapseTargetSectionTitleByViolationCode,
+  getCollapsedReasonForViolationCode,
   normalizeBossContractFact,
+  routeAcquisitionMemoBossViolations,
   validateAcquisitionMemoRenderAgainstBossContract,
   validateAcquisitionMemoBossContract,
 };
