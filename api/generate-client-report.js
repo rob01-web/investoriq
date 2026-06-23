@@ -9598,6 +9598,10 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         issues: acquisitionMemoBossContractValidation.issues || [],
       });
     }
+    const acquisitionMemoV2OwnsFinalHtml =
+      effectiveReportMode === "v1_core" &&
+      acqMemoV2SourceAuthorityEnabled &&
+      Boolean(acquisitionMemoV2Bridge?.acquisitionMemoProjection);
     // --- V2 SOURCE AUTHORITY BRIDGE END ---
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
@@ -11785,7 +11789,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
         renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
       });
-      if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+      // V2-owned final HTML is a sealed orchestrator output. Keep legacy document-treatment replacement
+      // and other post-render mutation cascades out of this branch.
+      if (acquisitionMemoV2OwnsFinalHtml) {
         htmlString = acquisitionMemoV2Finalization?.html || htmlString;
       } else if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
@@ -11793,7 +11799,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
         );
       }
-      if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+      if (acquisitionMemoV2OwnsFinalHtml) {
         const finalHarnessBossCompliance = acquisitionMemoV2Orchestrator?.runAcquisitionMemoV2Orchestrator({
           acquisitionMemoV2DocumentArgs,
           acquisitionMemoBossContract,
@@ -13152,6 +13158,8 @@ if (docraptorMode === "production" && !allowProductionPdf) {
 }
 try {
   docHtml = sanitizeTypography(qaHtml);
+  // V2-owned final HTML remains under orchestrator/Boss control; legacy reconciliation and section-heal
+  // guards stay fenced to the non-V2 path.
   if (!isAcqMemoV2FinalHtml) {
     const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
       docHtml,
