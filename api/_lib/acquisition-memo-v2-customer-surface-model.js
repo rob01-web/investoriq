@@ -804,6 +804,19 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "unitMix") {
     const rentRoll = coreSources.coreRentRoll;
     const facts = rentRoll?.extractedFacts || {};
+    const hasSourceBackedFacts =
+      Number.isFinite(normalizeMoney(facts.total_units)) &&
+      (Array.isArray(facts.unit_mix) || Array.isArray(facts.units) || Number.isFinite(normalizeMoney(facts.total_units)));
+    const availableFacts = Object.entries({
+      total_units: facts.total_units,
+      occupancy: facts.occupancy,
+      unit_mix: facts.unit_mix,
+      units: facts.units,
+      annual_in_place_rent: facts.annual_in_place_rent,
+      annual_market_rent: facts.annual_market_rent,
+    })
+      .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)) || Array.isArray(value))
+      .map(([keyName]) => keyName);
     return {
       ...section,
       sourceRole: "core_rent_roll",
@@ -812,12 +825,18 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         total_units: normalizeMoney(facts.total_units),
         occupancy: normalizeCapRatio(facts.occupancy),
         unit_mix: clone(facts.unit_mix || []),
-        units: clone(facts.units || []),
+        units: Number.isFinite(normalizeMoney(facts.total_units)) ? normalizeMoney(facts.total_units) : clone(facts.units || []),
         annual_in_place_rent: normalizeMoney(facts.annual_in_place_rent),
         annual_market_rent: normalizeMoney(facts.annual_market_rent),
       },
       boundaries: {
         noFalseMissingRowsTextWhenStructuredUnitMixExists: true,
+      },
+      factAvailability: {
+        required: ["unit_mix", "total_units"],
+        available: availableFacts,
+        missing: hasSourceBackedFacts ? [] : ["unit_mix", "total_units"],
+        sourceBacked: Boolean(hasSourceBackedFacts),
       },
       sourceDoc: rentRoll,
     };
@@ -826,6 +845,14 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "capRateValueIndication") {
     const rentRoll = coreSources.coreRentRoll;
     const facts = rentRoll?.extractedFacts || {};
+    const hasSourceBackedFacts = Number.isFinite(normalizeMoney(facts.total_units)) && Number.isFinite(normalizeCapRatio(valueSemantics?.wholePropertyValue?.goingInCapRate));
+    const availableFacts = Object.entries({
+      total_units: facts.total_units,
+      going_in_cap_rate: valueSemantics?.wholePropertyValue?.goingInCapRate,
+      implied_value_at_going_in_cap_rate: valueSemantics?.wholePropertyValue?.impliedValueAtGoingInCapRate,
+    })
+      .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)))
+      .map(([keyName]) => keyName);
     return {
       ...section,
       sourceRole: "core_rent_roll",
@@ -838,6 +865,12 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       boundaries: {
         perUnitValuesRequiredWhenUnitsExist: true,
       },
+      factAvailability: {
+        required: ["total_units", "going_in_cap_rate"],
+        available: availableFacts,
+        missing: hasSourceBackedFacts ? [] : ["total_units", "going_in_cap_rate"],
+        sourceBacked: Boolean(hasSourceBackedFacts),
+      },
       sourceDoc: rentRoll,
     };
   }
@@ -845,6 +878,17 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "operatingStatementTTMSummary") {
     const t12 = coreSources.coreT12;
     const facts = t12?.extractedFacts || {};
+    const hasSourceBackedFacts = Number.isFinite(normalizeMoney(facts.effective_gross_income)) && Number.isFinite(normalizeMoney(facts.total_operating_expenses)) && Number.isFinite(normalizeMoney(facts.net_operating_income));
+    const availableFacts = Object.entries({
+      income_lines: facts.income_lines,
+      expense_lines: facts.expense_lines,
+      effective_gross_income: facts.effective_gross_income,
+      total_operating_expenses: facts.total_operating_expenses,
+      net_operating_income: facts.net_operating_income,
+      gross_potential_rent: facts.gross_potential_rent,
+    })
+      .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Array.isArray(value))
+      .map(([keyName]) => keyName);
     return {
       ...section,
       sourceRole: "core_t12",
@@ -859,6 +903,12 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       },
       boundaries: {
         lineItemsMustRenderWhenPresent: true,
+      },
+      factAvailability: {
+        required: ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
+        available: availableFacts,
+        missing: hasSourceBackedFacts ? [] : ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
+        sourceBacked: Boolean(hasSourceBackedFacts),
       },
       sourceDoc: t12,
     };

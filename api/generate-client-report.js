@@ -11828,6 +11828,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         report_type: reportType,
         report_mode: effectiveReportMode,
         final_html: htmlString,
+        boss_compliance: acquisitionMemoV2Finalization?.bossCompliance || acquisitionMemoV2Finalization?.compliance || null,
+        customer_surface_model_validation: acquisitionMemoV2Finalization?.customerSurfaceModelValidation || null,
+        customer_surface_html_validation: acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation || null,
       });
     }
 // 9. Send to DocRaptor (STILL IN TEST MODE)

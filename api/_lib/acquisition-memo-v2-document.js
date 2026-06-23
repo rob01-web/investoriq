@@ -66,6 +66,10 @@ function getBossSectionContract(bossContract = null, sectionKey = "") {
   return bossContract?.sections?.[sectionKey] || null;
 }
 
+function getCustomerSurfaceSection(customerSurfaceModel = null, sectionKey = "") {
+  return customerSurfaceModel?.sections?.[sectionKey] || null;
+}
+
 function sectionHasSourceBackedFacts(sectionContract = null) {
   return Boolean(sectionContract?.factAvailability?.sourceBacked);
 }
@@ -101,6 +105,27 @@ function formatPercentDisplay(value) {
   if (!Number.isFinite(n)) return "";
   const pct = Math.abs(n) <= 1 ? n * 100 : n;
   return `${pct.toFixed(1)}%`;
+}
+
+function formatAssetIdentityForSurface({ customerSurfaceModel = null, sourcePackage = null, coreMetrics = null } = {}) {
+  const unitCount = Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
+    ? Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units)
+    : Number.isFinite(Number(coreMetrics?.units))
+      ? Number(coreMetrics.units)
+      : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
+        ? Number(sourcePackage.coreRentRoll.extractedFacts.total_units)
+        : null;
+  const assetClass = String(
+    customerSurfaceModel?.identity?.assetClass ||
+      sourcePackage?.propertyProfile?.assetClass ||
+      sourcePackage?.propertyProfile?.asset_class ||
+      coreMetrics?.assetClass ||
+      ""
+  ).trim();
+  if (Number.isFinite(unitCount) && unitCount > 0 && assetClass) return `${Math.round(unitCount)}-Unit ${assetClass}`;
+  if (assetClass) return assetClass;
+  if (Number.isFinite(unitCount) && unitCount > 0) return `${Math.round(unitCount)}-Unit`;
+  return "Property Identity";
 }
 
 function formatDisplayDate(value) {
@@ -466,18 +491,27 @@ function renderSourceDocRows(sourcePackage = null) {
   return rows;
 }
 
-function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics }) {
-  const supportDocCount = getSupportDocs(sourcePackage).length;
-  const assetClass = Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
+function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics, customerSurfaceModel = null }) {
+  const modelIdentity = customerSurfaceModel?.identity || {};
+  const supportDocCount = Number.isFinite(Number(customerSurfaceModel?.supportSourceCounts?.uniqueUploadedFileCount))
+    ? Number(customerSurfaceModel.supportSourceCounts.uniqueUploadedFileCount)
+    : getSupportDocs(sourcePackage).length;
+  const assetClass = String(modelIdentity?.assetClass || "").trim() || (Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
     ? `${Math.round(Number(sourcePackage.coreRentRoll.extractedFacts.total_units))}-Unit Multifamily`
-    : "Multifamily";
+    : "Multifamily");
   const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
-  const coverUnits = Number.isFinite(Number(coreMetrics?.units))
+  const coverUnits = Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
+    ? Math.round(Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units))
+    : Number.isFinite(Number(coreMetrics?.units))
     ? Math.round(Number(coreMetrics.units))
     : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
     ? Math.round(Number(sourcePackage.coreRentRoll.extractedFacts.total_units))
     : "";
-  const coverNoi = Number.isFinite(Number(coreMetrics?.noi)) ? formatMoney(coreMetrics.noi) : "";
+  const coverNoi = Number.isFinite(Number(customerSurfaceModel?.valueSemantics?.wholePropertyValue?.noi))
+    ? formatMoney(customerSurfaceModel.valueSemantics.wholePropertyValue.noi)
+    : Number.isFinite(Number(coreMetrics?.noi))
+      ? formatMoney(coreMetrics.noi)
+      : "";
   const coverExpenseRatio = Number.isFinite(Number(coreMetrics?.expenseRatio)) ? formatPercentDisplay(coreMetrics.expenseRatio) : "";
   const coverNoiMargin = Number.isFinite(Number(coreMetrics?.noiMargin)) ? formatPercentDisplay(coreMetrics.noiMargin) : "";
   return `<div class="cover-wrap">
@@ -509,13 +543,16 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
   </div>`;
 }
 
-function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null } = {}) {
+function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, customerSurfaceModel = null } = {}) {
+  const coreT12 = customerSurfaceModel?.coreSources?.coreT12 || null;
+  const coreRentRoll = customerSurfaceModel?.coreSources?.coreRentRoll || null;
+  const assetIdentity = formatAssetIdentityForSurface({ customerSurfaceModel, sourcePackage, coreMetrics });
   const rows = [
-    `<tr><td>64-Unit Multifamily</td><td style="font-weight:600;">${escapeHtml(String(Math.round(Number(coreMetrics?.units || sourcePackage?.coreRentRoll?.extractedFacts?.total_units || 0))))}</td></tr>`,
+    `<tr><td>Asset Identity</td><td style="font-weight:600;">${escapeHtml(assetIdentity)}</td></tr>`,
     `<tr><td>ACQUISITION MEMO</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
-    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
-    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
-    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(coreT12?.filename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
+    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(coreRentRoll?.filename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
   ];
   const occupancy = Number.isFinite(Number(coreMetrics?.occupancy)) ? formatPercentDisplay(coreMetrics.occupancy) : "Not available";
   const noi = Number.isFinite(Number(coreMetrics?.noi)) ? formatMoney(coreMetrics.noi) : "Not available";
@@ -586,16 +623,15 @@ function renderReadinessBodyHtml({ renderedAcquisitionMemo = null, acquisitionMe
     : `<p class="body-copy">Shown for lender discussion and acquisition diligence support only.</p>`;
 }
 
-function renderReadinessSection({ renderedAcquisitionMemo = null, acquisitionMemoProjection = null } = {}) {
-  const signals = acquisitionMemoProjection?.financingReadinessSignals || {};
-  const currentDebtContextValue = Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No";
+function renderReadinessSection({ renderedAcquisitionMemo = null, acquisitionMemoProjection = null, customerSurfaceModel = null } = {}) {
+  const signals = customerSurfaceModel?.diagnostics || acquisitionMemoProjection?.financingReadinessSignals || {};
   const rows = [
-    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${currentDebtContextValue}</td></tr>`,
-    `<tr><td>Purchase assumptions provided</td><td style="font-weight:600;">${Boolean(signals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(signals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Appraisal context</td><td style="font-weight:600;">${Boolean(signals?.hasAppraisalContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Market survey context</td><td style="font-weight:600;">${Boolean(signals?.hasMarketSurveyContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${Boolean(signals?.hasEnvironmentalContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(signals?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Purchase assumptions provided</td><td style="font-weight:600;">${Boolean(signals?.hasPurchaseAssumptions ?? acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(signals?.hasStructuredRenovation ?? acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Appraisal context</td><td style="font-weight:600;">${Boolean(signals?.hasAppraisalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasAppraisalContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Market survey context</td><td style="font-weight:600;">${Boolean(signals?.hasMarketSurveyContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${Boolean(signals?.hasEnvironmentalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext) ? "Yes" : "No"}</td></tr>`,
   ];
   return renderSection(
     "Preliminary Financing Readiness Summary",
@@ -611,20 +647,26 @@ function renderAcquisitionRequestContextSection({
   loanTermSheetTermsPayload = null,
   coreMetrics = null,
   bossContract = null,
+  customerSurfaceModel = null,
 } = {}) {
-  const sectionContract = getBossSectionContract(bossContract, "acquisitionRequestContext");
+  const modelSection = getCustomerSurfaceSection(customerSurfaceModel, "acquisitionRequestContext");
+  const sectionContract = modelSection || getBossSectionContract(bossContract, "acquisitionRequestContext");
+  if (modelSection?.status === "collapsed") {
+    return renderSection("Acquisition Request Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
+  }
   if (sectionHasSourceBackedFacts(sectionContract) && sectionHasMissingRequiredFacts(sectionContract)) {
     return renderSection("Acquisition Request Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
   }
-  const purchaseAssumptionsDoc = getBossSupportDocByRole(bossContract, sourcePackage, "purchase_assumptions");
-  const purchasePrice = toFiniteNumber(coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.purchase_price ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price ?? purchaseAssumptionsDoc?.extractedFacts?.purchase_price ?? acquisitionTermsPayload?.purchase_price ?? acquisitionTermsPayload?.purchasePrice ?? NaN);
-  const noiBasis = toFiniteNumber(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? purchaseAssumptionsDoc?.extractedFacts?.noi_basis ?? acquisitionTermsPayload?.noi_basis ?? acquisitionTermsPayload?.noi ?? NaN);
+  const purchaseAssumptionsDoc = modelSection?.sourceDoc || getBossSupportDocByRole(bossContract, sourcePackage, "purchase_assumptions");
+  const acquisitionFacts = modelSection?.facts || {};
+  const purchasePrice = toFiniteNumber(acquisitionFacts?.purchase_price ?? coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.purchase_price ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price ?? purchaseAssumptionsDoc?.extractedFacts?.purchase_price ?? acquisitionTermsPayload?.purchase_price ?? acquisitionTermsPayload?.purchasePrice ?? NaN);
+  const noiBasis = toFiniteNumber(acquisitionFacts?.noi_basis ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? purchaseAssumptionsDoc?.extractedFacts?.noi_basis ?? acquisitionTermsPayload?.noi_basis ?? acquisitionTermsPayload?.noi ?? NaN);
   const goingInCapRate = resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage, bossContract });
-  const proposedLoan = toFiniteNumber(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.proposed_loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.loan_amount ?? acquisitionTermsPayload?.proposed_loan_amount ?? acquisitionTermsPayload?.loan_amount ?? acquisitionTermsPayload?.stated_acquisition_loan_amount ?? acquisitionTermsPayload?.proposed_acquisition_loan_amount ?? NaN);
-  const ltv = normalizePercentFraction(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.ltv ?? acquisitionTermsPayload?.ltv ?? acquisitionTermsPayload?.loan_to_value ?? acquisitionTermsPayload?.loanToValue);
-  const interestRate = normalizePercentFraction(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.interest_rate ?? acquisitionTermsPayload?.interest_rate ?? acquisitionTermsPayload?.interestRate ?? acquisitionTermsPayload?.rate);
-  const amortization = toFiniteNumber(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_remaining_years ?? acquisitionTermsPayload?.amortization_years ?? acquisitionTermsPayload?.amortizationYears ?? NaN);
-  const lenderFee = normalizePercentFraction(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.lender_fee_percent ?? acquisitionTermsPayload?.lender_fee_percent ?? acquisitionTermsPayload?.lenderFeePercent ?? acquisitionTermsPayload?.origination_fee_percent);
+  const proposedLoan = toFiniteNumber(acquisitionFacts?.proposed_loan_amount ?? acquisitionFacts?.loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.proposed_loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.loan_amount ?? acquisitionTermsPayload?.proposed_loan_amount ?? acquisitionTermsPayload?.loan_amount ?? acquisitionTermsPayload?.stated_acquisition_loan_amount ?? acquisitionTermsPayload?.proposed_acquisition_loan_amount ?? NaN);
+  const ltv = normalizePercentFraction(acquisitionFacts?.ltv ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.ltv ?? acquisitionTermsPayload?.ltv ?? acquisitionTermsPayload?.loan_to_value ?? acquisitionTermsPayload?.loanToValue);
+  const interestRate = normalizePercentFraction(acquisitionFacts?.interest_rate ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.interest_rate ?? acquisitionTermsPayload?.interest_rate ?? acquisitionTermsPayload?.interestRate ?? acquisitionTermsPayload?.rate);
+  const amortization = toFiniteNumber(acquisitionFacts?.amortization_years ?? acquisitionFacts?.amortization_remaining_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_remaining_years ?? acquisitionTermsPayload?.amortization_years ?? acquisitionTermsPayload?.amortizationYears ?? NaN);
+  const lenderFee = normalizePercentFraction(acquisitionFacts?.lender_fee_percent ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.lender_fee_percent ?? acquisitionTermsPayload?.lender_fee_percent ?? acquisitionTermsPayload?.lenderFeePercent ?? acquisitionTermsPayload?.origination_fee_percent);
   const interestRateDisplay = Number.isFinite(interestRate) ? `${(interestRate * 100).toFixed(2)}%` : null;
   const lenderFeeDisplay = Number.isFinite(lenderFee) ? `${(lenderFee * 100).toFixed(2)}%` : null;
   const rows = [
@@ -678,12 +720,18 @@ function renderDebtFinancingContextSection({
   loanTermSheetTermsPayload = null,
   mortgagePayload = null,
   bossContract = null,
+  customerSurfaceModel = null,
 } = {}) {
-  const currentDebtSection = getBossSectionContract(bossContract, "currentDebtContext");
+  const modelSection = getCustomerSurfaceSection(customerSurfaceModel, "currentDebtContext");
+  const currentDebtSection = modelSection || getBossSectionContract(bossContract, "currentDebtContext");
+  if (modelSection?.status === "collapsed") {
+    return renderSection("Debt / Financing Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
+  }
   if (sectionHasSourceBackedFacts(currentDebtSection) && sectionHasMissingRequiredFacts(currentDebtSection)) {
     return renderSection("Debt / Financing Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
   }
-  const currentDebt = bossContract?.sourceTruth?.supportDocs?.find?.((doc) => String(doc?.canonicalRole || "").trim().toLowerCase() === "current_debt_context")
+  const currentDebt = modelSection?.sourceDoc
+    || bossContract?.sourceTruth?.supportDocs?.find?.((doc) => String(doc?.canonicalRole || "").trim().toLowerCase() === "current_debt_context")
     || getBossSupportDocByRole(bossContract, sourcePackage, "current_debt_context")
     || acquisitionMemoProjection?.currentDebtContext
     || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext
@@ -757,8 +805,10 @@ function renderDebtFinancingContextSection({
   return renderSection("Debt / Financing Context", `<table class="detail-table"><tbody>${rows}</tbody></table>`, { pageBreakBefore: true });
 }
 
-function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePackage = null, bossContract = null) {
-  const bossDocs = getBossSupportDocs(bossContract, sourcePackage);
+function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePackage = null, bossContract = null, customerSurfaceModel = null) {
+  const bossDocs = Array.isArray(customerSurfaceModel?.supportSources) && customerSurfaceModel.supportSources.length
+    ? customerSurfaceModel.supportSources
+    : getBossSupportDocs(bossContract, sourcePackage);
   const tableHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.documentTreatmentSummaryHtml || "").trim();
   const supportRows = Array.isArray(bossDocs) && bossDocs.length
     ? bossDocs.map((doc) => `<tr><td>${escapeHtml(doc?.originalFilename || doc?.roleLabel || doc?.canonicalLabel || doc?.canonicalRole || "Support Document")}</td><td style="font-weight:600;">${escapeHtml(doc?.canonicalLabel || doc?.roleLabel || doc?.canonicalRole || "Other Support Document")}</td><td>${escapeHtml(doc?.treatment || "")}</td><td>${escapeHtml(doc?.use || "")}</td></tr>`).join("")
@@ -772,16 +822,18 @@ function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePa
   );
 }
 
-function renderSummarySection({ sourcePackage = null, renderedAcquisitionMemo = null, acquisitionMemoProjection = null, bossContract = null } = {}) {
-  const supportDocCount = getBossSupportDocs(bossContract, sourcePackage).length;
-  const t12Name = bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present";
-  const rentRollName = bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present";
+function renderSummarySection({ sourcePackage = null, renderedAcquisitionMemo = null, acquisitionMemoProjection = null, bossContract = null, customerSurfaceModel = null } = {}) {
+  const supportDocCount = Number.isFinite(Number(customerSurfaceModel?.supportSourceCounts?.uniqueUploadedFileCount))
+    ? Number(customerSurfaceModel.supportSourceCounts.uniqueUploadedFileCount)
+    : getBossSupportDocs(bossContract, sourcePackage).length;
+  const t12Name = customerSurfaceModel?.coreSources?.coreT12?.filename || bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present";
+  const rentRollName = customerSurfaceModel?.coreSources?.coreRentRoll?.filename || bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present";
   const rows = [
     `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(t12Name)}</td></tr>`,
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(rentRollName)}</td></tr>`,
     `<tr><td>Support docs classified</td><td style="font-weight:600;">${supportDocCount > 0 ? String(supportDocCount) : "0"}</td></tr>`,
-    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasPurchaseAssumptions ?? acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
     `<tr><td>Renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
   ];
   const renderedCoreSourceSummary = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
@@ -792,20 +844,23 @@ function renderSummarySection({ sourcePackage = null, renderedAcquisitionMemo = 
   );
 }
 
-function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, renderedAcquisitionMemo = null, bossContract = null } = {}) {
-  const supportDocs = getBossSupportDocs(bossContract, sourcePackage);
+function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, renderedAcquisitionMemo = null, bossContract = null, customerSurfaceModel = null } = {}) {
+  const supportDocs = Array.isArray(customerSurfaceModel?.supportSources) && customerSurfaceModel.supportSources.length
+    ? customerSurfaceModel.supportSources
+    : getBossSupportDocs(bossContract, sourcePackage);
+  const assetIdentity = formatAssetIdentityForSurface({ customerSurfaceModel, sourcePackage, coreMetrics });
   const sourceRows = [
-    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td><td>${escapeHtml(bossContract?.sourceTruth?.coreT12?.roleLabel || sourcePackage?.coreT12?.roleLabel || sourcePackage?.coreT12?.canonicalLabel || "")}</td></tr>`,
-    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(bossContract?.sourceTruth?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
+    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreT12?.filename || bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreT12?.visibleLabel || bossContract?.sourceTruth?.coreT12?.roleLabel || sourcePackage?.coreT12?.roleLabel || sourcePackage?.coreT12?.canonicalLabel || "")}</td></tr>`,
+    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.filename || bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.visibleLabel || bossContract?.sourceTruth?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
     `<tr><td>Classified support documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>Included in source treatment schedule</td></tr>`,
   ];
   const renderedCoreSourceSummary = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   const rows = [
-    `<tr><td>64-Unit Multifamily</td><td style="font-weight:600;">${escapeHtml(String(Math.round(Number(coreMetrics?.units || bossContract?.sourceTruth?.coreRentRoll?.extractedFacts?.total_units || sourcePackage?.coreRentRoll?.extractedFacts?.total_units || 0))))}</td></tr>`,
+    `<tr><td>Asset Identity</td><td style="font-weight:600;">${escapeHtml(assetIdentity)}</td></tr>`,
     `<tr><td>ACQUISITION MEMO</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
     Number.isFinite(Number(coreMetrics?.occupancy)) ? `<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>` : "",
     Number.isFinite(Number(coreMetrics?.noi)) ? `<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(coreMetrics.noi)}</td></tr>` : "",
-    Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? `<tr><td>Current debt context</td><td style="font-weight:600;">Yes</td></tr>` : "",
+    Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? `<tr><td>Current debt context</td><td style="font-weight:600;">Yes</td></tr>` : "",
   ].filter(Boolean).join("");
   return renderSection(
     "Acquisition Memo Summary",
@@ -814,19 +869,23 @@ function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisition
   );
 }
 
-function renderOperatingStatementSection({ sourcePackage = null, t12Payload = null, coreMetrics = null, acquisitionMemoProjection = null, bossContract = null } = {}) {
+function renderOperatingStatementSection({ sourcePackage = null, t12Payload = null, coreMetrics = null, acquisitionMemoProjection = null, bossContract = null, customerSurfaceModel = null } = {}) {
   const rows = [];
-  const sectionContract = getBossSectionContract(bossContract, "operatingStatementTTMSummary");
+  const sectionContract = getCustomerSurfaceSection(customerSurfaceModel, "operatingStatementTTMSummary") || getBossSectionContract(bossContract, "operatingStatementTTMSummary");
+  if (sectionContract?.status === "collapsed") {
+    return renderSection("Operating Statement / TTM Summary", renderSectionCollapseHtml(), { pageBreakBefore: true });
+  }
   if (sectionHasSourceBackedFacts(sectionContract) && sectionHasMissingRequiredFacts(sectionContract)) {
     return renderSection("Operating Statement / TTM Summary", renderSectionCollapseHtml(), { pageBreakBefore: true });
   }
-  const t12Source = bossContract?.sourceTruth?.coreT12 || sourcePackage?.coreT12 || null;
-  const rentRollSource = bossContract?.sourceTruth?.coreRentRoll || sourcePackage?.coreRentRoll || null;
-  const t12Name = t12Source?.originalFilename || "Not present";
-  const rentRollName = rentRollSource?.originalFilename || "Not present";
+  const t12Source = customerSurfaceModel?.coreSources?.coreT12 || bossContract?.sourceTruth?.coreT12 || sourcePackage?.coreT12 || null;
+  const rentRollSource = customerSurfaceModel?.coreSources?.coreRentRoll || bossContract?.sourceTruth?.coreRentRoll || sourcePackage?.coreRentRoll || null;
+  const t12Name = t12Source?.filename || t12Source?.originalFilename || "Not present";
+  const rentRollName = rentRollSource?.filename || rentRollSource?.originalFilename || "Not present";
   const t12Snippet = getSourceEvidenceText(t12Source) || String(t12Payload?.document_text_extracted || t12Payload?.source_text || t12Payload?.text || "");
   const t12Facts = {
     ...(t12Payload && typeof t12Payload === "object" ? t12Payload : {}),
+    ...(customerSurfaceModel?.sourceBackedFacts?.operatingStatementTTMSummary || {}),
     ...(t12Source?.extractedFacts || {}),
   };
   const structuredT12LineItems = [
@@ -859,10 +918,10 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
   </div>`;
 }
 
-function renderCapRateValueSection({ acquisitionMemoProjection = null, sourcePackage = null, coreMetrics = null, bossContract = null } = {}) {
+function renderCapRateValueSection({ acquisitionMemoProjection = null, sourcePackage = null, coreMetrics = null, bossContract = null, customerSurfaceModel = null } = {}) {
   const noiBasis = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? NaN);
   const capRates = [5.0, 6.0, 7.0];
-  const units = Number(coreMetrics?.units ?? bossContract?.reportContext?.coreMetrics?.units ?? bossContract?.sourceTruth?.coreRentRoll?.extractedFacts?.total_units ?? sourcePackage?.coreRentRoll?.extractedFacts?.total_units ?? sourcePackage?.coreRentRoll?.extractedFacts?.units?.length ?? NaN);
+  const units = Number(coreMetrics?.units ?? customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units ?? bossContract?.reportContext?.coreMetrics?.units ?? bossContract?.sourceTruth?.coreRentRoll?.extractedFacts?.total_units ?? sourcePackage?.coreRentRoll?.extractedFacts?.total_units ?? sourcePackage?.coreRentRoll?.extractedFacts?.units?.length ?? NaN);
   const rows = capRates.map((cap) => {
     const value = Number.isFinite(noiBasis) ? noiBasis / (cap / 100) : NaN;
     const perUnit = Number.isFinite(value) && Number.isFinite(units) && units > 0 ? value / units : null;
@@ -880,10 +939,12 @@ function renderCapRateValueSection({ acquisitionMemoProjection = null, sourcePac
   </div>`;
 }
 
-function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null, bossContract = null) {
+function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null, bossContract = null, customerSurfaceModel = null) {
   const rows = [];
   const units = Number.isFinite(Number(coreMetrics?.units))
     ? Number(coreMetrics.units)
+    : Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
+    ? Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units)
     : Number.isFinite(Number(bossContract?.sourceTruth?.coreRentRoll?.extractedFacts?.total_units))
     ? Number(bossContract.sourceTruth.coreRentRoll.extractedFacts.total_units)
     : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
@@ -921,12 +982,12 @@ function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null, 
   );
 }
 
-function renderOperatingSnapshotSection({ sourcePackage = null, coreMetrics = null, bossContract = null } = {}) {
-  const rentRollSnippet = bossContract?.sourceTruth?.coreRentRoll?.sourceEvidence?.textSnippet || sourcePackage?.coreRentRoll?.sourceEvidence?.textSnippet || "";
-  const t12Snippet = bossContract?.sourceTruth?.coreT12?.sourceEvidence?.textSnippet || sourcePackage?.coreT12?.sourceEvidence?.textSnippet || "";
+function renderOperatingSnapshotSection({ sourcePackage = null, coreMetrics = null, bossContract = null, customerSurfaceModel = null } = {}) {
+  const rentRollSnippet = customerSurfaceModel?.coreSources?.coreRentRoll?.sourceEvidence?.textSnippet || bossContract?.sourceTruth?.coreRentRoll?.sourceEvidence?.textSnippet || sourcePackage?.coreRentRoll?.sourceEvidence?.textSnippet || "";
+  const t12Snippet = customerSurfaceModel?.coreSources?.coreT12?.sourceEvidence?.textSnippet || bossContract?.sourceTruth?.coreT12?.sourceEvidence?.textSnippet || sourcePackage?.coreT12?.sourceEvidence?.textSnippet || "";
   const rows = [
-    `<tr><td>Core T12 source</td><td style="font-weight:600;">${escapeHtml(bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
-    `<tr><td>Core Rent Roll source</td><td style="font-weight:600;">${escapeHtml(bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
+    `<tr><td>Core T12 source</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreT12?.filename || bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
+    `<tr><td>Core Rent Roll source</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.filename || bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
     `<tr><td>Occupancy</td><td style="font-weight:600;">${Number.isFinite(Number(coreMetrics?.occupancy)) ? formatPercentDisplay(coreMetrics.occupancy) : "Not available"}</td></tr>`,
     `<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${Number.isFinite(Number(coreMetrics?.annualInPlaceRent)) ? formatMoney(coreMetrics.annualInPlaceRent) : "Not available"}</td></tr>`,
     `<tr><td>Annual Market Rent</td><td style="font-weight:600;">${Number.isFinite(Number(coreMetrics?.annualMarketRent)) ? formatMoney(coreMetrics.annualMarketRent) : "Not available"}</td></tr>`,
@@ -939,8 +1000,8 @@ function renderOperatingSnapshotSection({ sourcePackage = null, coreMetrics = nu
   );
 }
 
-function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossContract = null } = {}) {
-  const rentRollSource = bossContract?.sourceTruth?.coreRentRoll || sourcePackage?.coreRentRoll || null;
+function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossContract = null, customerSurfaceModel = null } = {}) {
+  const rentRollSource = customerSurfaceModel?.coreSources?.coreRentRoll || bossContract?.sourceTruth?.coreRentRoll || sourcePackage?.coreRentRoll || null;
   const rentRollSnippet = rentRollSource?.sourceEvidence?.textSnippet || "";
   const rentRollFacts = rentRollSource?.extractedFacts || {};
   const structuredUnitMixRows = [
@@ -948,7 +1009,21 @@ function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossCo
   ].map(normalizeStructuredUnitMixRow).filter(Boolean);
   const structuredUnitRows = structuredUnitMixRows.length ? structuredUnitMixRows : deriveStructuredUnitMixRowsFromUnits(rentRollFacts?.units);
   const unitMixRows = structuredUnitRows.length ? structuredUnitRows : parseUnitMixRowsFromText(rentRollSnippet);
-  const unitMixSection = getBossSectionContract(bossContract, "unitMix");
+  const unitMixSection = getCustomerSurfaceSection(customerSurfaceModel, "unitMix") || getBossSectionContract(bossContract, "unitMix");
+  if (unitMixSection?.status === "collapsed") {
+    return renderSection(
+      "Unit Mix and Rent Positioning",
+      renderSectionCollapseHtml(),
+      { id: "unit-mix-title", pageBreakBefore: true }
+    );
+  }
+  if (unitMixSection?.status === "collapsed") {
+    return renderSection(
+      "Unit Mix and Rent Positioning",
+      renderSectionCollapseHtml(),
+      { id: "unit-mix-title", pageBreakBefore: true }
+    );
+  }
   const annualInPlace = Number(coreMetrics?.annualInPlaceRent);
   const annualMarket = Number(coreMetrics?.annualMarketRent);
   const annualUpside = Number.isFinite(annualInPlace) && Number.isFinite(annualMarket) ? annualMarket - annualInPlace : null;
@@ -994,14 +1069,16 @@ function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossCo
   );
 }
 
-function renderValueSensitivitySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, bossContract = null } = {}) {
+function renderValueSensitivitySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, bossContract = null, customerSurfaceModel = null } = {}) {
   const annualRentUpside = Number.isFinite(Number(coreMetrics?.annualMarketRent)) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent))
     ? Number(coreMetrics.annualMarketRent) - Number(coreMetrics.annualInPlaceRent)
     : null;
   const rentGapPct = Number.isFinite(annualRentUpside) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent)) && Number(coreMetrics.annualInPlaceRent) > 0
     ? annualRentUpside / Number(coreMetrics.annualInPlaceRent)
     : null;
-  const capRate = resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage, bossContract });
+  const capRate = Number.isFinite(Number(customerSurfaceModel?.valueSemantics?.wholePropertyValue?.goingInCapRate))
+    ? Number(customerSurfaceModel.valueSemantics.wholePropertyValue.goingInCapRate)
+    : resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage, bossContract });
   const impliedValue = Number.isFinite(Number(coreMetrics?.noi)) && Number.isFinite(capRate) && capRate > 0
     ? Number(coreMetrics.noi) / capRate
     : null;
@@ -1022,21 +1099,23 @@ function renderValueSensitivitySection({ sourcePackage = null, acquisitionMemoPr
   );
 }
 
-function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMemo = null, acquisitionMemoProjection = null, bossContract = null } = {}) {
-  const supportDocs = getBossSupportDocs(bossContract, sourcePackage);
+function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMemo = null, acquisitionMemoProjection = null, bossContract = null, customerSurfaceModel = null } = {}) {
+  const supportDocs = Array.isArray(customerSurfaceModel?.supportSources) && customerSurfaceModel.supportSources.length
+    ? customerSurfaceModel.supportSources
+    : getBossSupportDocs(bossContract, sourcePackage);
   const rows = [
-    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td><td>${escapeHtml(bossContract?.sourceTruth?.coreT12?.roleLabel || sourcePackage?.coreT12?.roleLabel || sourcePackage?.coreT12?.canonicalLabel || "")}</td></tr>`,
-    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(bossContract?.sourceTruth?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
+    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreT12?.filename || bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreT12?.visibleLabel || bossContract?.sourceTruth?.coreT12?.roleLabel || sourcePackage?.coreT12?.roleLabel || sourcePackage?.coreT12?.canonicalLabel || "")}</td></tr>`,
+    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.filename || bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.visibleLabel || bossContract?.sourceTruth?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
     `<tr><td>Classified support documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>Included in source treatment schedule</td></tr>`,
   ];
   const sourceSummaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   const stateRows = [
-    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Appraisal context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasAppraisalContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Market survey context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasPurchaseAssumptions ?? acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasStructuredRenovation ?? acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Appraisal context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasAppraisalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasAppraisalContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Market survey context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasMarketSurveyContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasEnvironmentalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext) ? "Yes" : "No"}</td></tr>`,
   ];
   return renderSection(
     "Data Coverage & Source Limitations",
@@ -1104,13 +1183,15 @@ export function renderCompleteAcquisitionMemoV2Html({
   reportMeta = null,
   propertyProfile = null,
   bossContract = null,
+  customerSurfaceModel = null,
 } = {}) {
   try {
-    const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
-    const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
-    const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
+    const surfaceIdentity = customerSurfaceModel?.identity || {};
+    const propertyName = surfaceIdentity?.propertyName || propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
+    const propertyAddress = surfaceIdentity?.propertyAddress || propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
+    const propertyTitle = surfaceIdentity?.propertyTitle || propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
     const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
-    const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics });
+    const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics, customerSurfaceModel });
     const headerStrip = `<div class="header-strip">
       <div class="header-top">
         <div>
@@ -1122,23 +1203,23 @@ export function renderCompleteAcquisitionMemoV2Html({
       </div>
     </div>`;
     const bossSections = bossContract?.sections || {};
-    const executiveSummarySection = renderSafely("Executive Summary", () => renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.executiveSummary });
-    const metricsSection = renderSafely("Key Metrics Snapshot", () => renderMetricsSnapshotSection(coreMetrics, sourcePackage, bossContract), { pageBreakBefore: true, bossSection: bossSections.keyMetricsSnapshot });
+    const executiveSummarySection = renderSafely("Executive Summary", () => renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.executiveSummary });
+    const metricsSection = renderSafely("Key Metrics Snapshot", () => renderMetricsSnapshotSection(coreMetrics, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.keyMetricsSnapshot });
     const keyUpsideDriversSection = renderSafely("Key Upside Drivers", () => renderKeyUpsideDriversSection({ sourcePackage, coreMetrics, acquisitionMemoProjection }), { pageBreakBefore: true, bossSection: bossSections.keyUpsideDrivers });
     const primaryConstraintSection = renderSafely("Primary Constraint / Review Disclosure", () => renderPrimaryConstraintSection({ sourcePackage, acquisitionMemoProjection }), { pageBreakBefore: true, bossSection: bossSections.primaryConstraintReviewDisclosure });
-    const acquisitionMemoSummarySection = renderSafely("Acquisition Memo Summary", () => renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, renderedAcquisitionMemo, bossContract }), { pageBreakBefore: true, bossSection: bossSections.acquisitionMemoSummary });
-    const operatingSection = renderSafely("Operating Snapshot", () => renderOperatingSnapshotSection({ sourcePackage, coreMetrics, bossContract }), { pageBreakBefore: true, bossSection: bossSections.operatingSnapshot });
-    const unitMixSection = renderSafely("Unit Mix and Rent Positioning", () => renderUnitMixSection({ sourcePackage, coreMetrics, bossContract }), { pageBreakBefore: true, bossSection: bossSections.unitMix });
-    const valueSensitivitySection = renderSafely("Rent Upside / Value Sensitivity", () => renderValueSensitivitySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, bossContract }), { pageBreakBefore: true, bossSection: bossSections.rentUpsideValueSensitivity });
-    const capRateValueSection = renderSafely("Cap-Rate Value Indication", () => renderCapRateValueSection({ acquisitionMemoProjection, sourcePackage, coreMetrics, bossContract }), { pageBreakBefore: true, bossSection: bossSections.capRateValueIndication });
-    const readinessSection = renderSafely("Preliminary Financing Readiness Summary", () => renderReadinessSection({ renderedAcquisitionMemo, acquisitionMemoProjection }), { pageBreakBefore: true, bossSection: bossSections.preliminaryFinancingReadinessSummary });
-    const acquisitionRequestContextSection = renderSafely("Acquisition Request Context", () => renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, acquisitionTermsPayload, loanTermSheetTermsPayload, coreMetrics, bossContract }), { pageBreakBefore: true, bossSection: bossSections.acquisitionRequestContext });
+    const acquisitionMemoSummarySection = renderSafely("Acquisition Memo Summary", () => renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, renderedAcquisitionMemo, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.acquisitionMemoSummary });
+    const operatingSection = renderSafely("Operating Snapshot", () => renderOperatingSnapshotSection({ sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.operatingSnapshot });
+    const unitMixSection = renderSafely("Unit Mix and Rent Positioning", () => renderUnitMixSection({ sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.unitMix });
+    const valueSensitivitySection = renderSafely("Rent Upside / Value Sensitivity", () => renderValueSensitivitySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.rentUpsideValueSensitivity });
+    const capRateValueSection = renderSafely("Cap-Rate Value Indication", () => renderCapRateValueSection({ acquisitionMemoProjection, sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.capRateValueIndication });
+    const readinessSection = renderSafely("Preliminary Financing Readiness Summary", () => renderReadinessSection({ renderedAcquisitionMemo, acquisitionMemoProjection, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.preliminaryFinancingReadinessSummary });
+    const acquisitionRequestContextSection = renderSafely("Acquisition Request Context", () => renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, acquisitionTermsPayload, loanTermSheetTermsPayload, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.acquisitionRequestContext });
     const operatingSupportSection = renderSafely("Operating Support", () => renderOperatingSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.operatingSupport });
     const rentValueSupportSection = renderSafely("Rent / Value Support", () => renderRentValueSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.rentValueSupport });
-    const debtFinancingContextSection = renderSafely("Debt / Financing Context", () => renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage, loanTermSheetTermsPayload, mortgagePayload, bossContract }), { pageBreakBefore: true, bossSection: bossSections.debtFinancingContext });
-    const operatingStatementSection = renderSafely("Operating Statement / TTM Summary", () => renderOperatingStatementSection({ sourcePackage, t12Payload, coreMetrics, acquisitionMemoProjection, bossContract }), { pageBreakBefore: true, bossSection: bossSections.operatingStatementTTMSummary });
-    const dataCoverageSection = renderSafely("Data Coverage & Source Limitations", () => renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection, bossContract }), { pageBreakBefore: true, bossSection: bossSections.dataCoverageSourceLimitations });
-    const treatmentSection = renderSafely("Source Context / Support Document Treatment", () => renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage, bossContract), { pageBreakBefore: true, bossSection: bossSections.sourceContextSupportDocumentTreatment });
+    const debtFinancingContextSection = renderSafely("Debt / Financing Context", () => renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage, loanTermSheetTermsPayload, mortgagePayload, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.debtFinancingContext });
+    const operatingStatementSection = renderSafely("Operating Statement / TTM Summary", () => renderOperatingStatementSection({ sourcePackage, t12Payload, coreMetrics, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.operatingStatementTTMSummary });
+    const dataCoverageSection = renderSafely("Data Coverage & Source Limitations", () => renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.dataCoverageSourceLimitations });
+    const treatmentSection = renderSafely("Source Context / Support Document Treatment", () => renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.sourceContextSupportDocumentTreatment });
     const methodologySection = renderSafely("Methodology & Data Transparency", () => renderMethodologySection(), { pageBreakBefore: true });
     const footerSection = `<div class="report-footer"><div class="report-footer-inner"><span>InvestorIQ Capital Intelligence Memorandum | Confidential</span><span>&copy; InvestorIQ Technologies Inc.</span></div></div>`;
 

@@ -11,6 +11,11 @@ process.env.QA_REVIEW_ENABLED ||= "false";
 process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY ||= "true";
 
 const { default: generateClientReport } = await import("../../api/generate-client-report.js");
+const {
+  buildAcquisitionMemoV2CustomerSurfaceModel,
+  validateAcquisitionMemoV2CustomerSurfaceModel,
+  validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel,
+} = await import("../../api/_lib/acquisition-memo-v2-customer-surface-model.js");
 
 function makeHandlerResponse() {
   return {
@@ -251,7 +256,198 @@ function buildNormalPathPayload() {
   };
 }
 
-async function buildLocalBossContract(requestBody) {
+function buildScenarioInputs(requestBody, overrides = {}) {
+  const unitCount = Number.isFinite(Number(overrides.unitCount)) ? Number(overrides.unitCount) : 64;
+  const occupancy = overrides.occupancy ?? 0.9375;
+  const annualInPlaceRent = overrides.annualInPlaceRent ?? 1432800;
+  const annualMarketRent = overrides.annualMarketRent ?? 1718400;
+  const annualRentUpside = overrides.annualRentUpside ?? 285600;
+  const egi = overrides.egi ?? 1500000;
+  const opEx = overrides.opEx ?? 555000;
+  const noi = overrides.noi ?? 945000;
+  const expenseRatio = overrides.expenseRatio ?? 0.37;
+  const noiMargin = overrides.noiMargin ?? 0.63;
+  const breakEvenOccupancy = overrides.breakEvenOccupancy ?? 0.37;
+  const purchasePrice = overrides.purchasePrice ?? 13500000;
+  const goingInCapRate = overrides.goingInCapRate ?? 7;
+  const propertyName = overrides.propertyName ?? requestBody.property_name ?? "Acquisition Memo";
+  const propertyAddress = overrides.propertyAddress ?? "123 Main St";
+  const assetClass = overrides.assetClass ?? "Multifamily";
+  return {
+    coreMetrics: {
+      units: unitCount,
+      occupancy,
+      annualInPlaceRent,
+      annualMarketRent,
+      annualRentUpside,
+      egi,
+      opEx,
+      noi,
+      expenseRatio,
+      noiMargin,
+      breakEvenOccupancy,
+      purchasePrice,
+      goingInCapRate,
+    },
+    propertyProfile: {
+      propertyName,
+      propertyAddress,
+      propertyTitle: propertyName,
+      assetClass,
+    },
+    reportMeta: {
+      propertyName,
+      generatedAt: "2026-06-20T00:00:00.000Z",
+      reportType: "underwriting",
+      reportMode: "v1_core",
+      reportTier: 2,
+    },
+  };
+}
+
+function buildGenericFinalHandoffPayload() {
+  const payload = structuredClone(buildNormalPathPayload());
+  payload.property_name = "Harbor View Apartments";
+  payload.__test_payloads.documentSources = payload.__test_payloads.documentSources.map((doc) => {
+    const next = structuredClone(doc);
+    if (next.id === "t12-file") next.original_filename = "T12_Harbor_View_Attack_Test_1.xlsx";
+    if (next.id === "rent-roll-file") next.original_filename = "Rent_Roll_Harbor_View_Attack_Test_1.xlsx";
+    if (next.id === "assumptions-file") next.original_filename = "Harbor_View_Assumptions.pdf";
+    if (next.id === "current-debt-file") next.original_filename = "Current_Debt_Harbor_View.pdf";
+    if (next.id === "reno-file") next.original_filename = "Harbor_View_Reno_Plan.pdf";
+    if (next.id === "appraisal-file") next.original_filename = "Harbor_View_Appraisal_Summary.pdf";
+    if (next.id === "survey-file") next.original_filename = "Harbor_View_Market_Survey.pdf";
+    if (next.id === "phase-file") next.original_filename = "Harbor_View_Phase_I_ESA.pdf";
+    return next;
+  });
+  payload.__test_payloads.t12Payload = {
+    income_lines: [{ label: "Effective Gross Income", amount: 312000 }],
+    expense_lines: [
+      { label: "Property Taxes", amount: 40800 },
+      { label: "Insurance", amount: 16800 },
+      { label: "Repairs & Maintenance", amount: 24000 },
+      { label: "Utilities", amount: 20000 },
+      { label: "Property Management", amount: 14400 },
+      { label: "Payroll / Admin", amount: 7200 },
+    ],
+    effective_gross_income: 312000,
+    total_operating_expenses: 123200,
+    net_operating_income: 188800,
+    gross_potential_rent: 336000,
+  };
+  payload.__test_payloads.rentRollPayload = {
+    total_units: 12,
+    occupied_units: 11,
+    vacant_units: 1,
+    occupancy: 0.9166666667,
+    annual_in_place_rent: 280800,
+    annual_market_rent: 336000,
+  };
+  payload.__test_payloads.computedRentRoll = {
+    total_units: 12,
+    occupied_units: 11,
+    vacant_units: 1,
+    occupancy: 0.9166666667,
+    avg_in_place_rent: 23400,
+    avg_market_rent: 28000,
+    total_in_place_annual: 280800,
+    total_market_annual: 336000,
+    rent_to_market_gap: 0.1965811966,
+    unit_mix: [
+      { unit_type: "1BR", count: 6, current_rent: 1450, market_rent: 1600, avg_sqft: 720 },
+      { unit_type: "2BR", count: 6, current_rent: 1750, market_rent: 1950, avg_sqft: 940 },
+    ],
+  };
+  payload.__test_payloads.acquisitionTermsPayload = {
+    debt_basis: "acquisition_financing_assumption",
+    purchase_price: 4200000,
+    going_in_cap_rate: 0.07,
+    noi_basis: 188800,
+    ltv: 0.7,
+    interest_rate: 0.0595,
+    amortization_years: 30,
+    lender_fee_percent: 0.0085,
+    source_text: "Purchase assumptions / acquisition context for lender discussion only.",
+  };
+  payload.__test_payloads.loanTermSheetTermsPayload = {
+    debt_basis: "current_debt_context",
+    outstanding_balance: 2150000,
+    interest_rate: 0.0485,
+    amortization_years: 24,
+    monthly_payment: 12450,
+    maturity_date: "2030-11-01",
+    source_text: "Current debt support for lender discussion only.",
+  };
+  payload.__test_payloads.mortgagePayload = {
+    outstanding_balance: 2150000,
+    interest_rate: 0.0485,
+    amort_years: 24,
+    monthly_payment: 12450,
+    ltv: 0.7,
+  };
+  payload.__test_payloads.propertyTaxPayload = {
+    annual_tax: 40800,
+    original_filename: "Property_Tax_Support.pdf",
+  };
+  payload.__test_payloads.coverageArtifacts = payload.__test_payloads.coverageArtifacts.map((artifact) => {
+    const next = structuredClone(artifact);
+    if (next.id === "artifact-t12-file") {
+      next.file_id = "t12-file";
+      next.payload.source_original_filename = "T12_Harbor_View_Attack_Test_1.xlsx";
+      next.payload.t12_parsed = {
+        effective_gross_income: 312000,
+        total_operating_expenses: 123200,
+        net_operating_income: 188800,
+        gross_potential_rent: 336000,
+        expense_lines: [
+          { label: "Property Taxes", amount: 40800 },
+          { label: "Insurance", amount: 16800 },
+          { label: "Repairs & Maintenance", amount: 24000 },
+          { label: "Utilities", amount: 20000 },
+          { label: "Property Management", amount: 14400 },
+          { label: "Payroll / Admin", amount: 7200 },
+        ],
+      };
+    }
+    if (next.id === "artifact-rent-roll-file") {
+      next.file_id = "rent-roll-file";
+      next.payload.source_original_filename = "Rent_Roll_Harbor_View_Attack_Test_1.xlsx";
+      next.payload.rent_roll_parsed = {
+        total_units: 12,
+        occupancy: 0.9166666667,
+        unit_mix: [
+          { label: "1BR", count: 6, current_rent: 1450, market_rent: 1600 },
+          { label: "2BR", count: 6, current_rent: 1750, market_rent: 1950 },
+        ],
+        annual_in_place_rent: 280800,
+        annual_market_rent: 336000,
+      };
+    }
+    if (next.id === "artifact-assumptions-file") {
+      next.file_id = "assumptions-file";
+      next.payload.source_original_filename = "Harbor_View_Assumptions.pdf";
+      next.payload.document_text_extracted =
+        "Purchase assumptions / proposed acquisition financing\nPurchase Price $4,200,000\nNOI Basis $188,800\nGoing-In Cap Reference 7.00%\nProposed Acquisition Loan $2,940,000\nLTV 70.0%\nInterest Rate 5.95%\nAmortization 30 years\nLender Fee 0.85%";
+    }
+    if (next.id === "artifact-current-debt-file") {
+      next.file_id = "current-debt-file";
+      next.payload.source_original_filename = "Current_Debt_Harbor_View.pdf";
+      next.payload.document_text_extracted =
+        "Existing Current Debt Statement\nCurrent Outstanding Balance $2,150,000\nInterest Rate 4.85%\nAmortization Remaining 24 years\nMonthly Payment $12,450\nMaturity Date 2030-11-01";
+      next.payload.current_debt_parsed = {
+        current_outstanding_balance: 2150000,
+        interest_rate: 4.85,
+        amortization_remaining_years: 24,
+        monthly_payment: 12450,
+        maturity_date: "2030-11-01",
+      };
+    }
+    return next;
+  });
+  return payload;
+}
+
+async function buildLocalBossContract(requestBody, overrides = {}) {
   const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
   const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
   const { buildAcquisitionMemoBossContract } = await import("../../api/_lib/acquisition-memo-boss-contract.js");
@@ -260,38 +456,34 @@ async function buildLocalBossContract(requestBody) {
     structuredClone(requestBody.__test_payloads.coverageArtifacts)
   );
   const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage);
+  const scenario = buildScenarioInputs(requestBody, overrides);
   return buildAcquisitionMemoBossContract({
     canonicalSourcePackage: sourcePackage,
     acquisitionMemoProjection,
     t12Payload: structuredClone(requestBody.__test_payloads.t12Payload),
-    coreMetrics: {
-      units: 64,
-      occupancy: 0.9375,
-      annualInPlaceRent: 1432800,
-      annualMarketRent: 1718400,
-      annualRentUpside: 285600,
-      egi: 1500000,
-      opEx: 555000,
-      noi: 945000,
-      expenseRatio: 0.37,
-      noiMargin: 0.63,
-      breakEvenOccupancy: 0.37,
-      purchasePrice: 13500000,
-      goingInCapRate: 7,
-    },
-    propertyProfile: {
-      propertyName: "Stonebridge Lofts",
-      propertyAddress: "123 Main St",
-      propertyTitle: "Stonebridge Lofts",
-      assetClass: "Multifamily",
-    },
-    reportMeta: {
-      propertyName: "Stonebridge Lofts",
-      generatedAt: "2026-06-20T00:00:00.000Z",
-      reportType: "underwriting",
-      reportMode: "v1_core",
-      reportTier: 2,
-    },
+    coreMetrics: scenario.coreMetrics,
+    propertyProfile: scenario.propertyProfile,
+    reportMeta: scenario.reportMeta,
+    reportMode: "v1_core",
+  });
+}
+
+async function buildLocalCustomerSurfaceModel(requestBody, localBossContract, overrides = {}) {
+  const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
+  const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
+  const sourcePackage = buildCanonicalSourcePackage(
+    structuredClone(requestBody.__test_payloads.documentSources),
+    structuredClone(requestBody.__test_payloads.coverageArtifacts)
+  );
+  const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage);
+  const scenario = buildScenarioInputs(requestBody, overrides);
+  return buildAcquisitionMemoV2CustomerSurfaceModel({
+    canonicalSourcePackage: sourcePackage,
+    acquisitionMemoProjection,
+    bossContract: localBossContract,
+    coreMetrics: scenario.coreMetrics,
+    propertyProfile: scenario.propertyProfile,
+    reportMeta: scenario.reportMeta,
     reportMode: "v1_core",
   });
 }
@@ -371,12 +563,15 @@ assertFinalHandoffIsCurrent(reportSource);
 assert.equal(handlerResponse.statusCode, 200);
 const finalPdfHandoffHtml = String(handlerResponse.body?.final_html || "");
 const localBossContract = await buildLocalBossContract(requestBody);
+const localCustomerSurfaceModel = await buildLocalCustomerSurfaceModel(requestBody, localBossContract);
 const {
   validateAcquisitionMemoBossContract,
   validateAcquisitionMemoRenderAgainstBossContract,
 } = await import("../../api/_lib/acquisition-memo-boss-contract.js");
 const localBossValidation = validateAcquisitionMemoBossContract(localBossContract);
 const localBossRenderValidation = validateAcquisitionMemoRenderAgainstBossContract(localBossContract, finalPdfHandoffHtml);
+const localCustomerSurfaceValidation = validateAcquisitionMemoV2CustomerSurfaceModel(localCustomerSurfaceModel);
+const localCustomerSurfaceHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(finalPdfHandoffHtml, localCustomerSurfaceModel);
 const normalizedFinalVisibleText = normalizeFinalVisibleText(finalPdfHandoffHtml);
 const localBossT12Requirements = localBossContract?.sections?.operatingStatementTTMSummary || {};
 const finalHandoffDiagnostics = {
@@ -384,8 +579,12 @@ const finalHandoffDiagnostics = {
   handler_render_validation: handlerResponse.body?.render_validation,
   handler_final_harness_boss_compliance: handlerResponse.body?.final_harness_boss_compliance,
   handler_finalizer_boss_compliance: handlerResponse.body?.finalizer_boss_compliance,
+  handler_customer_surface_model_validation: handlerResponse.body?.customer_surface_model_validation,
+  handler_customer_surface_html_validation: handlerResponse.body?.customer_surface_html_validation,
   local_boss_validation: localBossValidation,
   local_render_validation: localBossRenderValidation,
+  local_customer_surface_validation: localCustomerSurfaceValidation,
+  local_customer_surface_html_validation: localCustomerSurfaceHtmlValidation,
   local_requires_t12_expense_lines: localBossT12Requirements?.factAvailability?.sourceBacked === true
     && Array.isArray(localBossT12Requirements?.factAvailability?.required)
     && localBossT12Requirements.factAvailability.required.includes("expense_lines"),
@@ -417,6 +616,9 @@ assert.equal(handlerResponse.body?.success, true, JSON.stringify({
   final_handoff_diagnostics: finalHandoffDiagnostics,
 }, null, 2));
 assert.equal(handlerResponse.body?.report_mode, "v1_core");
+assert.equal(handlerResponse.body?.customer_surface_model_validation?.ok, true);
+assert.equal(handlerResponse.body?.customer_surface_html_validation?.ok, true);
+assert.equal(localCustomerSurfaceValidation.ok, true);
 assert.equal("__test_acq_memo_v2_source_package" in requestBody, false);
 assert.equal("__test_acq_memo_v2_render_context" in requestBody, false);
 if (!localBossRenderValidation.ok) {
@@ -424,6 +626,7 @@ if (!localBossRenderValidation.ok) {
 }
 assert.equal(localBossValidation.ok, true);
 assert.equal(localBossRenderValidation.ok, true);
+assert.equal(localCustomerSurfaceHtmlValidation.ok, true);
 
 assert.equal(finalPdfHandoffHtml.includes("1BR"), true);
 assert.equal(finalPdfHandoffHtml.includes("2BR"), true);
@@ -470,5 +673,82 @@ assert.equal(/Data Not Available/i.test(finalPdfHandoffHtml), false);
 assert.equal(/{{[^}]+}}/.test(finalPdfHandoffHtml), false);
 assert.equal(/BEGIN SECTION|END SECTION/i.test(finalPdfHandoffHtml), false);
 assert.equal(/\bV2\b/i.test(finalPdfHandoffHtml), false);
+
+const genericRequestBody = buildGenericFinalHandoffPayload();
+const genericHandlerResponse = makeHandlerResponse();
+await generateClientReport(
+  {
+    headers: {
+      "x-admin-run-key": process.env.ADMIN_RUN_KEY,
+    },
+    body: genericRequestBody,
+  },
+  genericHandlerResponse
+);
+
+assert.equal(genericHandlerResponse.statusCode, 200);
+const genericFinalPdfHandoffHtml = String(genericHandlerResponse.body?.final_html || "");
+const genericLocalBossContract = await buildLocalBossContract(genericRequestBody, {
+  propertyName: "Harbor View Apartments",
+  propertyAddress: "456 Oak Ave",
+  assetClass: "Apartment",
+  unitCount: 12,
+  occupancy: 0.9166666667,
+  annualInPlaceRent: 280800,
+  annualMarketRent: 336000,
+  annualRentUpside: 55200,
+  egi: 312000,
+  opEx: 123200,
+  noi: 188800,
+  expenseRatio: 0.3948717948717949,
+  noiMargin: 0.6051282051282051,
+  breakEvenOccupancy: 0.3948717948717949,
+  purchasePrice: 4200000,
+  goingInCapRate: 7,
+});
+const genericLocalCustomerSurfaceModel = await buildLocalCustomerSurfaceModel(genericRequestBody, genericLocalBossContract, {
+  propertyName: "Harbor View Apartments",
+  propertyAddress: "456 Oak Ave",
+  assetClass: "Apartment",
+  unitCount: 12,
+  occupancy: 0.9166666667,
+  annualInPlaceRent: 280800,
+  annualMarketRent: 336000,
+  annualRentUpside: 55200,
+  egi: 312000,
+  opEx: 123200,
+  noi: 188800,
+  expenseRatio: 0.3948717948717949,
+  noiMargin: 0.6051282051282051,
+  breakEvenOccupancy: 0.3948717948717949,
+  purchasePrice: 4200000,
+  goingInCapRate: 7,
+});
+const genericBossValidation = validateAcquisitionMemoBossContract(genericLocalBossContract);
+const genericBossRenderValidation = validateAcquisitionMemoRenderAgainstBossContract(genericLocalBossContract, genericFinalPdfHandoffHtml);
+const genericCustomerSurfaceValidation = validateAcquisitionMemoV2CustomerSurfaceModel(genericLocalCustomerSurfaceModel);
+const genericCustomerSurfaceHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericFinalPdfHandoffHtml, genericLocalCustomerSurfaceModel);
+assert.equal(genericHandlerResponse.body?.success, true, JSON.stringify({
+  statusCode: genericHandlerResponse.statusCode,
+  success: genericHandlerResponse.body?.success,
+  error: genericHandlerResponse.body?.error,
+  qa_status: genericHandlerResponse.body?.qa_status,
+  delivery_gate_status: genericHandlerResponse.body?.delivery_gate_status,
+  render_validation: genericHandlerResponse.body?.render_validation,
+  boss_validation: genericHandlerResponse.body?.boss_compliance,
+  generic_boss_validation: genericBossValidation,
+  generic_render_validation: genericBossRenderValidation,
+  generic_customer_surface_validation: genericCustomerSurfaceValidation,
+  generic_customer_surface_html_validation: genericCustomerSurfaceHtmlValidation,
+}, null, 2));
+assert.equal(genericHandlerResponse.body?.report_mode, "v1_core");
+assert.equal(genericHandlerResponse.body?.customer_surface_model_validation?.ok, true);
+assert.equal(genericHandlerResponse.body?.customer_surface_html_validation?.ok, true);
+assert.equal(genericBossValidation.ok, true);
+assert.equal(genericBossRenderValidation.ok, true);
+assert.equal(genericCustomerSurfaceValidation.ok, true);
+assert.equal(genericCustomerSurfaceHtmlValidation.ok, true);
+assert.equal(genericFinalPdfHandoffHtml.includes("64-Unit Multifamily"), false);
+assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(genericFinalPdfHandoffHtml), false);
 
 console.log("acquisition-memo-v2-final-pdf-handoff-smoke: ok");
