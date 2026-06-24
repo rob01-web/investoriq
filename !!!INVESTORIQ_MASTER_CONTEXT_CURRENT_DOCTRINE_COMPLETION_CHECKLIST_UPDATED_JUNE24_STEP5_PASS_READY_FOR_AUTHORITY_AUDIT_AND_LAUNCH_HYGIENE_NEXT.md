@@ -1,0 +1,12556 @@
+---
+# June 24, 2026 Addendum — Steps 2–5 Sealed-Lane Migration Passed / Local Replay Wall Green / Authority Audit + Launch Hygiene Next
+
+## Current controlling status
+
+This addendum supersedes the June 23 late dual-lane sealed pipelines checkpoint as the active InvestorIQ report-generation control point.
+
+Current product posture:
+
+```text
+Screening Report:
+Still the launchable / founder-beta-ready product.
+Now protected by a sealed Screening lane entry/fence and regression smoke.
+Do not let Acquisition Memo V2, Boss Contract, CustomerSurfaceModel, V2 repair-collapse, or shared legacy output mutation touch Screening customer output.
+
+Acquisition Memo V2:
+Still not launch-cleared for public/customer use, but the root architecture sequence for RETEST 18 failure family is now locally green.
+Steps 2, 3, 4, and 5 passed after review.
+Controlled RETEST 19 is now technically reachable only after the next audit/hygiene checkpoints.
+
+Full Underwriting V2:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final recommendation/BUY/SELL/HOLD surfaces inside Acquisition Memo.
+```
+
+## Owner doctrine reaffirmed
+
+Rob’s root-cause doctrine remains controlling:
+
+```text
+No whack-a-mole.
+No report-specific patching.
+No Stonebridge / RETEST production hardcoding.
+No weakening Boss to make a test pass.
+No letting generate-client-report.js act as a second Boss after the real Boss has spoken.
+```
+
+Correct product architecture:
+
+```text
+Raw uploads / parser artifacts
+-> product-owned source package
+-> V2 role reconciler
+-> Acquisition Memo projection
+-> Boss Contract
+-> CustomerSurfaceModel
+-> V2 renderer
+-> Boss enforcement / repair-collapse / revalidation
+-> PDF handoff / delivery
+```
+
+Correct role split:
+
+```text
+Boss is not the writer and does not invent facts.
+Boss is the contract/enforcer.
+Renderer writes/formats only inside Boss-approved boundaries.
+Handler dispatches/delivers but does not overrule.
+```
+
+## Step 2 — Thin dispatcher / sealed lane entry points
+
+Verdict:
+
+```text
+PASS + committed.
+```
+
+Accepted state:
+
+```text
+api/_lib/acquisition-memo-v2-pipeline.js exists as the sealed Acquisition Memo V2 lane wrapper.
+api/_lib/screening-report-pipeline.js exists as the sealed Screening lane wrapper.
+Screening lane output is established before acquisition document-treatment mutation and before V2 finalization mutation.
+Acquisition document-treatment replacement is fenced so it does not run on screening_v1.
+V2 finalization remains fenced under Acquisition Memo V2 conditions.
+```
+
+Interpretation:
+
+```text
+Step 2 did not finish full product-lane extraction.
+It established the boundary/fence needed for safe migration.
+Screening wrapper remains intentionally lightweight for now.
+Full Screening orchestrator extraction remains future hardening, not a Step 2 blocker.
+```
+
+## Step 3 — Acquisition Memo V2 role reconciler / source truth authority
+
+Verdict:
+
+```text
+PASS + committed.
+```
+
+Accepted files / concepts:
+
+```text
+api/_lib/acquisition-memo-v2-role-reconciler.js
+reconcileAcquisitionMemoV2SupportDocRole(...)
+```
+
+Accepted doctrine implemented:
+
+```text
+Parser semantic_doc_role is evidence only.
+Product-owned reconciled role is authority.
+Current/existing debt evidence wins over a conflicting parser-stamped purchase/acquisition label.
+Purchase assumptions / proposed acquisition financing evidence remains acquisition context when supported.
+Negative/boundary language must not count as positive acquisition-financing evidence.
+```
+
+Encoding cleanup completed later:
+
+```text
+Existing Debt - Contextual
+Acquisition Assumptions - Contextual
+```
+
+No launch-unsafe artifact remains:
+
+```text
+Existing Debt â€” Contextual removed.
+Acquisition Assumptions â€” Contextual removed.
+```
+
+## Step 4 — Boss repair/collapse loop before final fail
+
+Verdict:
+
+```text
+PASS + committed after completion fix.
+```
+
+Accepted files / concepts:
+
+```text
+api/_lib/acquisition-memo-v2-boss-repair.js
+buildAcquisitionMemoV2BossRepairPlan(...)
+applyAcquisitionMemoV2BossRepairPlan(...)
+api/_lib/acquisition-memo-v2-orchestrator.js integration
+```
+
+Accepted behavior:
+
+```text
+Initial model validation issues are classified before render.
+Repairable optional/support sections collapse in CustomerSurfaceModel and Boss contract.
+The orchestrator rerenders after repair.
+Boss enforcement runs again.
+CustomerSurfaceModel HTML validation runs again.
+Final success only occurs if the repaired output is safe.
+```
+
+Violation classes accepted:
+
+```text
+coreFatal
+repairableOptionalSupport
+forbiddenSurface
+advisoryOnly
+```
+
+Core-fatal remains fail-closed:
+
+```text
+Missing/unusable/contradictory core T12 still fails.
+Missing/unusable/contradictory core Rent Roll still fails.
+Unsafe final HTML that survives repair still fails.
+```
+
+Forbidden surface completion fix accepted:
+
+```text
+Forbidden-surface violations classify as forbiddenSurface before core-fatal classification.
+Repairable forbidden surfaces are scrubbed/collapsed and revalidated.
+Hard forbidden surfaces that remain after enforcement still fail.
+Boss validation was not weakened.
+CustomerSurfaceModel validation was not weakened.
+```
+
+Forbidden surfaces remain closed:
+
+```text
+DSCR
+refi/refinance
+DCF
+waterfall
+equity return
+deal score
+final recommendation
+BUY / SELL / HOLD
+loan approval
+lender commitment
+```
+
+## Step 5 — RETEST 18-style local artifact replay + Screening regression wall
+
+Verdict:
+
+```text
+PASS.
+Not committed yet at the time of handoff.
+```
+
+New test/harness:
+
+```text
+tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js
+```
+
+Production files changed:
+
+```text
+None.
+```
+
+Accepted proof wall:
+
+```text
+Uses neutral replay fixture names only, not Stonebridge / Attack Test / Final Attack names.
+Valid core T12 + Rent Roll publishes locally through the sealed V2 path.
+Parser role conflict is present in fixture and reconciled before Boss / CustomerSurfaceModel consume it.
+Optional/support repair-collapse remains compatible with replay wall.
+Forbidden surfaces remain closed.
+Core-fatal missing T12 / Rent Roll still fails.
+Screening smoke remains green.
+```
+
+Accepted neutral fixture language:
+
+```text
+Replay Property
+Replay_T12.xlsx
+Replay_Rent_Roll.xlsx
+Replay_Purchase_Assumptions.pdf
+Replay_Current_Debt.pdf
+Replay_T12_Conflict.xlsx
+Replay_Rent_Roll_Conflict.xlsx
+```
+
+Approved exception:
+
+```text
+The test filename and internal harness label may still include retest18 because this is explicitly a RETEST 18-style local replay wall.
+```
+
+No-match scan accepted for the harness:
+
+```text
+Stonebridge
+Attack Test
+Attack_Test
+Final Attack
+Harbor_View_Attack_Test
+AttackTest
+```
+
+Reported commands green:
+
+```text
+node --check tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js
+node tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js
+node tests/qa/acquisition-memo-v2-role-reconciler-smoke.js
+node tests/qa/acquisition-memo-v2-boss-repair-collapse-smoke.js
+node tests/qa/acquisition-memo-v2-normal-path-local-smoke.js
+node tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js
+node tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js
+node tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js
+node tests/qa/screening-report-smoke.js
+git diff --check
+```
+
+Working tree note at handoff:
+
+```text
+Latest commit: 3e7bd08 update — prior approved commit.
+Step 5 replay harness file is intentionally untracked and not committed yet.
+```
+
+Expected status:
+
+```text
+?? tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js
+```
+
+## Controlled RETEST 19 posture
+
+Step 5 makes the codebase technically closer to controlled RETEST 19, but do not jump immediately.
+
+Required next checkpoints before controlled RETEST 19:
+
+```text
+1. Commit Step 5 replay harness only if Rob approves.
+2. Run generate-client-report.js authority audit.
+3. Run launch hygiene / customer-facing copy audit.
+4. Confirm no live/public/customer surface has test/internal/AI/em-dash/encoding/email issues.
+5. Then prepare a controlled RETEST 19 prompt/run plan.
+```
+
+## Generate Client Report authority audit — NEXT
+
+Rob asked the right question:
+
+```text
+After Step 5, do we audit generate-client-report.js to make sure it no longer has customer-output authority over Screening and Acquisition pipelines?
+```
+
+Answer:
+
+```text
+Yes. This is the next architecture checkpoint before controlled RETEST 19.
+```
+
+Target posture:
+
+```text
+generate-client-report.js = public route / request resolver / dispatcher / delivery wrapper.
+
+screening-report-pipeline.js = Screening customer-output owner.
+
+acquisition-memo-v2-pipeline.js + V2 modules = Acquisition Memo customer-output owner.
+```
+
+Audit must prove generate-client-report.js does NOT:
+
+```text
+own Screening customer-output logic;
+own Acquisition Memo V2 customer-output logic;
+classify document truth;
+mutate final customer HTML after sealed lane output;
+override Boss / CustomerSurfaceModel / renderer outputs;
+reopen legacy support-doc role inference;
+run meaning-changing strip/replace/marker helpers after Boss validation.
+```
+
+Acceptable remaining responsibilities:
+
+```text
+request/auth/report-mode resolution;
+product-lane dispatch;
+feature/test flag gating;
+PDF/storage/delivery plumbing;
+credit/report job status plumbing;
+response shaping that does not change customer truth.
+```
+
+## Launch hygiene audit — NEXT / before launch
+
+Rob identified a real UX/customer-copy issue:
+
+```text
+The failed-report message tells the customer to email hello@investoriq.tech.
+For failed report/report-generation review contexts, the correct email is reports@investoriq.tech.
+```
+
+Recommended email roles:
+
+```text
+hello@investoriq.tech = general/contact/sales
+support@investoriq.tech = account/platform support
+billing@investoriq.tech = payments/credits/invoices
+reports@investoriq.tech = failed report, report review, report-generation issues
+```
+
+Launch hygiene audit must scan customer-facing surfaces for:
+
+```text
+em dashes / en dashes used as punctuation;
+encoding artifacts such as â€”;
+customer-facing AI / A.I. / artificial intelligence language;
+internal implementation terms such as Boss, CustomerSurfaceModel, v2, Source Authority, semantic_doc_role, parser, stack traces;
+RETEST / Final Attack / Stonebridge / smoke / debug / legacy language;
+wrong contact email in failure/report contexts;
+dead-end retry language in failed-report messages.
+```
+
+Preferred failed report customer copy doctrine:
+
+```text
+Generation paused before publication.
+No completed report was published.
+Report credit will be restored automatically if platform-side failure applies.
+The failure was logged for review.
+Do not repeatedly retry the same property if it fails again.
+Contact reports@investoriq.tech with the property name.
+```
+
+## AWS credit side note
+
+Rob earned AWS credits during this session:
+
+```text
+AWS Explore activities completed: 4 of 5.
+Total credits earned: $80 of $100 USD.
+Completed: Budgets, Lambda, Bedrock/model playground, EC2.
+EC2 instance was launched and then terminated.
+```
+
+Caution:
+
+```text
+RDS/Aurora credit task intentionally deferred for now because it carries more lingering-charge risk.
+If attempted later, create the smallest tutorial DB, wait for credit, delete DB, skip final snapshot, and confirm no snapshots/backups remain.
+```
+
+## Current stop conditions
+
+Do not run yet:
+
+```text
+controlled RETEST 19;
+live report generation;
+DocRaptor;
+Supabase writes;
+paid API loops;
+public sample PDFs;
+high-value outreach PDFs;
+launch marketing PDFs.
+```
+
+Do not patch next by:
+
+```text
+hardcoding any test value;
+weakening Boss;
+weakening CustomerSurfaceModel;
+adding another parser heuristic as standalone launch fix;
+letting generate-client-report.js remain a hidden second Boss;
+touching Screening casually;
+changing production report logic during launch hygiene unless it is customer-facing copy only.
+```
+
+## First task in the next chat
+
+Rob will start fresh from here.
+
+Recommended first action:
+
+```text
+Ask Codex to run the Generate Client Report Authority Audit.
+```
+
+If Step 5 has not yet been committed, first decide:
+
+```text
+Commit Step 5 replay harness only:
+tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js
+
+Do not use git add .
+```
+
+Then run the audit.
+
+## Fresh continuation point for next chat
+
+```text
+June 24 checkpoint.
+
+Steps 2–5 of the sealed-lane / RETEST 18 failure-family migration are now reviewed as PASS.
+
+Step 2: Thin dispatcher / sealed lane entry points — PASS + committed.
+- Screening lane output is established before Acquisition/V2 mutations.
+- Acquisition document-treatment mutation is fenced out of screening_v1.
+- Acquisition Memo V2 has a sealed lane wrapper.
+- Screening has a sealed lane wrapper.
+
+Step 3: V2 role reconciler/source truth authority — PASS + committed.
+- Parser semantic_doc_role is evidence only.
+- Product-owned reconciled role is authority.
+- Current debt vs purchase assumptions separation is evidence-based.
+- Encoding artifacts were cleaned to ASCII labels.
+
+Step 4: Boss repair/collapse loop before final fail — PASS + committed.
+- Optional/support violations repair/collapse before final fail.
+- Boss and CustomerSurfaceModel remain strict.
+- Forbidden surfaces classify separately and repairable ones are scrubbed/revalidated.
+- Hard forbidden surfaces still fail.
+
+Step 5: RETEST 18-style local artifact replay + Screening regression wall — PASS, not committed yet unless Rob commits it before opening this chat.
+- New file: tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js.
+- No production files changed.
+- Uses neutral Replay Property fixtures.
+- Valid core T12 + Rent Roll publishes locally.
+- Parser role conflict is reconciled before Boss/CustomerSurfaceModel.
+- Optional/support repair-collapse remains green.
+- Forbidden surfaces remain closed.
+- Missing core T12/Rent Roll still fails.
+- Screening smoke remains green.
+- No Stonebridge / Attack Test / Final Attack strings remain in the harness.
+
+Current working-tree note from Codex:
+- latest commit 3e7bd08 update was the prior approved commit;
+- Step 5 file is intentionally untracked:
+  ?? tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js
+
+Before controlled RETEST 19:
+1. Decide whether to commit Step 5 replay harness.
+2. Run Generate Client Report Authority Audit.
+3. Run Launch Hygiene / Customer-Facing Copy Audit.
+4. Then prepare controlled RETEST 19 only if those pass.
+
+Also note:
+- Failed-report customer copy should use reports@investoriq.tech, not hello@investoriq.tech.
+- Before launch, scan customer-facing surfaces for em dashes, encoding artifacts, AI/internal language, test/internal strings, and wrong email usage.
+- Rob earned AWS credits: 4 of 5 Explore AWS tasks completed, $80/$100 USD earned; EC2 instance was terminated; RDS/Aurora intentionally deferred for safety.
+```
+
+
+---
+# June 23, 2026 Late Addendum — RETEST 17/18 Lessons / Legacy Shared Output Path Rejected / Dual Sealed Product Lanes Next
+
+## Current controlling status
+
+This addendum supersedes the earlier June 23 CustomerSurfaceModel / hardcoding-firewall checkpoint as the active InvestorIQ report-generation control point.
+
+Current product posture:
+
+```text
+Screening Report:
+Still the launchable / founder-beta-ready product, but now it must also be sealed from shared legacy output mutation.
+Protect it. Do not let Acquisition Memo V2, Boss Contract, CustomerSurfaceModel, or shared underwriting cleanup mutate Screening customer output.
+
+Acquisition Memo V2:
+Still not launch-cleared.
+RETEST 17 partially passed and proved core publishability plus many customer-surface guards.
+RETEST 18 failed before publication because final Boss compliance blocked the report after a live parser role conflict.
+The active root work is no longer a one-doc patch; it is dual-lane architecture quarantine.
+
+Full Underwriting V2:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final recommendation/BUY/SELL/HOLD surfaces inside Acquisition Memo.
+```
+
+## Critical owner correction
+
+Rob escalated correctly after RETEST 18.
+
+The controlling correction is:
+
+```text
+No more “one more correction” at the seam.
+No more whack-a-mole around support-doc role labels.
+No more claiming the old pipeline is neutral if it can still touch final customer output.
+
+Legacy code may physically remain in the repo.
+Legacy/shared code may NOT act as customer-facing authority for Screening or Acquisition Memo V2.
+```
+
+The new architectural mission:
+
+```text
+Seal both product lanes.
+- Screening gets its own sealed customer-output lane.
+- Acquisition Memo V2 gets its own sealed customer-output lane.
+- generate-client-report.js becomes a thin dispatcher/plumbing owner over time.
+- Shared helpers are formatting-only, delivery-only, or request-dispatch-only.
+- Any shared helper that decides customer truth is forbidden from sealed lanes.
+```
+
+## RETEST 17 result and interpretation
+
+RETEST 17 was not a full launch pass, but it was a major diagnostic win.
+
+What passed:
+
+```text
+core report published;
+valid T12 + Rent Roll did not false-fail;
+core T12 values rendered;
+core Rent Roll values rendered;
+current debt facts rendered;
+forbidden Full UW surfaces stayed closed;
+publish-or-collapse doctrine mostly held;
+Boss/model final gate did not allow forbidden/internal surfaces.
+```
+
+What failed:
+
+```text
+Stonebridge_Assumptions.pdf / purchase assumptions support was accepted upstream,
+but the final customer report still said purchase assumptions were missing,
+and Document Treatment mislabeled the assumptions document as current debt.
+```
+
+Root cause discovered:
+
+```text
+Accepted purchase-assumptions artifact truth existed,
+but the legacy support-doc authority layer in generate-client-report.js could still re-derive / overwrite / misclassify support-doc roles before the CustomerSurfaceModel.
+
+Boss validated a self-consistent model, but the model was incomplete/wrong because accepted artifact truth was lost upstream.
+```
+
+Surgical patch after RETEST 17:
+
+```text
+Accepted support-doc semantic role/debt_basis was preserved into canonical package / support-doc rows / CustomerSurfaceModel / final HTML validation.
+Document Treatment precedence was corrected so accepted semantic role beats legacy filename/text heuristics.
+Boss/model validation was strengthened to catch accepted-artifact-truth-vs-model contradictions.
+Hardcoding grep remained clean.
+Screening smoke remained green.
+```
+
+Local verdict after that patch:
+
+```text
+PASS locally / commit acceptable,
+but live proof still required because RETEST 17 exposed a live artifact-shape seam.
+```
+
+## RETEST 18 result and interpretation
+
+RETEST 18 failed before publication.
+
+Customer-visible status:
+
+```text
+Generation failed before publication.
+No report was published.
+```
+
+Live artifact result:
+
+```text
+API returned 500.
+response preview: {"error":"Final Acquisition Memo V2 HTML failed Boss compliance"}
+```
+
+Important distinction:
+
+```text
+The Boss did catch a contradiction this time.
+But it failed the whole report instead of repairing/collapsing the conflicted support-doc lane and publishing the valid core report.
+```
+
+Core inputs were valid:
+
+```text
+T12 parsed successfully.
+Rent Roll parsed successfully.
+Core T12/Rent Roll were not the reason for failure.
+```
+
+Purchase assumptions truth was accepted correctly:
+
+```text
+Stonebridge_Assumptions.pdf was accepted as:
+semantic_doc_role: purchase_assumptions
+debt_basis: acquisition_financing_assumption
+purchase_price: 13,500,000
+derived_acquisition_loan_amount: 9,450,000
+ltv: 70
+interest_rate: 5.95
+amortization_years: 30
+closing_costs_percent: 0.85
+```
+
+But the live artifacts also showed the uglier failure:
+
+```text
+Current_Debt_Stonebridge.pdf text clearly said Existing Current Debt Statement,
+with current outstanding balance, interest rate, amortization, monthly payment, and maturity date.
+
+Yet the loan_term_sheet parser path incorrectly stamped it as:
+semantic_doc_role: purchase_assumptions
+debt_basis: acquisition_financing_assumption
+semantic_doc_display_label: Purchase Assumptions / Acquisition Context
+```
+
+Controlling interpretation:
+
+```text
+The previous patch made accepted artifact truth stronger.
+RETEST 18 proved the live parser can create wrong accepted artifact truth.
+Therefore parser semantic_doc_role cannot be treated as final truth.
+Parser role is evidence only.
+A V2 role reconciler must decide product-owned role truth before Boss/CustomerSurfaceModel.
+```
+
+## Why Rob rejected “one more correction”
+
+Rob correctly rejected the cycle:
+
+```text
+one more propagation fix;
+one more Boss validation fix;
+one more support-role fix;
+one more parser-role fix;
+one more final gate fix.
+```
+
+The true disease is:
+
+```text
+legacy/shared pipeline code still shares the final customer-output path.
+Multiple places can still infer, reclassify, mutate, strip, replace, or block customer-facing output.
+```
+
+The fix is not deleting every old line immediately.
+The fix is quarantining old authority so it cannot influence product-owned customer output.
+
+## Codex man-to-man architectural answer accepted
+
+Codex's high-level answer was accepted:
+
+```text
+Cutting all legacy code from the entire tree immediately is unsafe.
+The tree is still entangled, especially generate-client-report.js, which includes Screening, Acquisition Memo, delivery, and many legacy strip/replace/sanitize paths.
+
+The real problem is not that legacy code exists.
+The real problem is that legacy code still shares the final-output path.
+```
+
+Accepted strategy:
+
+```text
+1. Keep the one public route for now.
+2. Make generate-client-report.js a thin dispatcher over time.
+3. Give Acquisition Memo V2 a sealed internal lane.
+4. Give Screening a sealed internal lane.
+5. Shared helpers become formatting-only / delivery-only / request-dispatch-only.
+6. Product-owned customer truth lives inside each product lane.
+```
+
+## New target architecture
+
+One public route remains:
+
+```text
+api/generate-client-report.js
+```
+
+It should become:
+
+```text
+resolve request/auth/report mode
+-> dispatch to product-owned pipeline
+-> return product-owned output / delivery response
+```
+
+Target product lanes:
+
+```text
+api/_lib/acquisition-memo-v2-pipeline.js
+api/_lib/screening-report-pipeline.js
+```
+
+or equivalent internal modules.
+
+### Acquisition Memo V2 sealed lane owns
+
+```text
+raw uploaded files / parser artifacts / extracted text intake
+V2 role reconciliation
+V2 canonical source package
+V2 acquisition memo projection
+Boss Contract
+CustomerSurfaceModel
+V2 renderer / document owner
+V2 final validation
+V2 PDF handoff readiness
+V2 delivery output contract
+```
+
+Forbidden inside Acquisition Memo V2 lane after the V2 boundary:
+
+```text
+legacy support-doc role authority;
+legacy document treatment builder;
+legacy readiness wording;
+legacy debt/proposed-financing heuristics;
+legacy marker replacement / stripMarkedSection as authority;
+Screening cascade mutation;
+shared sanitize passes that change meaning;
+parser semantic_doc_role as final truth.
+```
+
+### Screening sealed lane owns
+
+```text
+Screening source rules;
+Screening metrics;
+Screening classification;
+Screening section eligibility;
+Screening renderer;
+Screening final validation;
+Screening delivery output contract.
+```
+
+Forbidden inside Screening lane:
+
+```text
+Acquisition Memo V2 Boss logic;
+Acquisition Memo V2 CustomerSurfaceModel logic;
+Acquisition Memo V2 document treatment/readiness logic;
+shared underwriting/acquisition final HTML mutation;
+legacy post-render mutation intended for Acquisition.
+```
+
+### Shared helpers may only be
+
+```text
+formatCurrency / formatPercent / formatNumber;
+escapeHtml / typography-only sanitation;
+pure number normalization;
+request parsing / dispatcher glue;
+storage path validation / delivery wrapper plumbing;
+no customer truth decisions.
+```
+
+Shared helpers may NOT decide:
+
+```text
+document role;
+support-doc treatment;
+section eligibility;
+classification;
+readiness wording;
+current debt vs proposed financing meaning;
+customer-facing disclaimers;
+final HTML replacement that changes report meaning.
+```
+
+## Current Codex task running at pause
+
+Codex is currently working on:
+
+```text
+Dual-Lane Architecture Audit — Seal Screening + Acquisition Memo V2 / Kill Shared Legacy Customer-Output Authority
+```
+
+This is Prompt 1 of the new plan.
+
+Scope:
+
+```text
+Audit only.
+No migration implementation yet.
+No live services.
+No RETEST 19.
+No DocRaptor.
+No Supabase writes.
+No commit.
+Prefer no code changes.
+```
+
+Codex must return a cut-line table:
+
+```text
+File/function
+Current behavior
+Current owner
+Future owner
+Screening allowed? yes/no/formatting-only
+Acquisition V2 allowed? yes/no/formatting-only
+Risk level
+Action needed
+Notes
+```
+
+Future owner labels:
+
+```text
+screening_lane
+acquisition_memo_v2_lane
+shared_formatting_only
+shared_delivery_only
+shared_request_dispatch_only
+legacy_forbidden_from_customer_output
+delete_later_after_quarantine
+```
+
+## Updated 3–5 prompt migration plan
+
+Do not run RETEST 19 until all relevant local proof walls pass.
+
+### Prompt 1 — Dual-lane architecture audit
+
+Status:
+
+```text
+CURRENTLY RUNNING WITH CODEX.
+```
+
+Goal:
+
+```text
+Map Screening, Acquisition Memo V2, shared helpers, and forbidden legacy authority.
+Identify the cut line before moving code.
+```
+
+### Prompt 2 — Thin dispatcher / sealed lane entry points
+
+Goal:
+
+```text
+Make generate-client-report.js call product-owned internal pipelines.
+No new public route.
+Preserve Vercel Hobby route/function cap.
+```
+
+Expected internal modules:
+
+```text
+api/_lib/acquisition-memo-v2-pipeline.js
+api/_lib/screening-report-pipeline.js
+```
+
+or Codex-approved equivalent names.
+
+### Prompt 3 — Acquisition Memo V2 role reconciler / source truth authority
+
+Goal:
+
+```text
+Parser semantic_doc_role becomes evidence only.
+V2 reconciled role becomes authority.
+```
+
+Required current-debt rule:
+
+```text
+Existing Current Debt Statement + Current Outstanding Balance + Monthly Payment + Maturity Date
+must resolve to current debt even if a parser stamped purchase_assumptions.
+```
+
+Required negative-phrase rule:
+
+```text
+"separate from proposed acquisition financing" and "not proposed acquisition financing"
+must not count as positive acquisition-financing signals.
+```
+
+### Prompt 4 — Boss repair/collapse loop before final fail
+
+Goal:
+
+```text
+Boss produces structured outcomes:
+coreFatal;
+supportRoleConflict;
+repairApplied;
+sectionCollapse;
+finalUnsafe;
+publishAllowed.
+```
+
+Required behavior:
+
+```text
+support-doc role conflict -> reconcile if clear;
+unresolved support conflict -> collapse/qualify support lane;
+valid T12 + Rent Roll -> publish;
+whole report fail only for true core fatal/runtime/storage/PDF fatal or unsafe final HTML that remains after repair/collapse.
+```
+
+### Prompt 5 — Live artifact replay harness + Screening proof wall
+
+Goal:
+
+```text
+Replay RETEST 18's actual artifact shape locally before any RETEST 19.
+Also keep Screening smoke/proof wall green.
+```
+
+Required live-shape fixture:
+
+```text
+loan_term_sheet_parsed for true purchase assumptions;
+loan_term_sheet_parsed wrongly stamping current debt as purchase_assumptions;
+document_text_extracted proving current debt truth;
+valid T12 parsed;
+valid Rent Roll parsed;
+supporting docs degraded/unclassified.
+```
+
+Expected result:
+
+```text
+report publishes locally;
+current debt reconciles correctly;
+purchase assumptions render correctly;
+support conflicts collapse/qualify if unresolved;
+Boss does not full-fail valid core report;
+forbidden Full UW surfaces remain blocked;
+Screening remains green.
+```
+
+## Current hard stop conditions
+
+Do not run:
+
+```text
+RETEST 19;
+live report generation;
+DocRaptor;
+Supabase writes;
+paid API retesting loops;
+public samples;
+high-value outreach PDFs.
+```
+
+Do not patch next by:
+
+```text
+only fixing Current_Debt_Stonebridge;
+only fixing Stonebridge_Assumptions;
+only adding another Boss final validator;
+only weakening the Boss so RETEST 18 publishes;
+only adding one more parser heuristic without sealing lanes;
+hardcoding any test report value into production;
+touching Screening casually.
+```
+
+## First task in the next chat
+
+Rob will paste Codex's reply to the Dual-Lane Architecture Audit.
+
+Review it as:
+
+```text
+PASS / PARTIAL / FAIL.
+```
+
+Do not let “good explanation” substitute for a usable cut-line table.
+
+Codex reply must include:
+
+```text
+A. Branch and latest commit.
+B. Files inspected.
+C. Files modified, if any.
+D. Cut-line table.
+E. Screening sealed-lane recommendation.
+F. Acquisition Memo V2 sealed-lane recommendation.
+G. Thin dispatcher recommendation.
+H. Shared formatting-only helper list.
+I. Shared delivery-only helper list.
+J. Legacy forbidden customer-output authority list.
+K. Highest-risk seams.
+L. Proposed 3–5 prompt migration sequence.
+M. Confirmation no live services/DocRaptor/Supabase/RETEST 19.
+N. Commands run/results.
+O. git diff --name-only.
+P. git status --short.
+Q. Final audit verdict: READY FOR MIGRATION / NOT READY.
+```
+
+## Fresh continuation point for next chat
+
+```text
+June 23 late checkpoint.
+
+Rob escalated after RETEST 18 because the team kept saying “one more correction.” That cycle is now rejected.
+
+RETEST 17 partially passed:
+- core report published;
+- T12/Rent Roll values rendered;
+- current debt facts rendered;
+- forbidden Full UW surfaces stayed closed;
+- but purchase assumptions accepted upstream were still lost/mislabeled downstream.
+
+A surgical patch preserved accepted support truth into canonical/CustomerSurfaceModel/final validation and fixed document-treatment precedence locally.
+
+RETEST 18 then failed before publication:
+- API returned 500: Final Acquisition Memo V2 HTML failed Boss compliance;
+- T12 and Rent Roll were valid;
+- Stonebridge_Assumptions.pdf was correctly accepted as purchase assumptions;
+- Current_Debt_Stonebridge.pdf text clearly said Existing Current Debt Statement, but live loan_term_sheet parser stamped it as purchase_assumptions / acquisition_financing_assumption;
+- Boss caught contradiction but failed the whole report instead of repairing/collapsing the bad support lane and publishing valid core.
+
+Rob correctly rejected another one-off parser/Boss patch.
+Codex agreed the real problem is not that legacy code exists, but that legacy code still shares the final-output path.
+
+Accepted new architecture direction:
+- keep one public route because of Vercel Hobby route/function limits;
+- make generate-client-report.js a thin dispatcher over time;
+- create/seal Acquisition Memo V2 lane;
+- create/seal Screening lane;
+- shared helpers become formatting-only/delivery-only/request-dispatch-only;
+- legacy authority forbidden from customer output.
+
+Current Codex task running:
+Dual-Lane Architecture Audit — Seal Screening + Acquisition Memo V2 / Kill Shared Legacy Customer-Output Authority.
+
+First thing next chat:
+Rob will paste Codex's audit receipt.
+Review it for PASS / PARTIAL / FAIL.
+No implementation, no RETEST 19, no live services until cut-line audit is accepted.
+```
+
+
+---
+# June 23, 2026 Addendum — RETEST 16 Surface-Authority Failure / CustomerSurfaceModel Started / Hardcoding Firewall Active
+
+## Current controlling status
+
+This addendum supersedes the June 22 late orchestrator/T12 propagation checkpoint as the active Acquisition Memo control point.
+
+Current product posture:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready. Protected. Do not touch except regression.
+
+Acquisition Memo:
+Still not launch-cleared.
+RETEST 16 was a major improvement versus RETEST 15, but it exposed that Boss/renderer/QA publication authority is still not fully customer-surface-owned.
+The active root work is now the Acquisition Memo V2 CustomerSurfaceModel / RenderSurfaceContract boundary.
+
+Full Underwriting V2:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final recommendation/BUY/SELL/HOLD surfaces inside Acquisition Memo.
+```
+
+## RETEST 16 interpretation
+
+RETEST 16 improved materially:
+
+```text
+published instead of failing;
+16 pages instead of the degraded 6-page RETEST 15 output;
+clean report title / no Generation failed contamination;
+core T12 and Rent Roll facts rendered;
+Property Taxes / $185,000 rendered;
+current debt facts rendered;
+elite section inventory mostly returned;
+forbidden advanced underwriting surfaces remained closed.
+```
+
+But RETEST 16 was not a clean launch pass.
+
+Customer-surface issues revealed:
+
+```text
+Stonebridge_Assumptions.pdf / purchase assumptions were still mishandled in customer-facing output;
+Acquisition Request Context could collapse despite source-backed purchase assumptions;
+Preliminary Financing Readiness could claim purchase assumptions were missing;
+appraisal stabilized values could be mislabeled as going-in cap / interest-rate style fields;
+whole-property cap value and rent-upside capitalized value could be presented with confusing labels;
+classified support document count could inflate from artifact/document rows instead of unique uploaded docs;
+QA/advisory findings could remain misaligned with Boss/canonical truth while publication proceeds.
+```
+
+Owner interpretation:
+
+```text
+The test report is the fork, not the cake.
+The deeper root is not a Stonebridge-specific bug.
+The deeper root is that Boss governs parts of the Acquisition Memo final handoff, but Boss does not yet own the full customer-surface contract across the pipeline.
+```
+
+## RED audit result — customer surfaces still not fully Boss-owned
+
+Codex ran the read-only authority-chain audit.
+
+Overall verdict:
+
+```text
+RED: material surfaces can still freelance source truth, labels, section eligibility, QA severity, and publication decisions.
+```
+
+Confirmed root:
+
+```text
+The repo still has multiple authority owners.
+Canonical, projection, renderer, QA, and delivery logic can each independently infer, relabel, collapse, or block customer-facing surfaces.
+Boss now governs the V2 final-handoff path, but it does not yet own the whole customer-surface contract end-to-end.
+```
+
+Unsafe or partially unsafe surfaces included:
+
+```text
+classification labels;
+T12 summary and line items;
+Rent Roll summary;
+Unit Mix / Rent Positioning;
+Acquisition Request Context;
+Preliminary Financing Readiness;
+Current Debt Context;
+Proposed Financing Context;
+Source Context / Uploaded Files;
+Document Treatment Summary;
+Data Coverage / Source Limitations;
+QA manager/director/action plan;
+delivery_gate_status;
+public_sample_ready / high_value_outreach_ready;
+Screening classification and source-treatment/shared-helper surfaces.
+```
+
+Accepted architectural fix:
+
+```text
+Build a Boss-owned Acquisition Memo V2 CustomerSurfaceModel / RenderSurfaceContract.
+Renderer becomes formatting-only.
+Final HTML must validate against the model before success/PDF handoff.
+QA remains advisory unless it maps to deterministic model/Boss violations.
+```
+
+## Why this was not solved by prior Boss Contract work
+
+The earlier Boss Contract work improved final compliance and publish-or-collapse behavior, but it did not finish the customer-surface ownership boundary.
+
+Distinction now recorded:
+
+```text
+Final publication Boss gate: improved.
+Full customer-surface Boss authority: incomplete.
+```
+
+The missing boundary:
+
+```text
+canonical source package
+-> acquisition memo projection
+-> Boss Contract
+-> CustomerSurfaceModel / RenderSurfaceContract
+-> renderer formats only
+-> final HTML model validation
+-> PDF/storage/delivery
+```
+
+## Micro-prompt plan adopted
+
+The original CustomerSurfaceModel implementation prompt was split into micro prompts to avoid Codex doing too much damage at once.
+
+### Micro Prompt 1 — read-only plan
+
+Result:
+
+```text
+PASS.
+No files changed.
+No code written.
+Implementation deemed SAFE TO IMPLEMENT.
+```
+
+Accepted plan:
+
+```text
+new file: api/_lib/acquisition-memo-v2-customer-surface-model.js
+exports:
+- buildAcquisitionMemoV2CustomerSurfaceModel(...)
+- validateAcquisitionMemoV2CustomerSurfaceModel(model)
+- validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model)
+- summarizeAcquisitionMemoV2CustomerSurfaceModel(model)
+inputs:
+- canonicalSourcePackage
+- acquisitionMemoProjection
+- bossContract
+- coreMetrics
+- propertyProfile
+- reportMeta
+- reportMode
+```
+
+### Micro Prompt 2 — additive model module only
+
+Codex added:
+
+```text
+api/_lib/acquisition-memo-v2-customer-surface-model.js
+tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js
+```
+
+Reported:
+
+```text
+no existing files modified;
+renderer/PDF/publication flow not rewired;
+Screening behavior untouched;
+model-only smoke passed;
+Screening smoke passed.
+```
+
+Review verdict:
+
+```text
+PARTIAL, not full PASS.
+Do not proceed to renderer/orchestrator wiring yet.
+```
+
+Why partial:
+
+```text
+1. Production model HTML validator hardcoded RETEST/Stonebridge values such as $6,800,000, $9,450,000, 4.85%, 5.95%, 70.0%, 24 years, 30 years, and 2029-11-01.
+2. Optional/support sections were treated too fatally; missing purchase/current-debt/proposed-financing context must collapse/omit/qualify, not fail the whole report.
+3. visibleClassification appeared able to fall back to asset class such as Multifamily, which is not an approved report classification.
+```
+
+## Hardcoding firewall — active doctrine
+
+Critical owner doctrine now explicit:
+
+```text
+Test reports are diagnostic tools only.
+They are not source-code requirements.
+They are not product constants.
+They are not production fixtures.
+They are not pipeline truth.
+```
+
+All test-specific values must live only in:
+
+```text
+test fixtures;
+smoke tests;
+expected-result files;
+local test assertions.
+```
+
+Test-specific values must never appear in:
+
+```text
+production validators;
+production renderers;
+Boss contract logic;
+CustomerSurfaceModel logic;
+canonical source package logic;
+parser logic;
+document treatment logic;
+QA routing logic;
+delivery gate logic;
+final HTML/PDF handoff logic.
+```
+
+Automatic FAIL condition:
+
+```text
+Any production code containing Stonebridge-specific values, fixed RETEST numbers, uploaded test filenames, or live test-report facts is an automatic FAIL.
+```
+
+Correct generic pattern:
+
+```text
+Production code must derive expected customer-surface values from the model and format them dynamically.
+Example: if model.sections.currentDebtContext.facts.current_outstanding_balance exists, validate the formatted value from that field — not a hardcoded $6,800,000.
+```
+
+## Active Codex task at pause
+
+Codex is currently working on Micro Prompt 2B:
+
+```text
+Hardcoding firewall + generic CustomerSurfaceModel correction.
+```
+
+Scope:
+
+```text
+Do not rewire renderer.
+Do not modify PDF/publication handoff.
+Do not touch Screening behavior.
+Do not patch RETEST 16 directly.
+Prefer modifying only:
+- api/_lib/acquisition-memo-v2-customer-surface-model.js
+- tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js
+```
+
+Micro Prompt 2B required fixes:
+
+```text
+1. Remove all Stonebridge/RETEST/fixed-value literals from production model validator.
+2. Replace hardcoded HTML validation with model-derived dynamic formatting.
+3. Treat optional support gaps as collapseable/omittable/qualifiable, not fatal.
+4. Prevent visible classification from falling back to asset class.
+5. Add generic non-Stonebridge fixture proof.
+6. Add negative hardcode proof.
+7. Add optional-support collapse proof.
+8. Add negated-current-debt-language proof.
+9. Run hardcoding grep against modified production files.
+10. Keep Screening smoke green.
+```
+
+## Current stop conditions
+
+Do not proceed to Micro Prompt 3 / renderer wiring until Micro Prompt 2B is reviewed and green.
+
+Do not run:
+
+```text
+RETEST 17;
+any live Stonebridge report;
+paid API testing loop;
+DocRaptor/PDF live handoff;
+Supabase writes;
+public sample generation;
+high-value outreach PDF;
+Ken Dunn launch PDF.
+```
+
+Do not commit unless Rob explicitly approves a clean model-only checkpoint after Micro Prompt 2B.
+
+Do not patch next by:
+
+```text
+hardcoding any test value;
+changing tests to accept production hardcoding;
+weakening Boss assertions;
+weakening CustomerSurfaceModel validation;
+letting renderer wiring begin before generic model validation is clean;
+touching Screening production behavior.
+```
+
+## Expected next message from Rob
+
+Rob will start the next chat by pasting Codex's Micro Prompt 2B reply.
+
+First task in the next chat:
+
+```text
+Review Codex's reply.
+Classify PASS / PARTIAL / FAIL.
+Do not assume green just because tests pass.
+Confirm production CustomerSurfaceModel code contains no hardcoded test-report values.
+Confirm optional support gaps are collapseable, not fatal.
+Confirm visible classification does not fall back to asset class.
+Confirm test-specific values live only in tests.
+Confirm renderer/PDF/publication flow was not rewired yet.
+Confirm Screening remains untouched/green.
+```
+
+Codex reply should include:
+
+```text
+A. Files modified.
+B. Confirmation no renderer/orchestrator/PDF/publication rewiring happened.
+C. Confirmation no test-report values remain hardcoded in production code.
+D. Confirmation any test-specific values exist only in test files.
+E. Confirmation optional support gaps are collapseable, not fatal.
+F. Confirmation classification no longer falls back to asset class.
+G. Tests added/updated.
+H. Commands run and results.
+I. Hardcoding grep command and output.
+J. Confirmation Screening behavior untouched.
+K. git diff --name-only.
+L. git status --short.
+M. Verdict: PASS / PARTIAL / FAIL.
+```
+
+## What to do if Micro Prompt 2B reports PASS
+
+Verify carefully:
+
+```text
+No production hardcoding.
+No Stonebridge/RETEST values in production model file.
+Dynamic model-derived validation only.
+Optional support sections can collapse/omit/qualify.
+Core T12/Rent Roll remain required.
+Approved classification fallback only.
+Hardcoding grep clean for production files.
+Screening smoke green.
+No renderer/orchestrator/PDF rewiring yet.
+```
+
+Then likely next move:
+
+```text
+Proceed to Micro Prompt 3 only after Rob approves.
+Micro Prompt 3 wires Acquisition Memo V2 rendering to the CustomerSurfaceModel and validates final HTML before success/PDF handoff.
+```
+
+## What to do if Micro Prompt 2B reports PARTIAL or FAIL
+
+```text
+Do not proceed to Micro Prompt 3.
+Do not wire renderer.
+Do not commit.
+Keep Codex bounded to the model-only hardcoding firewall / generic validation correction.
+```
+
+Likely failure buckets:
+
+```text
+1. production model file still contains Stonebridge/RETEST literals;
+2. validator still checks fixed values instead of model-derived values;
+3. optional support missing still fatal;
+4. classification still falls back to asset class;
+5. tests pass only because fixture values are hardcoded;
+6. Screening touched unnecessarily.
+```
+
+## Fresh continuation point for next chat
+
+```text
+June 23 checkpoint.
+
+RETEST 16 improved materially but exposed the real root: Boss is still not Boss over the full customer surface.
+Codex read-only audit returned RED: multiple authority owners still exist across canonical/projection/renderer/QA/delivery.
+Accepted fix: build Acquisition Memo V2 CustomerSurfaceModel / RenderSurfaceContract so renderer formats only and final HTML validates against model-owned truth before PDF/storage.
+
+Micro Prompt 1 read-only plan: PASS.
+Micro Prompt 2 additive model skeleton: PARTIAL after review.
+New files were added:
+- api/_lib/acquisition-memo-v2-customer-surface-model.js
+- tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js
+Renderer/PDF/publication not rewired yet.
+Screening untouched.
+
+Problem caught before wiring:
+Production model validator hardcoded RETEST/Stonebridge values. This violates the new hardcoding firewall.
+Also optional support sections were too fatal, and visible classification appeared to fall back to asset class.
+
+Rob correctly emphasized that test reports are forks, not the cake. Codex must NEVER hardcode any test-report fact into production pipeline code.
+
+Codex is currently working on Micro Prompt 2B:
+- remove all test-report hardcoding from production model code;
+- make HTML validation dynamic/model-derived;
+- make optional support gaps collapseable, not fatal;
+- prevent classification fallback to asset class;
+- add generic non-Stonebridge tests, negative hardcode proof, optional-collapse proof, negated-current-debt proof;
+- run hardcoding grep;
+- keep Screening untouched.
+
+First thing next chat:
+Rob will paste Codex's Micro Prompt 2B reply.
+Review it for PASS / PARTIAL / FAIL.
+Do not proceed to renderer wiring / Micro Prompt 3 unless Micro Prompt 2B is genuinely clean.
+```
+
+
+---
+# June 22, 2026 Late Addendum — Acquisition Memo V2 Orchestrator Bypass Partial / T12 Propagation Proof Next
+
+## Current controlling status
+
+This addendum supersedes the earlier June 22 Boss Contract / Legacy Firewall checkpoint.
+
+Current product posture:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready. Protected. Do not touch except regression.
+
+Acquisition Memo:
+Still not launch-cleared.
+Architecture is improving: Boss Contract is sovereign locally, final false-success is blocked, and an internal V2 orchestrator now owns render/finalization.
+But the final-handoff proof wall remains red because source-backed T12 expense lines are not yet rendering in the final returned HTML.
+
+Full Underwriting V2:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final recommendation/BUY/SELL/HOLD surfaces inside Acquisition Memo.
+```
+
+## What changed in this session
+
+### 1. Commit decision after fail-closed partial patch
+
+Codex first patched the V2 final-handoff seam so the handler stopped returning success when final Boss compliance was false.
+
+Accepted direction:
+
+```text
+Handler/finalizer should never return success:true when Boss compliance is false.
+PDF path should not hand HTML to DocRaptor when Boss compliance is false.
+```
+
+But the result was only PARTIAL because:
+
+```text
+Final HTML still did not render source-backed T12 expense lines.
+Final-handoff smoke still failed.
+```
+
+Decision:
+
+```text
+Do not commit the partial fail-closed patch by itself.
+Leave working tree uncommitted until the orchestrator/final-handoff proof is green.
+```
+
+### 2. Vercel Hobby route/function constraint handled
+
+Rob reminded the team that the project is already at the Vercel Hobby route/function cap.
+
+Decision:
+
+```text
+Do not add a new public API route.
+Do not create api/acquisition-memo-v2.js.
+Use only internal modules under api/_lib.
+Keep api/generate-client-report.js as the public route/dispatcher.
+```
+
+This preserves route/function count.
+
+### 3. Internal Acquisition Memo V2 orchestrator created
+
+New internal file:
+
+```text
+api/_lib/acquisition-memo-v2-orchestrator.js
+```
+
+Current accepted direction:
+
+```text
+generate-client-report.js remains the public route and high-level dispatcher/plumbing owner.
+Acquisition Memo V2 rendering/finalization moves into an internal orchestrator.
+```
+
+First orchestrator attempt was too thin because it only accepted already-rendered HTML.
+
+Second orchestrator pass improved it:
+
+```text
+runAcquisitionMemoV2Orchestrator({
+  acquisitionMemoV2DocumentArgs,
+  acquisitionMemoBossContract
+})
+```
+
+now calls:
+
+```text
+renderCompleteAcquisitionMemoV2Html(...)
+```
+
+and then runs Boss enforcement/validation.
+
+### 4. Current true orchestrator bypass status
+
+Current verdict:
+
+```text
+True orchestrator bypass: PARTIAL.
+```
+
+Accepted improvements:
+
+```text
+No new public API route/function.
+api/_lib/acquisition-memo-v2-orchestrator.js now calls renderCompleteAcquisitionMemoV2Html(...).
+Direct V2 document rendering/finalizer wrapper logic moved out of generate-client-report.js.
+V2 handoff path now fail-closes when Boss compliance is false.
+Normal-path, legacy-firewall, publish-or-collapse, and Screening smokes remain green.
+```
+
+Still inside generate-client-report.js:
+
+```text
+request/report-mode resolution;
+canonical source package / projection construction;
+Boss Contract construction;
+V2 context assembly / acquisitionMemoV2DocumentArgs assembly;
+response/PDF/storage wrapper behavior;
+legacy non-V2 assembly.
+```
+
+This is acceptable temporarily but not the final decomposition.
+
+### 5. Current final-handoff proof wall
+
+Current failing test:
+
+```text
+tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js
+```
+
+Current failure:
+
+```text
+500 == 200
+```
+
+Reason:
+
+```text
+The handler now correctly fail-closes because final Boss compliance is false.
+Violation: T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT.
+Final HTML does not contain Property Taxes / $185,000.
+```
+
+Key distinction:
+
+```text
+This is not a test-report patch request.
+Property Taxes / $185,000 is the known Stonebridge fixture used to prove generic T12 expense-line propagation.
+The production fix must work for any source-backed T12 expense_lines.
+```
+
+Correct target flow:
+
+```text
+source-backed t12Payload.expense_lines / coverageArtifacts.t12_parsed.expense_lines
+-> acquisitionMemoV2DocumentArgs and/or Boss sourceTruth
+-> renderCompleteAcquisitionMemoV2Html(...)
+-> final Boss-compliant HTML
+```
+
+Wrong fixes:
+
+```text
+hard-code Property Taxes;
+hard-code $185,000;
+change smoke to expect 500;
+weaken T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT;
+inject a test-only source package/render context into the final-handoff smoke;
+route V2 back through legacy report assembly.
+```
+
+## Current working-tree posture
+
+Do not commit yet.
+
+Latest reported status:
+
+```text
+ M api/generate-client-report.js
+ M tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js
+?? api/_lib/acquisition-memo-v2-orchestrator.js
+?? tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js
+```
+
+Reason:
+
+```text
+The final proof wall is still red.
+Commit only after source-backed T12 expense-line propagation is fixed and the final-handoff smoke is green, unless Rob explicitly accepts a safety-only partial commit.
+```
+
+## Active next prompt already sent to Codex
+
+The last Codex prompt asked for a narrow source-backed T12 expense-line propagation fix.
+
+It instructed Codex to inspect/fix only the propagation gap among:
+
+```text
+final-handoff smoke payload;
+generate-client-report.js acquisitionMemoV2DocumentArgs assembly;
+api/_lib/acquisition-memo-v2-orchestrator.js pass-through;
+api/_lib/acquisition-memo-v2-document.js rendering;
+api/_lib/acquisition-memo-boss-contract.js only if Boss source truth fails to expose the facts.
+```
+
+Hard boundaries in that prompt:
+
+```text
+No hardcoding Stonebridge.
+No weakening Boss assertions.
+No changing the smoke to accept controlled failure.
+No source-package/render-context injection.
+No Screening changes.
+No new public route.
+No DocRaptor/live/Supabase writes.
+```
+
+## Expected next message from Rob
+
+Rob will start the next chat by uploading Codex's reply to the source-backed T12 expense-line propagation prompt.
+
+First task in the next chat:
+
+```text
+Review Codex's reply.
+Determine PASS / PARTIAL / FAIL.
+Do not assume green just because some tests pass.
+Final-handoff smoke must pass with 200/success true and final Boss compliance true.
+```
+
+Codex reply should include:
+
+```text
+A. Files modified.
+B. Exact root cause of missing T12 expense-line rendering.
+C. Whether the missing data was absent from acquisitionMemoV2DocumentArgs, absent from Boss source truth, or present but not rendered.
+D. Exact fix made.
+E. Whether Property Taxes / $185,000 render from source-backed data, not hard-coded.
+F. Whether final Boss compliance is true.
+G. Whether final-handoff smoke passes.
+H. Whether normal-path, legacy-firewall, publish-or-collapse, and Screening smokes pass.
+I. Whether any forbidden/internal surfaces appear.
+J. git diff --name-only.
+K. git status --short.
+L. Final verdict: Source-backed T12 expense-line propagation PASS / PARTIAL / FAIL.
+```
+
+## What to do if Codex reports PASS
+
+If Codex reports PASS, verify:
+
+```text
+No production hardcoding.
+No weakened assertions.
+No new public route.
+No source-package/render-context injection in final-handoff smoke.
+Final-handoff smoke green.
+Normal-path smoke green.
+Legacy-firewall smoke green.
+Publish-or-collapse smoke green.
+Screening smoke green.
+Forbidden/internal surfaces absent.
+```
+
+Then likely next decision:
+
+```text
+commit = pass candidate for orchestrator/final-handoff proof wall,
+then move to bounded quarantine audit.
+```
+
+Still do not run live RETEST 14 until local final artifact/PDF handoff proof is fully sealed.
+
+## What to do if Codex reports PARTIAL or FAIL
+
+If PARTIAL/FAIL:
+
+```text
+Do not commit.
+Do not quarantine broad legacy code yet.
+Do not run live report.
+Keep Codex bounded to the exact missing source-backed T12 expense-line propagation path.
+```
+
+Likely root buckets:
+
+```text
+1. expense_lines absent from acquisitionMemoV2DocumentArgs;
+2. expense_lines absent from Boss sourceTruth;
+3. expense_lines present but acquisition-memo-v2-document.js does not render them;
+4. base HTML renders them but enforcement/finalization strips them.
+```
+
+## Quarantine/decomposition posture
+
+Rob is correct that the monster file must be quarantined/shrunk.
+
+But sequence matters:
+
+```text
+1. Finish orchestrator final proof wall.
+2. Commit green orchestrator state.
+3. Run quarantine audit.
+4. Move/deprecate old Acquisition/underwriting-only decision code by ownership boundary.
+5. Keep Screening protected.
+6. Delay hot delivery tail extraction until after report body path is stable.
+```
+
+Do not start broad generate-client-report cleanup while final-handoff smoke is red.
+
+## Stop conditions
+
+Do not run:
+
+```text
+RETEST 14
+live Stonebridge report
+paid API test loop
+DocRaptor/PDF live handoff
+Supabase writes
+public sample/high-value outreach PDF
+```
+
+Do not patch next:
+
+```text
+visual polish;
+stray zero;
+generic file-size cleanup;
+legacy quarantine;
+Screening extraction;
+delivery tail extraction;
+Full Underwriting V2 surfaces.
+```
+
+until source-backed T12 expense-line propagation proof is green.
+
+## Fresh continuation point for next chat
+
+```text
+June 22 late checkpoint.
+
+We pivoted from finalizer/row patching into a Vercel-safe Acquisition Memo V2 orchestrator extraction.
+
+Vercel route cap:
+No new public route was created. api/generate-client-report.js remains the only public route. New orchestrator is internal under api/_lib.
+
+Current architecture:
+- api/_lib/acquisition-memo-v2-orchestrator.js exists.
+- It now calls renderCompleteAcquisitionMemoV2Html(...).
+- It runs Boss enforcement and validation.
+- generate-client-report.js delegates V2 rendering/finalization to orchestrator output.
+- If final Boss compliance is false, V2 handoff fail-closes instead of returning success.
+
+Current status:
+True orchestrator bypass PARTIAL.
+Final-handoff smoke still fails with 500 == 200 because final Boss compliance is false.
+Violation: T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT.
+Final HTML does not contain source-backed Property Taxes / $185,000.
+This is not a test-report patch; these are fixture facts proving generic T12 expense-line propagation.
+
+Current working tree is not commit-ready:
+ M api/generate-client-report.js
+ M tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js
+?? api/_lib/acquisition-memo-v2-orchestrator.js
+?? tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js
+
+First thing next chat:
+Rob will upload Codex's reply to the source-backed T12 expense-line propagation prompt.
+Review it and classify PASS / PARTIAL / FAIL.
+No commit, no quarantine, no live report, no RETEST 14 unless final-handoff proof wall is green.
+```
+
+# June 22, 2026 Addendum — Boss Contract Built / Renderer + Handler Local Proof Green / Test Hooks Guarded / Legacy Override Firewall Next
+
+## Current controlling status
+
+This addendum supersedes the June 20 evening Boss Contract investigation checkpoint for the Acquisition Memo workstream.
+
+Current product posture:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready. Protected. Do not touch except regression.
+
+Acquisition Memo:
+Still not launch-cleared and no live/paid testing is allowed yet.
+However, the workstream has moved from investigation into implementation of the correct root architecture:
+Boss Contract authority is now built, hardened, wired into the V2 renderer/handler path locally, and protected by local smokes.
+
+Full Underwriting V2:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final recommendation/BUY/SELL/HOLD surfaces inside Acquisition Memo.
+```
+
+## What changed since June 20 evening
+
+The June 20 investigation confirmed the earlier “AI Boss” was not truly sovereign.
+
+The active issue was:
+
+```text
+QA Manager / QA Director / QA Action Plan were advisory inspectors.
+They could flag issues but could not force the renderer to obey.
+The renderer and late legacy final-html path could still silently omit source-backed facts.
+```
+
+Corrected architecture:
+
+```text
+Boss decides the contract.
+Renderer obeys the contract.
+Post-render Boss compliance verifies obedience before final PDF/storage.
+```
+
+Correct flow:
+
+```text
+Uploaded files
+-> parsers / extraction
+-> canonical source package
+-> acquisition memo projection
+-> Boss Contract
+-> V2 renderer consumes Boss Contract
+-> post-render Boss compliance check
+-> deterministic repair/collapse if needed
+-> final HTML
+-> PDF/storage/delivery
+```
+
+## Boss Contract implementation status
+
+New/active module:
+
+```text
+api/_lib/acquisition-memo-boss-contract.js
+```
+
+Accepted exports / API surface:
+
+```text
+buildAcquisitionMemoBossContract
+buildBossContractAssertion
+buildSectionContract
+enforceAcquisitionMemoBossContractOnHtml
+normalizeBossContractFact
+validateAcquisitionMemoBossContract
+validateAcquisitionMemoRenderAgainstBossContract
+```
+
+The Boss Contract now carries and validates:
+
+```text
+coreGate
+sourceTruth
+per-section contract status
+required facts
+source bindings
+factAvailability
+collapse instructions
+forbidden fallback text
+render requirements
+post-render assertions
+forbidden surfaces
+diagnostics
+```
+
+Important contract facts/sections now covered locally include:
+
+```text
+unitMix
+capRateValueIndication
+currentDebtContext
+proposedFinancingContext
+acquisitionRequestContext
+operatingStatementTTMSummary
+documentTreatment
+lenderDiligenceChecklist
+```
+
+## Phase 1.5 Boss Contract hardening — accepted
+
+Codex hardened the Boss Contract before renderer wiring.
+
+Accepted improvements:
+
+```text
+support-doc collection normalization from canonical source package Map / array / object shapes;
+projection supportDocProjection fallback/adaptor;
+dedupe by fileId/originalFilename/canonicalRole/role/sourceKind;
+strict boolean core validity;
+factAvailability metadata for major enforcement sections;
+section contract statuses: required, optional, required_if_source_present, collapsed;
+validator flags unknown status, missing bindings, missing required facts without collapse rules, missing assertions, incomplete forbidden list;
+critical assertion codes added for Unit Mix, cap-rate per-unit, current debt, proposed financing, T12 expense lines, document treatment, forbidden surfaces, and publish/collapse invariants.
+```
+
+Key assertion families:
+
+```text
+UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS
+UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT
+CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST
+NO_ZERO_CAP_RATE
+CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED
+PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED
+T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT
+DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED
+ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED
+CORE_VALID_PUBLISH_ALLOWED
+OPTIONAL_SUPPORT_COLLAPSE_NOT_FATAL
+NO_FORBIDDEN_SURFACES
+NO_PER_UNIT_DASH_WITH_UNITS
+NO_FAKE_UNIT_MIX_FALLBACK
+```
+
+## Phase 2 renderer obedience / post-render compliance — accepted locally
+
+Codex wired the Boss Contract into the V2 Acquisition Memo path locally.
+
+Accepted behavior:
+
+```text
+generate-client-report.js builds acquisitionMemoBossContract from canonicalSourcePackage, acquisitionMemoProjection, coreMetrics, propertyProfile, reportMeta, and reportMode.
+Boss Contract is passed to renderCompleteAcquisitionMemoV2Html(...).
+V2 document owner consumes bossContract for required facts, collapse behavior, and source-backed checks.
+Post-render path calls enforceAcquisitionMemoBossContractOnHtml(...) before final HTML leaves the local V2 path.
+validateAcquisitionMemoRenderAgainstBossContract(...) checks final HTML for Boss obedience.
+```
+
+Local render/handler proof now covers the RETEST 13 failure families:
+
+```text
+false Unit Mix fallback is blocked when unit_mix/units exist;
+cap-rate per-unit dashes are blocked when unit count exists;
+zero cap-rate output is blocked;
+current debt “Not available” output is blocked when current debt facts are source-backed;
+current debt facts are rendered from current debt context;
+proposed acquisition financing facts are rendered separately from current debt;
+T12 expense lines render when structured expense detail exists;
+T12 and Rent Roll remain core quantitative sources;
+forbidden advanced underwriting surfaces remain absent;
+internal implementation terms remain hidden.
+```
+
+## Handler/final-html local proof — accepted after reconciliation
+
+A new local handler/final-html smoke was added:
+
+```text
+tests/qa/acquisition-memo-v2-boss-contract-handler-smoke.js
+```
+
+Purpose:
+
+```text
+Exercise api/generate-client-report.js through the existing __test_return_final_html harness.
+Prove the V2 handler path builds the Boss Contract, validates it, renders V2 HTML, applies Boss enforcement, and returns compliant final_html before DocRaptor/storage.
+```
+
+Accepted proof:
+
+```text
+handler returns 200 / success true / report_mode v1_core;
+returned final_html is complete HTML document;
+Boss Contract validates;
+renderValidation.ok === true;
+renderValidation.violations.length === 0;
+Unit Mix rows 1BR and 2BR render;
+Current Outstanding Balance $6,800,000 renders;
+Proposed Acquisition Loan $9,450,000 renders;
+Property Taxes $185,000 renders;
+false missing-unit-mix fallback absent;
+per-unit dash pattern absent;
+0.0% going-in cap row absent;
+current debt Not available text absent;
+DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation/BUY/SELL/HOLD/loan approval/lender commitment absent;
+Boss Contract / Source Authority / V2 projection / debug stack language absent.
+```
+
+A negative enforcement proof also exists:
+
+```text
+Intentionally bad HTML is fed into enforceAcquisitionMemoBossContractOnHtml(...).
+The validator detects:
+- UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT
+- NO_PER_UNIT_DASH_WITH_UNITS
+- CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED
+- NO_FORBIDDEN_SURFACES
+
+The repair path removes false missing-row text, current debt Not available text, and forbidden DSCR text.
+```
+
+## Working-tree reconciliation issue and resolution
+
+During review, a possible line-order mismatch was flagged:
+
+```text
+buildAcquisitionMemoBossContract(...) appeared to read acquisitionMemoRenderContext before declaration.
+```
+
+Codex reconciled the working tree and reported the current line order is correct:
+
+```text
+acquisitionMemoRenderContext declaration: api/generate-client-report.js:9493
+Boss Contract build call: api/generate-client-report.js:9554
+```
+
+## Test-hook safety gate — accepted
+
+Because the handler proof uses test-only seams, the test-hook path was hardened.
+
+Accepted guard behavior:
+
+```text
+isTestHarnessAllowed()
+hasTestHarnessFields(body)
+
+Test-only body fields are honored only when:
+process.env.NODE_ENV === "test"
+OR
+process.env.INVESTORIQ_ENABLE_TEST_HOOKS === "true"
+
+If any top-level __test_* field appears without that guard, the handler returns 403 before render work.
+```
+
+Protected fields include:
+
+```text
+__test_return_final_html
+__test_enable_acq_memo_v2_source_authority
+__test_acq_memo_v2_source_package
+__test_acq_memo_v2_render_context
+__test_payloads
+```
+
+Negative proof added:
+
+```text
+With NODE_ENV=production and no INVESTORIQ_ENABLE_TEST_HOOKS, a request containing __test_return_final_html and __test_acq_memo_v2_source_package returns 403 with a test-only request fields error.
+```
+
+## Latest local proof wall reported green
+
+Reported passed commands include:
+
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/acquisition-memo-boss-contract.js
+node --check api/_lib/acquisition-memo-v2-document.js
+node --check tests/qa/acquisition-memo-boss-contract-smoke.js
+node --check tests/qa/acquisition-memo-boss-contract-edge-smoke.js
+node --check tests/qa/acquisition-memo-v2-boss-contract-render-smoke.js
+node --check tests/qa/acquisition-memo-v2-boss-contract-handler-smoke.js
+node tests/qa/acquisition-memo-boss-contract-smoke.js
+node tests/qa/acquisition-memo-boss-contract-edge-smoke.js
+node tests/qa/acquisition-memo-v2-boss-contract-render-smoke.js
+node tests/qa/acquisition-memo-v2-boss-contract-handler-smoke.js
+node tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/source-authority-smoke.js
+node tests/qa/screening-report-smoke.js
+git diff --check
+```
+
+Notes:
+
+```text
+No live tests.
+No DocRaptor.
+No Supabase writes.
+No paid services.
+Screening regression passed.
+git diff --check emitted line-ending warnings only, no diff errors.
+```
+
+## generate-client-report.js remains large
+
+The screenshot after this checkpoint showed:
+
+```text
+length: 657,310
+lines: 13,368
+```
+
+Interpretation:
+
+```text
+generate-client-report.js has been partially split by authority/helper ownership, but it has not been fully decomposed.
+The recent work was authority extraction and Boss sovereignty, not file-size cleanup.
+The file still owns legacy orchestration, Screening path, PDF/storage/delivery plumbing, old helper logic, and legacy surfaces.
+```
+
+Do not panic-refactor this file now.
+
+Correct sequence:
+
+```text
+1. Finish Acquisition Memo Boss sovereignty and local proof wall.
+2. Prove no legacy downstream path can override Boss-compliant V2 output.
+3. Only later run a dedicated generate-client-report decomposition project.
+```
+
+## Current accepted status by work item
+
+```text
+Boss Contract foundation: PASS
+Boss Contract hardening: PASS
+Renderer obedience local smoke: PASS
+Handler/final-html local smoke: PASS
+Import/export reconciliation: PASS
+Handler ordering reconciliation: PASS
+Test-hook production safety: PASS
+Publish-or-Collapse: PASS candidate / locally protected
+Screening regression: PASS
+Legacy override firewall: NEXT
+Normal-path local smoke without source-package/render-context injection: PENDING
+Visual/PDF proof: PENDING
+Live RETEST 14: NOT ALLOWED YET
+Acquisition Memo launch-clearance: NOT YET
+```
+
+## Current next root task — Legacy Override Firewall
+
+Rob's current concern is correct:
+
+```text
+No old legacy code from generate-client-report.js or any other file can be allowed to override the Boss after the Boss has spoken.
+```
+
+Next Codex prompt already prepared:
+
+```text
+Boss Sovereignty / Legacy Override Firewall
+```
+
+Purpose:
+
+```text
+Trace the V2 final HTML path from renderCompleteAcquisitionMemoV2Html(...) through enforceAcquisitionMemoBossContractOnHtml(...) to final_html / DocRaptor / storage handoff.
+Identify every post-Boss transform that can touch htmlString/finalHtml/safeHtml.
+Ensure Boss compliance runs at the last safe point before final_html/PDF/storage.
+Prove legacy strip/replacement/section injection logic cannot reintroduce forbidden surfaces, remove source-backed facts, or override Boss-compliant content.
+```
+
+Required new/updated smoke:
+
+```text
+tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js
+```
+
+## Do not do next
+
+Do not run:
+
+```text
+RETEST 14
+another live Stonebridge report
+any paid API testing loop
+public sample generation
+high-value outreach PDF
+```
+
+Do not patch next:
+
+```text
+unit mix alone
+current debt alone
+cap-rate per-unit alone
+T12 expense rows alone
+stray zero alone
+visual polish alone
+generate-client-report.js size cleanup
+```
+
+Reason:
+
+```text
+Those are either symptoms or non-urgent cleanup until Boss sovereignty is proven through the final legacy firewall.
+```
+
+## Fresh continuation point
+
+Resume here in the next chat:
+
+```text
+June 22 checkpoint.
+
+We paused after the Acquisition Memo Boss Contract work moved from investigation to local implementation.
+
+The original AI Boss problem was that QA Manager / QA Director / QA Action Plan were advisory, not sovereign. They could flag problems but could not force renderers to obey. Correct doctrine is: Boss decides the contract, renderer obeys, post-render compliance verifies before PDF.
+
+Completed locally:
+- api/_lib/acquisition-memo-boss-contract.js created/hardened.
+- Boss Contract validates coreGate, sourceTruth, section requirements, factAvailability, forbidden surfaces, render requirements, and post-render assertions.
+- V2 renderer consumes Boss Contract.
+- generate-client-report.js builds Boss Contract under the Acquisition Memo V2 path.
+- post-render enforcement runs locally through enforceAcquisitionMemoBossContractOnHtml(...).
+- handler/final-html smoke proves Boss Contract enforcement runs before final_html return.
+- test-hook safety gate rejects __test_* request fields with 403 unless NODE_ENV=test or INVESTORIQ_ENABLE_TEST_HOOKS=true.
+- Screening regression remains green.
+- No live tests, DocRaptor calls, Supabase writes, or paid services were run.
+
+Accepted local passes:
+Boss Contract foundation, hardening, renderer obedience, handler/final-html proof, import/export reconciliation, ordering reconciliation, test-hook production safety, publish-or-collapse, Screening regression.
+
+Important caution:
+generate-client-report.js is still large (~13,368 lines). That is expected because we did authority extraction, not a full decomposition. Do not panic-refactor it yet.
+
+Current next task:
+Run the prepared Codex prompt: Boss Sovereignty / Legacy Override Firewall.
+
+Goal:
+Prove no old legacy code after Boss enforcement can mutate, strip, replace, contaminate, or override Boss-compliant Acquisition Memo V2 final HTML before PDF/storage.
+
+No RETEST 14.
+No live report.
+No paid services.
+No visual polish patch.
+No file-size cleanup.
+```
+
+
+---
+
+# June 20, 2026 Evening Addendum — RETEST 13 Published / Publish-or-Collapse Worked / AI Boss Not Yet Sovereign / Boss Contract Investigation Active
+
+## Current controlling status
+
+This addendum supersedes the June 20 morning RETEST 11-ready checkpoint for the Acquisition Memo workstream.
+
+Current product posture:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready. Protected. Do not touch except regression.
+
+Acquisition Memo:
+Not launch-cleared.
+RETEST 13 proved the report can publish again after the Publish-or-Collapse renderer firewall, but the memo is not elite and not public-sample/high-value-outreach ready.
+The active root issue has shifted from catastrophic publication failure to AI/Boss authority not being mechanically enforced before final PDF.
+No more live/paid testing until further notice.
+
+Full Underwriting V2:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final recommendation surfaces inside Acquisition Memo.
+```
+
+## RETEST 12 failure and doctrine correction
+
+RETEST 12 used the same Stonebridge documents as RETEST 11 but failed before publication.
+
+Immediate runtime failure:
+
+```text
+{"error":"extractPercentFraction is not defined"}
+```
+
+Interpretation:
+
+```text
+This was not a document-quality failure.
+This was not a core T12/Rent Roll failure.
+This was an optional/support renderer branch crashing the whole report.
+```
+
+Rob corrected the doctrine language:
+
+```text
+The correct doctrine is not Publish-or-Fail.
+The correct doctrine is Core-Gated Publish-or-Collapse.
+
+If core T12 + core Rent Roll are valid, the report publishes.
+Everything optional/support/rendering-related collapses, omits, qualifies, or discloses.
+A complete report failure should be close to zero and should occur only for truly unusable core documents, fatal T12/Rent Roll contradiction, or true platform/infrastructure failure.
+```
+
+## Publish-or-Collapse hardening patch result
+
+Codex implemented the first true doctrine patch after RETEST 12.
+
+Reported files changed:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+api/generate-client-report.js
+tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js
+```
+
+Reported changes:
+
+```text
+1. Missing debt fallback helpers defined: extractPercentFraction, extractYears, extractDate.
+2. Current-debt rate normalization handles 4.85 and 0.0485 as 4.85%.
+3. renderSafely(...) added for V2 optional/support sections.
+4. Section-level optional/support failures collapse instead of aborting the report.
+5. Top-level V2 fallback returns valid minimal Acquisition Memo HTML if unexpected render error escapes after core docs exist.
+6. V2 final-HTML path in generate-client-report.js is gated away from fatal post-render source-reconciliation / section-heal mutation logic.
+7. New publish-or-collapse smoke covers malformed current debt, missing proposed financing, malformed support treatment, null renderedAcquisitionMemo, and handler-level V2 final HTML return through __test_return_final_html.
+```
+
+Reported checks passed:
+
+```text
+node --check api/_lib/acquisition-memo-v2-document.js
+node --check api/generate-client-report.js
+node --check tests/qa/acquisition-memo-v2-document-smoke.js
+node --check tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js
+node tests/qa/acquisition-memo-v2-document-smoke.js
+node tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js
+node tests/qa/source-authority-smoke.js
+node tests/qa/screening-report-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/report-type-normalization-smoke.js
+git diff --check
+```
+
+Interpretation:
+
+```text
+This was a meaningful root-level reliability improvement.
+It did not launch-clear Acquisition Memo.
+It made one controlled live proof reasonable.
+```
+
+## No-paid preflight result before RETEST 13
+
+Codex completed a no-paid preflight after the Publish-or-Collapse patch.
+
+Verdict:
+
+```text
+GO WITH KNOWN VISUAL RISK.
+No live report or deploy was run during the preflight.
+No direct paid/external API call was triggered by the listed local tests.
+All listed local smokes passed, including the publish-or-collapse smoke.
+No V2-specific complete-failure path was found after valid core T12 and Rent Roll pass.
+```
+
+Remaining non-doctrine risks from preflight:
+
+```text
+PRODUCTION_PDF_DISABLED / DocRaptor test-mode configuration.
+DocRaptor request path remains an external dependency.
+Supabase storage/report-publication/access-link paths remain infrastructure risks.
+PDF page flow and visual quality remained unproven.
+```
+
+## RETEST 13 result — published but not elite
+
+RETEST 13 was run as the single controlled live proof after the no-paid preflight.
+
+Result:
+
+```text
+Report generated and published.
+Status reached published.
+Email sent.
+Core-Gated Publish-or-Collapse worked.
+```
+
+Runtime marker:
+
+```text
+git_commit_sha / build_marker: 9b57e4c41754ed1df6b35cb14e617392da97e076
+deployment_id: dpl_8gLWdPumM8sW3PCPf96ybfBp8ZG3
+```
+
+Publication artifacts:
+
+```text
+job_id: 5e7d7ad2-1b26-4b62-ab18-7cea8b325fd7
+report_id: 2dfda2af-9276-4fb3-8d28-8cc18babacb8
+storage_path: 6082ae60-b804-413c-9fc1-dd71fd80be4d/2dfda2af-9276-4fb3-8d28-8cc18babacb8.pdf
+```
+
+Interpretation:
+
+```text
+The runtime doctrine problem from RETEST 12 is improved.
+The report no longer dies because an optional/support renderer branch breaks.
+But RETEST 13 is HOLD, not PASS, because the customer artifact still loses source-backed facts and is not elite.
+```
+
+## RETEST 13 customer-visible failures
+
+### 1. Unit Mix still failed despite parsed Rent Roll facts
+
+PDF showed:
+
+```text
+No parsed unit mix rows were available from the canonical rent roll evidence.
+```
+
+But artifacts showed the Rent Roll parsed successfully with:
+
+```text
+total_units: 64
+occupancy: 0.9375
+unit_mix:
+  1BR count 32, current_rent 1850, market_rent 2050
+  2BR count 32, current_rent 1881, market_rent 2425
+units: full unit rows present
+```
+
+Interpretation:
+
+```text
+The renderer is not consuming live-shaped rent roll artifact facts correctly.
+```
+
+### 2. Cap-rate per-unit values still missing
+
+PDF showed implied values but per-unit values as dashes:
+
+```text
+5.0% $18,900,000 -
+6.0% $15,750,000 -
+7.0% $13,500,000 -
+```
+
+Expected:
+
+```text
+5.0%: $18,900,000 / $295,313 per unit
+6.0%: $15,750,000 / $246,094 per unit
+7.0%: $13,500,000 / $210,937 per unit
+```
+
+Interpretation:
+
+```text
+Units exist upstream, but the cap-rate value section still cannot reliably use live unit count.
+```
+
+### 3. Current debt facts still did not render
+
+PDF showed only:
+
+```text
+Maturity Date Not available
+```
+
+But Current_Debt_Stonebridge.pdf source text had:
+
+```text
+Current Outstanding Balance $6,800,000
+Interest Rate 4.85%
+Amortization Remaining 24 years
+Monthly Payment $39,250
+Maturity Date 2029-11-01
+```
+
+Interpretation:
+
+```text
+Current debt role/treatment is visible, but the Debt / Financing Context renderer is not consuming the facts.
+```
+
+### 4. Proposed acquisition financing facts omitted from Acquisition Request Context
+
+PDF showed only:
+
+```text
+Purchase Price $13,500,000
+NOI Basis $945,000
+Going-In Cap Rate 7.0%
+```
+
+But Stonebridge_Assumptions.pdf source/artifacts had:
+
+```text
+Proposed Acquisition Loan $9,450,000
+Proposed LTV 70.0%
+Proposed Interest Rate 5.95%
+Proposed Amortization 30 years
+Lender / Origination Fee 0.85%
+```
+
+Interpretation:
+
+```text
+Acquisition Request Context is incomplete even though source-backed proposed financing facts exist.
+```
+
+### 5. T12 expense lines omitted from Operating Statement / TTM
+
+Artifacts had parsed expense lines:
+
+```text
+Property Taxes $185,000
+Insurance $72,000
+Repairs & Maintenance $104,000
+Utilities $86,000
+Property Management $60,000
+Payroll / Admin $28,000
+```
+
+PDF only rendered high-level totals.
+
+Interpretation:
+
+```text
+The final memo is not yet consuming live-shaped T12 expense line artifacts.
+```
+
+### 6. Visible polish failures remain
+
+Visible issues:
+
+```text
+64-Unit Multifamily 0 stray zero.
+Many sparse pages with low density.
+Repeated Review / Source Reconciliation Disclosure language.
+DocRaptor test-mode/public-distribution blocker.
+Long filenames and hyphenation still create awkward line breaks.
+```
+
+## RETEST 13 quality verdict
+
+```text
+System reliability: improved / B+.
+Source authority: improved but not final / B.
+Financial fact rendering: C.
+Visual polish: C.
+Lender-facing credibility: C+.
+Public sample readiness: NO.
+Elite Acquisition Memo: NO.
+```
+
+Control decision:
+
+```text
+No more live/paid testing until further notice.
+Do not run RETEST 14.
+Do not use more API/live-report spend until local architecture and authority enforcement are settled.
+```
+
+## AI Boss authority problem clarified
+
+Rob correctly challenged the “AI Boss” concept after RETEST 13.
+
+Key realization:
+
+```text
+The current QA Manager / QA Director / QA Action Plan layers are not true bosses.
+They are mostly post-render advisory reviewers.
+They can identify issues, but artifacts explicitly say the QA Action Plan is advisory only and does not mutate reports, parser values, worker state, or publication state.
+```
+
+This is why RETEST 13 could publish while QA/advisory layers flagged:
+
+```text
+current_debt_details_missing
+parser_miss / unit mix missing
+break_even_occupancy_confusion
+doc_classification_issue
+DOCRAPTOR_NOT_PRODUCTION_MODE
+```
+
+Interpretation:
+
+```text
+The Boss is not sleeping.
+The Boss is handcuffed.
+It has a clipboard but not final pre-PDF enforcement authority.
+```
+
+## Correct Boss doctrine
+
+The AI/Boss should not freehand rewrite reports or silently mutate numbers.
+
+Correct model:
+
+```text
+Boss decides the contract.
+Renderer obeys the contract.
+Boss compliance check verifies obedience before final PDF.
+```
+
+The Boss may:
+
+```text
+classify source roles;
+validate source-backed facts;
+define required / optional / collapsed sections;
+define forbidden surfaces;
+produce structured findings;
+produce deterministic repair/collapse instructions;
+require renderer compliance;
+prevent public-sample/high-value-outreach readiness.
+```
+
+The Boss may NOT:
+
+```text
+invent facts;
+override T12/Rent Roll truth;
+override source-backed values without deterministic rule;
+freehand rewrite customer output;
+silently change numbers;
+open Full Underwriting surfaces;
+fail the entire report for optional/support issues after core docs pass.
+```
+
+## Target Boss Contract architecture
+
+The missing architecture is a machine-readable render contract, for example:
+
+```text
+buildAcquisitionMemoBossContract(...)
+validateAcquisitionMemoRenderContract(...)
+enforceAcquisitionMemoBossContract(...)
+```
+
+Correct flow:
+
+```text
+Uploaded files
+-> parsers / extraction
+-> canonical source package
+-> acquisition memo projection
+-> Boss Contract
+-> renderer consumes Boss Contract
+-> post-render Boss compliance check
+-> deterministic repair/collapse if needed
+-> final PDF
+```
+
+Not acceptable:
+
+```text
+Uploaded files
+-> parsers
+-> renderer decides output
+-> QA writes advisory notes after the fact
+-> PDF already published
+```
+
+## Codex task currently running
+
+Codex is currently working on an investigation-only prompt:
+
+```text
+AI Boss / Boss Contract Architecture Investigation
+```
+
+Purpose:
+
+```text
+Determine how to make the AI/Boss authority a mandatory render contract that every Acquisition Memo renderer must obey, without allowing the AI to hallucinate, override source truth, or freehand-edit customer output.
+```
+
+Codex must not patch in this task.
+
+Required output from Codex:
+
+```text
+A. Executive verdict — Is AI Boss currently truly the boss? Yes/No/Partial.
+B. Current authority map — which layers exist and whether renderers must obey them.
+C. Renderer autonomy map — where renderers still have final say.
+D. Missing Boss Contract design — exact module/function/object shape.
+E. Enforcement flow — where Boss Contract creation, render, compliance check, repair/collapse, and PDF generation should happen.
+F. RETEST 13 examples — how Boss Contract would have prevented each issue.
+G. Required code changes later.
+H. Required tests later.
+I. Risks — how to prevent AI hallucination / override.
+J. Recommendation — whether to implement before further renderer/fact-consumption patches.
+```
+
+## Current stop conditions
+
+Do not run:
+
+```text
+RETEST 14
+another live Stonebridge report
+any paid API retest loop
+public sample generation
+high-value outreach PDF
+```
+
+Do not patch next:
+
+```text
+unit mix alone;
+current debt alone;
+cap-rate per-unit alone;
+T12 expense rows alone;
+stray zero alone;
+visual polish alone.
+```
+
+Reason:
+
+```text
+Those are symptoms if the Boss Contract is not sovereign.
+The next root work is Boss Contract authority enforcement.
+```
+
+## Launch posture after RETEST 13
+
+```text
+Screening:
+Still launchable / founder-beta ready. Protect.
+
+Acquisition Memo:
+Not launch-cleared.
+Published in RETEST 13, but not elite and not public-sample ready.
+Active root issue: AI/Boss authority not yet sovereign over V2 renderers.
+No more live testing until Boss Contract architecture is investigated and implementation direction is accepted.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Fresh continuation point
+
+Resume here in the next chat:
+
+```text
+June 20 evening checkpoint.
+
+RETEST 12 failed because an optional/support renderer branch called missing helper extractPercentFraction. This proved the old Publish-or-Fail language was wrong. Rob corrected the doctrine to Core-Gated Publish-or-Collapse: valid T12 + valid Rent Roll means publish; optional/support/rendering issues collapse, omit, qualify, or disclose.
+
+Codex implemented a Publish-or-Collapse hardening patch:
+- section-level renderSafely(...);
+- top-level V2 fallback;
+- missing debt helper fixes;
+- V2 path gated away from fatal post-render source-reconciliation / section-heal guards;
+- publish-or-collapse smoke.
+
+No-paid preflight passed with known visual risk.
+
+RETEST 13 published successfully on runtime SHA 9b57e4c41754ed1df6b35cb14e617392da97e076 / deployment dpl_8gLWdPumM8sW3PCPf96ybfBp8ZG3.
+
+RETEST 13 proved publication reliability improved, but the memo was HOLD, not PASS:
+- Unit Mix still said no parsed rows despite parsed unit_mix/units upstream.
+- Cap-rate per-unit values were dashes.
+- Current debt facts did not render despite source text/facts.
+- Proposed acquisition financing facts did not render in Acquisition Request Context.
+- T12 expense lines did not render.
+- 64-Unit Multifamily 0 stray zero remained.
+- PDF remains DocRaptor test mode and visually sparse.
+
+Then Rob challenged the AI Boss premise. Current finding: QA Manager / QA Director / QA Action Plan are advisory-only inspectors, not mandatory pre-PDF boss enforcement. The Boss can flag issues but cannot force renderers to obey yet.
+
+Correct next root task: make the AI/Boss authority a mandatory Boss Contract that renderers must obey. Boss decides source truth, required/optional/collapsed sections, forbidden surfaces, and compliance assertions. Renderer formats only from that contract. Post-render compliance checks repair/collapse before PDF. Boss cannot hallucinate, override source truth, or freehand rewrite numbers.
+
+Codex is currently running an investigation-only Boss Contract Architecture prompt. No code changes, no live tests, no paid services.
+
+Next step when Codex replies:
+- Review whether Codex agrees AI Boss is currently partial/advisory.
+- Extract exact authority map and renderer autonomy map.
+- Do not allow another symptom patch until Boss Contract implementation plan is accepted.
+- No RETEST 14 or live testing until further notice.
+```
+
+
+---
+
+# June 20, 2026 Morning Addendum — RETEST 10 Failure Diagnosed / Golden RETEST 5 Parity Patch Candidate Ready / RETEST 11 Next
+
+## Current controlling status
+
+This addendum supersedes the June 17 RETEST 6 patch-candidate checkpoint for the Acquisition Memo workstream.
+
+Current product posture:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready. Protected. Do not touch except regression.
+
+Acquisition Memo:
+Not launch-cleared yet.
+RETEST 10 proved the V2 source-authority path was materially improved but the customer artifact was still not RETEST 5 quality.
+A new three-file local patch candidate now appears commit-safe from Codex's reported checks, but it still requires one deployed live PDF proof.
+
+Full Underwriting V2:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final recommendation surfaces inside Acquisition Memo.
+```
+
+## RETEST 10 result — valid but disappointing
+
+RETEST 10 was run after the first old-shell transplant work.
+
+Verdict:
+
+```text
+Valid retest.
+Not acceptable as a customer/sample Acquisition Memo.
+Not launch-cleared.
+```
+
+The report was still far away from the old elite Underwriting / Acquisition Memo look and feel proven by RETEST 5.
+
+The key product-owner finding:
+
+```text
+Codex found parts of the old shell, but did not restore the actual old report machine.
+The output reused styling/class names and some cover elements, but still behaved like a thin V2 skeleton.
+```
+
+## RETEST 10 customer-visible failures
+
+Visible failures included:
+
+```text
+Going-In Cap Rate rendered as 0.0%.
+Implied value at going-in cap rate rendered as Not available.
+The report remained too sparse compared with RETEST 5.
+The report lacked the full RETEST 5 section density and narrative rhythm.
+The shell/class-name transplant did not recreate the old elite memo experience.
+```
+
+Important interpretation:
+
+```text
+This was not a full core parser collapse.
+T12 and Rent Roll core math remained largely intact.
+The active failures were support-doc fallback robustness, final rendered value validation, and incomplete restoration of old report section builders/content density.
+```
+
+## Two boss failures identified
+
+The RETEST 10 cap-rate issue exposed two separate authority failures.
+
+### Boss failure 1 — source fallback did not extract obvious support-doc truth
+
+Source text contained a clear cap-rate reference:
+
+```text
+Going-In Cap Reference7.00%
+```
+
+But after AI recovery/provider failure, the structured field reached the V2 path as missing/null.
+
+Correct behavior:
+
+```text
+If AI support-doc recovery fails, deterministic source-text fallback must extract obvious cap-rate patterns.
+```
+
+Required deterministic patterns include:
+
+```text
+Going-In Cap Reference7.00%
+Going-In Cap Reference 7.00%
+Going-In Cap Rate 7.00%
+Going-In Cap 7.0%
+```
+
+### Boss failure 2 — renderer allowed missing/invalid cap to become 0.0%
+
+The renderer allowed an invalid/missing cap-rate value to become customer-facing:
+
+```text
+Going-In Cap Rate 0.0%
+```
+
+Correct behavior:
+
+```text
+0.0% is not an acceptable missing-data display for going-in cap rate.
+If a cap-rate value is null, zero, negative, NaN, or unreasonable, the row/field must be omitted, qualified, or filled from a valid source-backed fallback.
+```
+
+The whole report should not fail closed for an optional/support-doc field, but the specific invalid row/section must fail closed.
+
+Correct doctrine:
+
+```text
+Report: publishable if core T12/Rent Roll are valid.
+Specific invalid support-doc field/row: fail closed / omit / qualify.
+Customer-facing fake 0.0%: forbidden.
+```
+
+## RETEST 5 is now the golden visual/content target
+
+The old RETEST 5 report remains the gold standard for Acquisition Memo visual and content-density parity.
+
+Golden RETEST 5 elements to preserve/restore:
+
+```text
+INVESTORIQ cover identity.
+Institutional Real Estate Analysis.
+CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.
+64-Unit Multifamily / ACQUISITION MEMO identity.
+Review / Source Reconciliation disclosure when applicable.
+Key Metrics Snapshot.
+Key Upside Drivers.
+Primary Constraint / Review disclosure.
+Acquisition Memo Summary.
+Uploaded Files / Source Context.
+Operating Snapshot.
+Unit Mix and Rent Positioning.
+Rent Upside / Value Sensitivity.
+Cap-Rate Value Indication.
+Preliminary Financing Readiness Summary.
+Acquisition Request Context.
+Operating Support.
+Rent / Value Support.
+Debt / Financing Context.
+Lender Diligence Checklist.
+Operating Statement / TTM Summary.
+T12 income/expense line items.
+Per-unit operating rows.
+Data Coverage & Source Limitations.
+Source Context / Support Document Treatment.
+Methodology & Data Transparency.
+InvestorIQ Capital Intelligence Memorandum footer.
+```
+
+Hard lesson:
+
+```text
+Class-name parity is not enough.
+The smoke must assert actual RETEST 5-style content, values, section flow, and regression guards.
+```
+
+## Latest Codex patch candidate after RETEST 10
+
+After several review rounds, Codex reported a new bounded patch candidate.
+
+Files changed:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+api/_lib/canonical-source-package.js
+tests/qa/acquisition-memo-v2-document-smoke.js
+```
+
+Reported fixes:
+
+```text
+1. Shared valid going-in cap-rate resolver added.
+2. Resolver normalizes candidates through toCapRatio(...).
+3. Resolver rejects null, undefined, NaN, 0, negatives, and unreasonable values.
+4. coreMetrics.goingInCapRate is preferred only if strictly greater than 0.
+5. If coreMetrics.goingInCapRate is 0, renderer falls back to projected purchase-assumptions facts and then support-doc facts.
+6. Final HTML smoke forbids Going-In Cap Rate 0.0%.
+7. Final HTML smoke forbids Implied value at going-in cap rate Not available when valid fallback exists.
+8. canonical-source-package now carries structured live artifact facts for core T12 and Rent Roll.
+9. Rent Roll facts now include total_units, occupancy, unit_mix, units, and rent totals when present.
+10. T12 facts now include income_lines, expense_lines, EGI, OpEx, NOI, and GPR when present.
+11. Unit Mix rendering now prefers structured rent roll artifact facts before text parsing.
+12. T12 line-item rendering now prefers structured T12 artifact facts before text parsing.
+13. Smoke now includes live-shaped artifact coverage, not only friendly text snippets.
+14. RETEST 5 golden parity assertions remain active.
+```
+
+Reported green checks:
+
+```text
+node --check api/_lib/acquisition-memo-v2-document.js
+node --check api/_lib/canonical-source-package.js
+node --check api/_lib/acquisition-memo-projection.js
+node --check tests/qa/acquisition-memo-v2-document-smoke.js
+node tests/qa/acquisition-memo-v2-document-smoke.js
+node tests/qa/source-authority-smoke.js
+node tests/qa/screening-report-smoke.js
+node tests/qa/report-type-normalization-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Current interpretation:
+
+```text
+The latest patch is commit-safe based on Codex's reported checks, assuming the actual diff matches the receipt.
+It is not launch-proof.
+It requires deployment and exactly one controlled live RETEST 11 PDF/customer artifact review.
+```
+
+## Required immediate next sequence
+
+When resuming:
+
+```text
+1. Confirm the latest three-file patch is committed/pushed if not already done.
+2. Do not use git add . because old retest PDFs may be untracked.
+3. Confirm Vercel production deployment completed.
+4. Confirm production runtime marker/new commit.
+5. Confirm ACQ_MEMO_V2_SOURCE_AUTHORITY=true remains set in Production.
+6. Run exactly one live Stonebridge RETEST 11.
+7. Capture job id, report id, PDF, runtime marker, and analysis artifacts.
+8. Compare RETEST 11 against RETEST 5 and the boss checklist below.
+9. Do not run repeated live retests as a loop.
+```
+
+Suggested commit command if not already committed:
+
+```bash
+git status --short
+
+git add api/_lib/acquisition-memo-v2-document.js api/_lib/canonical-source-package.js tests/qa/acquisition-memo-v2-document-smoke.js
+
+git commit -m "Restore Acquisition Memo V2 golden parity and live artifact guards"
+
+git push
+```
+
+## RETEST 11 boss checklist
+
+RETEST 11 must prove:
+
+```text
+Old elite InvestorIQ visual identity returns.
+Report looks/read like RETEST 5, not RETEST 10.
+No thin V2 skeleton.
+No cover source table/jumble.
+No internal V2/source-authority implementation language.
+No customer-facing v2 / authorityVersion language.
+Occupancy displays around 93.8%, not 0.9%.
+Going-In Cap Rate displays 7.0%, not 0.0%.
+Implied value at going-in cap rate displays $13,500,000, not Not available.
+Unit mix table renders 1BR and 2BR rows correctly.
+T12 expense rows render correctly.
+Cap-rate value indication renders 5.0%, 6.0%, 7.0% values and per-unit values correctly.
+Rent-upside/value sensitivity renders $285,600 annual rent upside and stabilized value sensitivity.
+T12 is a core quantitative source.
+Rent Roll is a core quantitative source.
+Stonebridge_Assumptions.pdf is Purchase Assumptions / Proposed Acquisition Financing Context.
+Current_Debt_Stonebridge.pdf is Existing Debt / Current Debt Context.
+Current debt facts come from Current_Debt_Stonebridge.pdf, not Stonebridge_Assumptions.pdf.
+Stonebridge_Reno_Plan.pdf is Structured Renovation / CapEx Plan.
+Stonebridge_Appraisal_Summary.pdf is Appraisal / Valuation Context.
+Stonebridge_Market_Survey.pdf is Market Survey Context.
+Stonebridge_Phase_I_ESA.pdf is Environmental / Phase I ESA Context.
+Lender checklist reflects uploaded support context correctly.
+Document Treatment appears inside the report body, not after </html>.
+No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation/BUY/SELL/HOLD/loan approval/lender commitment.
+Screening remains protected.
+```
+
+## Launch posture after this addendum
+
+```text
+Screening:
+Still launchable / founder-beta ready.
+
+Acquisition Memo:
+Not launch-cleared until RETEST 11 proves the live customer PDF.
+If RETEST 11 passes, Acquisition Memo can move from active rebuild to controlled founder-beta proof posture.
+If RETEST 11 fails, capture the exact PDF/artifacts and diagnose one bounded family only.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Core Valid Failure Path ledger disposition
+
+The Core Valid Failure Path ledger should not be deleted yet.
+
+Recommended disposition:
+
+```text
+Keep the CVF ledger through RETEST 11.
+After RETEST 11, either:
+- if clean: archive/freeze it as the historical root-cause/failure-family ledger and make the Master Context the controlling live handoff doc;
+- if not clean: update only the relevant active CVF family and do not keep expanding the ledger forever.
+```
+
+The CVF ledger has served its purpose as a root-cause map. It does not need indefinite day-to-day updates once CVF-15 is closed by live PDF proof.
+
+## Fresh continuation point
+
+Resume here in the next chat:
+
+```text
+June 20 morning checkpoint.
+
+Latest state:
+- RETEST 10 was valid but not customer-acceptable.
+- RETEST 10 proved old-shell class transplant was not enough.
+- RETEST 10 exposed Going-In Cap Rate 0.0% / implied value Not available despite support-doc text containing Going-In Cap Reference7.00%.
+- Root failures were deterministic support-doc fallback weakness, renderer invalid-zero guard weakness, and insufficient RETEST 5 content/visual parity.
+- Codex then produced a three-file patch candidate:
+  - acquisition-memo-v2-document.js
+  - canonical-source-package.js
+  - acquisition-memo-v2-document-smoke.js
+- Latest patch reportedly adds valid cap-rate resolver, rejects zero, falls back to 7.00% support-doc truth, carries structured T12/Rent Roll facts, and strengthens RETEST 5 golden parity/live-shaped artifact smoke.
+- Checks reportedly pass.
+- Patch is commit/deploy candidate, not launch proof.
+
+Next action:
+Deploy if not already deployed, then run exactly one live Stonebridge RETEST 11 and compare against RETEST 5 boss checklist.
+```
+
+
+
+---
+
+# June 17, 2026 Afternoon Addendum — RETEST 6 Live Failure Root-Caused / V2 Source Package + Production Shell Patch Locally Green
+
+## Current controlling status
+
+Final Attack Test 8 RETEST 6 was run against real production after the Acquisition Memo V2 source-authority branch was merged into `main` and deployed.
+
+Production runtime marker confirmed the live report was generated from the merged production commit:
+
+```text
+git_commit_sha / build_marker: 6721252350d211ba23194c6bdd00ac04c135cd3e
+deployment_id: dpl_AnFg1yqCBhXvtps28U335rBuTj2L
+```
+
+The live report was valid as a test, but it was **not** acceptable as a customer/sample report.
+
+Current product posture:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready. Protected.
+
+Acquisition Memo:
+Not launch-cleared yet.
+RETEST 6 exposed live V2 artifact-shape and V2 visual-shell failures.
+Codex has now produced a bounded local patch that appears to address those failures and passes focused smokes.
+One redeploy + exactly one live retest is required before launch-clearance can be reconsidered.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## RETEST 6 live failure summary
+
+The RETEST 6 PDF was only a thin 3-page skeletal V2 output rather than a production-grade Acquisition Memo.
+
+Visible failures:
+
+```text
+Occupancy rendered as 0.9% instead of ~93.8%.
+The report said no purchase assumptions uploaded.
+The report said no existing debt context uploaded.
+The report said no renovation plan uploaded.
+The report said no appraisal uploaded.
+The report said no market survey uploaded.
+The Lender Diligence Checklist showed No for current debt, purchase assumptions, renovation, appraisal, and market survey.
+Document Treatment listed most uploaded docs as Other Support Document / Context only.
+```
+
+The live artifacts proved source truth existed upstream:
+
+```text
+Current_Debt_Stonebridge.pdf extracted text included:
+- Current Outstanding Balance $6,800,000
+- Interest Rate 4.85%
+- Amortization Remaining 24 years
+- Monthly Payment $39,250
+- Maturity Date 2029-11-01
+
+Stonebridge_Assumptions.pdf extracted text included:
+- Purchase Price $13,500,000
+- NOI Basis $945,000
+- Proposed Acquisition Loan $9,450,000
+- LTV 70.0%
+- Interest Rate 5.95%
+- Amortization 30 years
+- Fee 0.85%
+
+Stonebridge_Reno_Plan.pdf extracted text included:
+- Structured Renovation / CapEx Plan
+- Total Renovation Budget $1,280,000
+- rent lift and phasing details
+
+Rent roll parsed occupancy was 0.9375.
+```
+
+Interpretation:
+
+```text
+This was not a core extraction collapse.
+The live source truth existed, but the V2 source-package/projection path did not consume the real artifact shape correctly.
+The V2 document owner also used a skeletal visual shell and formatted ratio occupancy as a raw percent.
+```
+
+## Codex patch result after RETEST 6
+
+Codex receipt summary:
+
+```text
+Root cause:
+- Artifact-only support docs were not consumed reliably when filenames arrived as original_filename.
+- Core files with underscore-heavy names such as T12_... and Rent_Roll_... were not consistently classified in live-shaped artifacts.
+- V2 document owner was too thin.
+- Occupancy was formatting a ratio as a raw percent.
+
+Files changed:
+- api/_lib/canonical-source-package.js
+- api/_lib/acquisition-memo-v2-document.js
+- tests/qa/acquisition-memo-v2-document-smoke.js
+
+Production boundaries preserved:
+- api/generate-client-report.js was not modified.
+- Screening behavior was not changed.
+- Stripe, Supabase, DocRaptor, auth, payment, upload gates, SQL, Admin Dashboard, pricing, and delivery gate behavior were untouched.
+- No live report was run during the patch.
+- No legacy V2 fact-authority path was restored.
+```
+
+## What the patch changes
+
+### 1. Live artifact-shape support
+
+`api/_lib/canonical-source-package.js` now recognizes more live-shaped artifact evidence, including:
+
+```text
+artifact-only support docs
+original_filename
+payload.document_text_extracted
+snake_case and underscore-heavy names
+core files named T12_...
+core files named Rent_Roll_...
+```
+
+Expected live roles now covered by focused smoke:
+
+```text
+T12_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_t12
+Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_rent_roll
+Stonebridge_Assumptions.pdf -> purchase_assumptions
+Current_Debt_Stonebridge.pdf -> current_debt_context
+Stonebridge_Reno_Plan.pdf -> structured_renovation_capex_plan
+Stonebridge_Appraisal_Summary.pdf -> appraisal_context
+Stonebridge_Market_Survey.pdf -> market_survey_context
+Stonebridge_Phase_I_ESA.pdf -> environmental_context
+```
+
+### 2. Ratio-aware occupancy formatting
+
+`api/_lib/acquisition-memo-v2-document.js` now formats ratio occupancy correctly:
+
+```text
+0.9375 -> 93.8%
+```
+
+The V2 document owner now uses ratio-aware percent formatting for occupancy and related rate fields.
+
+### 3. V2-owned production-grade memo shell expanded
+
+`api/_lib/acquisition-memo-v2-document.js` now owns a more complete V2 HTML document with production-grade Acquisition Memo section coverage:
+
+```text
+Acquisition Memo Summary
+Key Metrics Snapshot
+Operating Snapshot
+Unit Mix / Rent Positioning
+Rent Upside / Value Sensitivity
+Preliminary Financing Readiness Summary
+Data Coverage / Source Reliability
+Source Context / Support Document Treatment
+Methodology / Limitations
+```
+
+Important:
+
+```text
+The presentation shell was expanded without restoring legacy fact authority.
+The document still reads from V2 source package / V2 projection.
+No legacy section replacement, row regex mutation, body insertion, or append-after-html behavior was reintroduced.
+```
+
+## Tests updated / passing according to Codex
+
+Updated:
+
+```text
+tests/qa/acquisition-memo-v2-document-smoke.js
+```
+
+The smoke now:
+
+```text
+uses a live-shaped RETEST 6 artifact fixture;
+proves canonical roles for core T12, rent roll, current debt, purchase assumptions, renovation, appraisal, market survey, and Phase I ESA;
+proves occupancy 0.9375 renders as 93.8%;
+proves the V2 document includes production-grade section coverage;
+proves Document Treatment stays inside <body>.
+```
+
+Checks reported green:
+
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/canonical-source-package.js
+node --check api/_lib/acquisition-memo-v2-document.js
+node --check tests/qa/acquisition-memo-v2-document-smoke.js
+node tests/qa/acquisition-memo-v2-document-smoke.js
+node tests/qa/source-authority-smoke.js
+node tests/qa/screening-report-smoke.js
+node tests/qa/report-type-normalization-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+## Current interpretation
+
+This patch is a **local PASS candidate** for the specific RETEST 6 failures.
+
+Accepted as likely fixed locally:
+
+```text
+live-shaped artifact-only support doc classification;
+core T12/Rent Roll filename heuristic issues with underscores;
+current debt / purchase assumptions / Reno / appraisal / market survey / Phase I live-shaped canonical roles;
+occupancy ratio formatting;
+V2 visual/report-shell thinness.
+```
+
+Not yet proven:
+
+```text
+real production PDF/customer artifact after redeploy.
+```
+
+Therefore:
+
+```text
+Acquisition Memo is still not launch-cleared.
+The patch may be safe to redeploy and rerun exactly one controlled live retest.
+```
+
+## Required next sequence
+
+1. Review/commit the three-file patch if the working tree is clean and checks are confirmed.
+2. Merge/deploy to Production.
+3. Confirm Production is running the new commit.
+4. Confirm `ACQ_MEMO_V2_SOURCE_AUTHORITY=true` remains set in Production.
+5. Run exactly one live Stonebridge retest.
+6. Capture job id, report id, PDF, runtime marker, and artifacts.
+7. Review the PDF against the boss checklist below.
+8. Do not run repeated live tests as a loop.
+
+## Boss checklist for the next live retest
+
+The next PDF must show:
+
+```text
+professional Acquisition Memo structure, not a 3-page skeleton;
+Occupancy around 93.8%, not 0.9%;
+T12 and Rent Roll treated as core quantitative sources;
+Stonebridge_Assumptions.pdf as Purchase Assumptions / Proposed Acquisition Financing Context;
+Current_Debt_Stonebridge.pdf as Existing Debt / Current Debt Context;
+Current debt facts from Current_Debt_Stonebridge.pdf, not Stonebridge_Assumptions.pdf;
+Stonebridge_Reno_Plan.pdf as Structured Renovation / CapEx Plan;
+Stonebridge_Appraisal_Summary.pdf as Appraisal / Valuation Context;
+Stonebridge_Market_Survey.pdf as Market Survey Context;
+Stonebridge_Phase_I_ESA.pdf as Environmental / Phase I ESA Context;
+Lender checklist showing Yes for uploaded current debt, purchase assumptions, renovation, appraisal, market survey, and environmental context where applicable;
+Document Treatment inside <body>, not after </html>;
+no DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation/BUY/SELL/HOLD/loan approval/lender commitment.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 17 afternoon checkpoint.
+
+RETEST 6 live production run was valid but bad:
+- real deployment commit 6721252350d211ba23194c6bdd00ac04c135cd3e;
+- V2 produced a skeletal 3-page memo;
+- source docs were extracted upstream but rendered as missing/Other Support;
+- occupancy rendered as 0.9%.
+
+Codex then patched:
+- api/_lib/canonical-source-package.js
+- api/_lib/acquisition-memo-v2-document.js
+- tests/qa/acquisition-memo-v2-document-smoke.js
+
+The patch:
+- supports live-shaped artifact-only support docs;
+- fixes underscore-heavy core filenames;
+- fixes support-doc role classification for live RETEST 6 artifact shapes;
+- fixes occupancy ratio formatting;
+- expands the V2-owned Acquisition Memo shell;
+- preserves V2 source authority and avoids legacy row/marker/body hacks;
+- leaves generate-client-report.js and Screening untouched.
+
+Local smokes are reported green.
+Acquisition Memo remains not launch-cleared until exactly one redeployed live retest proves the customer PDF.
+```
+
+
+
+---
+
+# June 16, 2026 Late-Night Addendum — Smoke Green Checkpoint / Remaining Split List / Acquisition Memo Clean-Pipeline Readiness Plan
+
+## Current controlling status after late-night pass
+
+After the handler test-export cleanup and the final test-harness-only repair, the current local checkpoint is materially better than the prior June 16 split checkpoint.
+
+Current status:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Protected.
+
+Acquisition Memo:
+Not launch-cleared yet, but no longer in active whack-a-mole failure mode.
+V2 source-authority/document foundation is green at focused-smoke level.
+The remaining work is final handler-path proof, legacy-path quarantine, PDF/output QA, and launch flag posture.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+The late-night pass did not mean Acquisition Memo is fully launch-cleared.
+
+It means:
+
+```text
+The root split direction is holding.
+Focused smokes are green.
+The monster smoke is green again.
+The last red was a test-harness contract-data mismatch, not production rendering.
+```
+
+## Late-night pass checkpoint
+
+Codex completed a cleanup pass that removed split-owned helpers from the `generate-client-report.js#__test__` surface and moved tests to import helpers from their real owner modules.
+
+Relevant cleanup:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+tests/qa/report-type-normalization-smoke.js
+```
+
+Confirmed cleanup:
+
+```text
+Duplicate buildDeliveryResponseCompatibilityAliases was removed from the handler test surface.
+Delivery helpers are imported directly from api/_lib/report-delivery-output.js.
+resolveReportTypeAndTier is imported directly from api/_lib/report-request-context.js.
+Stale isValidReportStoragePath import was removed from the handler.
+No production rendering behavior was intentionally changed.
+```
+
+Focused smokes and syntax checks reported green:
+
+```text
+node --check api/generate-client-report.js
+node --check tests/qa/generate-client-report-import-smoke.js
+node --check tests/qa/acquisition-memo-v2-document-smoke.js
+node --check tests/qa/screening-report-smoke.js
+node --check tests/qa/source-authority-smoke.js
+node --check tests/qa/report-type-normalization-smoke.js
+node --check tests/qa/generate-client-report-rent-roll-smoke.js
+node tests/qa/generate-client-report-import-smoke.js
+node tests/qa/acquisition-memo-v2-document-smoke.js
+node tests/qa/source-authority-smoke.js
+node tests/qa/screening-report-smoke.js
+node tests/qa/report-type-normalization-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+## Monster smoke final repair
+
+The final remaining `tests/qa/generate-client-report-rent-roll-smoke.js` failure was:
+
+```text
+PURCHASE_ASSUMPTIONS_ROLE_DRIFT
+evidence: stonebridge_assumptions.pdf was reported as missing_from_source_treatment_table
+```
+
+Also present but not part of the failing assertion:
+
+```text
+ACQUISITION_FINANCING_READINESS_INCOMPLETE
+UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED
+```
+
+Root cause:
+
+```text
+The later attackContractQa block was feeding the contract checker HTML that did not include a Source Treatment / Quantitative Use section with the purchase-assumptions row expected by the contract logic.
+```
+
+Accepted fix:
+
+```text
+Test-only harness repair.
+A synthetic Source Treatment / Quantitative Use section was built inside attackContractHtml.
+The synthetic section includes consistent rows for:
+- Stonebridge_Assumptions.pdf
+- Current_Debt_Stonebridge.pdf
+- Stonebridge_Reno_Plan.pdf
+The later contradiction/tamper checks still use the original rendered HTML path.
+```
+
+Interpretation:
+
+```text
+This was not a production-rendering failure.
+This was not a V2 document failure.
+This was not a source-classification failure.
+It was the bloated regression harness failing because its own contract-QA fixture data did not include the source-treatment rows the contract checker requires.
+```
+
+Accepted recommendation:
+
+```text
+Keep the synthetic source-treatment section in the rent-roll smoke as the smallest stable harness-only repair.
+Do not reopen production rendering for this issue.
+```
+
+## Current split map after late-night pass
+
+Completed / accepted split work:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+  Owns complete V2 Acquisition Memo customer-visible HTML document/body.
+
+api/_lib/canonical-source-package.js
+  Owns V2 source detection / canonical source package.
+
+api/_lib/acquisition-memo-projection.js
+  Owns Acquisition Memo V2 projection / what the memo is allowed to show.
+
+api/_lib/acquisition-memo-renderer.js
+  Owns V2 memo rendering fragments / surfaces used by the complete document owner.
+
+api/_lib/report-delivery-output.js
+  Owns safe delivery/output helper plumbing:
+  - sanitizeTypography
+  - buildDeliveryResponseCompatibilityAliases
+  - isValidReportStoragePath
+  - buildReportStoragePath
+  - assertValidReportPublicationInsert
+
+api/_lib/report-request-context.js
+  Owns request/report-type helper plumbing:
+  - resolveReportTypeAndTier
+  - constantTimeEqual
+
+api/_lib/report-formatting-helpers.js
+  Owns pure display/formatting helpers.
+
+api/_lib/report-number-helpers.js
+  Owns pure numeric/value-normalization helpers.
+
+api/_lib/report-html-helpers.js
+  Owns generic HTML helper utilities:
+  - stripMarkedSection
+  - replaceMarkedSection
+  - stripT12DetailSubsection
+  - stripEmptyHeadingBlocks
+  - stripChartBlockByAlt
+```
+
+Current helper split posture:
+
+```text
+The safe helper splits are materially reducing generate-client-report.js without rewriting the platform generator.
+The delivery tail remains local intentionally.
+Screening remains protected.
+The Acquisition Memo V2 body owner exists and focused document smoke passes.
+```
+
+## What remains for splitting generate-client-report.js
+
+The remaining split work should be treated as strategic, not panic cleanup.
+
+### 1. Renderer canonical state owner
+
+Candidate future module:
+
+```text
+api/_lib/report-renderer-canonical-state.js
+```
+
+Likely owner for:
+
+```text
+buildRendererCanonicalState(...)
+canonical state preparation before rendering
+shared normalized state propagation
+```
+
+Caution:
+
+```text
+Do not move this casually.
+It is closer to business/render-state logic than pure helper logic.
+Only extract with direct owner-module tests and no behavior change.
+```
+
+### 2. Screening renderer / Screening sections
+
+Candidate future modules:
+
+```text
+api/_lib/screening-report-renderer.js
+api/_lib/screening-report-sections.js
+```
+
+Purpose:
+
+```text
+Protect launchable Screening by giving it its own clean lane.
+Reduce chance that Acquisition Memo changes disturb Screening.
+```
+
+Caution:
+
+```text
+Do not touch before Acquisition Memo V2 handler-path proof unless necessary.
+Screening is sacred because it is already launchable/founder-beta ready.
+```
+
+### 3. Legacy Acquisition Memo body assembly quarantine
+
+This is the highest-value remaining split/quarantine.
+
+Goal:
+
+```text
+Under the V2 gate, generate-client-report.js must not own customer-visible Acquisition Memo body sections.
+It may provide request/data/PDF/storage/delivery plumbing only.
+```
+
+Required disposition for legacy Acquisition Memo body paths:
+
+```text
+quarantine as legacy-gate-off only;
+delete if dead;
+or adapt as wrappers around V2 source package/projection/document output.
+```
+
+Do not keep independent V2 body authority in:
+
+```text
+legacy marked sections
+legacy preliminary financing builders
+legacy document treatment builders
+legacy source-context builders
+late body insertions
+after-html fallbacks
+row regex rewrites
+marker replacement paths
+```
+
+### 4. Document Treatment / support-doc legacy helpers
+
+Some older helpers may remain for legacy paths and tests:
+
+```text
+buildCanonicalSupportDocAuthorityRows(...)
+buildDocumentTreatmentSummaryHtml(...)
+related launch/source-context support-doc helpers
+```
+
+Do not rip these out until V2 handler-path proof and PDF proof pass.
+
+Correct near-term disposition:
+
+```text
+Leave legacy helpers local or legacy-only unless they are blocking V2 gate correctness.
+After V2 is proven, quarantine them more aggressively.
+```
+
+### 5. Delivery tail
+
+Do not split the hot delivery tail yet.
+
+Keep local for now:
+
+```text
+DocRaptor execution
+Supabase upload/write/insert
+delivery gate transitions
+credit restore behavior
+publication row insert/update
+fatal render/storage/PDF handling
+```
+
+Reason:
+
+```text
+This is live customer lifecycle plumbing, not pure helper cleanup.
+Move only after report body path is stable and with dedicated delivery tests.
+```
+
+### 6. Monster smoke decomposition
+
+The monster smoke is now green but remains too large.
+
+Future cleanup:
+
+```text
+Keep it as a bloated regression harness.
+Do not use it as the only validator.
+Gradually split meaningful blocks into focused smokes.
+```
+
+Do not weaken it simply because it is ugly.
+
+## What remains before Acquisition Memo is clean and ready to rock
+
+### Step 1 — Commit the green checkpoint
+
+Recommended commit message:
+
+```text
+Clean handler test exports and stabilize Acquisition Memo smokes
+```
+
+Commit should include:
+
+```text
+__test__ export cleanup
+owner-module test imports
+focused smokes
+monster smoke harness contract-data repair
+no production rendering change from the final harness repair
+```
+
+### Step 2 — Add focused V2 gate handler smoke
+
+This is the next critical proof.
+
+Required test:
+
+```text
+tests/qa/acquisition-memo-v2-gate-handler-smoke.js
+```
+
+Purpose:
+
+```text
+Prove generate-client-report.js handler/test path uses renderCompleteAcquisitionMemoV2Html(...) under the V2 gate and returns the complete V2-owned final HTML document/body without live services.
+```
+
+Required assertions:
+
+```text
+final HTML is complete document/body
+Preliminary Financing Readiness Summary appears
+Lender Diligence Checklist appears
+Current debt context uploaded says Yes
+Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual
+Stonebridge_Assumptions.pdf remains purchase/acquisition context and is not debt support
+Stonebridge_Reno_Plan.pdf appears as Structured Renovation / CapEx Plan
+Document Treatment Summary appears inside <body>, not after </html>
+forbidden V2 surfaces absent
+Screening remains protected
+```
+
+No-live-services requirements:
+
+```text
+no DocRaptor
+no Supabase upload/write/insert
+no Stripe/auth/payment
+dummy env only if needed
+__test_return_final_html or equivalent safe test hook
+```
+
+### Step 3 — Legacy V2 path quarantine inspection
+
+After the focused handler smoke passes, run a bounded inspection to confirm V2 correctness no longer depends on:
+
+```text
+marker replacement
+SECTION_0_8 chase
+DOCUMENT_TREATMENT_SUMMARY marker chase
+row-level regex mutation
+body insertion fallback
+append-after-</html> fallback
+legacy preliminary-financing builder
+legacy document-treatment builder
+legacy support-doc role reclassification
+```
+
+This is an inspection/verification pass first, not a patch-first pass.
+
+### Step 4 — Controlled real report/PDF run
+
+After handler-path proof:
+
+```text
+ACQ_MEMO_V2_SOURCE_AUTHORITY=true
+Stonebridge-style package
+actual report generation path
+capture job_id/report_id
+capture final HTML/PDF
+review PDF visually
+```
+
+Purpose:
+
+```text
+Prove the actual customer artifact, not only module-level/final_html smokes.
+```
+
+### Step 5 — Visual PDF QA
+
+Visual review must confirm:
+
+```text
+no duplicate sections
+no blank weird pages
+no table overflow
+Document Treatment is in the real body
+Financing Readiness appears once and coherently
+Lender checklist is readable
+source-treatment rows are clean
+no forbidden advanced underwriting language
+no after-html junk
+```
+
+### Step 6 — Launch flag posture decision
+
+Recommended posture:
+
+```text
+Controlled founder-beta enablement first.
+Do not immediately flip full public Acquisition Memo automation without one or more clean controlled PDFs.
+```
+
+Potential deployment strategy:
+
+```text
+V2 gate off by default for public
+V2 gate on for controlled internal/founder reports
+turn on more broadly after repeated clean artifact proof
+```
+
+### Step 7 — Docs/checklist update
+
+After handler smoke + real PDF proof:
+
+```text
+Update Master Context and CVF ledger.
+Record exact commands run.
+Record report/job ids.
+Record remaining deferred items.
+```
+
+## Guided Codex investigation to add after the green checkpoint
+
+This is not a broad panic audit.
+
+It is a bounded, read-first, source-authority investigation to confirm the Acquisition Memo pipeline is clean.
+
+### Investigation name
+
+```text
+Acquisition Memo V2 Clean Pipeline Verification
+```
+
+### Purpose
+
+```text
+Confirm that Acquisition Memo V2 has one clean authority chain:
+canonical source package
+-> acquisition memo projection
+-> complete V2 document owner
+-> handler V2 gate
+-> PDF/storage/delivery plumbing
+```
+
+### Scope
+
+Codex should inspect only:
+
+```text
+api/generate-client-report.js
+api/_lib/canonical-source-package.js
+api/_lib/acquisition-memo-projection.js
+api/_lib/acquisition-memo-renderer.js
+api/_lib/acquisition-memo-v2-document.js
+tests/qa/acquisition-memo-v2-document-smoke.js
+tests/qa/source-authority-smoke.js
+tests/qa/screening-report-smoke.js
+tests/qa/generate-client-report-import-smoke.js
+tests/qa/report-type-normalization-smoke.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Do not inspect or patch unrelated systems:
+
+```text
+Stripe
+SQL
+Supabase lifecycle
+auth/upload gates
+pricing
+DocRaptor config
+Admin Dashboard
+Full Underwriting V2 surfaces
+```
+
+### Questions Codex must answer
+
+```text
+1. Is there exactly one V2 source-authority chain under the V2 gate?
+2. Can Acquisition Memo projection or renderer bypass canonical-source-package by reading raw authority fields directly?
+3. Does renderCompleteAcquisitionMemoV2Html(...) own the complete customer-visible V2 document/body?
+4. Can generate-client-report.js still mutate V2 customer-visible sections after the V2 document owner runs?
+5. Are any V2 Document Treatment or Financing Readiness sections still made correct by marker replacement, row regex, body insertion, or append fallback?
+6. Does V2 gate off behavior remain unchanged?
+7. Is Screening protected by a focused regression?
+8. Are forbidden Acquisition Memo surfaces still blocked?
+9. Does the handler path have or need a focused V2 gate smoke?
+10. What exact legacy paths should be quarantined later, and which should be left alone until after launch?
+```
+
+### Required output
+
+Codex must return:
+
+```text
+A. Files inspected
+B. Clean authority chain confirmation / gaps
+C. Any remaining V2 bypass risks
+D. Any remaining legacy mutation risks
+E. Whether a focused V2 gate handler smoke exists or must be added
+F. Screening protection status
+G. Forbidden-surface protection status
+H. Recommended next patch, if any, limited to one bounded action
+I. Confirmation no production code was changed unless explicitly requested
+```
+
+### Hard boundaries
+
+Codex must not:
+
+```text
+patch one row
+patch one marker
+insert one block before body
+append one missing block
+weaken a smoke assertion
+remove a contract QA check
+touch Screening rendering
+touch source classification unless a test fixture bug is proven
+touch delivery/payment/storage/auth
+add DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation
+hardcode Stonebridge outside tests
+```
+
+## Fresh continuation point
+
+Resume from this late-night checkpoint:
+
+```text
+June 16 late-night green checkpoint.
+
+Completed:
+- V2 document owner exists.
+- Source package/projection/renderer foundation exists.
+- Delivery-output/request-context/formatting/number/html helper splits completed.
+- Handler __test__ export cleanup completed.
+- Focused smokes pass.
+- Monster rent-roll smoke passes again after test-harness-only contract-data repair.
+- No production rendering was reopened for the final smoke fix.
+
+Still required:
+1. Commit green checkpoint.
+2. Add focused Acquisition Memo V2 gate handler smoke.
+3. Prove handler path returns complete V2-owned final HTML under the V2 gate.
+4. Run bounded clean-pipeline investigation.
+5. Quarantine any remaining legacy V2 body mutation paths.
+6. Run controlled real PDF/report proof.
+7. Visual PDF QA.
+8. Decide controlled founder-beta flag posture.
+9. Update docs again after proof.
+
+Acquisition Memo is close, but not launch-cleared until the handler-path and PDF/customer-artifact proof pass.
+```
+
+# June 16, 2026 Late Addendum — V2 Document Owner Cutover Started / Helper Boundary Split Checkpoint / Monster Smoke Downgraded
+
+## Current controlling status
+
+After the June 16 owner escalation, the team stopped treating Acquisition Memo V2 as a row/regex/marker problem and began cutting responsibility out of `api/generate-client-report.js`.
+
+The controlling update is:
+
+```text
+The root direction has changed from “patch legacy final assembly until the assertion passes”
+to “give Acquisition Memo V2 and key plumbing concerns their own owned modules.”
+```
+
+This does **not** mean the entire platform generator is being rewritten.
+
+It means the monster file is being reduced by clear ownership boundaries, while protecting Screening and delivery doctrine.
+
+Current product status remains:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Protected. Do not touch except regression.
+
+Acquisition Memo:
+Not launch-cleared yet. V2 root cutover is now materially underway, but final smoke/focused validation is still required.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Major progress since the prior root-cutover addendum
+
+### 1. Acquisition Memo V2 now has a complete document owner
+
+New/active module:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+```
+
+Key exported owner:
+
+```javascript
+renderCompleteAcquisitionMemoV2Html(...)
+```
+
+Purpose:
+
+```text
+Own the complete Acquisition Memo V2 customer-visible HTML document/body under the V2 gate.
+```
+
+This is the correct architectural direction because V2 must not depend on legacy markers, late body insertions, row regex rewrites, or append-after-html fallbacks for its customer-visible body.
+
+Current V2 gate doctrine:
+
+```javascript
+effectiveReportMode === "v1_core" &&
+acqMemoV2SourceAuthorityEnabled &&
+acquisitionMemoV2Bridge?.acquisitionMemoProjection
+```
+
+Under this gate, `generate-client-report.js` now calls the V2 document renderer directly instead of relying on the old V2 final-assembly patch layer.
+
+### 2. Old helper-patch approach was rejected
+
+The bridge-helper approach represented by the old pattern:
+
+```text
+legacy HTML + V2 fragment patching + marker replacement + body insertion
+```
+
+is no longer accepted as the final strategy.
+
+Rejected / removed from the V2 cutover path:
+
+```text
+applyAcquisitionMemoV2FinalAssembly
+row-level current-debt "No -> Yes" regex mutation
+legacy append-after-</html> fallback
+V2 correctness by SECTION_0_8 marker replacement
+V2 correctness by DOCUMENT_TREATMENT_SUMMARY marker chase
+```
+
+### 3. Runtime blocker fixed after V2 document-owner cutover
+
+A real runtime blocker was caught in review:
+
+```javascript
+const htmlString = sanitizeTypography(htmlStringRaw);
+...
+htmlString = renderCompleteAcquisitionMemoV2Html(...);
+```
+
+This would pass syntax checks but fail at runtime as:
+
+```text
+TypeError: Assignment to constant variable
+```
+
+Fix:
+
+```javascript
+let htmlString = sanitizeTypography(htmlStringRaw);
+```
+
+Interpretation:
+
+```text
+This is why syntax checks alone are not enough for this phase.
+Runtime-path inspection remains necessary.
+```
+
+### 4. Monster smoke is now officially downgraded as the sole validator
+
+The giant smoke test:
+
+```text
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+is no longer treated as a clean smoke test.
+
+It has become a bloated regression harness that can fail before reaching meaningful V2 assertions due to scope leakage.
+
+Observed harness blockers:
+
+```text
+ReferenceError: attackPrelimHtml is not defined
+ReferenceError: supportDocAuthorityRows is not defined
+```
+
+Interpretation:
+
+```text
+These are harness-scope defects, not proof that the new V2 document owner failed.
+The monster smoke remains useful as a legacy regression harness, but it must not control every architecture split.
+```
+
+New test doctrine:
+
+```text
+Create focused smokes for:
+- Acquisition Memo V2 document output
+- canonical source package / source authority
+- acquisition memo projection
+- forbidden V2 surfaces
+- Screening regression
+- delivery/PDF path
+```
+
+## Controlled helper-boundary splits completed / underway
+
+The team has begun reducing `generate-client-report.js` by extracting pure helper clusters only.
+
+This is a controlled split, not a rewrite.
+
+### Split 1 — V2 document/body ownership
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+```
+
+Owns:
+
+```text
+complete Acquisition Memo V2 HTML document/body
+Preliminary Financing Readiness Summary
+Lender Diligence Checklist
+Current debt context uploaded row
+Document Treatment Summary inside valid body HTML
+V2 customer-visible source surfaces
+```
+
+Boundary:
+
+```text
+generate-client-report.js may provide request/data/PDF/storage/delivery plumbing only.
+It must not own V2 customer-visible Acquisition Memo body sections.
+```
+
+### Split 2 — delivery/output helper plumbing
+
+```text
+api/_lib/report-delivery-output.js
+```
+
+Moved safe pure delivery helpers:
+
+```text
+sanitizeTypography(...)
+buildDeliveryResponseCompatibilityAliases(...)
+isValidReportStoragePath(...)
+buildReportStoragePath(...)
+assertValidReportPublicationInsert(...)
+```
+
+Important boundary:
+
+```text
+DocRaptor request execution, Supabase upload/write/insert, delivery gate decisions,
+credit restore behavior, sentence integrity, and final publication pipeline remain in generate-client-report.js.
+```
+
+Codex inspected the remaining delivery tail and correctly did not move it because it is still coupled to live publication and fail-closed behavior.
+
+### Split 3 — request/context helper plumbing
+
+```text
+api/_lib/report-request-context.js
+```
+
+Moved:
+
+```text
+resolveReportTypeAndTier(...)
+constantTimeEqual(...)
+```
+
+Important repair:
+
+The first extraction changed behavior by dropping expected return fields:
+
+```text
+reportTier
+effectiveReportMode
+allowedTypes
+supportedAliases
+```
+
+and by temporarily adding new screening aliases.
+
+That was rejected and repaired.
+
+Current accepted state:
+
+```text
+resolveReportTypeAndTier(...) return contract restored.
+original alias behavior restored.
+constantTimeEqual(...) preserved.
+```
+
+### Split 4 — formatting/display helpers
+
+```text
+api/_lib/report-formatting-helpers.js
+```
+
+Moved pure display helpers:
+
+```text
+isNil(...)
+formatCurrency(...)
+formatPercent(...)
+formatPercent1(...)
+formatPercentExactDisplay(...)
+formatCapPercentExact(...)
+formatInterestRatePercent(...)
+formatMultiple(...)
+formatYears(...)
+formatDistanceKm(...)
+escapeHtml(...)
+replaceAll(...)
+sanitizeDisplayText(...)
+sanitizePropertyNameDisplayText(...)
+```
+
+Status:
+
+```text
+Passed review.
+Committed checkpoint: Extract report formatting helpers.
+```
+
+### Split 5 — numeric/value-normalization helpers
+
+```text
+api/_lib/report-number-helpers.js
+```
+
+Moved pure numeric helpers:
+
+```text
+isFiniteNumber(...)
+isFinitePositive(...)
+materiallyDifferent(...)
+toRateRatio(...)
+toCapRatio(...)
+```
+
+Left local intentionally:
+
+```text
+coerceNumber(...)
+computeMortgageConstant(...)
+normalizeCapRatePercent(...)
+capRateMatches(...)
+```
+
+Reason:
+
+```text
+coerceNumber remains too deeply depended on by local content/business logic.
+computeMortgageConstant is financial-modeling logic and should not move in this pure-helper pass.
+normalizeCapRatePercent and capRateMatches depend on local coerceNumber.
+```
+
+Status:
+
+```text
+Passed syntax/diff checks according to Codex.
+Safe to commit if not already committed.
+```
+
+### Split 6 — generic HTML helper utilities
+
+Codex is currently working on the next bounded split:
+
+```text
+api/_lib/report-html-helpers.js
+```
+
+Allowed candidates:
+
+```text
+stripMarkedSection(...)
+replaceMarkedSection(...)
+stripT12DetailSubsection(...)
+stripEmptyHeadingBlocks(...)
+stripChartBlockByAlt(...)
+```
+
+Optional inspect-only candidates:
+
+```text
+dedupeDataNotAvailableBySection(...)
+sanitizeScreeningRankedDriversHtml(...)
+stripThinSectionPages(...)
+```
+
+Hard boundary:
+
+```text
+Move only generic pure HTML utilities.
+Do not move report content, Screening rendering, V2 rendering, source authority,
+Document Treatment, T12/Rent Roll business logic, delivery/output, DocRaptor, Supabase, or credit logic.
+```
+
+## Current split map
+
+Current known/target module map:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+  V2 complete customer-visible memo document/body owner.
+
+api/_lib/report-delivery-output.js
+  safe delivery/output helper plumbing.
+
+api/_lib/report-request-context.js
+  request/report type resolution and constant-time token comparison.
+
+api/_lib/report-formatting-helpers.js
+  pure formatting and display helpers.
+
+api/_lib/report-number-helpers.js
+  pure numeric/value-normalization helpers.
+
+api/_lib/report-html-helpers.js
+  pending generic HTML utility helper owner.
+```
+
+## Current accepted doctrine for continuing the split
+
+Continue only with clean ownership boundaries.
+
+Allowed next moves:
+
+```text
+extract pure helper clusters;
+create focused smokes;
+map remaining helper clusters inspect-first;
+quarantine legacy V2 final assembly paths;
+protect Screening with targeted regression.
+```
+
+Rejected next moves:
+
+```text
+another row regex patch;
+another marker chase;
+another body insertion patch;
+another one-variable smoke harness patch as the main strategy;
+moving DocRaptor/Supabase/delivery gate/credit logic casually;
+moving report-content/business logic under the label of "helper cleanup";
+touching Screening rendering except protective regression.
+```
+
+## Acceptance state as of this checkpoint
+
+Accepted / good progress:
+
+```text
+V2 document-owner direction is correct.
+Pure helper splits are reducing generate-client-report.js safely.
+Request-context regression was caught and repaired.
+Formatting split passed.
+Number-helper split passed review.
+Delivery tail was correctly not moved because it is coupled.
+```
+
+Still not done:
+
+```text
+Acquisition Memo V2 is not yet launch-cleared.
+Monster smoke is not yet clean.
+Focused V2 document smoke still needs to be created/run.
+Screening regression should be run before any launch/deploy confidence claim.
+The legacy final assembly paths still need quarantine / verification under V2 gate.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 16 late checkpoint.
+
+Completed:
+- V2 hard cutover direction started through api/_lib/acquisition-memo-v2-document.js.
+- V2 now has a complete document/body owner.
+- Runtime const/let blocker was fixed.
+- Delivery-output helper split completed.
+- Request-context split completed after repair.
+- Formatting helper split completed and committed.
+- Number-helper split completed / safe to commit if not already committed.
+- Generic HTML helper split is currently in progress with Codex.
+- Monster rent-roll smoke is downgraded from clean smoke to bloated regression harness.
+- Focused V2/screening/source-authority smokes are still required.
+
+Do not:
+- return to V2 marker/regex patching;
+- treat monster smoke scope bugs as proof of V2 failure;
+- move hot delivery/PDF/storage/credit code casually;
+- touch Screening except protective regression.
+
+Next likely actions:
+1. Review Codex receipt for report-html-helpers split.
+2. Commit if clean.
+3. Create focused Acquisition Memo V2 document smoke.
+4. Create/confirm Screening smoke.
+5. Then reassess V2 gate behavior with focused tests before any deploy/UI retest.
+```
+
+---
+
+# June 16, 2026 Addendum — Owner Escalation / V2 Final Bridge Rejected / Real Root Cutover Required TODAY
+
+## Current controlling status
+
+Rob escalated after the June 16 local smoke loop continued to fail even after the Acquisition Memo V2 source-authority rebuild, V2 final assembly helper, and multiple tightly scoped bridge corrections.
+
+This escalation is warranted.
+
+The controlling conclusion is now:
+
+```text
+Acquisition Memo V2 has a cleaner upstream brain, but it still does not have a sovereign final report body.
+The current bridge still depends on legacy generate-client-report.js HTML assembly, markers, tokens, fallbacks, and test-return paths.
+Therefore the system is still structurally capable of whack-a-mole failures even after V2 source/projection/render modules are correct.
+```
+
+Product status:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Protect and do not touch except regression.
+
+Acquisition Memo:
+Not launch-cleared. V2 source-authority foundation is conceptually strong, but final HTML ownership is not solved.
+Acquisition Memo V2 must now hard-cut over to a complete V2-owned memo body/document path or equivalent sovereign final HTML owner.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Rob's escalation / owner red-line
+
+Rob's frustration must be preserved as project context because it is the correct product-owner signal.
+
+Rob's substance, recorded plainly:
+
+```text
+For weeks Rob has been asking for the ROOT problem, not another small patch.
+He repeatedly warned that the work was turning into whack-a-mole.
+He asked whether rebuilding generate-client-report.js or the Acquisition Memo path would be faster/safer.
+He was repeatedly advised to avoid a wholesale rebuild and keep doing bounded patches.
+The June 16 smoke loop proved that this advice was incomplete for Acquisition Memo final assembly.
+Rob is right to reject another tiny patch loop.
+Rob needs Screening and Acquisition Memo operational urgently.
+The next work must solve the ownership boundary TODAY, not move the smoke failure again.
+```
+
+Verbatim-style owner sentiment to preserve:
+
+```text
+"No more patching every single issue again."
+"Get to the fucking ROOT of the issue."
+"If V2 is supposed to be brand new, why is it still fighting generate-client-report?"
+"If the final bridge is still contaminated, then V2 is not truly bypassing the monster file."
+"One patch, rebuild, or whatever it takes today — no more fucking around."
+```
+
+Interpretation:
+
+```text
+This is not ordinary venting.
+This is a valid project-management correction.
+The active issue is no longer a row, regex, marker, or idempotency bug.
+The active issue is that Acquisition Memo V2 final report ownership is still not properly separated from the legacy generator.
+```
+
+## June 16 smoke / patch-loop evidence
+
+After the V2 final assembly helper was added:
+
+```text
+Files changed:
+- api/generate-client-report.js
+- api/_lib/acquisition-memo-v2-final-assembly.js
+```
+
+Codex reported:
+
+```text
+- New helper file created.
+- generate-client-report.js calls one helper in harness/intermediate/final paths.
+- old ad hoc row/marker replacements removed or bypassed.
+- Current debt context uploaded now driven from acquisitionMemoProjection.financingReadinessSignals.hasCurrentDebtContext.
+- helper inserts before </body> or before </html>, never after </html>.
+```
+
+Additional tiny correction followed:
+
+```text
+api/_lib/acquisition-memo-v2-final-assembly.js
+- current-debt row regex corrected to include the opening first <td>.
+```
+
+Manual smoke then failed again:
+
+```text
+node tests/qa/generate-client-report-rent-roll-smoke.js 2>&1 | findstr "PASS ERR_ASSERTION"
+
+AssertionError [ERR_ASSERTION]:
+The input did not match the regular expression
+/Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i
+```
+
+Interpretation:
+
+```text
+The failure moved back to Document Treatment visibility.
+This proves the V2 final assembly helper is still a patch layer operating on legacy-produced HTML, not a true sovereign V2 memo body.
+```
+
+## Corrected architecture diagnosis
+
+The V2 source-authority rebuild is NOT the failed part:
+
+```text
+buildCanonicalSourcePackage(...)
+buildAcquisitionMemoProjection(...)
+renderAcquisitionMemo(...)
+```
+
+The failed part is Step 5:
+
+```text
+bridge into generate-client-report.js final HTML assembly
+```
+
+The current helper is not a true bypass.
+
+It is:
+
+```text
+a centralized patch layer that inserts/replaces V2 fragments inside legacy htmlString/finalHtml.
+```
+
+That means it can still be defeated by:
+
+```text
+legacy marked sections,
+legacy token timing,
+legacy finalHtml/htmlString split paths,
+test-return path,
+late append fallbacks,
+old preliminary financing builders,
+old document treatment builders,
+old strip/dedupe/sanitize passes,
+old QA/source-coverage post-processing assumptions,
+old report template structure.
+```
+
+## Required doctrine change
+
+The prior doctrine:
+
+```text
+"Do not rewrite generate-client-report.js wholesale."
+```
+
+remains correct for Screening and whole-platform safety, but it is no longer sufficient for Acquisition Memo V2 final assembly.
+
+New doctrine:
+
+```text
+Do not rewrite the entire platform generator.
+Do hard-cut Acquisition Memo V2 to its own complete final HTML body/document owner under the V2 gate.
+generate-client-report.js may remain request/data/PDF/storage/delivery plumbing only, but it must not own Acquisition Memo V2 customer-visible body sections.
+```
+
+This means the next patch must not continue:
+
+```text
+replace SECTION_0_8;
+insert before </body>;
+patch Document Treatment idempotency;
+regex one row from No to Yes;
+marker chase DOCUMENT_TREATMENT_SUMMARY;
+append missing V2 block after legacy output.
+```
+
+## Required next root cutover
+
+Implement a true V2 final document owner such as:
+
+```text
+api/_lib/acquisition-memo-v2-document.js
+```
+
+Required exported function:
+
+```javascript
+renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection,
+  renderedAcquisitionMemo,
+  coreMetrics,
+  reportMeta,
+  propertyProfile,
+  sourcePackage,
+})
+```
+
+Or adapt the current renderer so that it returns a complete document/body, not fragments.
+
+Under the V2 gate:
+
+```javascript
+effectiveReportMode === "v1_core" &&
+acqMemoV2SourceAuthorityEnabled &&
+acquisitionMemoV2Bridge?.acquisitionMemoProjection
+```
+
+the generator must do conceptually:
+
+```javascript
+finalHtml = renderCompleteAcquisitionMemoV2Html(...);
+```
+
+and skip legacy Acquisition Memo body assembly.
+
+Allowed generate-client-report.js responsibilities under V2 gate:
+
+```text
+request/job parsing
+auth/user/job loading
+core T12/Rent Roll deterministic data preparation
+calling buildCanonicalSourcePackage
+calling buildAcquisitionMemoProjection
+calling renderCompleteAcquisitionMemoV2Html
+PDF generation
+storage
+delivery state
+artifact writing
+error handling
+```
+
+Forbidden generate-client-report.js responsibilities under V2 gate:
+
+```text
+legacy Acquisition Memo section marker ownership
+legacy preliminary financing readiness ownership
+legacy document treatment ownership
+legacy source-context/support-doc treatment ownership
+late append-after-html fallback
+row-level current debt regex mutation
+fragment insertion / body insertion patching
+legacy helper reclassification of support docs
+```
+
+## Acceptance criteria for the next patch
+
+The next patch is not accepted because one assertion passes once.
+
+It is accepted only if all of these hold:
+
+```text
+1. V2 gate on uses one complete V2-owned Acquisition Memo HTML body/document.
+2. generate-client-report.js does not insert V2 Document Treatment or Financing blocks by marker/regex/body insertion.
+3. SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is no longer the authority for V2 output.
+4. DOCUMENT_TREATMENT_SUMMARY marker is no longer the authority for V2 output.
+5. Current_Debt_Stonebridge.pdf appears within valid body HTML as Debt Support Received / Contextual.
+6. Current debt context uploaded appears and says Yes.
+7. Lender Diligence Checklist appears.
+8. Preliminary Financing Readiness Summary appears.
+9. Document Treatment is inside <body>, not after </html>.
+10. Stonebridge_Assumptions remains purchase/proposed acquisition context, not current debt.
+11. Reno remains Structured Renovation / CapEx Plan.
+12. Appraisal remains appraisal context.
+13. Phase I remains environmental context.
+14. T12/Rent Roll remain core quantitative sources, not Other Support Document.
+15. No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation/BUY/SELL/HOLD/loan approval language appears.
+16. Screening smoke remains protected.
+17. V2 gate off behavior remains unchanged.
+18. No production hardcoding of Stonebridge filenames except in tests.
+```
+
+## Working-tree caution
+
+As of the June 16 escalation, the repo may contain uncommitted changes from:
+
+```text
+api/generate-client-report.js
+api/_lib/acquisition-memo-v2-final-assembly.js
+```
+
+Previous temp/debug warning remains:
+
+```text
+Remove any temporary fs.writeFileSync("retest4-final-html.html", ...) test line before commit unless intentionally made into a named artifact-writing utility.
+```
+
+Do not commit the current bridge-helper patch series as final if the true root cutover replaces it.
+
+The next patch should either:
+
+```text
+A. replace the helper-based bridge with a complete V2 final document owner; or
+B. explicitly keep the helper only as an internal implementation inside the complete V2 document owner, no longer as a legacy-body patcher.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 16 owner escalation.
+
+The latest smoke still fails:
+Current_Debt_Stonebridge.pdf ... Debt Support Received / Contextual not found in final_html.
+
+The failure persists after:
+- V2 final assembly helper creation,
+- current debt checklist row ownership change,
+- row regex correction,
+- generate-client-report bridge cleanup attempts.
+
+Conclusion:
+The bridge-helper approach is still contaminated by legacy final assembly.
+No more row/marker/body-insertion patches.
+
+Next work:
+Hard-cut Acquisition Memo V2 to a complete V2-owned final HTML body/document under the V2 gate.
+generate-client-report.js may provide plumbing only.
+Screening must remain untouched/protected.
+One patch/rebuild today, not another micro-patch loop.
+```
+
+---
+
+
+# June 15, 2026 Pause Addendum — Acquisition Memo V2 Bridge Whack-a-Mole / Final HTML Assembly Not Yet Sovereign
+
+## Current controlling status
+
+Rob paused the Acquisition Memo V2 bridge patch loop after the June 15 controlled local smoke/debug sequence.
+
+This pause is intentional and correct.
+
+The active issue is no longer treated as another Current Debt label patch, another Reno label patch, or another source-classification patch.
+
+The controlling issue is now:
+
+```text
+Acquisition Memo V2 source authority exists upstream, but the bridge into legacy generate-client-report.js final HTML assembly is not yet sovereign.
+```
+
+Current product status remains:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Untouched and protected.
+
+Acquisition Memo:
+Not launch-cleared.
+V2 source-authority rebuild remains active, but the current bridge/integration path is paused because final HTML assembly is still being fought by legacy template/token/marked-section/test-return paths.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Why the pause happened
+
+Codex used substantial quota while repeatedly patching the same symptom family without proving the actual final HTML state first.
+
+The loop pattern was:
+
+```text
+1. Patch current-debt checklist row.
+2. Run smoke.
+3. Fail.
+4. Search/reason through many legacy paths.
+5. Patch another row/bridge location.
+6. Repeat.
+7. Eventually introduce a new ReferenceError.
+```
+
+Rob manually took control and uploaded the relevant outputs/files.
+
+## Local smoke/debug sequence results
+
+### 1. ReferenceError introduced and fixed
+
+A Codex patch introduced:
+
+```text
+ReferenceError: acquisitionMemoV2Projection is not defined
+```
+
+Root cause:
+
+```text
+The handler referenced acquisitionMemoV2Projection outside its scope.
+The valid scoped path is acquisitionMemoV2Bridge?.acquisitionMemoProjection.
+```
+
+Surgical fix applied:
+
+```javascript
+acquisitionMemoV2Projection?.financingReadinessSignals?.hasCurrentDebtContext
+```
+
+was replaced with:
+
+```javascript
+acquisitionMemoV2Bridge?.acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext
+```
+
+This fixed the crash class and `api/generate-client-report.js` passed syntax check afterward.
+
+### 2. Final HTML artifact proved the original row patch was aimed at a missing section
+
+The local `retest4-final-html.html` showed:
+
+```text
+Current debt context uploaded: 0 occurrences
+Lender Diligence Checklist: 0 occurrences
+Preliminary Financing Readiness Summary: 0 occurrences
+```
+
+The final HTML still contained an empty marked section:
+
+```html
+<!-- BEGIN SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+
+<!-- END SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY -->
+```
+
+Interpretation:
+
+```text
+There was no current-debt checklist row to rewrite.
+The whole financing-readiness/checklist section was not being inserted into the final HTML.
+```
+
+### 3. Current Debt classification itself was correct in the appended Document Treatment Summary
+
+The same final HTML showed:
+
+```text
+Current_Debt_Stonebridge.pdf
+Debt Support Received / Contextual
+Uploaded existing/current debt context only; not proposed acquisition financing.
+```
+
+Interpretation:
+
+```text
+The source authority / document-treatment role was no longer the primary blocker in this local smoke path.
+The blocker was final HTML assembly placement.
+```
+
+### 4. Document Treatment Summary remained outside the actual HTML document
+
+The final HTML still had:
+
+```html
+</body>
+</html>
+
+<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->...
+```
+
+Interpretation:
+
+```text
+DOCUMENT_TREATMENT_SUMMARY was still being appended after the closing HTML tag in at least one test-return/final assembly path.
+This is invalid report assembly and proves the legacy final assembly pipeline is still not fully under V2 control.
+```
+
+### 5. Latest smoke moved to a new assertion but did not prove the report is fixed
+
+After another bounded Codex final-assembly patch, the local smoke failed on:
+
+```javascript
+/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Debt Support Received \/ Contextual/i
+```
+
+But the uploaded `retest4-final-html.html` still proved:
+
+```text
+SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY remains empty.
+Current debt context uploaded remains absent.
+Lender Diligence Checklist remains absent.
+Document Treatment Summary remains after </html>.
+```
+
+Interpretation:
+
+```text
+The latest patch did not fix the actual bridge/final assembly path returned by the test.
+No commit, deploy, or UI retest should occur from this state.
+```
+
+## Sharpened root diagnosis
+
+The V2 source-authority rebuild is conceptually correct:
+
+```text
+buildCanonicalSourcePackage(...)
+-> buildAcquisitionMemoProjection(...)
+-> renderAcquisitionMemo(...)
+```
+
+The problem is the current Step 5 bridge approach is still half-new / half-old:
+
+```text
+V2 modules produce source/projection/rendered memo data,
+but generate-client-report.js still owns:
+- legacy template tokens,
+- marked sections,
+- late replacement passes,
+- test-return htmlString paths,
+- Document Treatment harness fallbacks,
+- legacy preliminary financing blocks,
+- legacy source-context sections,
+- late finalHtml overwrites.
+```
+
+This creates the same structural whack-a-mole the rebuild was supposed to eliminate.
+
+The practical lesson:
+
+```text
+Do not keep row-patching legacy final assembly.
+Acquisition Memo V2 needs one sovereign memo body / section-owner path.
+generate-client-report.js should insert the finished V2 rendered body/block once, then stop legacy paths from overwriting or appending behind it.
+```
+
+## Current local files / working-tree caution
+
+The current local repo may contain uncommitted changes from the debugging sequence:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+The smoke test also has a temporary manual debug line:
+
+```javascript
+fs.writeFileSync("retest4-final-html.html", retest4RenderHtml);
+```
+
+This temporary test-write line must be removed before any commit unless intentionally preserved as a named artifact-writing test utility.
+
+Current status:
+
+```text
+Do not commit.
+Do not deploy.
+Do not run UI retest.
+Do not ask Codex for broad investigation.
+```
+
+## Recommended next strategy
+
+When work resumes in a fresh chat, do not continue the same micro-patch loop.
+
+Choose one of two bounded paths:
+
+### Option A — Final bridge ownership patch
+
+Patch only the V2 gate path so that when:
+
+```javascript
+effectiveReportMode === "v1_core" &&
+acqMemoV2SourceAuthorityEnabled &&
+acquisitionMemoV2Bridge?.renderedAcquisitionMemo
+```
+
+then the final Acquisition Memo V2 financing/document-treatment/source-context surface is owned by V2 rendered output, and legacy template/token/test-return paths cannot append or overwrite those sections.
+
+Acceptance:
+
+```text
+SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is not empty.
+It includes Preliminary Financing Readiness Summary.
+It includes Lender Diligence Checklist.
+It includes Current debt context uploaded = Yes.
+DOCUMENT_TREATMENT_SUMMARY is inside <body>, not after </html>.
+Current_Debt_Stonebridge.pdf appears as Debt Support Received / Contextual.
+No duplicate/conflicting legacy row remains.
+V2 gate off behavior remains unchanged.
+```
+
+### Option B — Stop bridge patching and render a complete V2 Acquisition Memo body
+
+Instead of fighting legacy section-by-section replacements, make `renderAcquisitionMemo(projection)` produce a complete V2 memo body/block and insert it into one known Acquisition Memo container under the V2 feature gate.
+
+Acceptance:
+
+```text
+Projection/renderer own all V2 Acquisition Memo customer-visible source surfaces.
+generate-client-report.js is a thin shell only.
+Legacy Document Treatment / Preliminary Financing / support-doc helpers do not run for V2-gated memo body.
+```
+
+Preferred direction:
+
+```text
+Option B is cleaner and more aligned with the original rebuild doctrine.
+Option A may be faster, but risks continuing the same bridge whack-a-mole.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+We paused on June 15 after local smoke/debug proved the current Acquisition Memo V2 bridge is still not sovereign.
+
+Important latest evidence:
+- ReferenceError from acquisitionMemoV2Projection was fixed by using acquisitionMemoV2Bridge?.acquisitionMemoProjection.
+- Current debt role/classification appears correct in Document Treatment.
+- However SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY is still empty in final HTML.
+- Current debt context uploaded / Lender Diligence Checklist / Preliminary Financing Readiness Summary are absent.
+- DOCUMENT_TREATMENT_SUMMARY is still appended after </html>.
+- Latest smoke failure moved to a document-treatment assertion, but final HTML still proves bridge/final assembly is wrong.
+- Do not commit/deploy/UI retest from current local state.
+- Remove temporary fs.writeFileSync debug line before commit.
+- Next decision: either one bounded V2 bridge ownership patch or pivot to a cleaner complete V2 memo-body insertion so generate-client-report.js stops fighting the new V2 modules.
+```
+
+## Permanent guardrails still active
+
+```text
+Do not touch Screening except protective regression.
+Do not touch Stripe, SQL, Supabase, auth/upload gates, pricing, DocRaptor config, or Admin Dashboard.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/BUY/SELL/HOLD in Acquisition Memo.
+Do not hardcode Stonebridge production logic.
+Do not treat support-doc ambiguity as a customer fail gate.
+Do not let optional support docs override T12/Rent Roll core truth.
+Do not continue broad Codex investigation loops.
+Use get-in/get-out prompts only if Codex is used.
+```
+
+---
+
+# June 14, 2026 Evening Addendum — V2 Source-Authority Rebuild Steps 1 and 2 Complete
+
+## Current controlling status
+
+Step 1 (inspection + scaffolding) and Step 2 (buildCanonicalSourcePackage implementation + smoke tests) of the Acquisition Memo V2 Source-Authority Rebuild are complete on branch `acq-memo-v2-source-package`.
+
+Tag `pre-acq-memo-v2-rebuild` is set.
+
+Controlling decision unchanged:
+
+```text
+Screening Report:
+Launchable / founder-beta ready. Untouched. Protected.
+
+Acquisition Memo:
+Automation frozen / not launch-cleared.
+Now in active V2 source-authority rebuild. Branch is live. Foundation is built.
+
+Full Underwriting V2:
+Still deferred. Will be built later on the same canonical source package foundation.
+```
+
+## Step 1 result — Call Site Inspection Complete
+
+Codex produced a full inspection report identifying every competing document-role decision-maker in the codebase.
+
+### Confirmed competing decision-makers (complete cut list)
+
+```text
+api/_lib/report-surface-contracts.js ~1544-1659
+  buildSupportDocTaxonomyState
+  PRIMARY decision-maker. Acquisition Memo + shared.
+  Directly assigns purchase assumptions, current debt, renovation,
+  market survey, appraisal, environmental, and property tax roles.
+
+api/_lib/report-surface-contracts.js ~1706-1878
+  resolveCanonicalSupportDocAuthority
+  PRIMARY decision-maker. Acquisition Memo + shared.
+  Resolves keyword, AI, parser, and fallback authority.
+  Assigns role/display/treatment/use.
+
+api/_lib/report-surface-contracts.js ~2610-2648
+  Underwriting inventory acceptance checks against semantic_doc_role.
+  Consumer/fallback validator. Shared path.
+
+api/parse/parse-doc.js ~18-39, ~4916-4921, ~5254, ~5685
+  Parser taxonomy attachment, extracted-text lookup, debt-basis normalization.
+  Upstream decision-maker. Both Acquisition Memo and shared parser flow.
+
+api/_lib/source-package-qa.js ~61-139, ~178-222
+  Artifact inventory from document_text_extracted, semantic_doc_role,
+  debt_basis, parse_error. Consumer that can duplicate role interpretation.
+
+api/generate-client-report.js ~2994-3435
+  buildCanonicalSupportDocAuthorityRows
+  PRIMARY render-time authority builder. Acquisition Memo path.
+  Contains own heuristics and explicit overrides. MAIN TARGET for quarantine.
+
+api/generate-client-report.js ~3448-3670
+  buildDocumentTreatmentSummaryHtml
+  Consumer/fallback renderer. Acquisition Memo path.
+  Canonical branch + legacy fallback both still exist.
+
+api/generate-client-report.js ~4952-5010
+  Preliminary Financing Readiness support-doc lookups.
+  Consumer. Acquisition Memo path.
+
+api/generate-client-report.js ~5228-5264
+  buildLaunchSourceContextBlock
+  Consumer/wrapper. Acquisition Memo path.
+
+api/generate-client-report.js ~5734-5790
+  Acquisition Financing Readiness / current debt separation logic.
+  Consumer and secondary classifier. Acquisition Memo path.
+
+api/generate-client-report.js ~6048-6294
+  buildScreeningDataCoverageSummary
+  Shared consumer. Can re-render Document Treatment using canonical map.
+
+api/generate-client-report.js ~9708-9752
+  render-time canonicalSupportDocMap construction + internal diagnostic.
+  PRIMARY map build for Acquisition Memo render.
+
+api/generate-client-report.js ~10511-10522
+  Renovation authority fallback block.
+  Consumer with fallback authority rebuild. Acquisition Memo path.
+
+api/generate-client-report.js ~11949-11974
+  Harness document-treatment replacement.
+  Late overwrite consumer. Acquisition Memo path.
+
+api/generate-client-report.js ~12696-12718
+  Final HTML DOCUMENT_TREATMENT_SUMMARY overwrite.
+  Late renderer replacement. Acquisition Memo path.
+
+api/_lib/report-contract-qa.js ~1055-2262
+  Support-doc QA checks, contradiction checks, checklist checks,
+  financing-readiness checks. QA consumer, not sovereign.
+
+api/_lib/qa-action-plan.js ~84
+  debt_basis routing. Consumer / advisory gate.
+
+api/_lib/qa-fix-routing.js ~73
+  debt_basis routing. Consumer / advisory gate.
+```
+
+### Why this inspection was essential
+
+The inspection confirmed there are at least 4 separate locations in `generate-client-report.js` alone
+(~2994, ~9708, ~11949, ~12696) that can independently build or overwrite document treatment output.
+This is why RETEST 5 still failed after Patch 4D improved some labels. Patching one of four
+output paths left the other three running. The V2 architecture makes all four irrelevant.
+
+## Step 1 result — Scaffold Files Created
+
+```text
+api/_lib/canonical-source-package.js       — stub only, Step 2 fills this
+api/_lib/acquisition-memo-projection.js    — stub only, Step 3 will fill this
+api/_lib/acquisition-memo-renderer.js      — stub only, Step 4 will fill this
+tests/qa/acquisition-memo-source-package-smoke.js     — stub with 8 golden it() placeholders
+tests/qa/acquisition-memo-authority-boundary-smoke.js — stub with boundary it() placeholder
+```
+
+No production logic was rewritten in Step 1. No live report generation was run.
+
+## Step 2 result — buildCanonicalSourcePackage Implemented
+
+`api/_lib/canonical-source-package.js` is now fully implemented.
+
+### Canonical role enum (8 roles only, no others permitted)
+
+```text
+core_t12
+core_rent_roll
+purchase_assumptions
+current_debt_context
+structured_renovation_capex_plan
+appraisal_context
+market_survey_context
+environmental_context
+```
+
+Files that cannot be confidently classified into one of the above 8 roles
+receive role: "other_support".
+
+### Classification priority order (enforced mechanically)
+
+```text
+1. T12 detection — filename "t12"/"trailing" OR spreadsheet + semantic_doc_role "t12"
+2. Rent Roll detection — filename "rent_roll"/"rentroll" OR spreadsheet + semantic_doc_role "rent_roll"
+3. Current debt detection — debt_basis "current_debt" OR semantic_doc_role "current_debt"
+   CRITICAL: negative language ("not a current mortgage statement") must NEVER trigger current_debt_context.
+   A file with "assumption" in the filename must NEVER be classified as current_debt_context.
+4. Purchase assumptions detection — semantic_doc_role "purchase_assumptions" OR filename contains "assumption" OR debt_basis "proposed_acquisition"
+   NOTE: purchase_assumptions wins over current_debt_context if both signals fire.
+5. Renovation — semantic_doc_role "renovation_plan" OR filename "reno"/"renovation"/"capex"
+6. Appraisal — semantic_doc_role "appraisal" OR filename "appraisal"
+7. Market survey — semantic_doc_role "market_survey" OR filename "market"/"survey"
+8. Environmental — semantic_doc_role "phase_i_esa"/"environmental" OR filename "esa"/"phase_i"/"phase"
+   NOTE: environmental_context must NEVER be classified as property tax support.
+9. Default → other_support
+```
+
+### Key architectural guarantee
+
+`buildCanonicalSourcePackage` is the ONLY function in the codebase permitted to read:
+- semantic_doc_role
+- debt_basis
+- doc_type
+- parse_error
+- document_text_extracted
+- filename heuristics
+
+`buildAcquisitionMemoProjection` and `renderAcquisitionMemo` are forbidden from reading these fields directly.
+The authority boundary smoke test enforces this mechanically.
+
+### Output contract
+
+```javascript
+{
+  coreT12: { fileId, originalFilename, role: "core_t12" } | null,
+  coreRentRoll: { fileId, originalFilename, role: "core_rent_roll" } | null,
+  supportDocs: Map<fileId, CanonicalSupportDocEntry>,
+  authorityVersion: "v2"
+}
+```
+
+## Step 2 result — Smoke Tests Implemented
+
+### acquisition-memo-source-package-smoke.js — 8 golden assertions + 1 negative assertion
+
+```text
+GOLDEN ASSERTIONS:
+T12 file → coreT12 set AND role === "core_t12"
+Rent Roll file → coreRentRoll set AND role === "core_rent_roll"
+Stonebridge_Assumptions.pdf → role === "purchase_assumptions"
+Current_Debt_Stonebridge.pdf → role === "current_debt_context"
+Stonebridge_Reno_Plan.pdf → role === "structured_renovation_capex_plan"
+Stonebridge_Appraisal_Summary.pdf → role === "appraisal_context"
+Stonebridge_Market_Survey.pdf → role === "market_survey_context"
+Stonebridge_Phase_I_ESA.pdf → role === "environmental_context"
+
+NEGATIVE ASSERTION (critical contamination guard):
+A file named "Stonebridge_Assumptions.pdf" with debt_basis "proposed_acquisition"
+must NEVER resolve to role === "current_debt_context"
+```
+
+### acquisition-memo-authority-boundary-smoke.js
+
+```text
+Reads source text of acquisition-memo-projection.js and acquisition-memo-renderer.js.
+Asserts neither file contains forbidden authority fields:
+  semantic_doc_role, debt_basis, doc_type, parse_error, document_text_extracted,
+  originalFilename.toLowerCase, filename.toLowerCase
+Currently passes trivially because projection/renderer are still stubs.
+Becomes enforcement gate as Steps 3 and 4 are implemented.
+```
+
+### Validation commands (all must pass before Step 2 is marked complete)
+
+```text
+node --check api/_lib/canonical-source-package.js
+node --check tests/qa/acquisition-memo-source-package-smoke.js
+node --check tests/qa/acquisition-memo-authority-boundary-smoke.js
+node tests/qa/acquisition-memo-source-package-smoke.js
+node tests/qa/acquisition-memo-authority-boundary-smoke.js
+```
+
+Awaiting Codex confirmation that all 5 pass.
+
+## What was NOT touched in Steps 1 and 2
+
+```text
+generate-client-report.js — untouched
+report-surface-contracts.js — untouched (read-only reference only)
+Screening Report — untouched
+T12/Rent Roll core math — untouched
+Stripe, SQL, Supabase, DocRaptor, auth/upload gates, pricing, Admin Dashboard — untouched
+DSCR, refi, DCF, waterfall, equity return, deal score, final recommendation — untouched
+```
+
+## Step 2 cut list (for future steps)
+
+```text
+buildCanonicalSupportDocAuthorityRows in generate-client-report.js
+  → quarantine/replace in Step 3/4
+
+resolveCanonicalSupportDocAuthority and buildSupportDocTaxonomyState in report-surface-contracts.js
+  → convert to evidence extractors or move behind canonical source package
+
+buildDocumentTreatmentSummaryHtml legacy fallback
+  → remove for Acquisition Memo once canonical source package enforced
+
+buildLaunchSourceContextBlock, buildScreeningDataCoverageSummary,
+buildPreliminaryFinancingReadinessSummaryHtml, buildAcquisitionFinancingReadinessHtml,
+renovation acknowledgement path
+  → convert to dumb consumers only
+
+report-contract-qa, qa-action-plan, qa-fix-routing, source-package-qa
+  → stop independently re-deciding document roles; consume canonical authority only
+
+parse-doc.js
+  → remains upstream extractor; taxonomy attachment no longer treated as
+    competing authority for Acquisition Memo render decisions
+```
+
+## Rebuild sequence status
+
+```text
+Step 1: Call site inspection + scaffold creation — COMPLETE
+Step 2: buildCanonicalSourcePackage implementation + smoke tests — COMPLETE (awaiting Codex validation confirmation)
+Step 3: buildAcquisitionMemoProjection implementation — PENDING
+Step 4: renderAcquisitionMemo implementation — PENDING
+Step 5: Thin bridge wiring into generate-client-report.js — PENDING
+Step 6: Quarantine legacy competing decision-makers — PENDING
+Step 7: Final Attack Test 8 golden replay — PENDING
+```
+
+## Fresh continuation point
+
+```text
+Resume here in next session:
+Receive Codex Step 2 validation result (all 5 node commands).
+If all 5 pass → proceed to Step 3 (buildAcquisitionMemoProjection).
+If any fail → diagnose and fix before moving to Step 3.
+Do not proceed to Step 3 until all 5 validation commands pass.
+Do not touch generate-client-report.js until Step 5.
+Do not run any live report generation until Step 7.
+```
+
+## Permanent guardrails (unchanged)
+
+```text
+Do not run another V1 RETEST as a tiny patch loop.
+Do not write another one-off Current Debt / Reno / Assumptions label patch.
+Do not rebuild Full Underwriting first.
+Do not touch Screening except protective tests.
+Do not touch Stripe, SQL, Supabase lifecycle, payment/access, auth/upload gates,
+pricing, DocRaptor config, or Admin Dashboard.
+Do not reopen DSCR/refi/DCF/waterfall/equity-return/deal-score/
+final-recommendation/BUY/SELL/HOLD inside Acquisition Memo.
+```
+
+---
+
+# June 14, 2026 Addendum - Acquisition Memo Automation Frozen / Source-Authority Rebuild Start / No More Tiny Patch Loop
+
+## Current controlling decision
+
+Final Attack Test 8 RETEST 5 confirmed the support-document authority family is not fully solved by the Patch 4B/4C/4D-style patch loop.
+
+The project is now moving from incremental Acquisition Memo patching into a quarantined rebuild of the shared source-authority foundation.
+
+Controlling decision:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready from current evidence. Keep it protected and do not let the Acquisition Memo rebuild destabilize it.
+
+Acquisition Memo:
+Automation is frozen / not launch-cleared. Do not run more tiny support-doc authority patches and live retests as a loop.
+
+Full Underwriting V2.0:
+Still deferred. Do not rebuild Full Underwriting first. Build the shared source-authority foundation first, then Acquisition Memo V2, then Full Underwriting V2 later on that same foundation.
+```
+
+This supersedes the prior posture of “one more Patch 4C/4D/RETEST.”
+
+The issue is no longer treated as a one-document Current Debt or Reno label bug. The controlling root issue is now:
+
+```text
+The live Acquisition Memo path does not yet have a mechanically enforced single source-authority regime.
+```
+
+## RETEST 5 result - what improved
+
+Final Attack Test 8 RETEST 5 showed real improvement in some visible surfaces:
+
+```text
+Report generated and published.
+Core math held.
+V2 forbidden surfaces stayed closed.
+Current_Debt_Stonebridge.pdf now appeared in Document Treatment as Debt Support Received / Contextual.
+Stonebridge_Reno_Plan.pdf now appeared in Document Treatment as Structured Renovation / CapEx Plan.
+The visible report no longer said no verified current debt context was provided.
+The visible report acknowledged the structured Reno / CapEx budget, rent-lift assumptions, and phasing as source-transparent context.
+```
+
+Core values that continued to hold:
+
+```text
+Units: 64
+Occupancy: 93.8%
+Annual In-Place Rent: $1,432,800
+Annual Market Rent: $1,718,400
+Annual Rent Upside: $285,600
+Rent Gap: 19.9%
+EGI: $1,500,000
+OpEx: $555,000
+NOI: $945,000
+Expense Ratio: 37.0%
+NOI Margin: 63.0%
+Break-Even Occupancy: 37.0%
+Purchase Price: $13,500,000
+Going-In Cap Rate: 7.0%
+```
+
+Interpretation:
+
+```text
+The report engine, core math, publish path, and V2 containment remain strong.
+Patch 4D improved the exact Current Debt and Reno treatment rows.
+But the broader support-doc/source-authority system still leaks contradictions into final customer-visible output.
+```
+
+## RETEST 5 result - remaining customer-visible authority failures
+
+### 1. Uploaded Existing Debt Context still contaminated by proposed acquisition terms
+
+Visible PDF showed:
+
+```text
+Uploaded Existing Debt Context
+Interest Rate: 5.95%
+Amortization: 30 years
+LTV: 70.0%
+```
+
+Those are not the current-debt document facts. They are proposed acquisition financing assumptions from `Stonebridge_Assumptions.pdf`.
+
+The true `Current_Debt_Stonebridge.pdf` source facts were:
+
+```text
+Current Outstanding Balance: $6,800,000
+Interest Rate: 4.85%
+Amortization Remaining: 24 years
+Monthly Payment: $39,250
+Maturity Date: 2029-11-01
+```
+
+Interpretation:
+
+```text
+The label improved, but the facts feeding Uploaded Existing Debt Context were still wrong.
+This proves the source-authority path remains fragmented: proposed acquisition financing can still contaminate current debt context.
+```
+
+### 2. Stonebridge_Assumptions.pdf was misclassified as current debt support
+
+Document Treatment Summary showed:
+
+```text
+Stonebridge_Assumptions.pdf
+Document Role: Debt Support Received / Contextual
+Treatment: Debt support received / contextual or deferred
+Use: Uploaded existing/current debt context only; not proposed acquisition financing.
+```
+
+Correct behavior:
+
+```text
+Stonebridge_Assumptions.pdf should be Purchase Assumptions / Proposed Acquisition Financing Context.
+It must not be current debt or existing debt support.
+```
+
+### 3. Stonebridge_Phase_I_ESA.pdf was misclassified as Property Tax Support
+
+Document Treatment Summary showed:
+
+```text
+Stonebridge_Phase_I_ESA.pdf
+Document Role: Property Tax Support
+Treatment: Corroborating support
+Use: Corroborating property-tax support; does not override T12 totals.
+```
+
+Correct behavior:
+
+```text
+Stonebridge_Phase_I_ESA.pdf is Environmental / Phase I due diligence context only.
+It must not become property tax support.
+```
+
+### 4. Stonebridge_Appraisal_Summary.pdf was still overpromoted
+
+Document Treatment Summary showed:
+
+```text
+Stonebridge_Appraisal_Summary.pdf
+Document Role: Purchase Assumptions / Acquisition Context
+```
+
+Correct behavior:
+
+```text
+Appraisal summary should be appraisal / valuation context only.
+It must not override purchase assumptions, T12 NOI, Rent Roll market rent, or cap-rate value framework.
+```
+
+### 5. T12 and Rent Roll were listed as generic Other Support Document rows
+
+Document Treatment Summary showed the core files as:
+
+```text
+T12_Stonebridge_Lofts_Attack_Test_8.xlsx - Other Support Document / Context only
+Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx - Other Support Document / Context only
+```
+
+Correct behavior:
+
+```text
+T12 and Rent Roll are core quantitative sources, not generic support docs.
+They may appear in a core source table, but not as context-only support documents that are “not used quantitatively.”
+```
+
+### 6. Internal QA still showed stale/contradictory authority noise
+
+Artifacts still showed advisory/legacy fallback inconsistencies, including:
+
+```text
+UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED
+structured_renovation_present: false
+readiness_source: legacy_action_plan_fallback
+canonical_delivery_state_present: false
+```
+
+Interpretation:
+
+```text
+Internal QA is not the final customer delivery authority, but it still proves the old authority ecosystem has not been fully collapsed into one sovereign source package.
+```
+
+## Updated root diagnosis after RETEST 5
+
+The prior root diagnosis is confirmed and sharpened:
+
+```text
+InvestorIQ does not need one more support-doc label patch.
+InvestorIQ needs a single mechanically enforced source-authority foundation.
+```
+
+The broken pattern is:
+
+```text
+raw uploaded files
++ parser semantic roles
++ AI recovery artifacts
++ document_text_extracted artifacts
++ filename heuristics
++ canonical support doc map
++ renderer fallbacks
++ QA/action-plan fallbacks
+= competing decision makers
+```
+
+The rebuild target is:
+
+```text
+raw uploaded files + extracted text + parsed artifacts
+-> buildCanonicalSourcePackage(...)
+-> buildAcquisitionMemoProjection(...)
+-> renderAcquisitionMemo(...)
+```
+
+No downstream renderer, financing section, checklist, Document Treatment table, or QA layer may independently reinterpret document roles after the canonical source package exists.
+
+## New architecture decision - rebuild shared source-authority foundation, not Full Underwriting first
+
+Do not rebuild Full Underwriting first.
+
+Reason:
+
+```text
+Full Underwriting would multiply the same source-authority problem across DSCR, debt sizing, refinance, DCF, waterfall, equity returns, and final recommendation surfaces.
+```
+
+Correct sequence:
+
+```text
+1. Preserve / launch Screening first.
+2. Build Canonical Source Package foundation.
+3. Rebuild Acquisition Memo V2 on that foundation.
+4. Build Full Underwriting V2 later on the same foundation.
+```
+
+This is a source-authority rebuild, not a whole InvestorIQ rewrite.
+
+## Acquisition Memo V2 rebuild boundary
+
+The rebuild must be quarantined and reversible.
+
+Recommended branch:
+
+```text
+git checkout -b acq-memo-v2-source-package
+```
+
+Recommended tag before work:
+
+```text
+git tag pre-acq-memo-v2-rebuild
+```
+
+Recommended new files / modules:
+
+```text
+api/_lib/canonical-source-package.js
+api/_lib/acquisition-memo-projection.js
+api/_lib/acquisition-memo-renderer.js
+tests/qa/acquisition-memo-source-package-smoke.js
+tests/qa/acquisition-memo-final-render-smoke.js
+tests/qa/acquisition-memo-authority-boundary-smoke.js
+```
+
+Do not rewrite `api/generate-client-report.js` wholesale.
+
+Only add a thin bridge when ready:
+
+```text
+if report mode is Acquisition Memo V2:
+  buildCanonicalSourcePackage(...)
+  buildAcquisitionMemoProjection(...)
+  renderAcquisitionMemo(...)
+else:
+  preserve current Screening / legacy paths
+```
+
+## Canonical Source Package contract
+
+`buildCanonicalSourcePackage(...)` must return one canonical object per source file.
+
+Minimum fields:
+
+```text
+fileId
+originalFilename
+sourceKind: core_t12 | core_rent_roll | support_doc
+canonicalRole
+canonicalLabel
+allowedUses
+forbiddenUses
+extractedFacts
+confidence
+sourceEvidence
+sourceAuthorityVersion
+provenance
+```
+
+Required canonical roles:
+
+```text
+core_t12
+core_rent_roll
+purchase_assumptions
+proposed_acquisition_financing
+current_debt_context
+structured_renovation_capex_plan
+appraisal_context
+market_survey_context
+environmental_context
+property_tax_support
+zoning_or_compliance_context
+broker_or_diligence_context
+other_support_context
+unclassified_support_context
+```
+
+Core source examples:
+
+```text
+T12_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_t12
+Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx -> core_rent_roll
+```
+
+Support-doc examples from RETEST 5:
+
+```text
+Stonebridge_Assumptions.pdf -> purchase_assumptions / proposed_acquisition_financing
+Current_Debt_Stonebridge.pdf -> current_debt_context
+Stonebridge_Reno_Plan.pdf -> structured_renovation_capex_plan
+Stonebridge_Appraisal_Summary.pdf -> appraisal_context
+Stonebridge_Market_Survey.pdf -> market_survey_context
+Stonebridge_Phase_I_ESA.pdf -> environmental_context
+```
+
+## Acquisition Memo Projection contract
+
+`buildAcquisitionMemoProjection(canonicalSourcePackage, coreMetrics)` must create the only object the Acquisition Memo renderer consumes.
+
+Minimum projection fields:
+
+```text
+coreOperatingMetrics
+rentPositioning
+acquisitionContext
+proposedFinancingContext
+currentDebtContext
+renovationContext
+appraisalContext
+marketSurveyContext
+environmentalContext
+propertyTaxContext
+documentTreatmentRows
+lenderDiligenceChecklist
+omittedSections
+disclosures
+sourcePackageDiagnostics
+```
+
+The renderer must not read raw artifacts or parser roles. It must only render the projection.
+
+## Mechanical enforcement requirements
+
+The rebuild is not complete because the report looks right once.
+
+It is complete only when bypassing the source package becomes mechanically detectable.
+
+Required enforcement:
+
+```text
+1. Acquisition Memo renderer does not receive raw documentSources, coverageArtifacts, parser artifacts, or extracted text.
+2. Acquisition Memo renderer consumes only acquisitionMemoProjection.
+3. Forbidden-field/source-scan test fails if Acquisition Memo renderer/projection files directly read parser authority fields outside the source package builder.
+4. Old support-doc authority helpers are deleted, quarantined, or converted into adapters that call buildCanonicalSourcePackage.
+5. Final HTML tests assert source-package lineage for every support-doc row.
+6. RETEST 5 artifact replay becomes a permanent golden regression.
+7. Screening smoke must pass unchanged.
+8. V2 forbidden surfaces must stay absent.
+```
+
+Forbidden direct authority fields outside `canonical-source-package.js` include:
+
+```text
+semantic_doc_role
+semantic_doc_display_label
+debt_basis
+doc_type
+parse_error
+supporting_documents_unclassified
+loan_term_sheet_parsed
+rent_roll_parse_error
+document_text_extracted
+original_filename.includes(...)
+filename.includes(...)
+```
+
+Nuance:
+
+```text
+The source-package builder may read these fields as evidence.
+The Acquisition Memo projection/renderer may not use them as live authority.
+```
+
+## Old-path quarantine requirement
+
+Old helpers cannot remain live independent decision makers for Acquisition Memo V2.
+
+Relevant helpers to inspect and either delete, quarantine, or adapt:
+
+```text
+buildCanonicalSupportDocAuthorityRows(...)
+resolveExplicitSupportDocAuthority(...)
+buildSupportDocTaxonomyState(...)
+buildDocumentTreatmentSummaryHtml(...) if it performs its own role decisions
+buildPreliminaryFinancingReadinessSummaryHtml(...) if it performs its own role decisions
+QA/action-plan support-doc role inference helpers
+renderer filename/doc_type/debt_basis fallbacks
+```
+
+If kept, they must become wrappers/adapters around `buildCanonicalSourcePackage(...)` or V1 legacy-only paths not imported by Acquisition Memo V2.
+
+## Production doctrine preserved
+
+The rebuild must not violate Publish-or-Fail doctrine.
+
+Production report generation should still only fail closed for:
+
+```text
+true missing/unusable required T12;
+true missing/unusable required Rent Roll;
+true runtime/storage/PDF/catastrophic render failure.
+```
+
+Optional/support document ambiguity should not kill a core-valid report.
+
+Correct support-doc behavior remains:
+
+```text
+classify if source-bound;
+render as context-only / limited-use if bounded;
+collapse or disclose if incomplete;
+never fabricate;
+never override T12/Rent Roll core truth;
+never unlock V2 surfaces in Acquisition Memo.
+```
+
+The source-authority contract is a developer/test/CI contract, not a customer fail gate for optional docs.
+
+## Current business posture
+
+```text
+Do not use Acquisition Memo as an automated customer launch product until V2 source-package rebuild passes.
+```
+
+Recommended near-term business posture:
+
+```text
+1. Continue with Screening as the launchable/founder-beta product.
+2. Keep Acquisition Memo manual/controlled/internal until the source-authority rebuild is complete.
+3. Do not run more random live Acquisition Memo retests from the current V1 patch loop.
+4. Do not open Full Underwriting V2 until the shared source-authority foundation exists.
+```
+
+## Acceptance criteria for Acquisition Memo V2 rebuild
+
+Before Acquisition Memo V2 can be called certification-batch ready:
+
+```text
+1. Canonical source package correctly classifies RETEST 5 files.
+2. Acquisition Memo projection correctly separates purchase assumptions, proposed acquisition financing, current debt, appraisal, market survey, environmental context, Reno, T12, and Rent Roll.
+3. Final customer HTML renders Current Debt facts from Current_Debt_Stonebridge.pdf, not Stonebridge_Assumptions.pdf.
+4. Final customer HTML renders proposed acquisition financing facts only as proposed/acquisition context.
+5. Stonebridge_Assumptions.pdf never becomes current debt.
+6. Phase I ESA never becomes property tax support.
+7. Appraisal summary never becomes purchase assumptions unless a separate validated purchase-assumption source actually exists for that same file.
+8. T12 and Rent Roll never appear as “Other Support Document / not used quantitatively.”
+9. Reno plan renders as source-transparency context only and does not unlock ROI/payback/NOI impact/refi/DCF/waterfall/recommendation.
+10. No DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/BUY/SELL/HOLD surfaces render.
+11. Screening regression remains unchanged.
+12. Forbidden-field/source-scan tests prove Acquisition Memo renderer cannot bypass the projection.
+13. Old support-doc authority paths are quarantined, deleted, or adapters only.
+14. Final report artifacts include or can emit canonical_source_package.json and acquisition_memo_projection.json for auditability.
+```
+
+## Do not do next
+
+Do not:
+
+```text
+write another tiny Current Debt or Reno patch;
+run RETEST 6 against the same V1 patch loop;
+rewrite generate-client-report.js wholesale;
+rebuild Full Underwriting first;
+touch Screening except protective regression;
+touch Stripe, SQL, Supabase lifecycle, auth/upload gates, pricing, DocRaptor config, or Admin Dashboard as part of this rebuild;
+reopen DSCR/refi/DCF/waterfall/deal-score/final-recommendation/V2 surfaces inside Acquisition Memo.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+Final Attack Test 8 RETEST 5 confirmed the Patch 4 support-doc authority loop is not enough.
+Core math, publish path, and V2 containment held.
+Current Debt and Reno visible labels improved, but the system still contaminated Uploaded Existing Debt Context with proposed acquisition terms, misclassified Stonebridge_Assumptions as debt support, misclassified Phase I as property tax, overpromoted Appraisal as purchase assumptions, and listed T12/Rent Roll as generic Other Support Documents.
+Acquisition Memo automation is frozen / not launch-cleared.
+No more tiny patches or RETEST loop.
+Next work is a quarantined Acquisition Memo V2 source-authority rebuild on a branch:
+- buildCanonicalSourcePackage
+- buildAcquisitionMemoProjection
+- renderAcquisitionMemo
+- source-scan/forbidden-field tests
+- RETEST 5 golden replay
+- Screening untouched.
+Full Underwriting V2 remains deferred until the shared source-authority foundation is stable.
+```
+
+---
+
+# June 12, 2026 Addendum - Final Attack Test 8 RETEST 2 / Patch 4 Still Not Launch-Cleared / Current Debt + Reno Authority Still Disobeying
+
+## Current controlling status
+
+Final Attack Test 8 RETEST 2 was run after the latest bounded support-doc authority patch was deployed.
+
+Runtime marker confirmed the new deployment was active:
+
+```text
+git_commit_sha / build_marker: f88d9a9b6430a1af0043213a28b678d5e0c03819
+```
+
+This means the retest was valid. The observed failures are not a stale-deployment issue.
+
+Current verdict:
+
+```text
+Screening Report:
+Still launchable / founder-beta ready from current evidence.
+
+Acquisition Memo:
+NOT launch-cleared.
+Patch 4 improved Purchase Assumptions, but support-doc authority is still not sovereign.
+Current Debt and Structured Reno Plan still disobey the extracted source truth in visible customer output.
+
+Full Underwriting V2.0:
+Still deferred.
+```
+
+## What improved in RETEST 2
+
+The Purchase Assumptions / Proposed Acquisition Financing source path improved materially.
+
+Visible PDF now correctly includes:
+
+```text
+Purchase Price: $13,500,000
+NOI Basis: $945,000
+Going-In Cap Rate: 7.0%
+Purchase assumptions provided: Yes
+Proposed acquisition loan terms complete: Yes
+Proposed Acquisition Financing: Source-complete inputs provided / available for future underwriting.
+```
+
+Document Treatment now renders `Stonebridge_Assumptions.pdf` as:
+
+```text
+Document Role: Purchase Assumptions / Acquisition Context
+Treatment: Acquisition context / document-derived acquisition context
+Use: Purchase price / going-in cap / NOI basis and proposed acquisition financing context; does not override T12/Rent Roll operating truth.
+```
+
+Interpretation:
+
+```text
+The purchase-assumptions side of Patch 4 is materially improved and should be preserved.
+```
+
+## What still failed
+
+### 1. Current Debt still does not obey source truth
+
+Extracted source text for `Current_Debt_Stonebridge.pdf` clearly states:
+
+```text
+Stonebridge Lofts - Existing Current Debt Statement
+This is an existing/current debt context document.
+Current Outstanding Balance: $6,800,000
+Interest Rate: 4.85%
+Amortization Remaining: 24 years
+Monthly Payment: $39,250
+Maturity Date: 2029-11-01
+```
+
+But the visible PDF still says:
+
+```text
+Uploaded Existing Debt Context
+No verified current debt context was provided.
+
+Current debt context uploaded: No
+```
+
+And Document Treatment still lists the file as:
+
+```text
+Current_Debt_Stonebridge.pdf
+Document Role: Other Support Document
+Treatment: Context only
+Use: Listed for auditability only; not used quantitatively.
+```
+
+Artifact evidence shows the parser/authority route still misclassified this file:
+
+```text
+inferred_doc_type: loan_term_sheet
+semantic_doc_role: purchase_assumptions
+semantic_doc_display_label: Purchase Assumptions / Acquisition Context
+explicit_current_debt_proof: false
+mixed_financing_signals: true
+```
+
+Interpretation:
+
+```text
+Current Debt authority is still not obeying extracted source text.
+The source text is clear; the system is still allowing stale/incorrect financing-role inference to outrank explicit current-debt proof.
+```
+
+### 2. Structured Reno Plan still does not obey source truth
+
+Extracted source text for `Stonebridge_Reno_Plan.pdf` clearly states:
+
+```text
+Stonebridge Lofts - Structured Renovation / CapEx Plan
+This is a structured forward-looking renovation / CapEx plan.
+It provides budget, unit scope, stated rent lift, and phasing as source facts.
+Total Renovation Budget: $1,280,000
+1BR Interiors: 20 units x $18,500/unit; expected rent lift $225/month; Months 1-18
+2BR Interiors: 18 units x $24,000/unit; expected rent lift $325/month; Months 1-24
+Common Area Refresh: $210,000
+Exterior / Security: $115,000
+Contingency: $153,000
+```
+
+But the visible PDF still says:
+
+```text
+Uploaded Renovation / CapEx Document:
+Renovation/CapEx support was received. No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided; therefore renovation returns were not assessed.
+```
+
+And Document Treatment still lists the file as:
+
+```text
+Stonebridge_Reno_Plan.pdf
+Document Role: Other Support Document
+Treatment: Context only
+Use: Listed for auditability only; not used quantitatively.
+```
+
+Artifact evidence shows the file was still routed through rent-roll failure/recovery paths:
+
+```text
+rent_roll_parse_error for Stonebridge_Reno_Plan.pdf
+ai_rent_roll_recovery_diagnostic attempted: true
+final_outcome: validation_rejected
+inferred_doc_type: rent_roll
+```
+
+Interpretation:
+
+```text
+Structured Reno Plan authority is still not sovereign.
+The system correctly extracted the renovation text, but a rent-roll/recovery or generic-support path still bypassed the final structured renovation treatment.
+```
+
+### 3. Report-contract QA now sees a problem, but the authority system is still not hard enough
+
+RETEST 2 artifacts show:
+
+```text
+report_contract_qa: warn
+violations: ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT
+severity: high
+customer_delivery_ready: true
+delivery_conformance_source: legacy_fallback_only
+canonical_delivery_state_present: false
+```
+
+This is progress compared to prior zero-violation passes, but it is still not enough.
+
+Current interpretation:
+
+```text
+QA is beginning to catch the debt-separation family, but visible authority contradictions still publish as advisory-only.
+For Acquisition Memo launch quality, visible support-doc authority contradiction must not be treated as a harmless advisory.
+```
+
+## Updated root diagnosis
+
+Patch 4 did not fail everywhere.
+
+It fixed or improved:
+
+```text
+Purchase assumptions / proposed acquisition financing source recognition.
+Purchase price / NOI basis / going-in cap acquisition context rendering.
+Proposed acquisition financing checklist status.
+```
+
+But it did not finish:
+
+```text
+Current Debt source-text authority.
+Structured Reno Plan source-text authority.
+QA hard-fail / contract enforcement for visible authority contradiction.
+```
+
+Controlling root issue:
+
+```text
+InvestorIQ still has a support-doc authority helper, not a fully sovereign support-doc authority regime.
+```
+
+A true regime means:
+
+```text
+1. One uploaded support file receives one canonical role/treatment/use decision.
+2. Explicit extracted source text can override polluted parser semantics.
+3. Renderers consume only that canonical decision for visible Document Treatment / Financing Readiness / Reno acknowledgement.
+4. Report-contract QA fails when visible output contradicts canonical support-doc authority.
+5. Legacy/fallback paths cannot remain live authority when canonical authority exists.
+```
+
+## Updated launch posture
+
+```text
+Screening:
+Launchable / founder-beta ready from current evidence.
+
+Acquisition Memo:
+Not launch-cleared.
+Core math, publish path, V2 containment, and purchase assumptions have improved.
+However, Current Debt and Structured Reno Plan authority failures remain customer-visible and launch-blocking for the Acquisition Memo product promise.
+
+Full Underwriting V2:
+Still deferred.
+```
+
+## Current safest interpretation for Rob
+
+Do not treat this as the whole system collapsing.
+
+The report still proved major strengths:
+
+```text
+Core math held.
+T12/Rent Roll parsing held.
+Report published.
+Source Reconciliation Disclosure worked.
+No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation leaked.
+Purchase assumptions improved materially.
+```
+
+But do treat this as a real launch blocker for Acquisition Memo:
+
+```text
+The AI boss is not fully obeyed yet.
+Current Debt and Reno Plan still have disobedient support-doc paths.
+```
+
+## Immediate next action after docs update
+
+Do not issue another Codex prompt until Rob is ready.
+
+When work resumes, the next patch must be strictly bounded to:
+
+```text
+1. Current_Debt_Stonebridge-style explicit current-debt source text outranking purchase/acquisition/loan-term fallback.
+2. Stonebridge_Reno_Plan-style structured renovation source text outranking rent-roll recovery and generic support fallback.
+3. Contract QA escalation when visible Document Treatment / Financing Readiness contradict canonical support-doc authority.
+```
+
+Do not broaden into:
+
+```text
+Screening
+T12/Rent Roll core math
+delivery gate doctrine except visible authority contradiction handling if truly necessary
+credit/payment/access
+pricing/Stripe
+SQL/RPC/Supabase
+Dashboard
+DocRaptor config
+auth/upload gates
+Full Underwriting V2 surfaces
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+Final Attack Test 8 RETEST 2 was a valid retest on runtime SHA f88d9a9b6430a1af0043213a28b678d5e0c03819.
+Purchase assumptions improved and should be preserved.
+Current Debt still renders as Other Support / No verified current debt context despite explicit current-debt source text.
+Structured Reno Plan still renders as Other Support / no verified forward-looking renovation budget despite explicit structured Reno/CapEx source text.
+Report-contract QA now flags a high current-debt separation violation, but it remains advisory and legacy-fallback-sourced.
+Acquisition Memo is not launch-cleared.
+Next work should be a narrow Current Debt + Reno authority enforcement patch only, when Rob is ready.
+```
+
+---
+
+# June 10, 2026 Session Closeout Addendum - Seven-Test Batch, Patches 1-3, Claude V2 Architecture Notes, and Final Attack Test 8
+
+## Current emotional / execution context
+
+Rob is stepping away after a long launch-hardening session.
+
+Important context:
+
+```text
+The latest tests are still revealing issues, but the pattern is no longer "the whole system is collapsing."
+The core T12/Rent Roll math, publish/fail behavior, V2 containment, and disclosure discipline are repeatedly holding.
+The newly exposed issues are concentrated around support-document role routing, acquisition assumptions extraction, current debt extraction, structured renovation routing, and advisory/legacy artifact cleanliness.
+```
+
+Do not let the next session reopen broad panic-driven audits by default.
+
+The correct interpretation is:
+
+```text
+InvestorIQ is in final root-hardening, not rebuild.
+Each new test is exposing narrower edge seams because the core engine is now strong enough for deeper adversarial packages.
+```
+
+## Today’s 7-test batch final result
+
+A seven-report live test batch was reviewed under the June 10 ELITE Launch Doctrine.
+
+Final batch outcome:
+
+```text
+Tests 1-4: customer-facing PASS with disclosure; repeated internal rent-roll canonical QA drift found.
+Test 5: correct fail-closed for unusable/bad rent roll.
+Test 6: correct fail-closed for financially impossible 10x T12/Rent Roll mismatch.
+Test 7: exact PASS against expected controlled source-reconciliation contract.
+```
+
+Batch-level interpretation:
+
+```text
+Core operating math generally held.
+Valid messy reports published with disclosure.
+True invalid-core cases failed closed with credit restoration.
+No dangerous V2 leakage appeared.
+Debt/proposed financing separation generally held in customer-facing PDFs.
+The confirmed blocker was not visible rent math; it was internal QA/canonical source authority drift.
+```
+
+## Patch 1 completed - Rent-roll canonical QA drift
+
+Codex patch receipt summary:
+
+```text
+Files changed:
+- api/_lib/report-contract-qa.js
+- tests/qa/report-contract-qa-smoke.js
+
+Root cause:
+- report-contract-qa had its own annual market rent selector that trusted summary totals first.
+- Polluted canonical summary values could beat the row/unit-derived market rent used by the renderer.
+
+Fix:
+- Contract QA now uses shared resolveCanonicalRentRollAnnualTotals(...) authority from api/_lib/report-surface-contracts.js.
+- Regression added for polluted summary total where row/unit-derived annual market rent is correct.
+- True mismatch case still fails.
+
+Tests run:
+- node --check api/_lib/report-contract-qa.js
+- node --check tests/qa/report-contract-qa-smoke.js
+- node tests/qa/report-contract-qa-smoke.js
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+- git diff --check
+
+Safe to commit: yes.
+```
+
+Interpretation:
+
+```text
+This fixed the confirmed Tests 1-4 launch blocker without touching customer-facing renderer math.
+```
+
+## Patch 2 completed - Renovation / CapEx document treatment
+
+Codex patch receipt summary:
+
+```text
+Files changed:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+
+Root cause:
+- Renovation / CapEx docs were detected but structured forward-looking cases fell through to generic acknowledgement copy and generic treatment labels.
+
+Fix:
+- Added differentiated renovation acknowledgement path in buildDocumentTreatmentSummaryHtml.
+- Budget-only docs now acknowledge budget/scope while stating rent lift / ROI / payback / phasing were not provided.
+- Structured forward-looking docs now say budget, rent-lift assumptions, and phasing were received and are displayed for source transparency only.
+- Structured rows render as Structured Renovation / CapEx Plan with Structured renovation / CapEx context.
+- No ROI, payback, NOI impact, valuation, refinance, DCF, waterfall, or final recommendation logic added.
+
+Tests run:
+- node --check api/generate-client-report.js
+- node --check tests/qa/generate-client-report-rent-roll-smoke.js
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+- git diff --check
+
+Safe to commit: yes.
+```
+
+Interpretation:
+
+```text
+This fixed a bounded source-treatment miss from Tests 3-4, but Final Attack Test 8 later proved the live routing path can still misroute some Reno Plan PDFs into rent-roll/recovery handling before the new treatment display path gets authority.
+```
+
+## Patch 3 completed - QA advisory calibration / stale public-sample noise cleanup
+
+Codex patch receipt summary:
+
+```text
+Files changed:
+- api/_lib/source-report-coverage-qa.js
+- api/_lib/qa-action-plan.js
+- tests/qa/qa-action-plan-smoke.js
+
+Root cause:
+- Source coverage QA was still emitting public_sample_blocker for reconciliation and underwriting-depth noise.
+- QA action-plan rollup still surfaced legacy public/high-value fields in ways that looked like active readiness authority.
+
+Fix:
+- Noisy source-coverage findings rerouted to advisory_only or render_gating_gap instead of public_sample_blocker.
+- DocRaptor kept in distribution_config_blocked only.
+- Legacy public/high-value fields preserved as compatibility metadata, while active routing now uses elite/distribution language.
+
+Tests run:
+- node --check api/_lib/source-report-coverage-qa.js
+- node --check api/_lib/qa-action-plan.js
+- node --check tests/qa/qa-action-plan-smoke.js
+- node --check tests/qa/source-report-coverage-qa-smoke.js
+- node tests/qa/source-report-coverage-qa-smoke.js
+- node tests/qa/qa-action-plan-smoke.js
+- node tests/qa/qa-fix-routing-smoke.js
+- node tests/qa/report-contract-qa-smoke.js
+- node tests/qa/acquisition-financing-field-limited-smoke.js
+- node tests/qa/source-package-cap-rate-rounding-smoke.js
+- git diff --check
+
+Safe to commit: yes.
+```
+
+Interpretation:
+
+```text
+Patch 3 improved advisory/action-plan authority cleanliness without changing customer math, delivery doctrine, payment/access, or report rendering.
+```
+
+## Claude V2 architecture verdict recorded
+
+Claude reviewed the codebase and gave a useful Full Underwriting V2 interpretation.
+
+Key takeaway:
+
+```text
+The codebase is fundamentally well-designed and does not need a rewrite.
+The remaining issues are source-authority alignment, support-doc routing, acquisition triangle hardening, and regression-suite coverage.
+```
+
+Claude’s specific V2 notes to preserve:
+
+```text
+1. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT root cause:
+   - resolveCanonicalRentRollAnnualMetric / resolveCanonicalRentRollAnnualTotals has multi-candidate selection.
+   - QA and renderer can diverge if they independently recompute canonical values from artifacts captured at slightly different moments or with different summary-row trust flags.
+   - Patch 1 addressed the launch problem by making contract QA use the shared canonical authority.
+   - Future V2 strengthening: renderer should write selected canonical rent-roll values and selected_reason/provenance to the QA artifact, and QA should read the exact rendered authority instead of recomputing.
+
+2. Section eligibility architecture is clean:
+   - buildFullUnderwritingSectionEligibility and UNDERWRITING_SECTION_BLUEPRINTS are a good architecture.
+   - DCF/advanced modeling often being source_constrained when verified current debt is absent is correct behavior, not a bug.
+   - V2 should add fixture-based section eligibility tests, not rewrite the section architecture.
+
+3. Current debt assessment copy is already canonicalized:
+   - formatCurrentDebtAssessmentCopy uses reason-code switch behavior.
+   - If phrase variants recur, likely QA is checking a different path rather than renderer creating new variants.
+
+4. sanitizeFinalCustomerHtml is not missing logic:
+   - Hidden-character sanitization exists.
+   - Prior issue was stage order: QA could run before final HTML sanitization.
+
+5. Acquisition triangle is the genuinely complex V2 path:
+   - loan term sheet normalizer does regex extraction of purchase price, LTV, loan amount, rate, amortization, fees.
+   - This is the most variant-prone path.
+   - Acquisition Memo can stay conservative; Full Underwriting V2 needs deliberate acquisition-triangle fixtures.
+```
+
+Claude’s recommended V2 PRs:
+
+```text
+V2 PR A - Renderer-selected canonical rent-roll value/provenance write-through.
+V2 PR B - Acquisition triangle text-extraction fixture suite and hardening.
+V2 PR C - Section eligibility smoke-test suite covering source package shapes.
+```
+
+InvestorIQ interpretation:
+
+```text
+Do not reopen Full Underwriting V2 before launch.
+Use Claude’s notes as V2 roadmap, not launch-blocking work unless the same family affects Acquisition Memo launch.
+```
+
+## Final Attack Test 8 - Stonebridge Lofts result
+
+Rob ran a newly generated unseen attack package using XLSX T12/Rent Roll plus multiple support PDFs.
+
+Package design:
+
+```text
+T12 + Rent Roll were valid XLSX files.
+Support docs included purchase/proposed acquisition assumptions, appraisal summary, current debt statement, structured renovation plan, market survey, and Phase I ESA.
+```
+
+Customer-facing PDF result:
+
+```text
+PASS with disclosure / safe but incomplete.
+```
+
+What passed:
+
+```text
+Report published.
+Core math passed.
+XLSX T12 and XLSX Rent Roll parsing worked.
+Rent-roll canonical drift did not recur.
+Report contract QA passed with zero violations.
+No DSCR/refi/DCF/waterfall/equity return/deal score/final recommendation leaked.
+Appraisal did not override purchase price, T12 NOI, or Rent Roll market rent.
+Market survey did not inflate rent roll market rents.
+```
+
+Expected rendered values that passed:
+
+```text
+Units: 64
+Occupancy: 93.8%
+Annual In-Place Rent: $1,432,800
+Annual Market Rent: $1,718,400
+Annual Rent Upside: $285,600
+Rent Gap: 19.9%
+EGI: $1,500,000
+OpEx: $555,000
+NOI: $945,000
+Expense Ratio: 37.0%
+NOI Margin: 63.0%
+Break-Even Occupancy: 37.0%
+```
+
+Critical support-doc failures exposed:
+
+```text
+1. Purchase Assumptions / Proposed Acquisition Financing was not recognized correctly.
+   Source included purchase price $13,500,000, NOI basis $945,000, going-in cap 7.00%, proposed acquisition loan $9,450,000, LTV 70.0%, rate 5.95%, amortization 30 years, lender fee 0.85%.
+   PDF incorrectly said Purchase assumptions provided: No, Proposed acquisition loan terms complete: No, and Proposed Acquisition Financing: Not source-complete / not modeled.
+   Artifact parsed Stonebridge_Assumptions.pdf as mortgage_statement_parsed with rate/amortization but no loan amount, and bizarre semantic_doc_role environmental_due_diligence.
+
+2. Current Debt Statement was not recognized.
+   Source included current outstanding balance $6,800,000, rate 4.85%, amortization remaining 24 years, monthly payment $39,250, maturity 2029-11-01.
+   PDF incorrectly said No verified current debt context was provided and listed the file as Other Support Document / context only.
+
+3. Structured Reno Plan treatment failed on the live route despite Patch 2.
+   Source included total budget $1,280,000, 1BR and 2BR unit scopes, rent lifts, and phasing.
+   PDF incorrectly said no verified forward-looking renovation budget/rent-lift/phasing was provided.
+   Document Treatment labeled Stonebridge_Reno_Plan.pdf as Rent Roll / Context only, saying rent-roll support was displayed only.
+```
+
+Final Attack Test 8 verdict:
+
+```text
+Customer-facing PDF: PASS WITH DISCLOSURE / SAFE BUT INCOMPLETE.
+Core math: PASS.
+Publish/fail doctrine: PASS.
+V2 containment: PASS.
+Acquisition Memo product quality: FAIL / SUPPORT-DOC INTELLIGENCE BLOCKER.
+System/QA trust: WATCHLIST.
+```
+
+## Why more issues keep appearing
+
+Record this explanation for future emotional context:
+
+```text
+Every new attack test is not proving the whole system is broken.
+It is expanding the source-package shape space.
+Earlier tests were exposing core math, delivery, and V2 leakage.
+Those are now mostly holding.
+The new failures are concentrated in support-document role routing and acquisition-context intelligence, which only show up when a package includes overlapping debt, proposed financing, appraisal, market survey, renovation, and environmental documents.
+```
+
+Current root pattern:
+
+```text
+The core report engine is stronger than before.
+The support-doc routing/classification layer still has too many competing interpretations before final Document Treatment / Financing Readiness consumes the docs.
+```
+
+## New Patch 4 needed - Support Document Role Routing / Acquisition Context / Reno Path Fix
+
+Next Codex patch should be Patch 4, not a broad audit.
+
+Patch 4 target:
+
+```text
+Support-document role routing and bounded acquisition-context extraction for Acquisition Memo.
+```
+
+Likely affected seams:
+
+```text
+support-doc classifier / role routing
+support-doc parser dispatch
+acquisition assumptions extraction / proposed acquisition financing extraction
+current debt extraction and separation from proposed financing
+renovation / CapEx plan routing into structured renovation treatment
+Document Treatment Summary final row authority
+Preliminary Financing Readiness Summary consumption of validated support-doc facts
+QA/action-plan calibration for support-doc routing gaps
+```
+
+Patch 4 must not touch:
+
+```text
+core T12/Rent Roll math
+rent-roll row-derived canonical math
+delivery gate doctrine
+credit/payment/access
+DSCR/refi/DCF/waterfall/deal-score/final recommendation/V2 surfaces
+pricing/Stripe/SQL/routes/DocRaptor production config
+```
+
+Patch 4 acceptance criteria:
+
+```text
+1. Purchase/proposed acquisition assumptions doc with explicit purchase price, proposed loan, LTV, rate, amortization, and fee routes as Purchase Assumptions / Proposed Acquisition Financing Context, not mortgage/current debt/environmental.
+2. Current debt statement with explicit outstanding balance, rate, amortization/payment/maturity routes as Existing/Current Debt Context, not Other Support Document.
+3. Structured renovation plan with budget/rent lift/phasing routes as Structured Renovation / CapEx Plan, not Rent Roll.
+4. Support docs remain bounded/context-only or limited-use; no ROI/payback/NOI impact/value impact/refi/DCF/waterfall/recommendation unlocked.
+5. Market survey remains context only and does not override Rent Roll.
+6. Appraisal remains valuation context and does not override purchase price/T12 NOI/Rent Roll.
+7. Preliminary Financing Readiness Summary reflects validated purchase assumptions/current debt/proposed acquisition terms where source-complete.
+8. Incomplete support docs still collapse or qualify instead of blocking core-valid report.
+9. Report contract QA or smoke tests catch wrong visible Document Treatment role for these source shapes.
+10. Final Attack Test 8-style package becomes a regression fixture.
+```
+
+## Updated launch posture after Final Attack Test 8
+
+```text
+Screening Report: still launchable / founder-beta ready, subject to final launch smoke and website/checkout/DocRaptor/security/payment polish.
+
+Acquisition Memo: not launch-cleared after Attack Test 8. Core math/delivery/V2 containment are strong, but support-doc role routing is not yet ELITE enough for the product promise.
+
+Full Underwriting V2.0: still deferred. Claude’s PR A/B/C roadmap recorded for later.
+```
+
+## Immediate next-session continuation point
+
+Resume from here:
+
+```text
+June 10 session closeout.
+Patches 1-3 are safe to commit and should be committed separately if not already.
+Final Attack Test 8 exposed Patch 4: support-document role routing / acquisition assumptions / current debt / structured Reno Plan path.
+Do not run another random test before Patch 4.
+Do not ask for a broad audit.
+Use a targeted Patch 4 Codex prompt based on Attack Test 8.
+After Patch 4, rerun Final Attack Test 8 package as regression.
+Then update docs again and reassess Acquisition Memo launch readiness.
+```
+
+## Guardrails for next session
+
+```text
+Keep prompts compact.
+Bundle only by same subsystem/file seam.
+No broad repo audit unless Patch 4 reveals unknown authority conflict that cannot be scoped.
+No report-specific hardcoding.
+No new Vercel routes.
+No SQL/Stripe/pricing changes.
+No DocRaptor production flip yet.
+Do not reopen Full Underwriting V2 surfaces.
+Do not let support docs override T12/Rent Roll core truth.
+Do not let proposed acquisition financing become current debt or refinance logic.
+```
+
+---
+
+# June 10, 2026 Addendum - InvestorIQ Learning Loop Doctrine / No Silent Financial Mutation
+
+## Current controlling decision
+
+InvestorIQ should become more intelligent from every controlled test and every future live report, but it must not silently change customer-facing financial truth.
+
+The learning system is allowed to improve diagnostics, issue clustering, QA calibration, source-package scoring, regression recommendations, and future patch proposals.
+
+The learning system is not allowed to silently mutate deterministic financial outputs, source-bound values, delivery authority, credit/payment/access state, or customer-facing calculations.
+
+Controlling rule:
+
+```text
+InvestorIQ may learn from test and live-report outcomes, but any learned rule that can affect customer-facing financial outputs must be promoted through human-approved deterministic code, regression tests, and commit review before it can affect production reports.
+```
+
+## Three-zone learning architecture
+
+### 1. Locked deterministic calculation engine
+
+This layer remains sacred and must not self-learn or self-mutate.
+
+It owns:
+
+```text
+NOI
+EGI
+Gross rental income
+Other income
+Operating expenses
+Expense ratio
+NOI margin
+Break-even occupancy
+Occupancy
+Annual in-place rent
+Annual market rent
+Annual rent upside
+Rent gap %
+Per-unit metrics
+Cap-rate value math
+Price per unit
+NOI per unit
+Current debt context values
+Proposed acquisition financing values when explicitly source-complete
+Delivery/fail-closed/customer-credit/payment/access authority
+```
+
+Permitted change path:
+
+```text
+human red-pen decision -> deterministic rule proposal -> Codex/code patch -> regression test -> review -> commit -> future reports
+```
+
+Forbidden change path:
+
+```text
+test observation -> AI silently changes numbers in a future report
+```
+
+### 2. Learning ledger / feedback memory
+
+Every meaningful test and future live report should produce structured learning records.
+
+Minimum learning event fields:
+
+```text
+report_id / job_id
+report_type
+source_package_family
+issue_code
+human_red_pen_decision
+severity
+launch_blocker: yes/no
+customer_visible: yes/no
+math_affected: yes/no
+source_binding_affected: yes/no
+root_cause_family
+recommended_owner_area
+patch_required: yes/no
+regression_required: yes/no
+final_disposition
+notes
+```
+
+Allowed human red-pen dispositions:
+
+```text
+true_launch_blocker
+true_bug_non_launch_blocker
+qa_false_positive
+correct_conservative_disclosure
+source_limitation_correctly_handled
+support_doc_containment_pass
+v2_surface_leak
+current_debt_proposed_financing_contamination
+renderer_or_pdf_polish
+admin_dashboard_diagnostic_polish
+post_launch_backlog
+ignore_for_now
+```
+
+### 3. Recommendation / QA intelligence layer
+
+This layer may use prior learning records to make the system smarter without touching customer financial outputs.
+
+Allowed uses:
+
+```text
+cluster repeated issue families;
+identify repeated QA false positives;
+recommend focused Codex prompts;
+recommend regression tests;
+rank issues as Tier 1, Tier 2, or Tier 3;
+warn when a live report resembles a prior failure pattern;
+recommend whether an issue is parser, renderer, QA contract, source limitation, distribution config, or admin diagnostic;
+prepare V2 eligibility intelligence from Acquisition Memo patterns.
+```
+
+Forbidden uses:
+
+```text
+change NOI, rent, cap-rate value, debt, DSCR, financing, delivery, credit, payment, or access outputs without a deterministic patch;
+override T12/Rent Roll/source-bound values because a prior test looked similar;
+suppress a real customer-visible math issue because a previous issue was a false positive;
+mark a report deliverable or failed based only on learned similarity;
+create new modeled outputs from unsupported support documents.
+```
+
+## Test 1 / Test 2 learning signal recorded
+
+The first two June 10 major tests created the first clear Learning Loop candidate.
+
+Observed pattern:
+
+```text
+RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT fired in Test 1 and Test 2.
+Customer-visible rendered annual market rent appeared mathematically correct from row/unit-mix rent-roll math.
+Internal QA/canonical value appeared polluted by inflated summary totals.
+```
+
+Interpretation:
+
+```text
+This is not yet proof of wrong customer-facing math.
+It is a repeated QA/canonical-source-selection trust issue.
+Treat as a Critical Watchlist / potential launch blocker if repeated across the 7-test batch.
+Likely owner area: QA contract / rent-roll canonical source selection, not report renderer, unless a later test proves customer-visible math is wrong.
+```
+
+Correct learning classification for now:
+
+```text
+issue_code: RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+human_red_pen_decision: qa_false_positive_pattern_candidate
+severity: critical_watchlist
+customer_visible_math_wrong: not proven
+system_trust_affected: yes
+patch_now: no, wait for all 7 tests unless it escalates into visible math defect
+regression_required_if_patched: yes
+```
+
+## Startup launch discipline
+
+Learning Loop doctrine does not mean pausing launch for every imperfect artifact.
+
+Launch-blocking learning families are only those that can create Tier 1 failures:
+
+```text
+wrong math;
+wrong source binding;
+fabricated/inferred unsupported values;
+current debt / proposed financing / refi contamination;
+unsafe V2 surface leakage;
+customer lifecycle limbo;
+false fail-closed or false publish;
+credit/payment/access/security failure;
+missing or misleading customer-facing limitations.
+```
+
+Tier 2 learning families can be captured for post-launch improvement:
+
+```text
+PDF spacing;
+filename wrapping;
+thin divider pages;
+repetitive wording;
+advisory QA noise;
+admin diagnostic clarity;
+optional support-doc summary depth;
+public/sample/DocRaptor distribution polish.
+```
+
+## V2 Underwriting benefit
+
+Acquisition Memo testing should become the training ground for Full Underwriting V2.0.
+
+Every memo test can teach V2:
+
+```text
+which source packages are strong enough for debt sizing;
+which fields are commonly missing for DSCR;
+which support docs are safe context-only;
+which support docs should never unlock modeled outputs;
+which current-debt/proposed-financing combinations are dangerous;
+which QA signals are reliable versus noisy;
+which source gaps should create V2 eligibility constraints.
+```
+
+V2 should not inherit the old broad underwriting surfaces until the Learning Loop has enough source-package evidence and deterministic eligibility rules.
+
+## Future implementation target
+
+When launch pressure allows, add a persistent `learning_events` / `red_pen_review_events` table or artifact family.
+
+Near-term manual version:
+
+```text
+During major test batches, record each issue in the docs as:
+- Test number
+- visible report issue
+- artifact/QA issue
+- launch-blocking status
+- human decision
+- owner area
+- defer/patch decision
+```
+
+Longer-term product version:
+
+```text
+Every generated report creates structured diagnostics.
+Human/Admin red-pen decisions attach dispositions.
+Repeated patterns create recommended rules/regressions.
+Only human-approved deterministic patches can affect financial outputs.
+```
+
+## Guardrail phrase
+
+Use this phrase as the controlling shorthand:
+
+```text
+InvestorIQ learns for diagnostics and future rules; it does not silently learn new numbers.
+```
+
+---
+
+# June 10, 2026 Addendum - Major Test Batch Running Log / Tests 1-2 Learning Notes
+
+## Current batch status
+
+Rob is running a 7-report major test batch under Ken Dunn red-pen review.
+
+Instruction:
+
+```text
+Review all 7 tests first.
+Do not patch after each individual report unless a catastrophic launch blocker appears.
+Separate true launch blockers from Tier 2 polish.
+Track repeated root patterns before asking Codex to patch.
+```
+
+## Test 1 - Maplewell Court
+
+Customer-facing verdict:
+
+```text
+PASS with disclosure.
+```
+
+Key wins:
+
+```text
+Current debt was correctly treated as Uploaded Existing Debt Context.
+Current debt did not become proposed acquisition financing.
+Proposed Acquisition Financing correctly rendered as Not source-complete / not modeled.
+Property tax support correctly corroborated the T12 property tax line and did not override T12 totals.
+Source Reconciliation Disclosure was conservative and appropriate for the T12/Rent Roll income variance.
+```
+
+Critical watchlist:
+
+```text
+Internal QA/canonical rent-roll annual market rent drift fired with inflated canonical annual market rent while the rendered report appeared mathematically correct.
+```
+
+## Test 2 - Silvergate Manor
+
+Customer-facing verdict:
+
+```text
+PASS with disclosure.
+```
+
+Key wins:
+
+```text
+Unsupported appraisal did not override cap-rate value framework.
+Unsupported market survey did not override rent roll.
+Unsupported Phase I ESA stayed environmental context-only and did not create modeled impact.
+Historical CapEx stayed historical/context-only and did not create renovation ROI, payback, rent-lift, or forward budget outputs.
+Broker email did not override structured T12/Rent Roll source authority.
+No current debt and no proposed acquisition loan terms correctly rendered as no verified current debt context and Not source-complete / not modeled proposed acquisition financing.
+```
+
+Critical watchlist escalation:
+
+```text
+RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT repeated in Test 2.
+Rendered annual market rent again appeared correct from row/unit-mix math.
+Internal QA/canonical market rent again appeared inflated by bad summary-total acceptance.
+This is now a pattern to evaluate after all 7 tests.
+```
+
+## Current master watchlist after Tests 1-2
+
+```text
+1. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT repeated as likely QA/canonical-source-selection issue.
+   Status: Critical Watchlist / potential launch blocker if repeated.
+   Patch timing: wait for all 7 tests unless customer-visible math is proven wrong.
+   Likely owner: report_contract_qa / rent-roll canonical source selection.
+```
+
+## Current non-blocking observations after Tests 1-2
+
+```text
+DocRaptor test mode remains distribution/public-sample config only.
+Filename wrapping remains PDF polish.
+Thin divider page before financing readiness remains polish.
+Repetitive disclosure language remains polish unless it becomes misleading.
+```
+
+---
+
+# June 10, 2026 Addendum - Launch Doctrine / ELITE vs Not-Yet-ELITE Checkpoint After Acquisition Memo 15/16 + 124 Richmond Clean/Messy Tests
+
+## Current controlling interpretation
+
+InvestorIQ is no longer trying to make every optional surface perfect before launch.
+
+The controlling launch doctrine is now:
+
+```text
+InvestorIQ may launch when every published report is mathematically correct, source-bound, non-fabricated, properly qualified, and customer-deliverable.
+
+InvestorIQ does not need every optional or advanced section to be complete before launch.
+
+If an optional or advanced input is incomplete, unsupported, ambiguous, or unsafe, the correct behavior is to omit, collapse, qualify, disclose, or route it to admin diagnostics — not to block the entire report and not to invent a conclusion.
+```
+
+This checkpoint distinguishes between:
+
+```text
+Tier 1 = must be ELITE / launch-blocking if wrong.
+Tier 2 = should be good, but can be patched post-launch if the report remains honest, conservative, and customer-deliverable.
+Tier 3 = normal post-launch iteration.
+```
+
+## Report evidence behind this checkpoint
+
+Recent tested reports / packages reviewed:
+
+```text
+Acquisition Memo 15 - CLEAN
+Acquisition Memo 16 - CLEAN / swapped-slot stress test
+124 Richmond - MESSY
+124 Richmond - CLEAN
+```
+
+Current interpretation:
+
+```text
+Acquisition Memo 15 / 16:
+- Customer-facing PDF passed core math, document treatment, financing-readiness limitation handling, and V2-leak prevention.
+- Swapped-slot stress test confirmed content authority over upload-slot assumptions.
+- Internal QA still had advisory/routing calibration work, which has since been patched in qa-fix-routing.
+
+124 Richmond MESSY:
+- Not a bust.
+- Core parsing survived messy documents.
+- Customer-facing PDF remained coherent and conservative.
+- Unsupported support docs stayed context-only.
+
+124 Richmond CLEAN:
+- Not a bust.
+- Core parsing and customer-facing operating math passed.
+- Clean proposed acquisition financing was parsed/validated but not yet safely rendered as proposed-financing context.
+- This exposed a generalized Acquisition Memo financing-context render contract gap, not a report-specific bug.
+```
+
+## Tier 1 launch-blocking doctrine
+
+These items must be ELITE before launch because failures create legal, trust, refund, or customer-reliance risk.
+
+### 1. Core math and calculations
+
+Must be correct:
+
+```text
+EGI
+Gross rental income
+Other income
+Operating expenses
+NOI
+Expense ratio
+NOI margin
+Break-even occupancy
+Occupancy
+Annual in-place rent
+Annual market rent
+Annual rent upside
+Rent gap %
+Per-unit metrics
+Cap-rate value math
+Price per unit
+NOI per unit
+```
+
+Current status:
+
+```text
+ELITE / regression-watch.
+```
+
+Recent tests consistently carried core math through the report surfaces, including 124 Richmond CLEAN and MESSY.
+
+### 2. T12 and Rent Roll core parsing
+
+Must be correct:
+
+```text
+T12 parses to EGI / OpEx / NOI.
+Rent Roll parses to units / occupancy / in-place rent / market rent.
+Core valid documents must publish.
+Core invalid/unusable documents must fail closed or be blocked at upload/server gate.
+```
+
+Current status:
+
+```text
+ELITE.
+```
+
+Validated across clean spreadsheets, messy packages, narrative/AI-recovery style tests, and swapped-slot stress testing.
+
+### 3. Source-to-output binding
+
+Must be perfect:
+
+```text
+T12 controls operating income / expenses / NOI.
+Rent Roll controls units / occupancy / in-place rent / market rent.
+Property tax support only corroborates tax support and must not override T12 totals.
+Appraisal / market survey / offering summary / Phase I / zoning / CapEx must not override deterministic core values unless explicitly validated for a specific allowed use.
+Debt terms must not become current debt unless they are true existing/current debt.
+Proposed acquisition financing must not become refinance/current debt.
+```
+
+Current status:
+
+```text
+ELITE for T12/Rent Roll and support-doc containment.
+Good / patch-in-progress for proposed acquisition financing render behavior.
+```
+
+### 4. No fabricated or inferred financial facts
+
+Must never fabricate:
+
+```text
+purchase price
+loan amount
+interest rate
+amortization
+debt service
+DSCR
+market rent
+cap rate
+appraised value
+renovation budget
+rent lift
+ROI
+payback
+current debt balance
+NOI
+expense totals
+occupancy
+```
+
+Current status:
+
+```text
+Near ELITE.
+```
+
+Recent tests showed conservative omission/qualification rather than fabrication. The remaining clean-financing issue is over-omission, not hallucination.
+
+### 5. Correct fail-closed behavior for core documents
+
+Must be perfect:
+
+```text
+Missing/unusable T12 -> fail closed or blocked before generation.
+Missing/unusable Rent Roll -> fail closed or blocked before generation.
+Core-valid jobs publish unless true runtime/storage/PDF/catastrophic failure prevents safe generation.
+No customer admin-review limbo.
+No needs-documents loop for active jobs.
+Credit restored only for true core failure or true platform/runtime fatal.
+```
+
+Current status:
+
+```text
+Mostly ELITE for valid-core publish path.
+Continue invalid-core/server-gate regression before full launch.
+```
+
+### 6. No dangerous V2 leakage in launch products
+
+Acquisition Memo must not render unsupported advanced underwriting surfaces:
+
+```text
+DSCR conclusions
+current-debt DSCR
+refinance proceeds
+refinance sufficiency / stress
+DCF
+waterfall
+equity return
+deal score
+BUY / SELL / HOLD
+final recommendation
+loan approval / lender commitment / credit decision language
+```
+
+Current status:
+
+```text
+ELITE in recent customer-facing PDFs.
+```
+
+### 7. Debt / proposed acquisition financing / current debt separation
+
+Must be perfect:
+
+```text
+Current debt = actual existing/outstanding debt.
+Proposed acquisition financing = proposed/acquisition terms only.
+Refinance logic must not use proposed acquisition financing.
+Acquisition loan amount must not become purchase price.
+Purchase price must not become loan amount.
+Indicative terms must remain indicative.
+```
+
+Current status:
+
+```text
+Good but not fully ELITE yet.
+```
+
+Customer-facing PDFs are no longer contaminating proposed financing into current debt/refi outputs. Remaining root work is the bounded Proposed Acquisition Financing Context render path and corresponding contract QA calibration.
+
+### 8. Report classification must not mislead
+
+Must be conservative and non-promotional:
+
+```text
+Stable
+Sensitized
+Fragile
+Review - Source Reconciliation Disclosure
+Review - Insufficient Core Support
+Review - Debt Coverage Constraint, only where actually applicable
+```
+
+Must not imply:
+
+```text
+approved
+safe deal
+good investment
+pass/fail investment recommendation
+```
+
+Current status:
+
+```text
+Good / launch-safe, keep regression tests.
+```
+
+### 9. Disclaimers and limitation language
+
+Must be present and clear:
+
+```text
+document-backed
+framework-constrained
+not loan approval
+not lender commitment
+not investment / legal / tax advice
+missing values omitted rather than inferred
+unsupported docs context-only
+advanced sections deferred unless verified and in scope
+```
+
+Current status:
+
+```text
+ELITE.
+```
+
+### 10. Delivery lifecycle / payment / access basics
+
+Must be correct:
+
+```text
+Report publishes or fails closed with clear reason.
+No admin-review customer limbo.
+No report marked ready when PDF is missing.
+Credits/payment must not double-spend or silently disappear.
+Users must not access other users' reports.
+Download/storage paths must remain owner/admin protected.
+```
+
+Current status:
+
+```text
+Valid-core publish path is ELITE in recent tests.
+Security/payment/access must receive final launch smoke before public launch.
+```
+
+## Tier 2 important but not launch-blocking if Tier 1 remains true
+
+These are important, but can be patched post-launch if the report remains honest, conservative, and customer-deliverable.
+
+```text
+PDF spacing / layout polish
+long filename wrapping
+thin pages / divider pages
+some duplicate/awkward wording
+conservative omission of optional support details
+optional CapEx summary depth
+optional appraisal / market survey summary depth
+admin dashboard diagnostic polish
+advisory QA false positives/noise
+DocRaptor test-mode distribution configuration during internal/founder beta
+```
+
+Current Tier 2 status summary:
+
+```text
+PDF structure / report completeness: good, improving.
+Document Treatment Summary: near ELITE from doctrine/safety standpoint; filename wrapping remains cosmetic.
+Advisory QA diagnostics: useful but noisy; public/high-value/Ken vocabulary cleanup mostly patched but some old manager artifacts may still appear until fully refreshed.
+Optional support-doc summaries: launch-safe, not elite.
+CapEx / renovation handling: launch-safe and conservative.
+Appraisal / market survey handling: ELITE for containment, optional summary polish later.
+```
+
+## Already ELITE list
+
+The system is already ELITE or effectively ELITE in these areas based on recent tests:
+
+```text
+1. T12/Rent Roll core parsing across clean, messy, narrative/recovery, and swapped-slot tests.
+2. Core operating math: EGI, OpEx, NOI, expense ratio, NOI margin, break-even occupancy.
+3. Rent roll math: units, occupancy, in-place rent, market rent, rent upside, rent gap.
+4. Core source binding: T12 and Rent Roll control modeled operating outputs.
+5. Unsupported support-doc containment: Phase I, zoning, appraisal, market survey, offering summary, unsupported CapEx.
+6. Property tax corroborating support treatment.
+7. No dangerous V2 leakage in recent Acquisition Memo PDFs.
+8. Conservative omission/qualification of missing or incomplete data.
+9. Customer-facing limitation/disclaimer language.
+10. Valid-core publish path.
+```
+
+## Not yet ELITE / bounded root work still open
+
+These are the current bounded root issues, not proof that the system is broken:
+
+```text
+1. Proposed Acquisition Financing Context render path when clean proposed financing terms are validated.
+2. Current debt vs proposed acquisition financing contract QA calibration after that render path is added.
+3. REPORT_TYPE_SECTION_LEAK detector calibration for valid Acquisition Memo sections.
+4. Advisory QA vocabulary/noise cleanup in all manager/action artifacts.
+5. Admin dashboard diagnostic clarity.
+6. Final invalid-core/server-gate/payment/access smoke before full public launch.
+```
+
+## Current Codex work in progress
+
+Codex is currently working on the generalized root-contract patch:
+
+```text
+Acquisition Memo proposed-financing context render path + current-debt/proposed-financing separation + report-contract QA calibration.
+```
+
+This is not a 124 Richmond report patch.
+
+124 Richmond CLEAN is regression evidence only. The production invariant is:
+
+```text
+If validated proposed/acquisition financing context exists, the Acquisition Memo should render a bounded Proposed Acquisition Financing Context block.
+
+If proposed financing is incomplete, keep Not source-complete / not modeled.
+
+In both cases, do not open DSCR/refi/DCF/waterfall/deal-score/final-recommendation/V2 surfaces.
+```
+
+## Launch discipline from this checkpoint
+
+Do not ask Codex for broad audits by default.
+
+If an audit is needed, it must be limited to Tier 1 doctrine:
+
+```text
+Find only paths that can violate launch-blocking Tier 1 doctrine.
+Do not list cosmetic issues.
+Do not suggest product expansion.
+Do not patch.
+Return only launch-blocking root risks with file/function owners.
+```
+
+The launch bar is not perfection everywhere. The launch bar is:
+
+```text
+Core financial truth = ELITE.
+Source binding = ELITE.
+No fabrication = ELITE.
+Unsafe/V2 surfaces closed = ELITE.
+Delivery lifecycle honest = ELITE.
+Optional completeness and polish can be patched through admin diagnostics after launch.
+```
+
+---
+
+# June 8, 2026 Night Addendum - Acquisition Memo 13 Financing-Ready Checkpoint / Final Polish + Advisory Rounding Root Fix
+
+## Current controlling status
+
+InvestorIQ ended June 8 with the Acquisition Memo product direction materially validated.
+
+Current report/product status:
+
+```text
+Screening Report:
+Launchable / founder-beta ready.
+
+Acquisition Memo:
+Founder-beta / customer-deliverable and now credible for 1-150/200 unit financing conversations, pending one final retest after the latest polish and advisory QA rounding patch.
+
+Full Underwriting V2.0:
+Still deferred. This remains the institutional lender-credit-committee package for 250+ unit assets, multi-building deals, family office / Ken Dunn type users, and roughly $50M-$500M transactions.
+```
+
+Controlling product distinction:
+
+```text
+Acquisition Memo = financing-ready acquisition memo for serious lender discussions and acquisition financing requests on approximately 1-150/200 unit properties.
+
+Full Underwriting V2.0 = institutional credit-committee package with full DSCR stack, debt sizing, DCF, waterfall, capital stack, integrations, lender/investor package, and advanced sensitivity analysis.
+```
+
+Do not reopen Full Underwriting V2 surfaces inside the launch Acquisition Memo.
+
+## Acquisition Memo 12 root-render confirmation
+
+The repeated Document Treatment contradiction finally tested clean.
+
+The old failure was:
+
+```text
+purchase_assumptions_source.txt used correctly in the Acquisition Memo Summary for:
+- Purchase Price $10,640,000
+- Going-In Cap Rate 5.8%
+- NOI Basis $611,800
+
+but rendered incorrectly in Document Treatment as:
+- Appraisal Context
+- Context only
+- Listed for auditability only; not used quantitatively
+- Listed but Not Quantitatively Modeled
+```
+
+Acquisition Memo 12 proved the root-render fix:
+
+```text
+purchase_assumptions_source.txt rendered as:
+Purchase Assumptions / Acquisition Context
+
+It did not render as:
+Appraisal Context
+Context only
+Listed for auditability only
+Listed but Not Quantitatively Modeled
+```
+
+Interpretation:
+
+```text
+Final Document Treatment Summary same-file artifact precedence family is fixed in the tested path.
+Validated acquisition / purchase-assumptions authority now beats stale appraisal metadata for the same source identity.
+The visible PDF contradiction is no longer present.
+```
+
+This root family should be treated as closed after the next final retest confirms it remains stable after the financing-section patches.
+
+## Acquisition Memo 13 result - 100-unit / lender-conversation test
+
+Acquisition Memo 13 reached 17 pages and passed the practical "Ken Dunn 100-unit property test" / smaller-deal lender-conversation test.
+
+Clarified meaning of the test:
+
+```text
+This is not the full Ken Dunn institutional $50M-$500M / 250+ unit credit-committee test.
+This is the 50-150-ish / 1-150/200 unit Acquisition Memo financing-conversation test.
+```
+
+Verdict:
+
+```text
+Acquisition Memo 13 = PASS for founder-beta / customer-deliverable / 1-150/200 unit lender-conversation use, with minor polish.
+Full institutional Ken Dunn test = not applicable until Full Underwriting V2.0.
+```
+
+Acquisition Memo 13 now gives lenders and borrowers a coherent first-pass package:
+
+```text
+property size
+occupancy
+T12 income / expenses / NOI
+rent roll support
+rent upside
+purchase price
+going-in cap rate
+cap-rate value indication
+uploaded existing debt context
+source coverage
+document treatment
+what is verified, context-only, and not modeled
+```
+
+## Preliminary Financing Readiness Summary implemented
+
+The new Acquisition Memo financing section was implemented and refined.
+
+New section:
+
+```text
+Preliminary Financing Readiness Summary
+```
+
+Purpose:
+
+```text
+Make Acquisition Memo useful for 1-150/200 unit acquisition borrowers preparing lender discussions and acquisition financing requests, without implying loan approval or reopening V2 debt/refi/DCF surfaces.
+```
+
+Section structure now includes:
+
+```text
+1. Acquisition Request Context
+   - Purchase Price
+   - NOI Basis
+   - Going-In Cap Rate
+   - Units
+   - Price per Unit
+   - NOI per Unit
+
+2. Operating Support
+   - Effective Gross Income
+   - Operating Expenses
+   - NOI
+   - Expense Ratio
+   - NOI Margin
+   - Occupancy
+   - Break-Even Occupancy
+
+3. Rent / Value Support
+   - Annual In-Place Rent
+   - Annual Market Rent
+   - Annual Rent Upside
+   - Rent Gap %
+   - Implied Value at 5.0%, 6.0%, 7.0% cap rates
+   - Document-derived cap-rate reference, if available
+
+4. Debt / Financing Context
+   - Uploaded Existing Debt Context, when verified:
+     - Outstanding Balance
+     - Interest Rate
+     - Amortization
+     - LTV
+   - Proposed Acquisition Financing:
+     - shown only if explicitly source-complete
+     - otherwise: Not source-complete / not modeled
+
+5. Lender Diligence Checklist
+   - T12 verified: Yes / No
+   - Rent Roll verified: Yes / No
+   - Purchase assumptions provided: Yes / No
+   - Property tax support: Yes / No
+   - Current debt context uploaded: Yes / No
+   - Proposed acquisition loan terms complete: Yes / No
+   - Environmental / Phase I support: Context only / not modeled, when present
+   - Appraisal support: Context only unless structured value exists, when present
+   - CapEx / renovation plan: Context only unless verified budget and rent-lift assumptions exist, when present
+```
+
+Required note/caution remains:
+
+```text
+Shown for lender discussion and acquisition diligence support only. This Acquisition Memo organizes verified operating evidence, rent-positioning support, acquisition context, and uploaded financing context. It does not represent loan approval, lender commitment, refinance proceeds, full debt sizing, DCF, equity waterfall, or institutional credit-committee underwriting.
+```
+
+## Financing-section implementation sequence completed
+
+### Slice 1 - New Acquisition Memo-only section
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/report-template-runtime.html
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Added buildPreliminaryFinancingReadinessSummaryHtml(...)
+Added Acquisition Memo-only template block
+Wired section into v1_core Acquisition Memo final render path
+Kept Screening unchanged
+Kept old V2 debt/refi sections collapsed
+Current debt shown only as Uploaded Existing Debt Context
+Proposed acquisition financing separate and not derived from current debt
+```
+
+### Slice 2 - Lender-facing section hardening
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Strengthened the Preliminary Financing Readiness Summary without reopening V2 debt math.
+Existing/current debt remains disclosure-only under Uploaded Existing Debt Context.
+Proposed acquisition financing collapses to Not source-complete / not modeled unless explicit source-complete proposed-financing language exists.
+No proposed loan amount, debt service, DSCR, or debt sizing rendered in this slice.
+Forbidden V2 and loan-approval language confirmed absent from visible HTML.
+Screening regression confirms the section does not render in Screening.
+```
+
+Forbidden surfaces kept closed:
+
+```text
+DSCR
+Current Debt DSCR
+refinance proceeds
+refinance stability
+DCF
+waterfall
+equity return
+deal score
+final recommendation
+BUY / SELL / HOLD
+loan approval
+lender commitment
+financing approval
+credit approval
+Proposed Acquisition Debt Sizing
+```
+
+### Slice 3 - Tiny visible polish
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Added Annual Rent Upside to Rent / Value Support.
+Added Rent Gap % to Rent / Value Support.
+Fixed duplicate Proposed Acquisition Financing label.
+Removed duplicate/wrong Property tax support: Context only / not modeled row.
+Property tax support now appears once as Yes / No.
+Kept Screening unchanged.
+Kept forbidden V2 surfaces closed.
+```
+
+Interpretation:
+
+```text
+The financing section should now feel like a credible Acquisition Memo section rather than a tiny debt-context note.
+```
+
+## Cap-rate advisory QA false-positive root fix completed
+
+A final advisory/root cleanup fixed the cap-rate rounding false-positive class.
+
+Problem:
+
+```text
+Source value: 5.75%
+Customer report display: 5.8%
+
+This is normal display rounding, not a real source-report contradiction.
+The live source-package advisory layer could still flag it as source_report_inconsistency.
+```
+
+Root issue:
+
+```text
+Production advisory QA treated normal rounded percentage displays as source/report contradictions.
+```
+
+Files changed:
+
+```text
+api/_lib/source-package-qa.js
+tests/qa/source-package-cap-rate-rounding-smoke.js
+```
+
+Production path fixed:
+
+```text
+filterSourcePackageFalsePositives(review, compactPayload)
+isCapRateRoundingFalsePositive(finding, compactPayload)
+```
+
+Rounding rule:
+
+```text
+Cap-rate / percentage comparisons normalize to percentage points.
+Values within 0.1 percentage points are treated as equivalent.
+The filter is narrowly scoped to cap-rate / percentage source-report inconsistency findings.
+```
+
+Regression proof:
+
+```text
+source 5.75% vs rendered 5.8% -> no source_report_inconsistency
+source 5.75% vs rendered 5.75% -> no source_report_inconsistency
+source 5.75% vs rendered 6.5% -> still source_report_inconsistency
+non-cap contradictions remain unaffected
+```
+
+Interpretation:
+
+```text
+This is a root-class advisory QA fix, not a test-report hack.
+Do not hardcode Acquisition Memo 13, Harbourstone, purchase_assumptions_source.txt, 5.75, or 5.8 in production logic.
+```
+
+## Current report readiness assessment
+
+No-BS readiness assessment as of this checkpoint:
+
+```text
+Screening Report:
+8.5/10 launch readiness.
+Launchable/founder-beta ready.
+
+Acquisition Memo:
+Approximately 8+/10 if the next final retest confirms the new financing section polish and advisory rounding fix.
+Founder-beta/customer-deliverable.
+Financing-conversation ready for 1-150/200 unit properties.
+Not a loan approval package.
+Not a Full Underwriting V2 institutional package.
+
+Full Underwriting V2.0:
+Do not launch.
+Future premium product.
+```
+
+Current strongest product point:
+
+```text
+InvestorIQ now has document-treatment discipline:
+it clearly separates what was used quantitatively, what was context-only, what was deferred, and what was not modeled.
+```
+
+Current remaining risk:
+
+```text
+Trust polish.
+No visible contradictions.
+No stale document treatment.
+No false QA panic.
+No awkward duplicate labels.
+No V2 leakage.
+No Summary-vs-Data-Coverage contradictions.
+```
+
+## Next action after this checkpoint
+
+Do not do more tonight after committing the final cap-rate advisory patch and updating docs.
+
+Next work session:
+
+```text
+Run ONE controlled Acquisition Memo retest using the same/source-family package.
+```
+
+Retest acceptance checklist:
+
+```text
+1. Preliminary Financing Readiness Summary appears and looks substantial.
+2. Rent / Value Support includes Annual Rent Upside and Rent Gap %.
+3. Proposed Acquisition Financing appears once as Not source-complete / not modeled when incomplete.
+4. Lender Diligence Checklist has no duplicate Property tax support context-only row.
+5. Uploaded Existing Debt Context appears only as debt context, not proposed acquisition financing.
+6. purchase_assumptions_source.txt still renders as Purchase Assumptions / Acquisition Context.
+7. No Appraisal Context / Context only contradiction for validated purchase assumptions.
+8. No Listed but Not Quantitatively Modeled leak for validated purchase assumptions.
+9. No V2 surfaces leak:
+   - DSCR
+   - Current Debt DSCR
+   - refinance proceeds
+   - refinance stability
+   - DCF
+   - waterfall
+   - equity return
+   - deal score
+   - final recommendation
+   - BUY / SELL / HOLD
+10. Advisory QA should not false-flag 5.75% vs 5.8% cap-rate rounding.
+11. Screening remains unchanged/protected.
+```
+
+If this retest passes:
+
+```text
+Acquisition Memo can be treated as founder-beta / customer-deliverable and financing-conversation ready for 1-150/200 unit acquisitions.
+Next remaining launch work moves to final website/pricing/checkout/sample/DocRaptor/distribution polish, not report-core rescue.
+```
+
+## Guardrails going forward
+
+Continue to enforce:
+
+```text
+micro-prompts only
+no broad audits unless a real new root class appears
+no report-specific production hacks
+no hardcoded production filenames, property names, report IDs, or fixture-only values outside tests
+no new API/serverless routes casually due to Vercel Hobby constraints
+no pricing / Stripe / SQL / RPC changes during report-core polish
+no DocRaptor production flip until final report confidence is confirmed
+no public/Ken/sample distribution until DocRaptor production mode and public sample readiness are addressed
+no public AI wording
+no BUY / SELL / HOLD
+no loan approval / lender commitment / financing approval / credit approval language
+no reopening V2 debt/refi/DCF/waterfall/full debt sizing inside Acquisition Memo
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 8 night checkpoint.
+
+Completed:
+- Screening Memo 7 is launchable/founder-beta ready.
+- Acquisition Memo 12 fixed the purchase-assumptions Document Treatment contradiction.
+- Acquisition Memo 13 reached 17 pages and passed the 100-unit/lender-conversation test with minor polish.
+- Preliminary Financing Readiness Summary has been implemented and polished.
+- Cap-rate advisory QA rounding false-positive root fix is complete.
+- Latest patches were safe to commit.
+
+Next:
+- Run ONE controlled Acquisition Memo retest.
+- Upload PDF + artifacts.
+- Review only the financing summary polish, Document Treatment stability, V2 leakage absence, and cap-rate QA rounding behavior.
+- If clean, mark Acquisition Memo founder-beta/customer-deliverable and financing-conversation ready for 1-150/200 unit deals.
+```
+
+---
+
+
+# June 8, 2026 Addendum - Acquisition Memo Financing-Ready Product Doctrine / Preliminary Financing Readiness Summary Locked
+
+## Current controlling clarification
+
+InvestorIQ Acquisition Memo is not merely a light debt-context memo.
+
+The controlling product ladder is now:
+
+```text
+1. InvestorIQ Screening Report
+   Purpose: help investors narrow a broad property search down to a few deals worth deeper diligence.
+   Scope: T12 + Rent Roll operating triage, rent upside, operating quality, and source coverage.
+   Not a financing memo or lender approval package.
+
+2. InvestorIQ Acquisition Memo
+   Purpose: financing-ready acquisition memo for approximately 1-150/200 unit properties.
+   User outcome: help smaller and mid-market property investors organize the property story, operating support, NOI, rent upside, purchase basis, value indication, debt context, source coverage, and lender diligence gaps well enough to approach lenders and support acquisition financing conversations.
+   It should be strong enough for users to show a lender when pursuing financing for a 1-150/200 unit acquisition, while avoiding unsupported loan-approval claims.
+
+3. InvestorIQ Full Underwriting V2.0
+   Purpose: lender-credit-committee / institutional package for sophisticated users such as Ken Dunn, family offices, larger operators, brokers, and institutional users.
+   Target use case: 250+ unit assets, multi-building deals, and approximately $50M-$500M transactions.
+   Future scope: advanced debt/refi, full DSCR stack, DCF, waterfall, capital stack, sensitivity analysis, integrations, lender/investor package, and institutional credit-committee-ready outputs.
+```
+
+This supersedes any narrower language suggesting Acquisition Memo is only for under-50-unit properties or only for vague/simple financing discussions.
+
+## Acquisition Memo financing-readiness standard
+
+Acquisition Memo should support lender-facing preliminary financing conversations for 1-150/200 unit deals, but it must not claim loan approval, lender commitment, or institutional credit-committee completeness.
+
+Correct positioning:
+
+```text
+Acquisition Memo = financing-ready for serious lender discussions and acquisition financing requests.
+Full Underwriting V2.0 = institutional lender / credit-committee package for major assets and portfolios.
+```
+
+The Acquisition Memo should answer the lender's first-pass questions:
+
+```text
+What is the property?
+What is the verified income and NOI?
+What is the purchase basis?
+What rent/value support exists?
+What debt or financing context was uploaded?
+What is verified, what is context-only, and what remains missing for full credit underwriting?
+```
+
+## Required new section: Preliminary Financing Readiness Summary
+
+Add or upgrade the Acquisition Memo financing section to render as:
+
+```text
+Preliminary Financing Readiness Summary
+```
+
+The section should include the following structure when source-supported.
+
+### 1. Acquisition Request Context
+
+```text
+- Purchase Price
+- NOI Basis
+- Going-In Cap Rate
+- Units
+- Price per Unit
+- NOI per Unit
+```
+
+### 2. Operating Support
+
+```text
+- Effective Gross Income
+- Operating Expenses
+- NOI
+- Expense Ratio
+- NOI Margin
+- Occupancy
+- Break-Even Occupancy
+```
+
+### 3. Rent / Value Support
+
+```text
+- Annual In-Place Rent
+- Annual Market Rent
+- Annual Rent Upside
+- Rent Gap %
+- Implied Value at 5.0%, 6.0%, 7.0% cap rates
+- Document-derived cap-rate reference, if available
+```
+
+### 4. Debt / Financing Context
+
+```text
+- Uploaded Existing Debt Context, if available:
+  - Outstanding Balance
+  - Interest Rate
+  - Amortization
+  - LTV
+- Proposed Acquisition Financing:
+  - Shown only if explicitly provided
+  - Otherwise: "Not source-complete / not modeled"
+```
+
+### 5. Lender Diligence Checklist
+
+```text
+- T12 verified: Yes
+- Rent Roll verified: Yes
+- Purchase assumptions provided: Yes / No
+- Property tax support: Yes / No
+- Current debt context uploaded: Yes / No
+- Proposed acquisition loan terms complete: Yes / No
+- Environmental / Phase I support: Context only / not modeled
+- Appraisal support: Context only unless structured value exists
+- CapEx / renovation plan: Context only unless verified budget and rent-lift assumptions exist
+```
+
+## Safe boundaries for the financing-readiness section
+
+Allowed in Acquisition Memo:
+
+```text
+Acquisition Request Context
+Operating Support
+Rent / Value Support
+Uploaded Existing Debt Context
+Proposed Acquisition Financing status, only if explicitly source-supported
+Lender Diligence Checklist
+Source-complete limitation notes
+```
+
+Do not reopen Full Underwriting V2.0 surfaces in Acquisition Memo:
+
+```text
+No refinance proceeds
+No refinance stress
+No full debt sizing unless proposed acquisition financing terms are explicitly source-complete and the output is bounded to the Acquisition Memo readiness section
+No DCF
+No waterfall
+No equity returns
+No full debt schedule
+No final recommendation
+No BUY / SELL / HOLD
+No loan approval or lender commitment language
+No institutional credit-committee claim
+```
+
+Current debt / existing debt context must remain separate from proposed acquisition financing.
+
+```text
+Existing/current debt may be shown as Uploaded Existing Debt Context when verified.
+Existing/current debt must not be relabeled as Proposed Acquisition Financing unless the source explicitly says it is proposed acquisition financing.
+```
+
+## Source-gating rule
+
+If proposed acquisition financing terms are incomplete, the memo should still render the lender-facing readiness summary using verified property-level and source-coverage inputs, but proposed acquisition debt sizing/math should say:
+
+```text
+Not source-complete / not modeled
+```
+
+This limitation is acceptable and should not block the report.
+
+## Immediate next implementation slice
+
+After the Document Treatment root-render family is confirmed fixed, the next Codex slice should be:
+
+```text
+Add Preliminary Financing Readiness Summary to Acquisition Memo.
+```
+
+It must be a bounded Acquisition Memo product-value slice, not a V2 debt/refi/DCF reopening.
+
+Guardrails:
+
+```text
+Do not touch Screening except protective regression.
+Do not change pricing, Stripe, SQL/RPC, Supabase schema, routes, Dashboard, DocRaptor config, OpenAI config, auth, or upload gates.
+Do not add new API/serverless routes.
+Do not re-enable Full Underwriting V2 surfaces.
+Do not hardcode property names, report IDs, production filenames, or fixture values outside tests.
+```
+
+---
+
+# June 7, 2026 Addendum - Screening Launchable / Acquisition Memo Final Source-Treatment Root Bug Still Open / Codex Emergency Patch In Progress
+
+## Current controlling status
+
+InvestorIQ has completed the June 7 clean retest batch.
+
+Results:
+
+```text
+Screening Memo 7 - CLEAN: launchable / founder-beta ready.
+Acquisition Memo 10 - CLEAN: not launchable yet.
+```
+
+The remaining Acquisition Memo issue is narrow but serious:
+
+```text
+The final Document Treatment Summary still renders purchase_assumptions_source.txt as Appraisal Context / Context only / Listed for auditability only; not used quantitatively, even though the same report uses that source for purchase price and going-in cap rate.
+```
+
+This is a visible credibility contradiction and must be fixed before Acquisition Memo launch or Ken/public/founder outreach.
+
+## OpenAI API credits restored
+
+Rob restored OpenAI API credits before the latest retest.
+
+The prior `insufficient_quota` issue is no longer the blocker. OpenAI/advisory/recovery calls are working again and artifacts show successful responses.
+
+Important interpretation:
+
+```text
+AI did recover the relevant acquisition fields.
+The deterministic final renderer failed to consume the validated acquisition artifact correctly.
+Therefore the issue is not OpenAI failing; it is final renderer artifact precedence and QA blind spot.
+```
+
+## Product ladder remains controlling
+
+Current launch ladder:
+
+```text
+1. InvestorIQ Screening Report
+   - lower-priced first-pass document-based triage from T12 + Rent Roll
+   - launchable now based on Screening Memo 7
+
+2. InvestorIQ Acquisition Memo
+   - main launch product
+   - investor-ready acquisition and preliminary financing-readiness memo
+   - should support financing-ready lender conversations and acquisition financing requests for approximately 1-150/200 unit properties when source-complete inputs are available, while avoiding unsupported loan-approval claims
+   - not launchable until final source-treatment contradiction is fixed
+
+3. InvestorIQ Full Underwriting V2.0
+   - deferred / coming later
+   - advanced current debt/refi, DCF, waterfall, capital stack, integrations, full lender/investor package
+```
+
+## Screening Memo 7 conclusion
+
+Screening Memo 7 does what the Screening product is meant to do.
+
+It gives a fast document-based triage answer:
+
+```text
+Is this property obviously worth more attention,
+or should it be passed / placed in the maybe pile?
+```
+
+Visible metrics reviewed:
+
+```text
+Stable classification
+48 units
+95.8% occupancy
+Annual in-place rent: $1,036,800
+Annual market rent: $1,137,600
+Annual gross rent upside: $100,800
+Rent gap: 9.7%
+Effective gross income: $1,036,800
+Operating expenses: $425,000
+NOI: $611,800
+Expense ratio: 41.0%
+NOI margin: 59.0%
+Break-even occupancy: 41.0%
+T12 coverage: 4/4
+Rent Roll coverage: 4/4
+```
+
+Artifacts showed:
+
+```text
+report_contract_qa: pass
+violations: []
+report_quality_ready: true
+customer_delivery_ready: true
+```
+
+Screening launch decision:
+
+```text
+Screening Report at founder pricing around $199 is launchable.
+```
+
+Commercial framing:
+
+```text
+Screening is not competing with free calculators on raw arithmetic alone.
+It beats free calculators by extracting, validating, organizing, and presenting T12 + Rent Roll evidence into a consistent memo.
+For high-volume users who screen dozens of deals/month, future bundles/subscription/custom pricing will likely be needed.
+```
+
+## Acquisition Memo 10 conclusion
+
+Acquisition Memo 10 improved but still failed the launch bar.
+
+What passed:
+
+```text
+Core math remained correct.
+Purchase Price $10,640,000 displayed in the Acquisition Memo Summary.
+Going-In Cap Rate 5.8% displayed in the Acquisition Memo Summary.
+NOI Basis $611,800 displayed.
+Duplicate Rent Positioning Evidence appears fixed.
+V2 forbidden surfaces remained deferred/collapsed.
+```
+
+What failed:
+
+```text
+Document Treatment Summary still rendered purchase_assumptions_source.txt as:
+- Appraisal Context
+- Context only
+- Listed for auditability only; not used quantitatively
+
+The same file also appeared under:
+- Listed but Not Quantitatively Modeled
+```
+
+This is a visible contradiction because the report used that file for acquisition summary values earlier.
+
+Acquisition Memo launch decision:
+
+```text
+Do not launch Acquisition Memo until this final source-treatment contradiction is fixed and proven in the regenerated PDF.
+```
+
+## Root cause diagnosis
+
+Artifacts show two competing same-file artifact paths for `purchase_assumptions_source.txt`:
+
+```text
+1. stale appraisal_parsed artifact:
+   semantic_doc_role: appraisal
+   cap_rate: 5.75
+   missing_appraised_value
+
+2. validated acquisition artifact:
+   artifact type: loan_term_sheet_parsed acquisition artifact
+   semantic_doc_role: purchase_assumptions
+   validated: true
+   purchase_price: 10640000
+   going_in_cap_rate: 5.75
+   accepted_fields: purchase_price, going_in_cap_rate
+```
+
+The final Document Treatment Summary renderer is still letting the stale appraisal artifact win for the visible source-treatment row.
+
+Correct root rule:
+
+```text
+When duplicate artifacts exist for the same source file, validated acquisition-support truth must outrank stale appraisal metadata for final Document Treatment Summary rendering.
+```
+
+## QA blind spot diagnosis
+
+`report_contract_qa` passed despite the visible PDF contradiction.
+
+This means the contract QA is not checking final rendered Document Treatment Summary text/rows strongly enough.
+
+The patch must fix both:
+
+```text
+1. production final renderer artifact precedence
+2. final rendered contract QA blind spot
+```
+
+Do not accept another receipt that only says internal artifacts are correct. The regenerated PDF must prove the visible output is correct.
+
+## Correct Acquisition Memo source-treatment invariant
+
+In Acquisition Memo mode, if a source file has any validated acquisition fields such as:
+
+```text
+purchase_price
+going_in_cap_rate
+noi_basis
+semantic_doc_role: purchase_assumptions
+```
+
+then the visible Document Treatment Summary must render it as:
+
+```text
+Document Role: Purchase Assumptions / Acquisition Context
+Treatment: Acquisition context / document-derived acquisition context
+Use: Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth
+```
+
+It must not render as:
+
+```text
+Appraisal Context
+Context only / not used quantitatively
+Listed for auditability only; not used quantitatively
+Listed but Not Quantitatively Modeled
+```
+
+Unsupported appraisal files without validated acquisition fields still remain Appraisal Context / context only.
+
+Debt/current loan support such as `loan_terms_simple_source.txt` remains Debt Support Received / contextual or deferred unless explicitly identified as proposed acquisition financing and source-complete for the mini financing section.
+
+## Mini Acquisition Financing Readiness section doctrine
+
+Rob clarified that Acquisition Memo should be strong enough to support financing-ready lender conversations and acquisition financing requests for approximately 1-150/200 unit properties when the required source inputs are available, while avoiding unsupported loan-approval claims.
+
+Current doctrine:
+
+```text
+Acquisition Memo may include a small controlled financing-readiness section.
+It must not reopen Full Underwriting V2 surfaces.
+```
+
+Required source-gated inputs for financing math:
+
+```text
+purchase_price
+NOI basis
+proposed acquisition loan amount OR LTV
+interest rate
+amortization years
+```
+
+Allowed calculations:
+
+```text
+Proposed Loan Amount
+Estimated Annual Debt Service
+Going-In DSCR
+Going-In LTV
+```
+
+Required collapse behavior:
+
+```text
+If required financing inputs are incomplete, do not render partial debt math.
+Show a compact limitation note or omit the math.
+```
+
+Do not render before V2:
+
+```text
+refinance proceeds
+refinance stress
+current-debt DSCR unless explicitly in scope and source-supported
+full debt schedule
+DCF
+waterfall
+equity returns
+final recommendation
+BUY / SELL / HOLD
+```
+
+For Acquisition Memo 10, financing fields were incomplete, so the absence/collapse of financing math is acceptable. The launch blocker is the purchase-assumptions document-treatment contradiction.
+
+## Current Codex task in progress
+
+Codex is working on emergency root fix:
+
+```text
+Final Document Treatment Summary same-file artifact precedence and contract QA blind spot.
+```
+
+Acceptance requirements for Codex receipt:
+
+```text
+A. Exact final renderer function that produced the bad row
+B. Why report_contract_qa passed despite the bad PDF
+C. Production precedence fix implemented
+D. Final rendered contract check added
+E. Regression with same filename producing stale appraisal + validated acquisition artifacts
+F. Safe to commit yes/no
+```
+
+## No-more-testing rule until patch lands
+
+Do not run a different test package now.
+
+Reason:
+
+```text
+A different test might pass by accident if it does not create both a stale appraisal artifact and a validated acquisition artifact for the same file.
+That would not prove the root bug is fixed.
+```
+
+After Codex patches, rerun the same Acquisition Memo source package.
+
+## Next retest acceptance checklist
+
+After Codex patch and commit, run one Acquisition Memo retest using the same source family.
+
+Pass only if:
+
+```text
+purchase_assumptions_source.txt renders as Purchase Assumptions / Acquisition Context.
+purchase_assumptions_source.txt does not render as Appraisal Context.
+purchase_assumptions_source.txt does not render as Context only / not used quantitatively.
+purchase_assumptions_source.txt does not appear under Listed but Not Quantitatively Modeled.
+Only one Rent Positioning Evidence/Summary block appears.
+No V2 debt/refi/DCF/waterfall/deal-score/final-recommendation leak appears.
+Core operating and acquisition math remains correct.
+```
+
+## Launch posture after this update
+
+```text
+Screening: launchable.
+Acquisition Memo: one visible final-render/source-treatment root bug away, not launchable yet.
+Full Underwriting V2.0: deferred.
+DocRaptor production mode: still distribution/public-sample switch, not ordinary customer delivery logic.
+```
+
+## Immediate continuation point
+
+Continue from here:
+
+```text
+Codex is patching the final Document Treatment Summary artifact precedence issue.
+Do not run more live tests until Codex returns.
+When Codex returns, review root-path receipt, commit if safe, then run one same-package Acquisition Memo retest.
+```
+
+
+
+---
+
+# June 5/6, 2026 Addendum - Pre-Retest Checkpoint After Elite Report Fullness / Source Treatment / Readiness Cleanup
+
+## Current controlling status
+
+InvestorIQ is now ready for the next clean live retest batch after a major June 5/6 cleanup sequence.
+
+The working product ladder remains:
+
+```text
+1. InvestorIQ Screening Report
+   - lower-priced, stable first-pass report from T12 + Rent Roll
+
+2. InvestorIQ Acquisition Memo
+   - main launch product
+   - document-driven acquisition and preliminary financing-readiness memo
+   - built from the former Underwriting / v1_core path
+   - not Full Underwriting V2.0
+
+3. InvestorIQ Full Underwriting V2.0
+   - deferred / coming later
+   - advanced debt/refi, DCF, waterfall, capital stack, integrations, and full investor/lender package
+```
+
+The latest live reports showed strong directional improvement:
+
+```text
+Screening Memo 3: 7 pages
+Acquisition Memo 6: 14 pages
+```
+
+However, red-pen review still found known root-level issues. Those issues have now been patched in two focused batches. The next step is not another Codex audit. The next step is one fresh clean Screening and one fresh clean Acquisition Memo retest.
+
+## Work completed today
+
+### 1. Report fullness / source-bound section assembly direction validated
+
+The report-fullness effort materially improved page count and report feel:
+
+```text
+Screening moved to 7 pages.
+Acquisition Memo moved to 14 pages.
+```
+
+This confirmed that the pivot from thin shell to source-bound memo/report structure is working.
+
+The quality bar remains universal:
+
+```text
+There is no customer-vs-Ken-vs-public-sample quality tier.
+Every report should be document-driven, deterministic, source-bound, and credible enough for sophisticated review.
+```
+
+Use distribution labels only for operational/config readiness, such as DocRaptor production mode or public sample publishing.
+
+### 2. Ken-style red-pen review findings from live Screening Memo 3 / Acquisition Memo 6
+
+Known issues identified before patching:
+
+```text
+Screening still risked thin pages / thin final assembly.
+Screening used customer-visible advanced-module/exclusion wording.
+Acquisition Memo duplicated Rent Positioning Summary.
+Acquisition Memo support-treatment table needed clean semantic role/treatment labels while preserving filename transparency.
+Debt support was too close to modeled current-debt treatment.
+Purchase assumptions treatment could contradict document-derived purchase/cap-rate context.
+Deferred-analysis wording listed forbidden advanced module names too explicitly.
+Artifacts still showed legacy readiness alias contradictions beside canonical deliverability.
+Provider/advisory quota failures needed to remain diagnostic-only.
+DocRaptor test mode needed to remain distribution metadata only.
+Purchase assumptions/acquisition context still needed classification/treatment follow-through.
+```
+
+Important correction recorded during review:
+
+```text
+Uploaded filenames should remain visible for transparency.
+Do not blank customer filenames.
+Do not remove file-level auditability.
+Clean the semantic role/treatment labels beside filenames instead.
+```
+
+This filename-transparency rule is now controlling.
+
+## Patch batch 1 - source treatment, filename transparency, duplicate rent-positioning cleanup
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/_lib/report-contract-qa.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Duplicate Acquisition Memo rent-positioning presentation corrected.
+Summary-only rent-roll branch now emits Rent Positioning Evidence rather than a second Rent Positioning Summary.
+Uploaded filenames remain visible for auditability.
+Support-treatment table separates Filename, Document Role, and Treatment.
+Semantic labels are clean/customer-facing and based on document role/treatment, not raw filename wording.
+Loan/current-debt support is disclosed as debt support received with launch memo analysis deferred.
+Purchase assumptions render as acquisition context / document-derived purchase-price or cap-rate reference when supported.
+Property tax, market survey, CapEx, appraisal, environmental, broker/email, and unclassified support render with explicit source-bound treatment.
+Customer-facing deferred/excluded wording no longer lists exact advanced module names.
+Screening no longer mentions launch memo.
+QA false-positive risks around support-doc proximity and occupancy drift were reduced.
+```
+
+Validation:
+
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/report-contract-qa.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Status:
+
+```text
+Safe to commit / committed before continuing.
+```
+
+## Patch batch 2 - final assembly depth, visual/output polish, readiness alias alignment
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/_lib/qa-action-plan.js
+api/_lib/report-contract-qa.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Completed behavior:
+
+```text
+Screening final assembly keeps full source-bound T12/Rent Roll operating depth when valid T12 + Rent Roll exist.
+Screening preserves income reconstruction, expense structure, NOI stability, rent-roll distribution, and Data Coverage / Source Reliability.
+Screening visible output no longer uses launch memo, DCF, waterfall, equity return, deal score, final recommendation, current-debt DSCR, refinance proceeds, or refinance stability language.
+Screening scope wording is generic and safe.
+Acquisition Memo wrapper churn / duplicate rent-positioning presentation was reduced.
+Smoke verifies one visible rent-positioning path.
+Canonical deliverability now drives legacy compatibility/readiness aliases.
+Canonical deliverable jobs should no longer emit contradictory report_blocked/report_publishable/customer_delivery_ready/customer_publish_eligible/user_needs_documents-style aliases.
+Provider/advisory failures remain diagnostic-only when deterministic core parsing succeeds.
+DocRaptor test mode remains distribution/public-sample metadata only and is not ordinary customer delivery authority.
+Purchase assumptions classify as purchase-context/acquisition-context support when supported, otherwise context-only.
+Purchase assumptions do not become appraisal, appraised value, T12 override, Rent Roll override, or current debt override.
+Forbidden V2/full-underwriting surfaces remain collapsed/deferred.
+```
+
+Validation:
+
+```text
+node --check api/generate-client-report.js
+node --check api/_lib/qa-action-plan.js
+node --check api/_lib/report-contract-qa.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+```
+
+Status:
+
+```text
+Safe to commit / committed before retest.
+```
+
+## Codex usage conservation note
+
+Rob is conserving Codex usage.
+
+Controlling workflow from this checkpoint:
+
+```text
+Do not run another Codex audit before the clean retest batch.
+Do not start another patch just because an issue might exist.
+Do not ask Codex for broad summaries or broad audits.
+Use Codex only for a targeted patch if the next clean live PDFs/artifacts reveal a real blocker.
+```
+
+Preferred prompt style remains:
+
+```text
+small, direct, scope-locked micro-prompts;
+patch exact known defects;
+no broad exploration unless genuinely necessary;
+compact receipt only.
+```
+
+## Next action
+
+Run only this clean live retest batch:
+
+```text
+1. One fresh Screening Report using valid T12 + Rent Roll.
+2. One fresh Acquisition Memo using valid T12 + Rent Roll + support docs.
+```
+
+Use the same document family as the last tests unless intentionally changing the source package.
+
+Do not run messy variants or edge cases until the clean retest batch is reviewed.
+
+## What to upload after retesting
+
+For each clean retest, upload:
+
+```text
+PDF
+analysis_artifacts_rows.json
+report_contract_qa artifact if separate
+source_report_coverage_qa artifact if separate
+qa_action_plan artifact if separate
+delivery_gate_decision / deliveryDecisionState evidence if visible
+Dashboard/Admin screenshots only if the lifecycle/display looks wrong
+```
+
+## Retest review checklist - Screening
+
+Screening must show:
+
+```text
+substantial report feel for the product tier;
+valid T12 + Rent Roll operating depth survives final PDF assembly;
+Income Reconstruction / Operating Expenses / NOI / rent-roll analysis where source-supported;
+Data Coverage / Source Reliability visible;
+no launch memo wording;
+no DCF / Discounted Cash Flow / waterfall / equity return / deal score / final recommendation / current-debt DSCR / refinance wording;
+no unresolved tokens;
+no orphan headings;
+no empty tables;
+no one-card pages that feel unfinished unless unavoidable from source limitation;
+no public AI wording;
+no BUY / SELL / HOLD.
+```
+
+## Retest review checklist - Acquisition Memo
+
+Acquisition Memo must show:
+
+```text
+fuller memo presentation;
+one rent-positioning path only;
+source-bound operating, rent, cap-rate/value indication, acquisition context, Data Coverage, Source Treatment, and deferred advanced-module language;
+filenames preserved for transparency;
+clean document role/treatment labels beside filenames;
+debt support disclosed as received/contextual/deferred, not modeled current-debt analysis;
+purchase assumptions treated as acquisition context when supported;
+property tax, environmental, market survey, CapEx, appraisal, broker/email roles clearly separated;
+advanced financing/refinance/return-projection/recommendation modules deferred in customer-safe language;
+no current-debt DSCR;
+no refinance proceeds/stability;
+no DCF;
+no waterfall;
+no equity return;
+no deal score;
+no final recommendation;
+no BUY / SELL / HOLD;
+no unresolved tokens;
+no orphan headings;
+no empty tables;
+no internal parser/admin/vendor artifacts in customer-facing copy.
+```
+
+## Retest review checklist - artifacts
+
+Artifacts should show:
+
+```text
+customer_delivery_allowed: true
+hold_delivery: false
+delivery_gate_status: deliverable / ready
+canonical delivery state controls compatibility aliases
+no contradictory legacy aliases on deliverable jobs
+no customer-lifecycle needs_documents/publication_held/admin_review_required for core-valid jobs
+no entitlement_restored for section-only/support/advisory/distribution issues
+provider/advisory failures diagnostic-only when deterministic core parsing succeeds
+DocRaptor test mode distribution-only, not ordinary customer delivery blocker
+```
+
+## Do not do yet
+
+Do not:
+
+```text
+flip DocRaptor production mode;
+create public sample links;
+send anything to Ken/public distribution;
+run messy/edge variants before reviewing the clean retest;
+run another Codex audit before the retest;
+patch Dashboard/Admin unless the next artifacts or screenshots show a real customer/admin lifecycle issue;
+change pricing/Stripe;
+add routes/serverless functions;
+patch SQL/RPC casually.
+```
+
+## Fresh chat continuation prompt
+
+Use this if starting a new chat after this checkpoint:
+
+```text
+We are continuing InvestorIQ after the June 5/6 Elite Report Fullness / Source Treatment / Readiness Alias cleanup.
+
+Completed today:
+- Screening Memo 3 reached 7 pages and Acquisition Memo 6 reached 14 pages, confirming fullness direction.
+- Patch 1 cleaned Acquisition Memo source treatment, filename transparency, duplicate rent-positioning, purchase assumptions consistency, debt-support deferred/contextual treatment, and QA false positives.
+- Patch 2 preserved Screening final-assembly operating depth, cleaned Screening advanced/exclusion wording, improved Acquisition Memo wrapper/page composition, aligned legacy readiness aliases with canonical delivery, kept provider/DocRaptor diagnostic-only, and fixed purchase-assumptions acquisition-context follow-through.
+- Files touched across both patches: api/generate-client-report.js, api/_lib/qa-action-plan.js, api/_lib/report-contract-qa.js, tests/qa/generate-client-report-rent-roll-smoke.js.
+- Validation passed and patches were safe to commit.
+
+Next action:
+Run one fresh clean Screening Report and one fresh clean Acquisition Memo using the same source family as the last tests. Upload PDFs and analysis artifacts for Ken-style red-pen review.
+
+Guardrails:
+No more Codex audits before retest. No messy/edge variants yet. Do not flip DocRaptor. Do not create public samples. Do not change pricing/Stripe. Preserve filename transparency. Do not re-enable current-debt DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/BUY/SELL/HOLD surfaces.
+```
+
+---
+
+# June 4, 2026 Addendum - Acquisition Memo Product Pivot / Memo Density / Renderer Runtime Stability Checkpoint
+
+## Current controlling status
+
+InvestorIQ is now continuing under the June 4 product ladder and Acquisition Memo launch pivot.
+
+The current launch ladder is:
+
+```text
+1. InvestorIQ Screening Report
+   - lower-priced stable first-pass report from T12 + Rent Roll
+   - keep Screening stable and largely as-is
+
+2. InvestorIQ Acquisition Memo
+   - main launch product
+   - built from the current Underwriting / v1_core path
+   - document-driven acquisition and preliminary financing-readiness memo
+   - not a loan approval
+   - not final Full Underwriting V2.0
+
+3. InvestorIQ Full Underwriting V2.0
+   - coming later
+   - advanced debt/refi, DCF, waterfall, capital stack, integrations, and full investor/lender package
+```
+
+## Acquisition Memo Slice 1 completed
+
+Acquisition Memo Slice 1 isolated the launch memo from current-debt / DSCR Review-cap summary logic.
+
+Completed behavior:
+
+- launch Acquisition Memo no longer uses current-debt DSCR or debt-cap verdict logic for the Executive Summary / launch memo visible classification;
+- the visible contradiction where the memo showed Stable but also said classification was capped at Review because current debt DSCR was below 1.25x was removed;
+- `v1_core` launch memo classification now uses operating/acquisition memo logic, not current-debt verdict caps;
+- Full Underwriting / future V2 debt logic remains preserved for the future V2 path.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+tests/qa/report-contract-qa-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+isolate acquisition memo from debt verdict caps
+```
+
+## Acquisition Memo Slice 2 completed
+
+Acquisition Memo Slice 2 expanded the memo structure so the Acquisition Memo no longer feels like a thin 7-page Screening-plus shell.
+
+Added / promoted dedicated memo sections:
+
+```text
+Acquisition Memo Summary
+Operating Snapshot
+Rent Positioning Summary
+Rent Upside / Value Sensitivity
+Cap-Rate Value Indication
+Source Context / Support Document Treatment
+Data Coverage & Source Limitations
+```
+
+Additional behavior:
+
+- Document Treatment now renders as a dedicated memo-grade source-context block instead of being buried only inside a coverage card;
+- Data Coverage now renders as a dedicated memo-grade section and no longer depends on old stripped debt/refi/scenario artifacts to become substantial;
+- rent-positioning title logic now uses summary-driven language when only summary totals drive the surface;
+- `Unit-Level Rent Positioning & Value Sensitivity` is used only when true unit-level detail is actually rendered.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+api/report-template-runtime.html
+tests/qa/generate-client-report-rent-roll-smoke.js
+tests/qa/report-contract-qa-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+expand acquisition memo section structure
+```
+
+## Runtime failures found during live Acquisition Memo testing
+
+Two live Acquisition Memo runs failed during rendering after valid T12 + valid Rent Roll parsing.
+
+Failures:
+
+```text
+Acquisition Memo 3:
+Cannot access 'rrUnits' before initialization
+
+Acquisition Memo 4:
+hasForwardLookingRenovationInputs is not defined
+```
+
+Interpretation:
+
+- these were renderer/runtime variable-scope bugs;
+- these were not customer document failures;
+- T12 and Rent Roll were valid/parseable;
+- credit restore behavior correctly treated them as platform/render failures;
+- the failures reinforced that unsupported support docs must collapse, qualify, or render context-only rather than kill a core-valid report.
+
+Doctrine reaffirmed:
+
+```text
+Valid T12 + valid Rent Roll should publish unless true runtime/storage/PDF/catastrophic failure prevents safe generation.
+
+Unsupported support docs should collapse, qualify, omit, or render context-only.
+
+Renderer runtime defects are platform defects, not bad-upload failures.
+```
+
+## Emergency tiny fix completed
+
+A focused runtime fix was completed for the `rrUnits` TDZ crash.
+
+Completed behavior:
+
+- Acquisition Memo cap-rate/value rendering now uses an initialized units value before rendering;
+- the prior pre-initialization `rrUnits` usage was removed from the early memo assembly path.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+fix acquisition memo units initialization
+```
+
+## Root runtime audit completed
+
+After the second runtime failure, whack-a-mole patching was stopped.
+
+Codex ran an audit-only pass of its Acquisition Memo Slice 2 work.
+
+Root cause class identified:
+
+```text
+Acquisition Memo renderer-scope TDZ / missing render-context initialization
+```
+
+Pattern identified:
+
+```text
+New Acquisition Memo sections reached sideways into scattered late-bound locals instead of consuming one early safe render context object.
+```
+
+Why existing tests missed this:
+
+- tests were too source-regex/helper-level;
+- they did not execute the actual `v1_core` final HTML assembly path;
+- they did not exercise the realistic support-doc combination that failed in production.
+
+## Root runtime stability patch completed
+
+A system-level runtime stability patch was completed.
+
+Completed behavior:
+
+- one early Acquisition Memo render context now exists before section assembly;
+- memo sections consume initialized/defaulted context rather than reaching sideways into late-bound locals;
+- `rrUnits` / unit-count hazards were resolved;
+- `hasForwardLookingRenovationInputs` is now defined before source-context and data-coverage assembly;
+- unstructured renovation/CapEx support defaults to context-only / limited-use instead of creating runtime risk.
+
+Early Acquisition Memo render context now includes safe/defaulted values for:
+
+```text
+units
+occupiedUnits
+vacantUnits
+occupancy
+annualInPlaceRent
+annualMarketRent
+annualRentUpside
+rentGapPercent
+egi
+opEx
+noi
+expenseRatio
+noiMargin
+breakEvenOccupancy
+purchasePrice
+goingInCapRate
+acquisitionNoiBasis
+hasForwardLookingRenovationInputs
+renovationDisplayMode
+renovationPayload
+propertyTaxPayload
+propertyTaxBindingState
+documentQuantitativeUsageMap
+documentSources
+```
+
+A real `v1_core` full-render smoke was added using `__test_return_final_html` and a Harbourstone-style fixture package.
+
+The smoke executes the real handler / final HTML assembly far enough to catch:
+
+```text
+ReferenceError
+TDZ crash
+undefined render variables
+unresolved {{TOKEN}} placeholders
+```
+
+The fixture includes:
+
+```text
+valid T12
+valid narrative / summary Rent Roll
+current loan summary
+purchase assumptions
+property tax support
+unstructured CapEx notes
+market survey excerpt
+broker email context
+Phase I ESA context
+unsupported appraisal excerpt
+```
+
+Support docs in the harness fail soft / context-only unless validated.
+
+Files changed:
+
+```text
+api/generate-client-report.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Commit message used or recommended:
+
+```text
+stabilize acquisition memo render context
+```
+
+## Codex usage constraint
+
+Rob is conserving Codex usage.
+
+Current note:
+
+```text
+Codex usage is down to about 85% remaining.
+Reset: Jun 11, 2026 8:38 AM.
+```
+
+Future Codex prompts should remain:
+
+- tight;
+- high-impact;
+- no broad audits unless clearly necessary;
+- no long receipts by default;
+- no repeated verification passes unless a serious ambiguity or failure requires it.
+
+## Current next action
+
+Do not do more Codex patches tonight.
+
+Next fresh-chat action:
+
+```text
+Run one controlled live Acquisition Memo test.
+```
+
+If it publishes, inspect:
+
+- actual PDF page count;
+- memo flow and density;
+- Document Treatment;
+- Data Coverage;
+- source treatment;
+- support-doc context-only handling;
+- absence of V2 debt/refi/DCF/waterfall surfaces.
+
+If it fails again with a renderer/runtime error, treat that as evidence the full-render harness is still missing a production branch.
+
+Do not run multiple live tests in a row without reviewing artifacts.
+
+## Current live-test acceptance checklist
+
+The next controlled Acquisition Memo live test should prove:
+
+```text
+report publishes;
+no renderer/runtime 500;
+no entitlement restore unless true runtime fatal;
+PDF is materially fuller than the old 7-page shell;
+no Current Debt DSCR launch-memo leak;
+no Debt Coverage Constraint launch-memo leak;
+no refinance capacity/proceeds surface;
+no DCF;
+no waterfall;
+no equity return;
+no BUY / SELL / HOLD language;
+Document Treatment is visible and source-bound;
+Data Coverage is visible and not falsely severe when T12 + Rent Roll are clean;
+support docs are context-only/limited-use unless validated;
+no unresolved tokens;
+no orphan headings;
+no empty tables;
+no public AI wording.
+```
+
+---
+
+# June 3, 2026 Addendum - Codex Usage Conservation / Slice 3 In Progress Checkpoint
+
+## Current continuation point
+
+Codex is currently working on:
+
+```text
+Slice 3 - Acquisition/current-debt/proposed-financing truth cleanup
+```
+
+This follows:
+
+```text
+Slice 0 - Documentation checkpoint: complete
+Slice 1 - Delivery/artifact legacy alias cleanup: pass / safe to commit
+Slice 2 - Advanced modeling / DCF / waterfall render gates: pass / safe to commit
+Slice 3 - in progress with tightened prompt
+```
+
+## Codex usage constraint
+
+Rob has limited Codex usage until June 8.
+
+Current remaining usage at this checkpoint:
+
+```text
+62% remaining
+```
+
+Because usage is limited, future Codex work must conserve usage. Do not ask Codex for unnecessary long summaries, broad re-audits, repeated verification passes, or nonessential exploratory work.
+
+## Prompt/receipt style change - controlling from this point forward
+
+Codex prompts should remain:
+
+- tightly scoped;
+- tied to the committed `.MD` cleanup map;
+- repo-wide by root family, not report-specific;
+- limited to the mapped file cluster unless Codex proves the invariant cannot be enforced there;
+- direct and short enough to avoid wasting usage.
+
+Codex receipts should be concise. Do not ask Codex for long narrative summaries of every detail it changed unless a serious failure or ambiguous patch requires deeper explanation.
+
+Use this compact receipt standard by default:
+
+```text
+A. Files changed
+B. Audit IDs addressed
+C. Exact production rule fixed
+D. Tests run / pass
+E. Anti-hardcode confirmation
+F. Anything intentionally not touched
+```
+
+Request longer receipts only when:
+
+- Codex changes files outside the requested scope;
+- a test fails;
+- a production invariant is unclear;
+- a patch touches delivery/credit/SQL/lifecycle behavior;
+- a patch risks weakening fail-closed behavior;
+- the result is not obviously safe to commit.
+
+## Slice 3 tightened scope
+
+The active Slice 3 prompt was tightened to reduce Codex usage.
+
+Controlling Slice 3 invariant:
+
+```text
+Proposed acquisition/refinance financing can be recognized as proposed/acquisition support without becoming true current debt.
+```
+
+Additional non-negotiable appraisal guard:
+
+```text
+Appraisal context may support valuation/comparable context only.
+Appraisal context must never unlock current debt, current-debt DSCR, refinance, DCF, waterfall, debt-service mix, sale-proceeds, or equity-return surfaces.
+```
+
+Slice 3 scope:
+
+```text
+Audit IDs: L-18, L-21, L-22
+Files:
+- api/parse/parse-doc.js
+- api/_lib/report-surface-contracts.js
+- api/_lib/report-contract-qa.js
+- api/_lib/source-report-coverage-qa.js
+- related tests only
+```
+
+`api/generate-client-report.js` may be inspected only for the appraisal unlock guard and patched only if required to enforce the invariant.
+
+## Current execution guardrails
+
+Do not live retest yet.
+Do not rerun the repo-wide audit.
+Do not flip DocRaptor production mode.
+Do not create public samples.
+Do not change pricing/Stripe.
+Do not casually patch SQL/RPC.
+Do not add new API/serverless routes.
+Do not hardcode 124 Richmond, filenames, job IDs, report IDs, or fixture-only values.
+Do not ask Codex for broad summaries or broad audits while usage is constrained.
+
+## Next sequence after Slice 3
+
+After Codex returns the Slice 3 receipt:
+
+1. Review whether Slice 3 passes using the compact receipt.
+2. If pass, commit Slice 3.
+3. Continue to Slice 4 - Property-tax corroborating support path.
+4. Then Slice 5 - Dashboard/customer/Admin copy cleanup.
+5. Then Slice 6 - Parser/source-coverage fallback rationalization.
+6. Reassess before any live retest.
+
+---
+
+# June 2, 2026 Addendum - Repo-Wide Legacy Residue Audit Converted Into Cleanup Map
+
+## Purpose
+
+Record that the June 2 controlled 124 Richmond Screening + Underwriting test moved the project from "controlled live testing next" into a new cleanup-map checkpoint.
+
+This does not mean the customer-delivery doctrine is broken. Both reports published and customer delivery was allowed. But the audit proved legacy residue still exists in live artifacts, PDF renderer/template paths, Dashboard/customer copy, worker/queue/admin metrics, parser/source coverage, tests, and sample/preview assets.
+
+## Controlling interpretation
+
+1. Customer-delivery doctrine:
+   - materially working better;
+   - valid core jobs published;
+   - no needs_documents customer outcome;
+   - no publication_held customer outcome;
+   - no MISSING_REQUIRED_SOURCE_DATA customer failure;
+   - no credit restore for section-only/support/advisory issues.
+
+2. Remaining issue:
+   - repo still contains active legacy residue and old template/render paths;
+   - contradictions in artifacts are caused by legacy/fallback compatibility aliases and duplicate readiness fields still being emitted beside canonical delivery state;
+   - advanced modeling / DCF / waterfall surfaces are caused by old reachable renderer/template sections and weak canonical render gates.
+
+3. Do not run this broad audit again unless a future patch invalidates this map.
+   This audit is now the working inventory.
+
+## Cleanup map
+
+### Slice 0 - Documentation checkpoint
+- Files:
+  - `!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_JUNE2_UPDATED_PRETEST_CHECKPOINT.md`
+  - `!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_2026-06-02_UPDATED_PRETEST_CHECKPOINT.md`
+- Purpose: lock this audit into docs before patching.
+- Status: in progress / do first.
+
+### Slice 1 - Delivery/artifact legacy alias cleanup
+- Audit IDs: L-01, L-14, L-15, L-16, L-20, L-23, L-24, L-25 inspect-only.
+- Files:
+  - `api/generate-client-report.js`
+  - `api/_lib/qa-action-plan.js`
+  - `api/_lib/qa-fix-routing.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/admin-run-worker.js`
+  - `api/admin/queue-metrics.js`
+  - `supabase/migrations/20260214_0930_queue_job_for_processing.sql` inspect only
+- Invariant:
+  When canonical delivery state exists, live/new-job artifacts must not emit contradictory legacy/fallback fields as live authority.
+- Target fields to remove/rename/isolate when canonical-present:
+  - `readiness_source: legacy_publish_eligibility_fallback`
+  - `readiness_fallback_used: true`
+  - `report_blocked: true`
+  - `report_publishable: false`
+  - `customer_publish_eligible: false`
+  - `customer_delivery_ready: false`
+  - `launch_path_recommendation: user_needs_documents`
+  - `customer_status_reason_code: customer_publish_not_ready`
+- Disposition:
+  historical compatibility may remain only if clearly isolated as non-authoritative.
+- Priority: highest.
+
+### Slice 2 - Advanced modeling / DCF / waterfall render gates
+- Audit IDs: L-02, L-03, L-17, L-18, L-19.
+- Files:
+  - `api/generate-client-report.js`
+  - `api/report-template-runtime.html`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/report-surface-contracts.js`
+  - `api/_lib/full-underwriting-state.js`
+- Invariant:
+  DCF, advanced modeling, debt-service mix, refinance, waterfall, comparables, and relative-positioning surfaces render only when canonical support exists.
+- Surfaces:
+  - Advanced Financial Modeling
+  - Operating Expense, Debt Service, and Cash Flow Mix
+  - Equity Cash Flow Waterfall
+  - Initial Equity / Cash Flow / Refinance / Sale
+  - DCF Framework Sensitivity Summary
+  - Comparable Transaction Context
+  - Relative Positioning
+- Priority: highest after Slice 1.
+
+### Slice 3 - Acquisition/current-debt/proposed-financing truth cleanup
+- Audit IDs: L-18, L-21, L-22.
+- Files:
+  - `api/parse/parse-doc.js`
+  - `api/_lib/report-surface-contracts.js`
+  - `api/_lib/report-contract-qa.js`
+  - `api/_lib/source-report-coverage-qa.js`
+- Invariant:
+  Proposed acquisition/refinance financing can be recognized as proposed/acquisition support without becoming true current debt.
+- 124 Richmond source proof:
+  Clean term sheet contains loan amount at purchase price, 5.85% rate, 30-year amortization, and 1.00% lender fee.
+- Required behavior:
+  recognize fields as proposed/acquisition support, not current outstanding debt.
+- Priority: high.
+
+### Slice 4 - Property-tax corroborating support path
+- Audit IDs: L-18, L-22 support-doc/property-tax portions.
+- Files:
+  - `api/parse/parse-doc.js`
+  - `api/_lib/report-surface-contracts.js`
+  - `api/_lib/full-underwriting-state.js`
+  - `api/generate-client-report.js`
+  - `api/_lib/report-contract-qa.js`
+- Invariant:
+  A property tax document that matches the T12 tax line should render as limited corroborating support, not generic auditability-only and not modeled override.
+- 124 Richmond source proof:
+  Property tax bill contains 2025 Municipal Property Taxes $38,400, matching the T12 property tax line.
+- Priority: high.
+
+### Slice 5 - Dashboard/customer/Admin copy cleanup
+- Audit IDs: L-10, L-11, L-12, L-24 if relevant.
+- Files:
+  - `src/lib/dashboardCustomerCopy.js`
+  - `src/pages/Dashboard.jsx`
+  - `src/pages/AdminDashboard.jsx`
+  - `api/admin/queue-metrics.js`
+- Invariant:
+  Customer-facing status/copy must come from canonical customer state, not old job.status, old readiness aliases, needs-doc, or publication-held fallbacks.
+- Must not show for core-valid jobs:
+  - `needs_documents`
+  - `user_needs_documents`
+  - `publication_held`
+  - `under_review`
+  - `admin_review_required`
+  - `upload more documents`
+  - `source package blame`
+  - `T12/Rent Roll blame when usable`
+- Priority: high after Slice 1.
+
+### Slice 6 - Parser/source-coverage fallback rationalization
+- Audit IDs: L-17, L-18, L-22.
+- Files:
+  - `api/parse/parse-doc.js`
+  - `api/_lib/source-report-coverage-qa.js`
+  - `api/_lib/report-surface-contracts.js`
+- Invariant:
+  Parser fallback/recovery paths may recover usable deterministic core evidence, but fallback provenance cannot become live customer-blocking authority or silent financial truth.
+- Nuance:
+  Do not delete useful deterministic fallback blindly. Separate safe deterministic recovery from legacy fallback authority.
+- Priority: medium-high.
+
+### Slice 7 - Preview/sample/dead asset isolation
+- Audit IDs: L-04, L-05, L-06, L-07, L-08, L-09, L-26, L-27, L-28.
+- Files:
+  - `api/report-template.html`
+  - `api/html/sample-report.html`
+  - `src/lib/pdfSections.js`
+  - `src/lib/generatePDF.js`
+  - `public/reports/sample-report.html`
+  - `scripts/generate-sample-pdf.js`
+  - `src/pages/SampleReport.jsx`
+  - `src/components/UploadModal.jsx`
+  - `src/lib/sampleReportPages.js`
+- Invariant:
+  Legacy sample/demo/preview paths must not feed live customer PDFs or public trust surfaces.
+- Priority:
+  medium/low unless proven reachable.
+
+### Slice 8 - Test-suite doctrine split
+- Files:
+  - `tests/qa/qa-action-plan-smoke.js`
+  - `tests/qa/delivery-decision-state-smoke.js`
+  - `tests/qa/source-report-coverage-qa-smoke.js`
+  - `tests/qa/admin-run-worker-gate-smoke.js`
+  - `tests/qa/report-contract-qa-smoke.js`
+  - `tests/qa/dashboard-customer-copy-smoke.js`
+  - `tests/qa/job-failure-messaging-smoke.js`
+  - `tests/qa/report-upload-gate-smoke.js`
+  - `tests/qa/rent-roll-text-summary-fallback-smoke.js`
+  - `tests/qa/rent-roll-alias-smoke.js`
+  - `tests/qa/t12-core-summary-smoke.js`
+- Invariant:
+  Tests may preserve historical compatibility only when explicitly named as historical/read-only compatibility. No test should protect legacy fallback as expected live/new-job behavior.
+- Priority:
+  update alongside each slice, finalize after Slices 1-6.
+
+### Slice 9 - SQL/RPC lifecycle review only
+- Audit ID: L-25.
+- File:
+  - `supabase/migrations/20260214_0930_queue_job_for_processing.sql`
+- Invariant:
+  New jobs must not create or queue through needs_documents.
+- Current note:
+  Production Supabase was already manually fixed so active consume_purchase_and_create_job creates queued and queue_job_for_processing queues from queued.
+- Disposition:
+  inspect/document only unless repo source-of-truth would reintroduce old behavior.
+- Priority:
+  after code authority slices; no casual SQL patch.
+
+## Recommended execution order
+
+0. Update docs.
+1. Slice 1 - Delivery/artifact legacy alias cleanup.
+2. Slice 2 - Advanced modeling / DCF / waterfall render gates.
+3. Slice 3 - Acquisition/current-debt/proposed-financing truth cleanup.
+4. Slice 4 - Property-tax corroborating support rendering.
+5. Slice 5 - Dashboard/customer/Admin copy cleanup.
+6. Slice 6 - Parser/source-coverage fallback rationalization.
+7. Slice 8 - Test-suite doctrine split finalization.
+8. Slice 9 - SQL/RPC inspect-only source-of-truth check.
+9. Slice 7 - dead/sample/preview cleanup later unless reachable sooner.
+
+## Guardrails
+
+- Do not patch yet from this documentation update.
+- Do not run more live testing until the map is committed and the next patch slice is chosen.
+- Do not flip DocRaptor.
+- Do not create public samples.
+- Do not change pricing/Stripe.
+- Do not add new API/serverless routes.
+- Do not hardcode 124 Richmond, filenames, job IDs, report IDs, or fixture-only values.
+- Do not delete parser fallback blindly.
+- Do not casually patch SQL/RPC.
+- Do not treat customer-deliverable as Ken/public-sample ready.
+
+## Required receipt
+
+A. Files changed
+B. Addendum title added to each file
+C. Confirm all 10 slices/Slice 0-9 were recorded
+D. Confirm execution order recorded
+E. Confirm guardrails recorded
+F. Confirm no code files changed
+G. Validation: `git diff --check`
+
+# June 2, 2026 Addendum - Pre-Test Checkpoint / Universal Report-Quality Cleanup Verified / Controlled Live Testing Next
+
+## Current controlling status
+
+InvestorIQ is now at a pre-test checkpoint.
+
+Full Underwriting has already passed the core-valid customer-delivery doctrine live once: a valid core job published instead of failing closed because of optional/support/advisory issues. After that pass, red-pen review exposed report-surface root classes rather than delivery-gate failures. Codex has now patched those root classes and verified the patch as safe to commit.
+
+The system should now proceed to controlled live validation after the patch is committed. DocRaptor production mode remains intentionally deferred until testing confidence is established.
+
+## Universal report-quality cleanup completed and verified
+
+Codex completed a root-invariant patch across renderer/canonical support-doc treatment/report-contract QA conformance surfaces.
+
+Files changed:
+
+- `api/generate-client-report.js`
+- `api/_lib/report-surface-contracts.js`
+- `api/_lib/report-contract-qa.js`
+- `tests/qa/current-debt-support-routing-smoke.js`
+- `tests/qa/generate-client-report-rent-roll-smoke.js`
+- `tests/qa/report-contract-qa-smoke.js`
+
+Codex validation run:
+
+- `node --check api/generate-client-report.js`
+- `node --check api/_lib/report-surface-contracts.js`
+- `node --check api/_lib/report-contract-qa.js`
+- `node tests/qa/current-debt-support-routing-smoke.js`
+- `node tests/qa/generate-client-report-rent-roll-smoke.js`
+- `node tests/qa/report-contract-qa-smoke.js`
+- `npm.cmd run build`
+- `git diff --check`
+
+No-code verification result:
+
+```text
+1. Going-in cap rate binding: Verified
+2. Summary-only rent roll unit-mix collapse: Verified
+3. Generic orphan heading collapse: Verified
+4. Property-tax corroborating support wording: Verified
+5. Explicit current debt QA recognition / acquisition separation: Verified
+Blocker found: None
+Commit status: safe to commit
+```
+
+## What this cleanup means
+
+This cleanup was not a patch to one test report. It addressed universal report-quality root invariants.
+
+### Universal render eligibility
+
+Now considered complete/safe to commit:
+
+- no orphan headings;
+- no empty tables;
+- no unsupported rows;
+- summary-only rent rolls should not render misleading unit-mix tables;
+- representative observations must not be treated as full unit mix;
+- empty intro/heading blocks should collapse generically.
+
+### Field-source binding
+
+Now considered complete/safe to commit:
+
+- going-in cap rate cannot render as acquisition interest rate;
+- acquisition interest rate renders only with explicit interest-rate support;
+- acquisition fields render only under exact source meaning;
+- property tax support that matches the T12 tax line is limited corroborating support;
+- property tax support does not override T12 totals and does not become modeled input without a validated structured tax artifact.
+
+### QA conformance alignment
+
+Now considered complete/safe to commit:
+
+- explicit current debt support is recognized by QA/conformance;
+- explicit current debt should no longer be demoted to acquisition-only/not-assessed;
+- acquisition/proposed financing stays separated from current debt.
+
+## Screening vs Underwriting status at this checkpoint
+
+### Screening
+
+Status: `GREEN/YELLOW - ready for final controlled validation`
+
+Screening remains the cleaner report type because it has fewer optional/support surfaces. It still requires final controlled live validation, PDF visual review, Dashboard card review, and website/distribution readiness before launch.
+
+### Full Underwriting
+
+Status: `YELLOW/GREEN - customer-delivery doctrine live-proven once; final controlled validation next`
+
+Full Underwriting is no longer in the prior phase where valid core jobs were failing closed because of section/support/advisory issues. The immediate issue shifted to report-surface discipline, and the known root-class surface issues have now been patched and verified.
+
+The next Full Underwriting step is not another broad audit. It is controlled live validation.
+
+## Production/distribution readiness
+
+### DocRaptor production mode
+
+Status: `DEFERRED INTENTIONALLY`
+
+Do not flip DocRaptor yet. The test watermark remains acceptable during controlled testing. DocRaptor production mode is a distribution/public-sample switch, not proof that report logic is correct.
+
+Flip only after final controlled Screening and Underwriting outputs are trusted.
+
+### Public sample files/assets
+
+Status: `DEFER UNTIL FINAL TRUSTED OUTPUTS EXIST`
+
+Do not create public samples from pre-final test reports. Sample links/assets can be audited later, but external distribution should wait until controlled report outputs pass.
+
+### Website/pricing/checkout copy
+
+Status: `OPEN BEFORE LAUNCH, NOT THE NEXT REPORT-ENGINE STEP`
+
+Still required before launch:
+
+- Landing/Pricing copy audit;
+- checkout/report-type copy audit;
+- Stripe/pricing alignment;
+- sample link/assets check;
+- no public AI wording;
+- no BUY/SELL/HOLD;
+- no admin-review/under-review/publication-held customer copy;
+- no misleading Underwriting availability.
+
+## Immediate next action
+
+If not already committed, commit the universal report-quality cleanup patch.
+
+Recommended commit message:
+
+```text
+universal report quality cleanup
+```
+
+Then proceed to controlled live testing.
+
+## Controlled live testing sequence
+
+Run:
+
+1. final Screening live run;
+2. final Full Underwriting live run;
+3. Dashboard customer card review;
+4. Admin artifacts/diagnostics review;
+5. PDF visual review.
+
+Capture for each:
+
+- PDF;
+- `analysis_artifacts_rows.json`;
+- lifecycle events;
+- delivery gate decision;
+- report-contract QA;
+- source-report coverage QA;
+- QA action plan;
+- Dashboard status/copy;
+- Admin diagnostics if relevant.
+
+## Acceptance criteria for live testing
+
+Valid core jobs must show:
+
+```text
+- published status;
+- customer delivery allowed;
+- no needs_documents / user_needs_documents lifecycle for core-valid jobs;
+- no publication_held lifecycle for core-valid jobs;
+- no MISSING_REQUIRED_SOURCE_DATA for core-valid jobs;
+- no entitlement/credit restore for section-only/support/advisory issues;
+- unsupported sections collapse/omit/qualify/disclose instead of killing the report;
+- no orphan headings;
+- no empty tables;
+- no unsupported rows;
+- no cap-rate-as-interest-rate issue;
+- property tax treatment matches source support;
+- explicit current debt support aligns with QA/conformance;
+- acquisition/proposed financing remains separate from current debt;
+- Dashboard copy is ready/processing/fail-closed only, with no customer review limbo;
+- DocRaptor watermark accepted during testing and treated as distribution-only.
+```
+
+## Do not do before testing
+
+Do not:
+
+- flip DocRaptor production mode;
+- create public samples;
+- change Pricing/Stripe;
+- run broad repo audits;
+- add routes/serverless functions;
+- touch SQL/RPC lifecycle unless a new live blocker appears;
+- change Dashboard lifecycle/copy unless live testing exposes a customer-facing issue.
+
+## Fresh continuation point
+
+Start the next chat from this checkpoint. Commit the universal report-quality cleanup patch if it has not already been committed, then run controlled live Screening and Full Underwriting tests.
+
+
+---
+
+# June 2, 2026 Addendum - Full Underwriting Live Pass / SQL Lifecycle Fixed / Ken Red-Pen Result
+
+## Current controlling status
+
+Full Underwriting finally produced a successful controlled live customer-deliverable report after the stop-the-line core-valid failure path campaign.
+
+Report:
+
+```text
+Final Motherload underwriting 12
+Result: published
+Customer-deliverable: yes
+Ken/public-sample ready: no, not yet
+```
+
+This supersedes prior notes saying no more live Underwriting retests should run. That restriction applied before the SQL lifecycle and legacy fallback fixes. The controlled retest has now run and passed.
+
+## Critical production fix completed in Supabase
+
+Production Supabase was still using old function definitions:
+
+```text
+consume_purchase_and_create_job created new jobs as needs_documents.
+queue_job_for_processing only queued from needs_documents.
+```
+
+That was the last live lifecycle blocker.
+
+The production SQL functions were manually updated so:
+
+```text
+consume_purchase_and_create_job creates new jobs as queued.
+queue_job_for_processing only accepts queued.
+```
+
+A production verification query confirmed the active function definitions now use `queued`, and a status check confirmed there are no current `analysis_jobs` rows with a `needs` status.
+
+Interpretation:
+
+```text
+The legacy needs_documents lifecycle is gone from the live/new-job path.
+```
+
+## Live Underwriting result
+
+The successful job moved through:
+
+```text
+queued -> extracting -> underwriting -> scoring -> rendering -> pdf_generating -> publishing -> published
+```
+
+The report-published email artifact was created.
+
+This confirms the core-valid job no longer gets forced into:
+
+```text
+user_needs_documents
+publication_held
+MISSING_REQUIRED_SOURCE_DATA
+credit_restore_required
+entitlement_restored
+source-package / Rent Roll / T12 customer blame
+```
+
+## Math / source validation result
+
+The Ken-style red-pen review checked the report against the uploaded source docs.
+
+Core math passed:
+
+```text
+T12:
+- EGI $1,036,800
+- OpEx $425,000
+- NOI $611,800
+- Expense Ratio 41.0%
+- NOI Margin 59.0%
+
+Rent Roll:
+- 48 units
+- 46 occupied
+- 2 vacant
+- occupancy 95.83%
+- in-place annual rent $1,036,800
+- market annual rent $1,137,600
+- annual rent upside $100,800
+
+Debt:
+- balance $8,750,000
+- rate 5.25%
+- amortization 30 years
+- monthly P&I about $48,318
+- DSCR about 1.06x
+```
+
+The visible classification `Review - Debt Coverage Constraint` is appropriate because current debt DSCR is below 1.25x.
+
+## Report-quality result
+
+The report is customer-deliverable, but it is not Ken/public-sample ready.
+
+Ken/public-sample blockers:
+
+1. DocRaptor test watermark / test-mode PDF output.
+2. Acquisition section appears to show `Interest Rate 5.75%` where the source only supports `Going-In Cap Rate 5.75%`.
+3. Internal QA artifacts still contain stale legacy/canonical current-debt contradictions even though the report rendered correct current debt math.
+4. Advanced modeling page has empty/weak headings that should collapse when no meaningful content exists.
+5. Unit mix table appears under-rendered for summary/narrative rent roll data; it should collapse or qualify summary-only mode.
+6. Property tax document treatment should say it supports the T12 tax line and does not override T12 totals.
+
+## Doctrine interpretation
+
+This is the correct interpretation:
+
+```text
+Underwriting engine customer-delivery pass: YES
+Core-valid publish doctrine live-confirmed: YES
+Optional/support/advisory non-blocking doctrine live-confirmed: YES
+OpenAI quota/advisory failures non-blocking: YES
+Ken/public sample readiness: NO
+DocRaptor production mode: still required before external distribution
+```
+
+Do not call Full Underwriting public/Ken/sample ready yet.
+
+## Immediate next recommended work
+
+Do not restart broad doctrine work.
+
+Next recommended batch is a focused Ken-readiness cleanup:
+
+```text
+1. Fix acquisition cap-rate vs interest-rate label.
+2. Collapse empty/weak advanced modeling headings.
+3. Collapse or qualify summary-only unit mix table.
+4. Polish property-tax support treatment wording.
+5. Clean internal current-debt canonical QA artifact contradiction.
+6. Keep DocRaptor production mode as distribution/config work, separate from ordinary customer delivery.
+```
+
+After that, regenerate one Underwriting report and run another Ken red-pen test.
+
+## Fresh-chat continuation point
+
+We resume after the breakthrough live pass:
+
+```text
+Final Motherload underwriting 12 published.
+SQL needs_documents live lifecycle removed.
+Core-valid Underwriting customer-delivery doctrine passed live.
+Math mostly checks out.
+Ken/public-sample readiness still blocked by polish/config/artifact issues.
+```
+
+Next likely action:
+
+```text
+Focused Ken-readiness cleanup batch.
+```
+
+---
+
+# June 2, 2026 Addendum - Doctrine Completion Checklist / Remaining Work To Make InvestorIQ Obey Doctrine End-to-End
+
+## Current controlling decision
+
+Yes: update the `.MD` files before this gets lost.
+
+The P0 Core-Valid Failure Path families were closed by Slices 1-3, but InvestorIQ should not stop at "P0 closed" while known P1 doctrine edges remain mapped. The next work is doctrine-completion hardening, not random patching.
+
+## Current doctrine target
+
+InvestorIQ must obey this end-to-end:
+
+```text
+Bad uploads cannot generate.
+Valid core jobs publish.
+Unsupported sections self-heal.
+Worker cannot resurrect old fail states.
+Dashboard cannot blame usable docs.
+Support/advisory/distribution issues stay internal.
+Only true core failure or true runtime/PDF/storage failure can kill the report.
+```
+
+## Remaining work sequence from this checkpoint
+
+### 1. Doctrine-completion patch: hard upload/server gate + P1 CVF cleanup
+
+Patch before live retest:
+
+- Screening Generate gate:
+  - require valid/usable T12;
+  - require valid/usable Rent Roll.
+- Underwriting Generate gate:
+  - require valid/usable T12;
+  - require valid/usable Rent Roll;
+  - require at least one supporting/deal document outside the required core docs.
+- Server-side generate gate:
+  - re-check the same rule so UI bypass cannot generate invalid jobs;
+  - reject before report generation and before credit consumption wherever safely possible;
+  - do not create failed-report lifecycle limbo for attempts that never satisfied the upload gate.
+- CVF-07 cleanup:
+  - optional/full-underwriting support-depth constraints must stay internal/distribution-only or section-level;
+  - they must not block ordinary customer delivery when `core_valid_required_coverage === true`.
+- CVF-15 cleanup:
+  - optional-support/source-package/admin-op paths must stay diagnostic/internal/distribution-only;
+  - they must not feed customer lifecycle, fail closed, or restore credit for core-valid jobs.
+
+Important support-doc nuance:
+
+```text
+For Underwriting, at least one support doc is required to start generation.
+But support docs are not quantitatively mandatory after that.
+Bad or unsupported support docs after the gate is satisfied are section-level/internal/distribution-only issues.
+They must not become required-core blockers once T12 + Rent Roll are valid.
+```
+
+### 2. Final no-code doctrine closure audit
+
+After the doctrine-completion patch passes, run an audit-only confirmation.
+
+Audit must prove:
+
+- CVF-07 is closed or safe internal/distribution-only;
+- CVF-15 is closed or safe internal/distribution-only;
+- upload/server gate is enforced for Screening and Underwriting;
+- `core_valid_required_coverage === true` cannot be overridden by optional/support/advisory/distribution issues;
+- no known non-legitimate CVF remains open before live retest.
+
+No code changes during this audit unless a real remaining P0/P1 doctrine edge is found.
+
+### 3. Controlled live retests
+
+Run in this order:
+
+1. valid Screening job with T12 + Rent Roll;
+2. valid Underwriting job with T12 + Rent Roll + support doc;
+3. deliberate invalid-core case;
+4. optional deliberate runtime/PDF/system failure case only if safe.
+
+Live retest must prove:
+
+- valid core jobs publish;
+- invalid core docs fail closed or are blocked at the gate;
+- runtime fatal shows neutral system-failure copy;
+- no core-valid job shows source-package/rent-roll/missing-doc blame;
+- no unsupported debt/refi/report-type surfaces leak into the PDF.
+
+### 4. Artifact and PDF inspection after live tests
+
+For valid Screening and Underwriting jobs, confirm artifacts show:
+
+```text
+core_valid_required_coverage: true
+customer_delivery_allowed: true
+hold_delivery: false
+delivery_gate_status: deliverable / ready
+no MISSING_REQUIRED_SOURCE_DATA
+no entitlement_restored
+no user_needs_documents customer lifecycle
+no publication_held customer lifecycle
+```
+
+PDF inspection must confirm:
+
+- no unsupported Current Debt DSCR leak;
+- no unsupported refinance stress/proceeds table leak;
+- no wrong report-type section leak;
+- unsupported sections are omitted, qualified, disclosed, or Not Assessed.
+
+### 5. Ledger/master-context update after live retest
+
+If live retest passes, update statuses:
+
+- `CVF-01`, `CVF-02`, `CVF-03`, `CVF-13` = legitimate failure paths preserved;
+- `CVF-04`, `CVF-05`, `CVF-06` = closed + live-confirmed;
+- `CVF-07` = closed or safe internal/distribution-only after doctrine-completion patch;
+- `CVF-08`, `CVF-09`, `CVF-10` = closed + live-confirmed;
+- `CVF-11`, `CVF-12` = closed + live-confirmed;
+- `CVF-14` = safe internal/distribution-only;
+- `CVF-15` = closed or safe internal/distribution-only after doctrine-completion patch.
+
+### 6. Final public/customer polish sweep
+
+Only after doctrine behavior is proven:
+
+- replace contraction wording where touched, especially `You'll` -> `You will`;
+- verify no customer-visible admin-review / under-review / publication-held wording;
+- verify no stale upload-clearer-docs copy except true invalid core-doc cases;
+- verify no weird report labels, unresolved tokens, mojibake, stale N/A blocks, public AI wording, or BUY/SELL/HOLD language;
+- resolve DocRaptor production/public-sample distribution readiness separately from ordinary customer delivery.
+
+### 7. Launch-readiness smoke
+
+Final short run:
+
+- `npm run build`;
+- all targeted QA smokes touched by the doctrine-completion sequence;
+- one Screening report;
+- one Underwriting report;
+- Dashboard customer card review;
+- Admin artifacts/diagnostics review;
+- PDF visual review.
+
+## Definition of Done
+
+InvestorIQ obeys doctrine when all of the following are true:
+
+```text
+1. Bad uploads cannot start generation.
+2. Valid T12 + Rent Roll jobs publish.
+3. Underwriting requires at least one support doc to start, but optional/support docs cannot later kill a core-valid report.
+4. Unsupported current-debt/refi/report-type/support sections self-heal before delivery.
+5. Worker cannot map core-valid section/support/advisory issues to MISSING_REQUIRED_SOURCE_DATA or entitlement restore.
+6. Dashboard and failure-message copy cannot blame usable core docs.
+7. Public-sample/high-value/DocRaptor/OpenAI/advisory issues stay internal or distribution-only.
+8. Only true core failure or true runtime/storage/PDF/catastrophic failure can kill the whole report.
+```
+
+## Immediate next action
+
+Give Codex the doctrine-completion patch prompt:
+
+```text
+Hard upload/server gate + remaining P1 CVF-07/CVF-15 cleanup.
+```
+
+Do not run controlled live retest until that patch and the follow-up no-code closure audit pass.
+
+---
+
+# June 2, 2026 Addendum - 15 Core-Valid Failure Path Families Added / Full Underwriting Launch Gate Reopened
+
+## Current controlling status
+
+The Publish-or-Fail doctrine remains correct, but the prior “Doctrine Lock Closed” implementation status is no longer sufficient for launch confidence.
+
+A controlled Full Underwriting live test proved that a report can still whole-report fail after required core documents are valid. The live package had a valid parsed T12 and valid parsed Rent Roll, but section/render-contract drift cascaded through legacy delivery/failure mapping into a whole-report fail and incorrect source-package/rent-roll blame copy.
+
+## New controlling invariant
+
+```text
+Valid T12 + valid Rent Roll = publish the report.
+
+If core docs are valid, non-core or section-level issues must collapse/omit/qualify/disclose the affected section, not fail the whole report.
+```
+
+Whole-report fail remains allowed only for:
+
+1. missing/unusable/unvalidated required T12;
+2. missing/unusable/unvalidated required Rent Roll;
+3. true runtime/storage/PDF generation failure;
+4. catastrophic render failure where no safe report shell can be produced.
+
+## New active ledger/campaign
+
+Active campaign name:
+
+```text
+InvestorIQ Core-Valid Failure Path Family Ledger
+```
+
+Suggested active ledger filename:
+
+```text
+!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_2026-06-02.md
+```
+
+This does not erase the original Decision-Source Elimination Ledger. It supersedes the launch-critical working focus.
+
+## 15 Core-Valid Failure Path Families to track until destroyed
+
+1. `CVF-01` Core T12 parse failure - legitimate fail-closed only when truly core-invalid.
+2. `CVF-02` Core Rent Roll parse failure - legitimate fail-closed only when truly core-invalid.
+3. `CVF-03` Financial scale mismatch after core parse - must disclose/qualify when defensible; only fail if truly unreconcilable.
+4. `CVF-04` Current-debt/refi render-contract drift - collapse/omit/qualify debt/refi/DSCR surfaces; do not whole-report fail.
+5. `CVF-05` Report-type section leak - strip/collapse leaked section; do not whole-report fail.
+6. `CVF-06` Source reconciliation/rendered variance drift - disclose-only for core-valid jobs.
+7. `CVF-07` Optional/full-underwriting support depth constraints - internal/distribution-only or section limitation; not ordinary customer block.
+8. `CVF-08` Delivery-gate hold-chain / legacy needs-doc conversion - destroy customer-facing `user_needs_documents` / `needs_documents` / `publication_held` conversion for core-valid jobs.
+9. `CVF-09` Generator publication-held shim - remove/bypass hold shim for core-valid section-only issues.
+10. `CVF-10` Worker terminal failure / credit restore misclassification - no `MISSING_REQUIRED_SOURCE_DATA` or entitlement restore for core-valid section-only issues.
+11. `CVF-11` Failure message builder source-package/rent-roll blame - never blame usable core docs.
+12. `CVF-12` Dashboard customer status/copy fallback - no needs-doc/publication-held/additional-documents lifecycle for core-valid jobs.
+13. `CVF-13` Runtime/storage/PDF/catastrophic render failure - legitimate fail-closed, system-failure copy only.
+14. `CVF-14` OpenAI/provider/advisory failures - diagnostic only when deterministic core is valid.
+15. `CVF-15` Optional-support/source-package/admin ops paths - internal/distribution/diagnostic only; cannot feed customer lifecycle.
+
+## P0 patch order now controlling
+
+1. Slice 1 - Core-valid delivery invariant.
+   - Main files: `api/_lib/qa-action-plan.js`, `api/generate-client-report.js`, `api/admin-run-worker.js`.
+   - Goal: core-valid jobs cannot become needs-doc/publication-held/MISSING_REQUIRED_SOURCE_DATA because of non-core/section-only issues.
+
+2. Slice 2 - Section self-heal/collapse for render-contract violations.
+   - Main files: `api/_lib/report-contract-qa.js`, `api/generate-client-report.js`, `api/_lib/report-surface-contracts.js`.
+   - Goal: current-debt/refi/report-type/source-reconciliation issues collapse/omit/qualify affected sections before delivery.
+
+3. Slice 3 - Dashboard/failure messaging final customer-copy lock.
+   - Main files: `src/lib/jobFailureMessaging.js`, `src/pages/Dashboard.jsx`.
+   - Goal: core-valid jobs never display source-package/rent-roll/additional-documents blame.
+
+4. Slice 4 - Optional/support/distribution isolation sweep.
+   - Main files: `api/_lib/source-report-coverage-qa.js`, `api/_lib/source-package-qa.js`, `api/_lib/qa-action-plan.js`.
+   - Goal: optional support docs, public-sample/high-value blockers, DocRaptor test mode, and OpenAI/advisory issues cannot block ordinary customer delivery.
+
+
+## Execution rule - bundle path families by shared file cluster
+
+When Codex begins implementation, do not patch one CVF row at a time if several rows share the same files, canonical owner, and invariant. To prevent this from taking the entire day, bundle **2-4 tightly related CVF families** per prompt only when they touch the same file cluster and share the same doctrine rule.
+
+Approved grouping pattern:
+
+1. **Delivery invariant cluster**
+   - CVF-08, CVF-09, CVF-10
+   - Files: `api/_lib/qa-action-plan.js`, `api/generate-client-report.js`, `api/admin-run-worker.js`
+   - Shared invariant: core-valid jobs cannot become needs-doc/publication-held/MISSING_REQUIRED_SOURCE_DATA/credit-restored because of non-core or section-only issues.
+
+2. **Rendered section self-heal cluster**
+   - CVF-04, CVF-05, CVF-06
+   - Files: `api/_lib/report-contract-qa.js`, `api/generate-client-report.js`, `api/_lib/report-surface-contracts.js`, `api/_lib/source-report-coverage-qa.js`
+   - Shared invariant: section-contained render-contract issues collapse/omit/qualify affected sections and do not fail core-valid reports.
+
+3. **Customer copy cluster**
+   - CVF-11, CVF-12
+   - Files: `src/lib/jobFailureMessaging.js`, `src/pages/Dashboard.jsx`
+   - Shared invariant: customer copy cannot blame source package, T12, Rent Roll, missing documents, or additional documents when core-valid is true.
+
+4. **Optional/support/distribution isolation cluster**
+   - CVF-07, CVF-14, CVF-15 plus DocRaptor/public-sample/high-value metadata behavior where surfaced through CVF-08
+   - Files: `api/_lib/source-report-coverage-qa.js`, `api/_lib/source-package-qa.js`, `api/_lib/qa-action-plan.js`, advisory QA helpers
+   - Shared invariant: optional/support/advisory/distribution blockers remain diagnostic or distribution-only and cannot block ordinary customer delivery when deterministic core docs are valid.
+
+Do not bundle unrelated parser, renderer, worker, Dashboard, and support-doc families just to move faster. Bundling is allowed only when the same patch can enforce one shared invariant without broad refactor or drift.
+
+## Immediate instruction
+
+Before any new Codex patch prompt, commit this documentation update so the 15 path families are not lost.
+
+Then give Codex Slice 1 only.
+
+Do not run more live tests until Slice 1 is complete and validated.
+Do not patch only Dashboard copy first.
+Do not patch only current-debt rendering first.
+The core-valid delivery invariant must be patched before the next symptom class.
+
+
+---
+
+# June 2, 2026 Addendum - Publish-or-Fail Doctrine Lock Progress / `user_needs_documents` Demotion Doctrine Added
+
+## Current controlling status
+
+- Publish-or-Fail doctrine remains the controlling customer-outcome doctrine.
+- Ordinary customer outcomes are only:
+  1. **PUBLISH**
+  2. **FAIL CLOSED + RESTORE CREDIT**
+- There is no normal customer-facing admin-review outcome.
+- There is no normal customer-facing under-review limbo.
+- There is no normal customer-facing upload-more-documents loop for an active job.
+
+## Slice 1 and Slice 1B completed in `api/_lib/qa-action-plan.js`
+
+### Slice 1 - admin-review / under-review emitter demotion
+
+Files changed:
+- `api/_lib/qa-action-plan.js`
+- `tests/qa/qa-action-plan-smoke.js`
+
+Completed behavior:
+- `qa-action-plan` no longer preserves `admin_review_required` as a canonical ordinary customer delivery state.
+- `under_review` customer label/message path was removed from canonical delivery state construction.
+- Customer-facing "under internal review" language was removed from this canonical/action-plan layer.
+- `admin_review_required` output is forced false in publish-eligibility output.
+- Canonical override paths normalize legacy review states before downstream delivery/readiness synthesis.
+
+Important correction:
+- Slice 1 initially risked over-demoting deprecated `admin_review_required` into `user_needs_documents`, which could have converted non-core/report-surface issues into fail-closed outcomes. That was not acceptable under current doctrine.
+
+### Slice 1B - reason-aware deprecated-admin-review normalization
+
+Files changed:
+- `api/_lib/qa-action-plan.js`
+- `tests/qa/qa-action-plan-smoke.js`
+
+Completed behavior:
+- Blanket `admin_review_required -> user_needs_documents` normalization was replaced with reason-aware classification.
+- Deprecated `admin_review_required` now resolves by cause:
+  - `core_fail` reasons -> fail-closed path / legacy `user_needs_documents` internal status.
+  - known non-core/report-surface reasons -> `deliverable`.
+  - unknown deprecated reasons -> `deliverable` plus diagnostic code `DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION`.
+- No `under_review` customer label/message path was reintroduced.
+
+Examples now deliverable when core T12 + Rent Roll are usable:
+- `REPORT_TYPE_SECTION_LEAK`
+- `RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER`
+- placeholder/render leak classes
+- other known non-core/report-surface classes
+
+Examples still fail-closed:
+- `missing_required_t12`
+- `missing_required_rent_roll`
+- `missing_required_source_documents`
+- `rent_roll_unusable`
+- `t12_unusable`
+- `core_input_verification_inconsistency`
+- `system_contract_failure` only where it has true core-fail/generation-failure semantics
+
+Validation reported:
+- `node --check api/_lib/qa-action-plan.js`
+- `node tests/qa/qa-action-plan-smoke.js`
+- `git diff --check`
+- All passed, with CRLF warnings only.
+
+## New doctrine clarification - `user_needs_documents` is not a customer workflow state
+
+`user_needs_documents` is legacy/internal terminology from an earlier product concept where a user might upload additional documents into the same active job.
+
+That workflow does **not** currently exist.
+
+Therefore:
+
+- `user_needs_documents` must not be presented as a normal customer-facing "add more documents to this job" state.
+- It may remain temporarily as an internal/legacy fail-closed alias for required-core-source failure.
+- Customer-facing copy must describe the actual product outcome:
+  - **Report could not be generated from the required uploaded documents.**
+  - **Report credit has been restored.**
+  - **User may start a new report with corrected source documents.**
+
+Correct conceptual replacement:
+- Internal old label: `user_needs_documents`
+- Current meaning: `fail_closed_core_documents` / `required_source_data_unusable`
+- Customer outcome: `FAIL CLOSED + RESTORE CREDIT`
+
+Correct mapping:
+- Missing/unusable T12 -> fail closed + restore credit.
+- Missing/unusable Rent Roll -> fail closed + restore credit.
+- Both required core docs unusable -> fail closed + restore credit.
+- Parser/provider failure where required core docs cannot be validated -> fail closed + restore credit.
+- Optional/support docs missing or ambiguous -> publish with affected section collapsed/omitted/qualified/disclosed.
+- Report-surface/copy/rendering issue -> self-heal/sanitize/replace/collapse/omit/qualify, then publish.
+- DocRaptor test mode -> customer delivery allowed if otherwise safe; external/public/sample/high-value distribution blocked only.
+- OpenAI quota/advisory failure -> diagnostic only if deterministic core artifacts are valid.
+
+Customer-facing language target:
+```text
+Report could not be generated.
+
+InvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.
+```
+
+Do not use customer-facing language implying:
+- "under review"
+- "internal review"
+- "24 business hours review"
+- "additional documents are needed before this report can be delivered"
+- "upload more documents to this job"
+
+unless/until the product actually supports adding documents to an active job.
+
+## Current remaining Publish-or-Fail doctrine-lock work
+
+Do not run more live Underwriting tests until the remaining downstream doctrine-lock slices are handled or intentionally deferred with a clear risk note.
+
+Remaining slices:
+
+1. **Generator hold branch demotion**
+   - File likely: `api/generate-client-report.js`
+   - Remove ordinary customer hold behavior keyed to `admin_review_required`.
+   - Demote `user_needs_documents` customer wording into fail-closed/credit-restored semantics.
+   - Preserve true fail-closed behavior for unusable required core docs and true system/runtime/storage failure.
+
+2. **Worker lifecycle demotion**
+   - File likely: `api/admin-run-worker.js`
+   - Remove admin-review held transition as ordinary customer state.
+   - Ensure publish path proceeds when canonical customer delivery is allowed.
+   - Ensure true core fail/system fail restores credit.
+   - Ensure legacy `user_needs_documents` maps to fail-closed/credit-restored, not upload-more-docs limbo.
+
+3. **Dashboard customer display cleanup**
+   - File likely: `src/pages/Dashboard.jsx`
+   - Remove customer-visible `under_review` and upload-more-docs style messaging.
+   - Display published/ready reports normally.
+   - Display fail-closed reports with credit-restored language.
+   - Avoid implying the user can add more documents to the same job.
+
+4. **AdminDashboard display/diagnostics cleanup**
+   - File likely: `src/pages/AdminDashboard.jsx`
+   - Keep internal diagnostics/triage visible.
+   - Ensure labels do not imply ordinary customer admin approval/review.
+   - Preserve emergency/admin tooling as internal-only.
+
+5. **Final doctrine-lock smoke/audit**
+   - Add/maintain tests proving:
+     - no customer-facing `under_review`;
+     - no customer-facing `admin_review_required`;
+     - no customer-facing "under internal review";
+     - `user_needs_documents` is not a customer workflow state;
+     - required-core failures fail closed + restore credit;
+     - optional/support/render/copy issues publish with collapse/omit/qualify/self-heal/disclosure;
+     - public/sample/high-value blockers cannot block ordinary customer delivery.
+
+## Fresh-chat continuation prompt
+
+We are continuing InvestorIQ immediately after updating the master context for Publish-or-Fail doctrine lock progress.
+
+Current status:
+- `.MD` doctrine has been updated again.
+- Slice 1 and Slice 1B are complete/pass in `api/_lib/qa-action-plan.js`.
+- Slice 1 removed/demoted admin-review and under-review emitters in qa-action-plan.
+- Slice 1B fixed the over-demotion mistake by making deprecated `admin_review_required` reason-aware:
+  - core-fail reasons -> fail-closed path / legacy internal `user_needs_documents`;
+  - non-core/report-surface reasons -> deliverable;
+  - unknown deprecated reasons -> deliverable + `DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION` diagnostic.
+- `user_needs_documents` doctrine is now clarified:
+  - it is not a customer workflow state because InvestorIQ currently has no upload-more-documents flow for an active job;
+  - it may remain temporarily as an internal/legacy fail-closed alias only;
+  - customer-facing copy must say the report could not be generated from required uploaded documents and the credit was restored.
+
+Next work:
+1. Continue Publish-or-Fail doctrine-lock downstream slices.
+2. Recommended next slice: `generate-client-report.js` hold-branch demotion and customer wording correction.
+3. Then worker lifecycle.
+4. Then Dashboard customer display.
+5. Then AdminDashboard/internal diagnostics wording.
+6. Then final doctrine-lock smoke/audit.
+
+Guardrails:
+- Do not run more live Underwriting tests yet.
+- Do not loosen QA.
+- Do not publish unsafe rendered surfaces.
+- Do not fail whole reports for wording/render/optional-support issues.
+- Fail closed only for unusable required core T12/Rent Roll or true generation failure.
+- No normal admin review.
+- No normal customer under-review.
+- No customer upload-more-documents limbo.
+- No broad refactors.
+- No new Vercel/serverless routes casually.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off fixture values.
+- Renderer consumes canonical state.
+- QA is conformance/diagnostics only.
+- Public/sample/high-value readiness remains distribution metadata, not ordinary customer delivery authority.
+
+---
+
+# June 1/2, 2026 Addendum - Publish-or-Fail Doctrine Locked / Admin Review Removed as Customer Outcome
+
+## Current controlling doctrine - supersedes all older contradictory implementation notes
+
+InvestorIQ has **no normal customer-facing admin-review outcome**.
+
+The only ordinary customer outcomes are:
+
+1. **PUBLISH**
+   - Required core T12 + Rent Roll evidence is usable enough to produce a defensible, document-driven report.
+   - Any non-core, optional, support-document, section-specific, wording, rendering, report-surface, DocRaptor/test-mode, OpenAI/advisory, acquisition-support, current-debt, property-tax, market-survey, appraisal, environmental, zoning, renovation/CapEx, or public-copy issue must be handled by deterministic self-heal, sanitize, collapse, omit, qualify, disclose, or render Not Assessed where appropriate.
+   - These issues may emit internal diagnostics and may block external/public/sample/high-value distribution, but they must not create ordinary customer limbo.
+
+2. **FAIL CLOSED + RESTORE CREDIT**
+   - Only when required core T12 or Rent Roll evidence is missing, unreadable, unparseable, materially invalid, incoherent, contradictory beyond defensible use, or otherwise so unusable that producing any report would be dishonest.
+   - True runtime/system/storage failure that prevents generation may also fail closed with credit restored.
+
+There is no third ordinary outcome.
+
+## Explicitly superseded / removed from active doctrine
+
+Any older language in this file or the codebase implying ordinary customer outcomes such as:
+
+- `admin_review_required`
+- `under_review`
+- "admin-held publishing"
+- "send to review"
+- "manual/operator-reviewed customer delivery"
+- "24 business hours review"
+- customer-facing "under internal review"
+
+is superseded and must be treated as legacy/internal/emergency-only terminology, not a normal product state.
+
+If code still emits those states for ordinary customer jobs, that code is out of alignment with doctrine and must be audited/demoted.
+
+## Required system behavior by issue class
+
+- Report-type wording leak, stale heading, wrong methodology label, public copy issue:
+  - self-heal/sanitize/replace/collapse the affected text or block, then publish if core docs are usable.
+  - Do not fail the whole report.
+  - Do not send to review.
+
+- Unsupported optional/support document:
+  - omit, list as unmodeled context, or qualify affected section.
+  - Do not block whole-report publication.
+
+- Missing or ambiguous acquisition/proposed-financing support:
+  - omit/qualify acquisition financing rows or show only verified fields.
+  - Keep acquisition/proposed financing separate from current debt.
+  - Do not block whole-report publication.
+
+- Missing or ambiguous current-debt support:
+  - mark current debt/refi/DSCR sections Not Assessed or collapse/omit them.
+  - Do not block whole-report publication.
+
+- Property-tax support missing/unverified:
+  - omit/qualify property-tax modeling.
+  - Do not allow unrelated support docs to become property-tax authority.
+  - Do not block whole-report publication.
+
+- DocRaptor test mode:
+  - ordinary customer delivery blocker: no.
+  - external/public/sample/high-value distribution blocker: yes until production mode is verified.
+
+- OpenAI quota/advisory/QA failure:
+  - ordinary customer delivery blocker: no, when deterministic core artifacts are valid.
+  - diagnostic/platform-infrastructure issue only.
+
+## Immediate architecture priority
+
+Before more live Underwriting testing, run an **Admin Review Outcome Demotion Audit** across worker, delivery gate, QA/action-plan, report-contract QA, generator, Dashboard, and AdminDashboard paths.
+
+Goal:
+- find every remaining path that can turn an ordinary customer report into `admin_review_required`, `under_review`, admin-held, or review-limbo;
+- classify whether it should become publish, self-heal/collapse/omit/qualify then publish, fail-closed + credit restored, or internal diagnostic only;
+- patch in small slices until ordinary customer flow obeys Publish-or-Fail doctrine.
+
+## Guardrail
+
+Do not loosen QA to make unsafe reports publish. Instead:
+- prevent unsafe surfaces before render,
+- self-heal deterministic surface issues,
+- collapse/omit/qualify unsupported sections,
+- fail closed only for unusable core T12/Rent Roll or true generation failure.
+
+---
+﻿# June 1, 2026 Addendum - Clean Screening Regression Root Fixes / Parser Fallback / Delivery Gate Correction / Summary-Only Surface Patch / Core Parser Rejection Audit Installed
+
+## Current controlling status
+- Controlled live regression started after G8 material closure.
+- Clean Screening pipeline materially improved, but one more red-pen PDF review is still required after the latest surface patch rerun.
+- Do not claim all DS rows are globally closed.
+- Do not claim Full Underwriting public self-serve launch-ready.
+- Do not claim Ken/public samples are ready.
+
+## Doctrine reaffirmed
+- Whole-report fail-closed is only for unusable/missing/unreadable/materially invalid required core docs, severe core contradiction, or true runtime/system/storage failure.
+- Messy but usable core T12/Rent Roll evidence should publish when defensible.
+- Optional/support/section-specific issues must collapse/omit/qualify/disclose at section/line level, not fail the whole report.
+- Admin review is not a normal customer outcome.
+- AI is not the boss; deterministic validation remains authority.
+
+## June 1 regression sequence
+1. Clean Screening initially failed closed.
+- Root cause: rent roll was plain-text narrative with explicit coherent summary totals.
+- Deterministic rent-roll parsing was gated to tabular flows.
+- AI recovery attempted; provider returned non-OK (429/openai_non_ok); no accepted candidate.
+- Worker fail-closed/credit-restore behavior was correct.
+
+2. Deterministic text-summary rent-roll fallback added.
+- Files:
+- `api/parse/parse-doc.js`
+- `tests/qa/rent-roll-text-summary-fallback-smoke.js`
+- Added `parseRentRollFromTextSummary(...)`.
+- Non-tabular rent roll can now produce `rent_roll_parsed` when explicit coherent summary totals exist.
+- Requires: total units, occupied, vacant, occupancy, in-place/current total family, market total family.
+- Coherence checks added (occupied+vacant=total, occupancy approx occupied/total, monthly/annual consistency).
+- No fabricated unit rows.
+- No summing representative observations.
+- Specific rejection diagnostics added.
+
+3. Fallback tightened.
+- Initial version was too permissive (accepted any one rent-total family).
+- Fixed to require both in-place/current family and market family.
+- Added in-place-only and market-only rejection tests.
+
+4. Summary-total precedence fixed.
+- Parser now prefers controlling summary-total semantics over representative unit narrative values.
+- Representative-only observations reject.
+- Trailing numeric extraction avoids “across all 48 units” collisions.
+- No parser hardcoding.
+
+5. Delivery leak fixed after parse succeeded.
+- Root cause: `DOCRAPTOR_NOT_PRODUCTION_MODE` leaked from distribution readiness into ordinary customer delivery.
+- Files:
+- `api/_lib/qa-action-plan.js`
+- `tests/qa/delivery-decision-state-smoke.js`
+- Canonical `customer_delivery_allowed` now wins when present.
+- Otherwise customer delivery derives from canonical delivery authority:
+- `delivery_gate_status === "deliverable"`
+- `customer_publish_blockers.length === 0`
+- DocRaptor test mode still blocks `public_sample_ready` and `high_value_outreach_ready`.
+- True holds/fails remain unchanged.
+
+6. Post-publish red-pen found summary-only surface defects.
+- Empty unit-level framing visible for summary-only rent roll.
+- “Weighted Avg” labels shown without row-level support.
+- Stale heading “InvestorIQ Estimates” remained.
+
+7. Screening summary-only rent-roll surface patch completed.
+- Files:
+- `api/generate-client-report.js`
+- `tests/qa/generate-client-report-rent-roll-smoke.js`
+- Detects summary-only surface (`units/unit_mix/computed unit_mix` empty with verified totals).
+- Collapses empty unit-level/unit-mix surface in Screening.
+- Replaces with summary-positioning language.
+- Uses implied-average labels for summary-only:
+- `Implied Avg In-Place Rent`
+- `Implied Avg Market Rent`
+- Adds monthly/annual total metrics.
+- Preserves weighted/rent-band row-level rendering when row support exists.
+- Replaced stale heading with `Document-Backed Screening Outputs`.
+- No parser/delivery/DocRaptor changes.
+
+8. Core parser rejection audit layer installed (diagnostic-only safeguard).
+- Files:
+- `api/admin-run-worker.js`
+- `tests/qa/core-parser-rejection-audit-smoke.js`
+- New artifact type: `core_parser_rejection_audit`.
+- Trigger: extracting-stage fail path before/around `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS` when required core parsed artifact is missing, core file exists, and `document_text_extracted` exists.
+- Deterministic-only signal findings include:
+- `parser_rejection_confirmed`
+- `parser_missed_usable_core_evidence`
+- `representative_values_confused_with_summary_totals`
+- `source_text_contains_core_summary_totals`
+- `provider_unavailable`
+- `deterministic_recovery_needed`
+- `insufficient_readable_text`
+- `core_evidence_incoherent`
+- No publish effect, no parsed artifact creation, no AI value authority, no credit-restore behavior change, no Dashboard copy change.
+
+## Validation receipts recorded
+- `rent-roll-text-summary-fallback-smoke` passed.
+- `t12-rent-roll-diagnostics-regression` passed when run.
+- `delivery-decision-state-smoke` passed.
+- `admin-run-worker-gate-smoke` passed.
+- `generate-client-report-rent-roll-smoke` passed.
+- `core-parser-rejection-audit-smoke` passed.
+- `git diff --check` passed with CRLF warnings only.
+
+## Immediate continuation point
+- Pause live testing until this doc update checkpoint is committed and a fresh chat starts.
+- Next:
+1. Rerun the same Clean Screening and red-pen the new PDF surface.
+2. Investigate OpenAI 429/insufficient_quota diagnostics as separate launch-readiness/config work.
+
+## OpenAI quota/config investigation note
+- Codex should inspect code-side OpenAI diagnostics capture only.
+- Identify error-body capture gaps, model selection, retry/backoff behavior, and clarity of rate-limit vs quota vs billing/project/model-limit diagnostics.
+- Do not print secrets or expose API keys.
+- Account-side billing/project limits still require Rob dashboard verification.
+
+## Guardrails unchanged
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded property/job/file IDs
+- no casual new API/serverless routes
+- no public AI wording
+- no BUY/SELL/HOLD
+- renderer consumes canonical state
+- QA/conformance/diagnostics only
+- deterministic validation remains authority
+
+---
+# May 30, 2026 Addendum - G8 Delivery/UI Lifecycle Authority Materially Closed / Grouped Campaign Checkpoint
+
+## Current controlling status
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- G8 is materially closed after worker publish-path hold guard hardening and closure audit.
+- Completed/materially closed grouped sequence: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7, G8.
+- Remaining grouped batches in the current G1-G8 sequence: none.
+- Do not claim all DS rows are globally closed unless row closure standards are satisfied.
+- Do not claim Full Underwriting public self-serve launch-ready.
+- Do not claim Ken/public samples are ready.
+
+## G8 closure status
+- G8A-02 seam in `api/admin-run-worker.js` is closed.
+- Worker publish path now requires resolved delivery permission:
+  - `holdDelivery === false`
+  - `customerDeliveryAllowed === true`
+- Typed outcomes remain preserved:
+  - `user_needs_documents` fail-closed/restore path
+  - Superseded legacy note: `admin_review_required` / admin-held publishing must not remain an ordinary customer outcome; remaining paths must be demoted to publish/self-heal/collapse/fail-closed according to Publish-or-Fail doctrine
+- Fail-closed and credit-restore safety behavior remains preserved.
+
+## Post-patch audit verdict
+- Audit-only verification completed.
+- No material remaining delivery/UI duplicate truth-maker was found across:
+  - worker lifecycle
+  - Dashboard customer status/message surfaces
+  - AdminDashboard triage surfaces
+  - generator delivery compatibility aliases
+- Dashboard remains canonical-first for `customer_status_label`/`customer_message` when canonical state exists.
+- Legacy display/copy fallback remains canonical-absent compatibility only.
+- AdminDashboard remains display/diagnostic/emergency-action only, not customer delivery authority.
+- `public_sample_ready` and `high_value_outreach_ready` remain distribution metadata, not ordinary customer delivery authority.
+
+## Fresh-chat continuation prompt
+We resume after G8 material closure.
+
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7, G8.
+
+Next step: either controlled live regression checkpoint or targeted post-launch polish selection.
+
+Guardrails unchanged:
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded IDs/filenames
+- no new API/serverless routes casually
+- renderer consumes canonical state
+- QA conformance only
+
+---
+# May 30, 2026 Addendum - G7 Action-Plan Consumer Demotion Materially Closed / G8 Remains Next
+
+## Current controlling status
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- Completed/materially closed grouped sequence: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7.
+- G7 is materially closed after Slices 1, 2A, 2B, and the Slice 3 closure audit.
+- Remaining grouped batch: `G8 - Delivery/UI Lifecycle Follow-up`.
+- Do not claim all DS rows are closed.
+- Do not claim Full Underwriting public self-serve launch-ready until controlled live regression passes.
+
+## G7 completion record
+- Slice 1:
+  - `buildQaActionPlan(...)` now consumes canonical delivery state when present.
+  - Legacy action-plan readiness synthesis is canonical-absent fallback only.
+- Slice 2A:
+  - `buildPublishEligibilitySummary(...)` now consumes canonical delivery state when present.
+  - Local blockers/advisories/regeneration/source-limitation fields remain diagnostic metadata when canonical state is present.
+- Slice 2B:
+  - `buildDeliveryGateDecision(...)` now consumes canonical delivery state when present across accepted shapes:
+    - `deliveryDecisionState`
+    - `canonicalDeliveryDecisionState`
+    - `delivery_gate_decision`
+    - `deliveryGateDecision`
+  - Canonical-present paths mirror canonical gate truth for delivery/readiness fields.
+  - `public_sample_ready` and `high_value_outreach_ready` mirror canonical only when explicitly present; otherwise safe fallback metadata remains.
+  - Legacy gate-owner behavior remains only for canonical-absent artifacts.
+- Slice 3 closure audit:
+  - Audit-only; no files changed.
+  - No material duplicate-authority leak remains in G7 scope.
+  - Optional future hardening (non-blocking): defensive overwrite-proofing in `buildDeliveryGateDecision(...)` return ordering.
+
+## Remaining work and next task
+- Remaining grouped batch: `G8 - Delivery/UI Lifecycle Follow-up`.
+- Next recommended task: G8 audit only, unless Rob explicitly chooses controlled live regression first.
+- G8 must remain micro-sliced due to worker/dashboard lifecycle risk and Vercel Hobby function-count constraints.
+
+## Fresh-chat continuation prompt
+We resume after G7 material closure.
+
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6, G7.
+
+Remaining: G8 - Delivery/UI Lifecycle Follow-up.
+
+Next recommended task: G8 audit only, unless Rob explicitly chooses controlled live regression first.
+
+G8 must remain micro-sliced because it touches worker/dashboard lifecycle behavior and Vercel Hobby function-count constraints.
+
+Guardrails:
+- Do not start broad worker/dashboard refactors.
+- Do not add new API/serverless routes.
+- Do not alter customer delivery doctrine.
+- Do not loosen fail-closed/credit-restore behavior.
+- Audit first, patch only after the residual lifecycle/UI authority path is identified.
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded property names/filenames/report IDs
+- no public AI wording
+- no BUY/SELL/HOLD
+- renderer consumes canonical state
+- QA is conformance only
+- action plan consumers must not re-infer truth
+- lifecycle/UI consumers in G8 must not reinterpret canonical delivery state
+
+---
+# May 30, 2026 Addendum - G1/G2/G5/G6 Materially Closed / Pause Before G7-G8
+
+## Current controlling status
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- The original audit estimated approximately 132 duplicate decision-making paths/truth-makers.
+- The ledger tracks 70 explicit DS rows/groups plus grouped expansion clusters.
+- We are not requiring closure of every DS row before controlled launch/regression decisions.
+- Work is intentionally paused after G6 Final Sweep due to low Codex usage.
+- Full Underwriting is not declared public self-serve ready until controlled live regression passes.
+
+## Completed grouped sequence (committed)
+- Patch 1/1B
+  - Parser current-debt support routing and loan-term promotion aligned.
+  - Explicit non-acquisition current-debt terms route/promote as current debt.
+  - Acquisition/proposed financing remains separated.
+  - Standalone LTV no longer creates acquisition/proposed classification by itself.
+- Patch 2
+  - `resolveReportTypeAndTier(...)` added.
+  - Explicit unknown `report_type` fails closed with `400 Invalid report_type`.
+  - Underwriting aliases normalize to underwriting/tier 2/v1_core.
+  - Screening default remains only when no explicit type is provided.
+- G4
+  - Source-report-coverage QA canonical-first depth/signal guard sweep completed.
+  - Rendered/file/artifact signals are conformance/evidence only when canonical state exists.
+  - Full Underwriting depth conformance uses canonical section-family expectations, not raw page count.
+- G1 materially closed
+  - Slice 1: operating statement, renovation, document sources canonicalization.
+  - Slice 2: debt tables, DCF table, risk matrix, DCF summary, narrative strip canonicalization.
+  - Slice 3: late `reportTier === 1` strip cascade canonical guard.
+  - Residual `G1C-02` early screening cascade is contained/watch-only unless live regression proves a real mismatch.
+- G2 materially closed
+  - Mode-aware visible classification/coverage consumers.
+  - Screening cannot leak debt-coverage classification.
+  - Screening stress-summary/framework/rationale now consume canonical/final visible label.
+  - Deferred polish only: CSS stale aliases, Data Coverage wording nuance, historical Deal Scorecard threshold note.
+- G5 materially closed
+  - Report-contract QA provenance/conformance authority hardened.
+  - `resolveCanonicalCurrentDebtStateForQa(...)` and `hasCanonicalCoverageAuthority(...)` provenance-locked.
+  - `inferCanonicalVerdictCapState(...)` provenance-gated.
+  - Remaining G5 scope is non-authority regex/taxonomy polish.
+- G6 materially closed
+  - `buildAcquisitionAssumptionState(...)` no longer uses rendered acquisition phrase as canonical support authority.
+  - `buildFullUnderwritingSectionEligibility(...)` no longer uses rendered section headings as eligibility authority.
+  - Final sweep removed QA inventory-boolean authority from debt truth, demoted deterministic-flag reconciliation escalation, and mode-gated debt-cap classification to underwriting/tier 2.
+
+## Launch-risk compression status at this pause
+- Major Full Underwriting collapse root families were materially compressed:
+  - parser current-debt support routing
+  - report-type downgrade
+  - generator strip/mutation authority
+  - visible classification leakage
+  - QA provenance leaks
+  - surface-contract canonical-owner rendered/inventory/flag authority leaks
+- Do not overclaim all DS rows are closed.
+- Do not overclaim Ken/public samples are ready.
+
+## Remaining grouped batches
+- `G7 - Action-Plan Consumer Demotion`
+- `G8 - Delivery/UI Lifecycle Follow-up`
+- G8 remains micro-sliced due to worker/dashboard lifecycle risk and Vercel Hobby constraints.
+- Because this checkpoint is paused, do not start G7/G8 until resumed.
+
+## Current next action when resumed
+1. G7 audit only.
+2. If Rob decides cleanup is sufficient for now, checkpoint and run controlled live regression.
+
+## Fresh-chat continuation prompt
+We resume after G6 Final Sweep.
+
+Completed/materially closed: Patch 1/1B, Patch 2, G4, G1, G2, G5, G6.
+
+Remaining: G7 and G8.
+
+Codex usage was low, so work paused intentionally.
+
+Next recommended task: G7 audit only.
+
+Guardrails remain:
+- micro-prompts
+- no broad refactors
+- no report-specific hacks
+- no hardcoded property names/filenames/report IDs
+- no public AI wording
+- no BUY/SELL/HOLD
+- no new Vercel API/serverless routes casually
+- renderer consumes canonical state
+- QA is conformance only
+- action plan and lifecycle consumers must not re-infer truth
+
+---
+# May 30, 2026 Addendum - Batch 6 Decision-Source Compression Complete / Batch 6F Final Recommendation Guard Complete / Live Regression Next
+
+## G. Fresh-chat continuation prompt
+
+We are continuing InvestorIQ after Batch 6 Decision-Source Compression on May 30, 2026.
+
+Current status:
+- Batch 6B/6B-Proof/6C/6D/6E/6F are complete.
+- DS-064/065/066 launch-risk compression is complete with known broader follow-up.
+- Launch-Risk Compression Audit found no clear P0 canonical-present launch blocker.
+- Controlled launch is acceptable with monitoring if live regression passes.
+- Full ledger closure is no longer required before controlled launch.
+- Next step is live regression set:
+  1. Clean Screening
+  2. Messy Screening
+  3. Clean Underwriting
+  4. Messy Underwriting
+  5. Acquisition/current-debt edge case
+- Do not start broad DS-065/066 cleanup before live regression unless a regression exposes a launch-blocking issue.
+- Do not overclaim public self-serve readiness until live regression passes.
+
+## A. Current controlling status
+
+- InvestorIQ Decision-Source Elimination remains the controlling architecture cleanup track.
+- The original audit estimated approximately 132 duplicate decision-making paths / truth-makers.
+- The ledger tracks 70 explicit DS rows/groups plus grouped expansion clusters.
+- We are no longer treating closure of every DS row as a pre-launch requirement.
+- Latest launch-risk compression audit says: controlled launch acceptable now with monitoring.
+- No clear P0 launch-blocking canonical-present risk was found.
+- Live regression is now the launch gate.
+- Full ledger closure is not required before controlled launch.
+- Do not state Full Underwriting is fully public self-serve launch-ready until live regression passes.
+
+## B. Today's completed Batch 6 work
+
+Batch 6B - Canonical State Propagation + Provenance Guard Hard-Lock
+- generator now passes canonical states into source-report-coverage QA.
+- source-report-coverage QA emits authority_provenance and canonical/fallback state source markers.
+- report-contract QA no longer treats fallback-derived current debt state as canonical authority.
+
+Batch 6B-Proof - Runtime Behavioral Proof Hardening
+- runtime behavioral proof now covers canonical-present, canonical-absent fallback, report-contract provenance behavior, and generator canonical-state helper propagation.
+- source-level assertions reduced to backup where practical.
+
+Batch 6C - DS-064 Residual Renderer Strip/Mutation Cleanup
+- SECTION_4_NEIGHBORHOOD and SECTION_4_LOCATION_TABLE now obey canonical market_context visibility when canonical state exists.
+- Data Coverage phrase-count stripping is legacy fallback only and cannot override canonical Data Coverage authority.
+
+Batch 6D - Closure Audit
+- audit-only.
+- verdict: CLOSED WITH KNOWN BROADER FOLLOW-UP.
+- found the remaining QA provenance tightening items and the final recommendation section guard.
+
+Batch 6E - QA Provenance Guard Tightening
+- report-contract QA provenance gates tightened.
+- hasCanonicalCoverageAuthority(...) now requires explicit provenance authority flags.
+- resolveCanonicalCurrentDebtStateForQa(...) no longer promotes fallback/unprovenanced current_debt_state to canonical truth.
+- source-report-coverage QA treats explicit sectionEligibility as part of unified coverage/sufficiency authority.
+- fallback_reconstructed current debt remains explicitly non-canonical.
+
+Batch 6F - DS-064 Final Recommendation Canonical Guard
+- SECTION_11_FINAL_RECS is now canonical-first.
+- Added resolveFinalRecommendationSectionVisibility(...).
+- Supports section eligibility keys:
+  - final_recommendation
+  - final_recommendations
+  - final_recs
+- canonical eligible/rendered keeps the section.
+- canonical omitted/source_constrained strips the section.
+- canonical absent preserves local narrative fallback.
+- runtime helper-level tests added.
+
+## C. Launch-risk compression result
+
+- Controlled launch acceptable now with monitoring.
+- No clear P0 remaining from the sweep.
+- No current canonical-present path found that plausibly reintroduces false debt/refi math, acquisition-as-current-debt contamination, or wrong customer delivery decision.
+- Remaining DS-064/065/066 work is P1/P2 hardening unless live regression proves otherwise.
+- Live regression replaces full ledger closure as the next launch gate.
+
+## D. Current next action
+
+Current next action: run live regression set.
+
+Regression set:
+1. Clean Screening
+2. Messy Screening
+3. Clean Underwriting
+4. Messy Underwriting
+5. Acquisition/current-debt edge case
+
+For each live regression, capture:
+- PDF/report output
+- analysis artifacts
+- report_contract_qa
+- source_report_coverage_qa
+- qa_action_plan
+- Dashboard/Admin Diagnostics evidence if relevant
+
+Regression checklist:
+- no false limitation headline
+- Screening does not leak underwriting sections
+- acquisition/proposed financing never treated as current debt
+- DSCR/refi suppressed when current debt is not assessed
+- current-debt/refi math only appears with verified current debt basis
+- Data Coverage headline/severity obeys canonical state
+- support docs are not used quantitatively unless canonical state supports it
+- visible classification aligned across cover/executive/scorecard/risk surfaces
+- no prohibited public language
+- no internal parser/admin/vendor artifacts
+- no unresolved tokens
+- no DATA NOT AVAILABLE placeholders
+- no mojibake
+- no awkward N/A metric leaks
+
+## E. Current working doctrine
+
+- The launch goal is not a perfect codebase.
+- The launch goal is safe, honest, deterministic, commercially credible reports.
+- Launch-blocking risk means a plausible path to:
+  - false financial conclusions
+  - unsupported current debt / DSCR / refinance math
+  - acquisition financing treated as current debt
+  - wrong publish/fail/customer delivery decision
+  - hidden material source limitation
+  - visible trust-breaking contradictions
+  - support-doc quantitative misuse
+  - prohibited public/customer copy
+- Launch-hardening/post-launch work can remain open if:
+  - canonical authority wins
+  - fallback is canonical-absent only
+  - QA catches contradictions
+  - unsafe sections collapse/omit/qualify
+  - delivery gate prevents unsafe publication
+
+## F. Supersession note
+
+- Older notes saying Screening-first only or Full Underwriting must remain paused until full decision-source closure are superseded to the extent that the latest launch-risk compression audit says controlled launch is acceptable with monitoring if live regression passes.
+- Historical caution remains relevant, but the current next step is live regression, not more blind patching.
+- Do not state Full Underwriting public self-serve is approved until live regression passes.
+- Do not state all decision-source rows are closed.
+- Do not state Ken/public samples are ready.
+
+---
+# May 29, 2026 Addendum - Decision-Source Elimination Progress: Batch 2 Complete / Batch 3 Current Debt-Refi Complete Pending Ledger Update
+
+## H. Fresh-chat continuation prompt update
+
+We are continuing InvestorIQ after a long May 28/29 Decision-Source Elimination session.
+
+Current state:
+- Decision-source audit found ~132 duplicate decision-making paths; ledger tracks 70 explicit DS rows/groups.
+- Batch 2 Delivery / Readiness Authority is completed and documented.
+- Batch 3 Current Debt / Refi Authority is code-complete through Batch 3F and needs consolidated ledger update.
+- Current strict Batch 3 status: DS-021 PARTIAL; DS-022 through DS-027 CLOSED.
+- Immediate next step: update `!!INVESTORIQ_DECISION_SOURCE_ELIMINATION_LEDGER_2026-05-28.md` for Batch 3, then begin Batch 4 Acquisition / Current Debt Separation Authority.
+- Do not start Batch 4 before Batch 3 ledger update.
+- Keep prompts small, scope-locked, and strict about canonical authority vs duplicate decision-makers.
+
+## A. Current controlling status
+
+- The Decision-Source Elimination project is now the controlling architecture cleanup path.
+- Original audit found approximately 132 decision-making paths / duplicate truth-makers across Screening + Full Underwriting.
+- The ledger tracks 70 explicit DS rows/groups, with grouped rows representing clusters from the broader ~132-source audit.
+- Closure standard remains strict:
+  - CLOSED only when the old decision-maker can no longer override canonical truth.
+  - PARTIAL when canonical authority exists but some broader/root/fallback architecture remains.
+  - Legacy fallback is acceptable only when canonical truth cannot be overridden.
+- The goal is not to add another helper layer; the goal is to retire, neutralize, quarantine, or convert duplicate authorities.
+
+## B. Batch 2 - Delivery / Readiness Authority status
+
+Batch 2 is consolidated and documented in the ledger.
+
+Completed Batch 2 items:
+- Stable canonical `deliveryDecisionState` shape created.
+- Generator emits compatibility aliases derived from canonical delivery state.
+- Worker consumes canonical delivery decision state.
+- Worker credit-restore behavior respects canonical `credit_restore_required`.
+- Worker terminal failure handling consolidated through `applyTerminalFailureOutcome(...)`.
+- `restoreEntitlementForFailedJob(...)` remains the sole entitlement restore authority.
+- `recordJobFailure(...)` routes through the terminal failure helper.
+- Dashboard customer-facing status/message/guidance uses canonical customer status/message where present.
+- Failed-file guidance is suppressed when canonical customer message exists.
+- Report-contract QA treats delivery readiness as canonical-vs-render/payload conformance, not independent truth.
+
+Batch 2 ledger result:
+- CLOSED:
+  - DS-049
+  - DS-050
+  - DS-051
+  - DS-052
+  - DS-059
+  - DS-060
+  - DS-061
+- PARTIAL:
+  - DS-068 broader worker lifecycle/status-machine cluster
+  - DS-069 broader Dashboard fallback/messaging architecture for older/non-canonical jobs
+
+Important interpretation:
+- Batch 2 customer-facing delivery/readiness override risk is materially reduced.
+- DS-068 and DS-069 remain broader architecture clusters, not active canonical override risks where canonical delivery/customer state exists.
+
+## C. Batch 3 - Current Debt / Refi Authority status
+
+Batch 3 code patches are complete through Batch 3F and now need a consolidated ledger update.
+
+Completed Batch 3 sequence:
+- Batch 3A audit-only mapped current debt/refi authority rows.
+- Batch 3B standardized canonical current-debt field contract and scorecard DSCR consumption.
+- Batch 3C hard-locked refi debt basis/render-state/narrative behavior to canonical current-debt state.
+- Batch 3D converted debt/refi QA from rendered-text truth inference into canonical-vs-render conformance.
+- Batch 3E closure audit found one final QA artifact/inventory inference blocker.
+- Batch 3F locked QA canonical-present precedence so artifact/inventory debt heuristics are fallback-only when canonical current-debt payload is absent.
+
+Batch 3 current strict status:
+- PARTIAL:
+  - DS-021
+- CLOSED:
+  - DS-022
+  - DS-023
+  - DS-024
+  - DS-025
+  - DS-026
+  - DS-027
+
+DS-021:
+- `buildCurrentDebtAssessmentState(...)` is now the canonical current-debt root authority / owner candidate with standardized field contract.
+- Keep DS-021 PARTIAL because it is the family root authority, not a duplicate to delete.
+- Downstream override risks are tracked and closed through DS-022 to DS-027.
+
+Closed-row interpretation:
+- DS-022: Scorecard DSCR consumes canonical current-debt state. If canonical debt exists and is not computed, no numeric DSCR is backfilled from legacy fallback.
+- DS-023: `resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(...)` is retained only as canonical-absent compatibility and cannot override canonical not-assessed state.
+- DS-024: `resolveCanonicalRefiDebtBasis(...)` obeys canonical current-debt state. Non-computed canonical state returns no true debt balance, annual debt service, or DSCR; computed state uses canonical balance/service/DSCR.
+- DS-025: `buildRefiDebtRenderState(...)` allows debt/refi math only when canonical debt is computed/eligible. Acquisition-only, source-limited, and not-assessed paths remain non-quantitative.
+- DS-026: `resolveRefiNarrativeMode(...)` is now a read-only wording adapter and cannot upgrade not-assessed/source-limited states into assessed current-debt/refi messaging.
+- DS-027: `extractCurrentDebtDscrValues(...)` is evidence-only. Report-contract QA resolves canonical current-debt state first, checks rendered DSCR/refi surfaces for conformance, and uses artifact/inventory debt heuristics only as canonical-absent fallback.
+
+## D. Current scoreboard
+
+- Total explicit DS rows/groups: 70
+- Fully closed before Batch 3: 7
+- Newly closed in Batch 3: 6
+- Fully closed now: 13 / 70
+- Partial/in progress includes at least:
+  - Batch 1 classification rows
+  - DS-021
+  - DS-047 / DS-048 if still partial
+  - DS-068 / DS-069
+- Do not treat this as final unless the ledger says otherwise; ledger remains source of truth for row counts/statuses.
+
+## E. Immediate next step
+
+1. First, update the decision-source ledger for Batch 3 consolidated completion.
+2. Then begin Batch 4.
+
+Batch 4 expected focus:
+- Acquisition / Current Debt Separation Authority.
+- This should handle acquisition/current-debt separation issues, not reopen Batch 3 unless a regression proves canonical debt/refi gates were bypassed.
+
+Do not start Batch 4 until the Batch 3 ledger update is done.
+
+## F. Still active working rules
+
+- Micro-prompts only.
+- Audit before patch.
+- No broad refactors.
+- No tactical symptom patches.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off production values.
+- Tests are not substitutes for production root-cause fixes.
+- Renderer should consume canonical state, not re-decide truth.
+- QA should be conformance/safety net, not primary truth-maker.
+- Legacy fallback is allowed only when canonical payload is absent or cannot be overridden.
+- Vercel Hobby constraint remains active; do not casually add new API/serverless routes.
+- No public AI wording.
+- No BUY/SELL/HOLD language.
+- Customer-deliverable does not equal public/sample/high-value ready.
+- Full Underwriting public self-serve remains paused until architecture consolidation and live retesting prove stability.
+
+## G. Supersession note
+
+- This May 29 addendum supersedes older "audit before further patches" language only to the extent that Batch 2 and Batch 3 have now been executed.
+- The broader decision-source audit doctrine remains controlling.
+- Older RF/PR/live-retest next-step notes remain historical unless reaffirmed later.
+- Current next action is Batch 3 ledger update, then Batch 4.
+
+---
+# May 28, 2026 Addendum - Controlling Status: Decision-Source Audit Before Further Patches
+
+## A. Recent completed work
+
+1. PR5 enforcement sequence completed/committed.
+
+2. Slice 6 completed/committed.
+- `DCF_EXIT_CAP_SOURCE_OVERCLAIM` guard was calibrated.
+- Root cause was guard matching `verified exit cap` inside conservative negated wording such as `not a verified exit cap`.
+- Guard now catches true document-derived/verified exit-cap overclaims and does not flag conservative `not a verified exit cap` wording.
+
+3. Full Underwriting launch-certification matrix smoke completed/committed.
+- `tests/qa/full-underwriting-launch-certification-matrix-smoke.js`
+- Test-only.
+- Aggregates existing invariants across:
+  - clean current debt
+  - acquisition-only
+  - current debt + acquisition context
+  - messy support docs
+  - property-tax binding contamination
+  - DCF cap-rate provenance
+  - readiness blocker hierarchy
+- Does not replace live queue-to-published gauntlet testing.
+
+## B. Latest live gauntlet result
+
+- 124 Richmond MESSY Full Underwriting live report published and was customer-deliverable.
+- It was not public/sample/Ken/high-value-outreach ready.
+- Delivery gate correctly allowed customer delivery while blocking public/high-value readiness.
+- Support-doc contamination fixes mostly held:
+  - Phase I/environmental remained context-only.
+  - Zoning/compliance remained context-only.
+  - Market survey did not override rent roll.
+  - DCF/cap-rate provenance used standardized/framework-style wording, not unsupported document-derived exit-cap wording.
+- Recurring structural decision-sprawl still surfaced:
+  - rendered classification showed `Review - Insufficient Core Support` while contract QA expected `Review - Debt Coverage Constraint`;
+  - occupancy QA produced a likely false positive by treating a non-occupancy percentage as occupancy;
+  - messy acquisition source text still under-recovered purchase price/lender fee fields despite source text such as `Price ref: 1,250,000 -> Loan $937,500` and `Fees 1% lender fee + legal.`
+
+## C. Updated root diagnosis (controlling)
+
+- This is no longer treated as one more underwriting report bug.
+- Controlling diagnosis: duplicate truth-makers / decision-sprawl across report generation.
+- Contract QA improved but still often catches drift after render rather than preventing renderer drift.
+- Architecture must shift from contract-QA-after-render to contract-driven rendering with canonical decision authority.
+- Renderer, QA, action plan, delivery gate, dashboard, parsers, and report surfaces may still contain duplicate decision-makers.
+
+## D. New immediate next step (controlling)
+
+- Codex is now running an audit-only task:
+  - `InvestorIQ Report Decision-Source Audit - Screening + Underwriting`
+- Audit scope must cover both report types and produce full decision-path inventory for:
+  - report type/tier
+  - visible classification/verdict/risk profile
+  - scoring
+  - core document sufficiency
+  - T12 truth
+  - rent roll truth
+  - debt/refi truth
+  - acquisition financing truth
+  - DCF/cap-rate/valuation truth
+  - property tax truth
+  - support-doc treatment
+  - renovation/CapEx truth
+  - section eligibility/rendering
+  - Data Coverage
+  - QA systems
+  - delivery/readiness decisions
+  - dashboard/customer status decisions
+- Audit-only constraints remain strict: no file changes during that audit.
+- No new patches should start until that audit is reviewed.
+
+## E. Launch strategy / pricing discussion status
+
+- Screening-first launch remains a possible path.
+- Positioning discussion remains open: whether `Screening Report` undersells the product versus a `Deal Intelligence Memo` / `Acquisition Review Memo` framing.
+- Current honest pricing stance under discussion:
+  - Screening/Deal Intelligence likely viable around `$199-$299` launch pricing.
+  - `$499` Screening-only likely risky unless repositioned/bundled.
+  - Full Underwriting `$1,499` remains aspirational until public self-serve Full Underwriting is certified.
+- Full Underwriting public self-serve remains paused.
+- Full Underwriting may remain controlled beta / not public self-serve while architecture consolidation proceeds; this must not create an ordinary customer admin-review/manual-review outcome.
+- Do not change `src/pages/Pricing.jsx` from this documentation update alone.
+
+## F. Superseded older next-step notes
+
+- Older notes that state RF-5/RF-6/RF-7/RF-8 are next immediate build slices are superseded by this May 28 decision-source audit gate.
+- Older language that implies PR5/RF completion means Full Underwriting is near launch-ready is superseded.
+- Older language directing immediate continued controlled live retesting is superseded until audit review is complete.
+- Historical context remains intentionally preserved below.
+
+## G. Current working rules (controlling)
+
+- No more tactical symptom patches.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off values.
+- Audit before patch.
+- Identify duplicate truth-makers before creating canonical architecture.
+- Screening and Underwriting must both be audited.
+- Tests are not substitutes for production root-cause fixes.
+- Vercel Hobby constraint remains active; do not casually add new serverless/API route files.
+- No public AI wording.
+- No BUY/SELL/HOLD language.
+- Customer-deliverable does not equal public/sample/high-value ready.
+
+---
+# May 27, 2026 (Late Night) Addendum - Full Underwriting Launch-Hardening Current Controlling Status
+
+## A. Current committed status
+
+1. PR5 complete/committed
+- Full UnderwritingState/render-boundary hardening completed.
+- Current debt/refi, acquisition/proposed financing, property-tax binding, visible classification, Data Coverage, and optional section eligibility are now centrally protected through the PR5 path.
+- Full-render/customer HTML smoke coverage exists for major PR5 gates.
+
+2. First controlled clean Full Underwriting live retest completed
+- Published successfully through queued/extracting/underwriting/scoring/rendering/pdf_generating/publishing/published.
+- Customer-deliverable result confirmed.
+- Not yet external/public-sample/Ken-ready at that checkpoint because second-layer label/QA consistency issues were still being closed in RF slices.
+
+3. RF-1 complete/committed
+- RF-1A fixed support-role label alignment and acquisition QA calibration.
+- Market/rent survey files render as market/rent context only (not rent-roll support).
+- Accepted purchase assumptions used for acquisition context render as Displayed / Limited Use (not Listed but Not Quantitatively Modeled).
+- `purchase_price_not_verified` no longer emits when acquisition triangle verification already verifies purchase price.
+- RF-1B added targeted smoke/contract hardening for those exact regression paths (test-only).
+
+4. RF-2 complete/committed (test-only)
+- Worker/publication lifecycle publication-guard smoke expanded.
+- Publish path now contract-locked to valid `.pdf` storage path + non-empty report type + deliverable gate + `holdDelivery=false`.
+- Historical RF-2 note superseded in part: missing/invalid path and `user_needs_documents` remain blocked/fail-closed paths; legacy `admin_review_required` must be audited/demoted and must not remain an ordinary customer outcome.
+- Worker source-contract assertions confirm typed-gate outcomes do not proceed into published transition and restore-entitlement routing remains centralized.
+- Direct end-to-end Supabase credit-restoration replay intentionally deferred (would require broad mocking/refactor).
+
+5. RF-3 complete/committed (test-only)
+- Core document routing/content-rescue smoke added.
+- Filename/upload slot are contract-locked as hints only, not modeled authority.
+- Filename-only `Rent Roll.xlsx` / `T12.pdf` do not become Modeled Inputs.
+- Parser source contracts confirm deterministic content-based rescue paths exist for `rent_roll <-> t12` where validation supports it.
+- Unsafe rescue remains limited/fail-closed (market survey, broker email, Phase I/environmental/zoning do not contaminate modeled core surfaces).
+- No AI expansion.
+
+6. RF-4 complete/committed
+- **Files changed:** `api/_lib/report-contract-qa.js`, `tests/qa/report-contract-qa-smoke.js`.
+- **Production touched:** yes, tiny deterministic QA-contract addition only.
+- **Added contract check:** `DOCUMENT_TREATMENT_DUPLICATE_CATEGORY_CONFLICT` catches same-file dual listing under Modeled Inputs and Listed but Not Quantitatively Modeled.
+- **RF-4 invariant coverage strengthened:** classification consistency, debt/refi not-assessed consistency, acquisition/current-debt separation, Data Coverage/document-treatment consistency, source reconciliation consistency, and public/customer copy guardrails.
+- **Validation passed:** `node --check api/_lib/report-contract-qa.js`, `node --check api/generate-client-report.js`, `node tests/qa/report-contract-qa-smoke.js`, `node tests/qa/full-underwriting-gates-full-render-smoke.js`, `node tests/qa/generate-client-report-rent-roll-smoke.js`, `node tests/qa/property-tax-binding-finalhtml-smoke.js`, `node tests/qa/refi-gate-not-assessed-finalhtml-smoke.js`, `node tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js`, `node tests/qa/core-doc-routing-rescue-smoke.js`, `git diff --check` (CRLF warnings only).
+- **Remaining RF-4 limitation:** still QA-contract/smoke-level hardening, not a full DB-backed publication workflow simulator.
+
+## B. Remaining families after RF-4
+
+- RF-5: Dashboard Delivery Visibility / Report History Assumption Check
+- RF-6: Admin Diagnostics / Reason-Code Precision
+- RF-7: Remaining UnderwritingState Fallback Cleanup Audit
+- RF-8: Customer/Public Copy Doctrine Sweep
+
+## C. Current guidance
+
+- RF-4 was the last heavy report-quality/root-leak family in this sequence; RF-5..RF-8 should be smaller audit/smoke/copy/diagnostic slices unless a real issue is exposed.
+- RF-4 is now committed; proceed to RF-5 by default unless there is a strong reason to run another controlled clean live retest first.
+- Keep prompts small, direct, and scope-locked.
+- Continue Vercel Hobby constraint discipline: do not add API/serverless route files casually.
+- No broad refactors.
+- No public AI wording.
+- No BUY/SELL/HOLD recommendation language.
+- Customer-deliverable does not equal external/public-sample-ready.
+- Quality bar is universal: normal customers, Ken Dunn, and public samples require the same elite document-driven deterministic credibility.
+
+## D. Superseded note
+
+Older sections below that state PR5 is pending, RF slices are not started, or that next step is PR1/PR2/PR3/live retesting before RF closure are historical and superseded by this addendum.
+
+---
+# May 27, 2026 (Night) Addendum - Current Controlling Status (Supersedes Older Next-Step Notes)
+
+## A. Completed launch-hardening sequence (committed)
+
+1. BLK-1 completed/committed
+- Scorecard-facing current debt coverage no longer falls back to legacy/raw mortgage values when canonical current debt status is not computed.
+- `resolveCanonicalCurrentDebtScoreInputs(...)` returns `currentDebtCoverage: null` and `usedCanonicalState: false` when canonical current debt is not computed.
+- `buildCurrentDebtScorecardEntry(...)` treats null coverage as not assessed and does not render DSCR score rows from raw mortgage fallback.
+- This closes scorecard/body drift where body says current debt/refi is not assessed.
+
+2. BLK-3 Part 1 completed/committed
+- Added `tests/qa/refi-gate-not-assessed-finalhtml-smoke.js`.
+- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.
+- It proves not-assessed current debt/refi output does not include: Maximum Financing Envelope; Base Case Supportable Loan; Current loan balance / Interest rate / Amortization / Refinance cap rate rows; Refinance proceeds/debt-balance surfaces; Current Debt DSCR / DSCR (Current Debt) scorecard rows.
+
+3. BLK-3 Part 2 completed/committed
+- Added `tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js`.
+- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.
+- It proves unsafe/inconsistent acquisition triangle output collapses to disclosure, contradictory Proposed Acquisition Debt Sizing rows do not render, lender fee/closing costs do not render as bogus `0.0%` when unverified, and proposed acquisition financing remains separate from current outstanding debt.
+
+4. BLK-3 Part 3 completed/committed
+- Added `tests/qa/property-tax-binding-finalhtml-smoke.js`.
+- This is finalHtml-like/helper-assembly coverage, not a true full `generateClientReport()` customer HTML invocation.
+- It proves only the validated/bound property-tax source receives `Structured property tax input`; unbound tax-like support, Phase I/environmental, and zoning/compliance remain non-modeled/context-only.
+
+5. BLK-2 completed/committed
+- Patched acquisition financing artifact provenance pollution.
+- `normalizeAcquisitionFinancingArtifactPayload` no longer back-mutates parsed/source fields with recovered/derived renderer values.
+- `purchase_price`, `stated_acquisition_loan_amount`, `loan_amount`, `lender_fee_percent`, and `derived_acquisition_loan_amount` are populated only from explicit payload/source fields/aliases.
+- Recovered/derived values are separated under `_renderer_derived_fields` (including `purchase_price_from_text`, `stated_acquisition_loan_amount_from_text`, `lender_fee_percent_from_text`, `derived_acquisition_loan_amount_from_purchase_ltv`).
+- Existing acquisition collapse finalHtml-like smoke still passes.
+
+## B. Critical caveats / tracked follow-up
+
+- BLK-3 caveat remains: the three finalHtml-like smokes are helper-assembly coverage, not true full-generator/full-render customer HTML regression coverage.
+- Required pre-launch hardening item: add a dedicated true full-generator/full-render regression harness proving the actual customer-report path cannot bypass:
+  1. refi/debt not-assessed gate
+  2. acquisition triangle collapse gate
+  3. property-tax source-binding/document-treatment gate
+- Follow-up provenance cleanup: review whether `ltv`, `interest_rate`, and `amortization_years` should also be separated into explicit source fields vs `_renderer_derived_fields` when recovered only from free text. Do not patch ad hoc; handle under a future canonical acquisition/provenance cleanup pass.
+
+## C. Doctrine clarification (controlling)
+
+- Goal is not zero bugs forever; goal is to stop recurring root-class/sub-class contradictions from escaping into live testing.
+- Customer outcome model remains:
+  1. Whole report fails closed only when required core evidence is unusable/unreadable/unverifiable enough that no defensible report can be published.
+  2. Otherwise, report publishes and unsupported/missing/contradictory section-level inputs collapse/omit/qualify/disclose affected sections/lines.
+  3. Admin diagnostics capture recurring section-level limitations/bugs for product intelligence and deterministic follow-up patches.
+- Admin review is not a normal customer outcome. Diagnostics are product-learning intelligence, not routine manual review.
+
+## D. Current status and next likely steps
+
+- BLK-1: done/committed.
+- BLK-3 Part 1: done/committed.
+- BLK-3 Part 2: done/committed.
+- BLK-3 Part 3: done/committed.
+- BLK-2: done/committed.
+- Live testing: still paused.
+- PR 5 / UnderwritingState: deferred unless the final checkpoint says it is needed now.
+
+Likely sequence:
+1. Documentation update now (this addendum).
+2. Consider a true full-generator/full-render regression harness PR.
+3. Final Emergent repo-wide Full Underwriting audit.
+4. Decide whether PR 5 is required before controlled live testing.
+5. Only then resume controlled live testing.
+
+Older references below that say PR 1/2/3 are next, that live retesting resumes immediately, or that launch-readiness is already confirmed are historical context and superseded by this May 27, 2026 controlling addendum.
+
+---
+# May 26, 2026 (Late Evening) Addendum - PR 1 + PR 4 Micro Completed / Launch Path Still Open
+
+## A. Architecture cleanup completed tonight
+
+1. PR 1 - Property-tax per-file binding
+Status: completed and committed.
+Outcome: Renderer document-treatment property-tax modeled/support labels are now bound to the validated property-tax source file identity. Missing, unreliable, or mismatched binding fails safe to neutral non-modeled treatment. This prevents Phase I ESA, environmental, zoning/compliance, appraisal, market survey, or generic support docs from being labeled as property-tax support solely because propertyTaxPayload exists elsewhere.
+
+2. PR 4 micro - Renderer consumes support-doc taxonomy
+Status: completed and committed.
+Outcome: generate-client-report.js now imports uildSupportDocTaxonomyState, and uildDocumentTreatmentSummaryHtml uses canonical taxonomy semantic_doc_role as primary authority for support-doc role classification. Existing semantic_doc_role is fallback only when taxonomy role is absent/non-useful. Inline regex/filename logic remains fallback only. PR 1 property-tax per-file binding remains intact.
+
+## B. Launch-strategy clarification (current)
+
+- Rob has not made a final decision to launch Screening-only.
+- Current launch strategy is still undecided.
+- Full Underwriting cleanup is being executed now to preserve the option of launching Screening + Full Underwriting together if Full Underwriting reaches the universal quality bar.
+- Do not automatically convert Pricing Underwriting to invite-only unless Rob explicitly decides Full Underwriting will not be public self-serve at launch.
+- Emergent's Pricing invite-only recommendation remains a fallback launch-safety option, not an approved patch.
+
+## C. Next architecture sequence
+
+1. PR 2 - Acquisition triangle pre-render gate (next).
+2. PR 3 - Refi / Debt state machine.
+3. PR 5 - UnderwritingState skeleton (explicitly deferred until after PR 1 + PR 4 canonical consumption proof).
+
+## D. Proven pattern from tonight
+
+- Canonical helper logic must be consumed by the renderer to matter; exported-only canonical helpers do not prevent rendered drift.
+
+---
+# May 25/26, 2026 Addendum - Full Underwriting Architecture Audit / Whack-a-Mole Freeze / Screening-First Launch Path
+
+## A. New current status
+
+- The May 24/25 root-class patches were completed/deployed/pass, but controlled live underwriting retests proved Full Underwriting still has structural report-quality drift.
+- The issue is not one remaining bug; it is fragmented underwriting truth architecture.
+- Full Underwriting is not public self-serve launch-ready.
+- Screening remains the safer public launch path.
+- Full Underwriting should be beta/invite-only/not public self-serve until canonical-state consolidation is completed; this must not create an ordinary customer admin-review/manual-review outcome.
+
+## B. Safe UI/customer/admin patches completed
+
+- AdminDashboard.jsx Slice 2A.2 completed/pass:
+  - undefined `ai` expanded-row reference removed
+  - AI Recovery fallback now deterministic: `None - deterministic only`
+  - compact Triage empty state: `{title} - 0 jobs - all clear`
+  - roadmap leak copy replaced with `No items today.`
+  - Force-Fail confirmation modal added before executing existing forceFailJob call
+  - no backend/API/doctrine/gating changes
+
+- Dashboard.jsx customer launch copy cleanup completed/pass:
+  - historical note: internal status labels were collapsed to customer labels; current doctrine should avoid customer review-limbo language and use Ready or Fail Closed/Unable to Publish as appropriate
+  - historical note: failed-job header cleanup reduced raw error-code leakage; current doctrine should use fail-closed/credit-restored copy, not review-limbo copy
+  - muted reference code remains for support
+  - upload overlay changed to Submitting your documents
+  - checkout toast changed to Your report credit has been added
+  - Dashboard.jsx DATA NOT AVAILABLE copy replaced with sentence-case prose
+  - no API/admin/report-engine/lifecycle changes
+
+## C. Customer Launch Audit results
+
+- Journey mostly safe, doctrine/copy/fail-closed handling unusually disciplined.
+- Main customer trust risk was internal pipeline jargon/raw error-code leakage during waiting/failure; Dashboard copy cleanup addressed the highest-value items.
+- Remaining launch blocker: public sample assets are broken/missing because LandingPage references public/samples paths that do not exist.
+- Do not generate underwriting sample assets from current flawed underwriting PDFs.
+- STRONG BUY remains in dead/orphan chain; verify build/dist grep before public launch, but do not edit dead chain unless it reaches dist or active routes.
+- Recommended current stance: do not touch orphan/dead-code cleanup pre-launch unless proven reachable.
+
+## D. Live underwriting retest findings
+
+1. Final Motherload underwriting 2:
+- Published successfully and was likely customer-deliverable.
+- Core T12/Rent Roll/current debt values mostly rendered correctly.
+- Support-doc treatment mostly worked: Phase I/ESA was listed as not quantitatively modeled.
+- But visible contradiction remained:
+  - Refinance Stability header said refinance stability was not assessed due to missing current debt/refi inputs.
+  - Later debt sections rendered current debt balance, rate, amortization, DSCR, and DSCR sensitivity.
+- Root symptom: refinance header and debt body read different state/authority.
+
+2. 124 Richmond CLEAN underwriting 2:
+- Published, but not public-sample/high-value-ready.
+- Visible failures persisted:
+  - Phase I ESA rendered as Structured property tax input in Data Coverage.
+  - Acquisition financing table rendered purchase price and stated acquisition loan amount both as $937,500, despite source language indicating loan amount at a higher purchase price.
+  - Closing costs rendered 0.0% despite source lender fee evidence.
+  - QA artifacts detected high-severity rendered-contract issues only after PDF rendering.
+- Root symptom: renderer still bypasses canonical/QA-supported state and reads raw/fallback/local classification paths.
+
+## E. Emergent Full Underwriting Architecture Audit - controlling diagnosis
+
+- Root cause is architectural, not one more parser/label bug.
+- There is no complete canonical UnderwritingState object.
+- Existing `buildRendererCanonicalState` is partial and does not own all 18 critical underwriting truth families.
+- The renderer is still acting as classifier/calculator/label generator/template engine.
+- `buildDocumentTreatmentSummaryHtml` has its own inline regex/classification chain.
+- `buildSupportDocTaxonomyState` exists, but renderer does not consistently consume it; QA consumes it.
+- QA runs after finalHtml exists, so it detects contradictions too late to prevent customer-visible PDF issues.
+- Root-class patches have been fixing individual authority paths, not replacing the authority model.
+- Architecture risk: fragmented truth model; Full Underwriting is too fragile for public self-serve launch without canonical-state consolidation.
+
+## F. Strategic decision / doctrine update
+
+- Freeze tactical one-off Full Underwriting patches unless they are part of the canonical-state roadmap.
+- Stop prompts like:
+  - add one more regex
+  - add one keyword to classifier
+  - patch this exact refinance permutation
+  - patch this exact visible label
+  - add another post-render QA detector as primary fix
+- Screening-first public launch is the recommended path.
+- Full Underwriting may remain visible only as invite-only/beta/not public self-serve or unavailable for self-serve until consolidation; this must not create an ordinary customer admin-review/manual-review outcome.
+- Public sample assets should use Screening first unless/until Full Underwriting passes sample-grade QA.
+- Do not flip DocRaptor production mode or create underwriting sample assets from flawed PDFs.
+
+## G. 99.999% Full Underwriting reliability requirements
+
+1. Complete immutable UnderwritingState owning operating, rent roll, current debt, acquisition financing, refinance, valuation, property tax, support docs, data coverage, classification, section eligibility, diagnostics.
+2. Renderer must consume UnderwritingState, not raw parser payloads.
+3. Pre-render contract gates must collapse/qualify/omit before HTML is assembled.
+4. Section-level narrative state machines so header/body cannot disagree.
+5. Rendered QA becomes safety net, not primary authority.
+6. Per-file binding for modeled support docs, especially property tax/appraisal/mortgage.
+7. Acquisition triangle validation before render.
+8. Refi/current-debt narrative state machine.
+9. 120-ish fixture matrix / snapshot harness or equivalent broad regression coverage.
+10. Separate customer-delivery gate from public-sample/high-value-outreach gate.
+
+## H. Current active next step
+
+- Emergent is running/should run Underwriting Renderer Canonical Consumption Audit.
+- Goal: map every non-canonical/raw/fallback read in api/generate-client-report.js across the 18 underwriting truth families.
+- No code edits during this audit.
+- Do not run another Full Underwriting patch until the canonical consumption map is reviewed.
+
+After that:
+1. Decide Screening-first launch implementation steps.
+2. Use Codex for the first implementation PR only after the consumption audit identifies the highest-leverage architectural patch.
+3. Likely first candidates:
+   - renderer consumes canonical support-doc taxonomy
+   - acquisition triangle pre-render gate
+   - refi/current-debt narrative state machine
+   - UnderwritingState skeleton
+
+## I. Current working rules
+
+- Micro-prompts only.
+- One task at a time.
+- Audit before patch.
+- No broad refactor unless explicitly scoped.
+- No report-specific hacks.
+- No hardcoded property names, filenames, report IDs, or one-off values in production logic.
+- No more whack-a-mole renderer regex patches.
+- Screening public launch path is allowed to move forward while Full Underwriting consolidation continues.
+- Full Underwriting public self-serve is paused pending architecture consolidation.
+
+## J. Fresh-Chat Continuation Prompt
+
+We are continuing InvestorIQ after the May 25/26 Full Underwriting Architecture Audit.
+
+Current controlling status:
+- May 24/25 root-class patches were completed/deployed/pass but live underwriting retests proved Full Underwriting still has structural fragmented-truth failures.
+- Full Underwriting is not public self-serve launch-ready.
+- Screening is the recommended public launch path.
+- Full Underwriting should be invite-only/beta/not public self-serve until canonical-state consolidation; this must not create an ordinary customer admin-review/manual-review outcome.
+- AdminDashboard Slice 2A.2 and Dashboard.jsx launch-copy cleanup are safe/pass.
+- Customer launch audit found missing sample assets as the remaining major public launch blocker.
+- Do not create underwriting sample assets from flawed underwriting PDFs.
+- Emergent is running the Underwriting Renderer Canonical Consumption Audit.
+- Do not run another tactical underwriting patch until the canonical consumption map is reviewed.
+
+Immediate next work:
+1. Complete/review Emergent canonical consumption audit.
+2. Decide Screening-first public launch implementation.
+3. Then scope first architectural Full Underwriting PR.
+
+Do not:
+- start Admin Slice 2B
+- patch another one-off underwriting renderer symptom
+- add classifier keywords/regex branches
+- rotate secrets mid-debug
+- flip DocRaptor production mode yet
+- disable GitHub worker yet
+- generate public underwriting samples from current flawed PDFs
+
+---
+# May 24/25, 2026 Addendum - Canonical Render Parity Contracts Completed / Admin Diagnostics Slice 2A Deployed / Next Step Retest
+
+## A. Completed Root-Class + Admin Diagnostics Status (May 24/25)
+
+1. SUPPORT_DOC_TREATMENT_CONTRACT_GAP
+Status: patched, committed, deployed/pass.
+Outcome: Environmental / Phase I / ESA / zoning / compliance docs cannot be rendered as property-tax support or structured property-tax inputs. Deterministic contract enforcement exists; advisory AI is not the authority.
+
+2. ACQUISITION_FINANCING_CANONICALIZATION_GAP
+Status: patched, committed, deployed/pass.
+Outcome: Acquisition/proposed financing canonicalization now handles clean/messy/shorthand term-sheet formats generally, including purchase price, stated acquisition loan amount, derived acquisition loan amount, LTV/rate/amortization, lender/origination/financing fees, and unquantified legal/appraisal/closing notes. Acquisition/proposed financing remains separate from current outstanding debt unless true current debt balance evidence exists.
+
+3. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: Clean core T12 + Rent Roll coverage should not be mislabeled as severe source limitation just because optional/support sections are constrained. Optional underwriting constraints should be disclosed separately from core input sufficiency.
+
+4. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP
+Status: completed, committed, deployed/pass.
+Outcome: Final sweep expanded rendered contract coverage using tests-only/generalized coverage where appropriate. This was not a renderer rewrite.
+
+5. ROOT-FAMILY_TAXONOMY_AUDIT
+Status: completed audit-only.
+Outcome: Audit identified canonical-value/rendered-value drift as the next root family and recommended targeted QA contracts instead of broad refactors.
+
+6. SECTION_ELIGIBILITY_RENDER_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: If canonical section eligibility says current debt/refi/renovation sections are source-constrained, rendered output should not show computed/numeric modeled surfaces for those sections. Unsupported optional sections should collapse/qualify/omit instead of inventing outputs.
+
+7. VERDICT_CAP_EXPLANATION_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: Visible classification and explanation language must align with canonical verdict caps. Stable language cannot appear when source reconciliation, insufficient core support, or debt coverage constraints cap the report to Review-class labels.
+
+8. CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: Rendered current-debt DSCR values across customer-facing surfaces must match canonical computed current-debt DSCR within tolerance. Proposed/acquisition DSCR is excluded from current-debt DSCR parity.
+
+9. RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: Rendered Annual In-Place Rent and Annual Market Rent totals must match canonical rent-roll annual totals when canonical trusted totals exist. Partial-sample rent rolls without trusted summary totals are skipped.
+
+10. OCCUPANCY_CANONICAL_VALUE_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: Rendered current/rent-roll/physical occupancy must match canonical trusted occupancy within tolerance. Break-even, buffer, stress, sensitized, vacancy, and market occupancy contexts are excluded.
+
+11. ACQUISITION_CANONICAL_VALUE_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: Rendered Proposed Acquisition Debt Sizing values must match same-label canonical acquisition payload values when both exist, including purchase price, stated acquisition loan amount, derived acquisition loan amount, and lender/origination/financing fee. Contract is scoped only to Proposed Acquisition Debt Sizing, not current debt/refi/scorecard/risk register.
+
+12. SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT
+Status: patched, committed, deployed/pass.
+Outcome: When canonical support-document role/treatment metadata exists, rendered document-treatment labels must not contradict canonical support role. Environmental, zoning/compliance, market survey, appraisal/background, qualitative, unmodeled, or limited-support docs cannot be rendered as property-tax support or modeled/structured underwriting inputs unless canonical metadata explicitly supports that class. Existing SUPPORT_DOC_TREATMENT_LABEL_CONTRACT remains active for obvious text leaks when canonical metadata is absent.
+
+13. Admin Diagnostics Intelligence Layer Slice 1
+Status: patched, committed, deployed/pass.
+Outcome: Admin dashboard now has a read-only diagnostics intelligence rollup using existing QA artifacts. Explicit blocker booleans from report_contract_qa and source_report_coverage_qa take precedence over severity-derived fallback, so high-severity disclose-only diagnostics are not mislabeled as customer blockers.
+
+14. Admin Diagnostics Slice 2A - Triage Workspace
+Status: clean PR merged to main and Vercel production deployed green.
+Outcome: AdminDashboard.jsx frontend-only restructure:
+- "Admin Review / Fix Queue" renamed to "Triage Workspace"
+- rows bucketed into Published With Diagnostics, Fail-Closed Core, and Operational Health
+- delivery_gate_status underlying values unchanged
+- Historical UI note superseded in part: legacy `admin_review_required` display work must not imply a normal customer review state; current doctrine requires Publish or Fail Closed + Restore Credit.
+- operational recovery controls remain scoped
+- emergency override controls remain locked and reframed as emergency-only, not report approval
+- no backend/API/schema/customer-dashboard/package/env changes
+
+All known May 24 root-class blocker patches from the active patch order have now been completed and deployed/pass. The current active next step is not another blind patch. The next step is a controlled live retest batch.
+
+## B. Current Recommended Next Action
+
+Run controlled live retests:
+1. Clean Screening
+2. Clean Full Underwriting
+3. Messy Full Underwriting / acquisition-financing scenario
+4. One fail-closed core-doc test if needed
+
+For each retest, capture:
+- PDF
+- analysis_artifacts_rows.json
+- any report_contract_qa / source_report_coverage_qa / qa_action_plan artifacts
+- Admin Diagnostics view if relevant
+
+Retest checklist:
+- no Phase I / ESA / environmental / zoning / compliance doc appears as property-tax support
+- Data Coverage headline distinguishes clean core coverage from optional/support constraints
+- acquisition/proposed financing purchase price, stated loan, derived loan, fee, and closing notes render correctly
+- acquisition/proposed financing is not treated as current debt
+- current-debt DSCR/refi sections collapse/qualify when true current debt balance is absent
+- canonical DSCR/rent-roll/occupancy/acquisition values match rendered values
+- visible classification is aligned across cover/executive/scorecard/risk surfaces
+- unsupported renovation/CapEx does not produce ROI/payback/rent-lift/NOI impact
+- Screening does not leak underwriting sections
+- no DATA NOT AVAILABLE / N/A metric placeholders / unresolved tokens / internal QA/admin/parser/artifact language / public AI language / mojibake
+- Admin Diagnostics Triage Workspace appears as expected
+
+## C. Active Patch Order (Current Checkpoint)
+
+0. SUPPORT_DOC_TREATMENT_CONTRACT_GAP - done/deployed/pass
+1. ACQUISITION_FINANCING_CANONICALIZATION_GAP - done/deployed/pass
+2. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT - done/deployed/pass
+3. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP - done/deployed/pass
+4. ROOT-FAMILY_TAXONOMY_AUDIT - done audit-only
+5. CANONICAL VALUE / RENDERED VALUE DRIFT CONTRACTS:
+   - CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT - done/deployed/pass
+   - OCCUPANCY_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - ACQUISITION_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT - done/deployed/pass
+6. Admin Diagnostics Slice 1 - done/deployed/pass
+7. Admin Diagnostics Slice 2A - done/merged/deployed/pass
+8. NEXT: canonical consumption audit + Screening-first launch decision. (supersedes controlled live retest batch)
+
+## D. Doctrine (Unchanged)
+
+- Publish vs fail-closed remains the operating model.
+- Admin review is not a normal customer outcome.
+- Entire-report fail-closed only when core T12/Rent Roll are unusable/missing/unreadable/materially invalid or true system/runtime/storage failure blocks generation.
+- Optional/support/section-specific limitations should collapse, omit, qualify, disclose, or render Not Assessed where appropriate.
+- Unsupported optional/support issues should emit structured diagnostics.
+- Diagnostics are product intelligence, not routine manual review.
+- Universal report-quality standard for customers, public samples, and high-value outreach.
+- No Ken/public/customer quality-tier distinction.
+- Root-class patches must be generalized with anti-hardcode proof/tests.
+- No report-specific hacks.
+
+## E. Fresh-Chat Continuation Prompt (Updated)
+
+We are continuing InvestorIQ after the May 24/25 root-class hardening sprint.
+
+Completed/deployed/pass:
+- SUPPORT_DOC_TREATMENT_CONTRACT_GAP
+- ACQUISITION_FINANCING_CANONICALIZATION_GAP
+- UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
+- RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP
+- ROOT-FAMILY_TAXONOMY_AUDIT audit-only
+- SECTION_ELIGIBILITY_RENDER_DRIFT
+- VERDICT_CAP_EXPLANATION_DRIFT
+- CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT
+- RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT
+- OCCUPANCY_CANONICAL_VALUE_DRIFT
+- ACQUISITION_CANONICAL_VALUE_DRIFT
+- SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT
+- Admin Diagnostics Slice 1
+- Admin Diagnostics Slice 2A Triage Workspace
+
+Current next step:
+Superseded: canonical consumption audit + Screening-first launch decision.
+
+Do not start Slice 2B yet.
+Do not do broad refactors.
+Do not rotate secrets mid-debug.
+Do not flip DocRaptor production mode yet.
+Do not disable GitHub worker yet.
+
+---
+# May 24, 2026 Addendum - Publish-vs-Fail Doctrine Refined / Section Diagnostics Strategy Locked / Support-Doc Contract Gap Patched / Next Root-Family Work
+
+## A) New practical customer outcome doctrine
+
+InvestorIQ should no longer treat admin review as a normal customer outcome.
+
+Practical customer outcomes are:
+
+```text
+1. PUBLISH
+2. FAIL CLOSED + RESTORE CREDIT
+
+Entire-report fail-closed should occur only when required core evidence is unusable:
+
+- T12 missing / unreadable / unparseable / materially invalid
+- Rent Roll missing / unreadable / unparseable / materially invalid
+- T12 or Rent Roll so contradictory or structurally unusable that InvestorIQ cannot justify publishing any defensible report
+- true runtime/system/storage failure that prevents generation
+
+If core T12 + Rent Roll are usable, the report should normally publish.
+
+Non-core, optional, support-document, or section-specific issues should not fail the entire report.
+
+Instead, the affected line/metric/section should:
+
+- omit
+- collapse
+- qualify
+- disclose
+- render Not Assessed only where appropriate
+- never fabricate missing values
+
+Examples:
+
+Missing current debt -> report publishes; current-debt DSCR/refi sections omitted or marked not assessed.
+Unsupported appraisal -> report publishes; appraisal not used quantitatively.
+Unsupported Phase I / Zoning -> report publishes; listed as non-modeled context or omitted.
+Incomplete renovation budget -> report publishes; ROI/rent-lift/payback omitted unless source-supported.
+Messy acquisition financing -> report publishes; only verified fields shown; unsupported fields omitted.
+```
+
+## B) Section-level fail-close diagnostics strategy
+
+The most important new launch-confidence doctrine:
+
+Unknown optional/support data should not block publication.
+Unknown optional/support data should create diagnostics.
+Unknown core data should fail closed.
+
+Every time InvestorIQ omits, collapses, qualifies, or limits a section/line because source support is missing, ambiguous, unsupported, or failed validation, the system should emit structured internal diagnostics.
+
+Purpose:
+
+Turn real customer document messiness into product intelligence.
+Use recurring diagnostics to identify sub-classes for future patches.
+Do not use diagnostics as routine manual admin review.
+
+Suggested diagnostic shape:
+
+```json
+{
+  "event": "section_fail_closed",
+  "job_id": "...",
+  "report_type": "underwriting",
+  "section": "acquisition_financing",
+  "status": "omitted_or_qualified",
+  "reason_code": "purchase_price_not_verified",
+  "source_family": "loan_term_sheet",
+  "customer_delivery_impact": "none",
+  "report_quality_impact": "advisory_or_external_distribution_blocker",
+  "input_fields_missing": ["purchase_price"],
+  "input_fields_present": ["ltv", "interest_rate", "loan_amount"],
+  "recommended_admin_bucket": "possible_parser_subclass",
+  "rendered_behavior": "section qualified; no fabricated purchase price",
+  "needs_code_patch": "unknown_until_recurs"
+}
+```
+
+Admin dashboard / diagnostics rollup target:
+
+Recurring diagnostics this week:
+- purchase_price_not_verified: 7 reports
+- market_survey_not_modeled: 12 reports
+- renovation_roi_missing: 9 reports
+- current_debt_not_assessed: 5 reports
+- support_doc_unclassified: 14 reports
+
+Interpretation:
+
+This is how InvestorIQ can launch responsibly while continuing to improve.
+Reports publish safely.
+Unsupported sections fail closed at section level.
+Diagnostics reveal recurring sub-classes that can be patched into stronger deterministic support over time.
+
+## C) Root-class patch standard tightened
+
+Every future "root-class" patch must prove it is system-level, not report-specific.
+
+Required proof in Codex receipts:
+
+1. Generalized invariant fixed
+2. Anti-hardcode proof/tests
+3. Multiple varied fixtures
+4. Rendered contract QA coverage where applicable
+
+Every root-class prompt should explicitly prohibit:
+
+- hardcoding property names
+- hardcoding filenames
+- hardcoding report IDs
+- hardcoding exact one-off fixture values outside tests
+- patching only one PDF/report symptom
+
+Use test reports only as regression evidence, not as the patch target.
+
+Correct model:
+
+Specific report exposed the hole.
+Patch the fence, not the dog.
+
+## D) SUPPORT_DOC_TREATMENT_CONTRACT_GAP patched
+
+Confirmed Codex patch completed for:
+
+SUPPORT_DOC_TREATMENT_CONTRACT_GAP
+
+Problem:
+
+Phase I ESA / environmental and Zoning / compliance documents could render in Data Coverage as property-tax support or Structured property tax input.
+
+Files changed:
+
+api/_lib/report-surface-contracts.js
+api/generate-client-report.js
+api/_lib/report-contract-qa.js
+tests/qa/supporting-doc-classification-smoke.js
+tests/qa/report-contract-qa-smoke.js
+tests/qa/generate-client-report-rent-roll-smoke.js
+
+Deterministic guard added:
+
+buildSupportDocTaxonomyState(...)
+- hasEnvironmentalSignals
+- hasZoningComplianceSignals
+- environmental/zoning role precedence before property-tax role selection
+- even if declared/detected doc_type is property_tax, Phase I/ESA/environmental/REC signals force environmental_due_diligence
+- zoning/compliance/permitted use/municipal zoning signals force zoning_compliance_context
+
+Rendered label behavior:
+
+Environmental / Phase I / ESA / REC:
+Environmental due-diligence context only; not used quantitatively.
+
+Zoning / compliance / permitted use:
+Zoning/compliance context only; not used quantitatively.
+
+Market survey / rent comps:
+Market survey / rent context only; not used to override rent roll.
+
+Unsupported appraisal:
+Listed for auditability only; not used quantitatively.
+
+True property-tax support:
+Allowed only when property-tax semantics are present and validated annual-tax logic passes.
+
+Hard report contract QA added:
+
+code: SUPPORT_DOC_TREATMENT_LABEL_CONTRACT
+severity: high
+blocks_customer_delivery: false
+blocks_public_sample: true
+blocks_high_value_outreach: true
+
+Trigger:
+
+Rendered text shows Phase I / ESA / environmental / zoning / compliance near:
+- property tax support
+- structured property tax input
+- modeled property tax input
+
+Important interpretation:
+
+This is deterministic contract enforcement, not advisory AI.
+Advisory AI may still flag, but deterministic contract must enforce.
+
+Validation reported:
+
+node --check api/_lib/report-contract-qa.js
+node --check api/_lib/report-surface-contracts.js
+node --check api/_lib/source-report-coverage-qa.js
+node --check api/generate-client-report.js
+node tests/qa/report-contract-qa-smoke.js
+node tests/qa/source-report-coverage-qa-smoke.js
+node tests/qa/supporting-doc-classification-smoke.js
+node tests/qa/generate-client-report-rent-roll-smoke.js
+git diff --check
+
+Status:
+
+Pass to commit if not already committed.
+
+## E) Current known blocker patch order
+
+Next work should patch known confirmed blockers first, then run the broader root-family taxonomy audit.
+
+Order:
+
+0. SUPPORT_DOC_TREATMENT_CONTRACT_GAP
+   Status: patched by Codex; commit if not already committed.
+
+1. ACQUISITION_FINANCING_CANONICALIZATION_GAP
+   Patch next.
+   Must be a GENERAL acquisition/proposed-financing parser/canonicalization contract, not a 124 Richmond fix.
+
+2. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT
+   Patch after acquisition.
+   General rule:
+   clean core T12 + Rent Roll coverage must remain CORE INPUT COVERAGE CONFIRMED;
+   optional/support-section constraints get secondary disclosure only.
+
+3. RENDERED_QA_CONTRACT_EXPANSION
+   Build hard rendered checks into each patch where possible.
+   Then do one final explicit rendered-contract sweep after acquisition and Data Coverage headline patches.
+
+4. ROOT-FAMILY TAXONOMY AUDIT
+   After known blockers are patched, have Codex map all root families, sub-classes, coverage, hardcode risks, and remaining gaps.
+
+## F) Acquisition financing patch must be generalized
+
+Do not patch only 124 Richmond.
+
+Root family:
+
+ACQUISITION_FINANCING_CANONICALIZATION_GAP
+
+General invariant:
+
+InvestorIQ must consistently canonicalize acquisition/proposed-financing evidence across clean, messy, shorthand, and table-style term sheets before render and QA consumption.
+
+General field mapping:
+
+Purchase price / asking price / acquisition price / price ref
+-> purchase_price
+
+Loan amount / proposed loan / acquisition loan / mortgage amount
+-> stated_acquisition_loan_amount
+
+LTV / loan-to-value
+-> ltv
+
+Interest rate / rate
+-> interest_rate
+
+Amortization / AM / amort
+-> amortization_years
+
+Lender fee / origination fee / financing fee
+-> lender_fee_percent
+
+Legal/appraisal/closing costs mentioned without amount
+-> notes only, not 0.0%
+
+Acquisition/proposed financing
+-> never current outstanding debt unless document explicitly says current outstanding balance / existing mortgage / current principal balance.
+
+Regression fixture examples may include, but must not be limited to:
+
+Loan Amount (at $X purchase price) $Y
+Price ref: X -> Loan Y
+Purchase Price: X / Loan Amount: Y
+Asking Price: X / Proposed Loan: Y
+X purchase price, Y loan, Z% LTV
+Fees 1% lender fee + legal
+
+124 Richmond values are evidence/regression examples only, not production logic.
+
+## G) Root-family taxonomy audit later
+
+After the known blocker patches, run a repo-wide Root-Family Taxonomy Audit.
+
+Purpose:
+
+Stop patching isolated symptoms.
+Map current root families, sub-classes, deterministic enforcement, rendered contract coverage, test coverage, anti-hardcode risks, and foreseeable adjacent gaps.
+
+Expected families likely include:
+
+1. Classification / visible verdict alignment
+2. Current debt vs acquisition/proposed financing
+3. Source reconciliation / canonical truth
+4. Support-document treatment
+5. Data Coverage / limitation taxonomy
+6. Parser / extraction / recovery validation
+7. Optional section rendering / collapse behavior
+8. Report surface integrity / public language
+9. Delivery gate / QA authority / readiness routing
+10. Pipeline / dashboard / worker / entitlement operations
+
+Audit should not patch at first.
+Audit should return:
+
+- root-family inventory
+- known sub-classes
+- current enforcement files/functions
+- tests proving coverage
+- rendered contract QA coverage: YES / PARTIAL / NO
+- anti-hardcode audit
+- missing rendered-contract coverage
+- adjacent foreseeable sub-classes
+- recommended patch order
+
+## H) Updated launch confidence framing
+
+InvestorIQ is launch-justifiable only if the operating model is:
+
+Known root-class blockers patched.
+Core docs either validate or fail closed.
+Optional/support docs cannot contaminate modeled outputs.
+Unsupported/missing optional inputs omit/collapse/qualify/disclose affected sections.
+Every section-level omission/qualification emits diagnostics.
+Diagnostics roll up recurring sub-classes for future patching.
+Reports publish safely while the system keeps learning.
+
+This is the product-learning loop:
+
+Customer docs expose messy real-world cases.
+InvestorIQ publishes safely using only verified support.
+Unsupported parts fail closed at section level.
+Diagnostics tell Rob what happened.
+Recurring diagnostic sub-classes become future deterministic patches.
+
+That is how InvestorIQ becomes stronger and smarter after launch without turning into a manual-review factory.
+
+## I) Working rules still active
+
+- Micro-prompts only.
+- One task at a time.
+- No broad refactors.
+- No unrelated cleanup.
+- SHORT FORM RECEIPT ONLY.
+- No report-specific patches.
+- Root-class patches require generalized invariant + anti-hardcode proof.
+- Do not flip DocRaptor production mode yet.
+- Do not disable GitHub worker yet.
+- Do not rotate secrets mid-debug.
+- Do not change Supabase Cron cadence unless explicitly chosen.
+- Admin review should not be treated as a normal customer outcome.
+- Publish if usable T12 + Rent Roll support a defensible report.
+- Fail entire report only if core T12/Rent Roll cannot support a defensible report.
+- Optional/support sections fail closed at section level, not whole-report level.
+
+## J) Current status supersession note
+
+As of May 24, new controlled batch retesting exposed new confirmed root-class blockers:
+- support-doc treatment contract gap, now patched/pass-to-commit;
+- acquisition financing canonicalization gap, next patch;
+- underwriting Data Coverage headline optional-limitation drift, patch after acquisition;
+- final rendered QA contract sweep, then root-family taxonomy audit.
+
+This May 24 status supersedes earlier May 23 language that stated no active report-quality patch remained open.
+
+---
+---
+
+## Quick Current Doctrine Summary
+
+- Publish vs fail-closed remains the operating model.
+- Admin review is not a normal customer outcome.
+- Entire-report fail-closed only when core T12/Rent Roll are unusable, contradictory beyond defensible use, or true runtime/system/storage failure blocks generation.
+- Optional/support issues fail closed at section/line level (omit/collapse/qualify/disclose; no fabrication).
+- Diagnostics convert recurring limitations into deterministic patch intelligence.
+- One elite report-quality standard.
+- No Ken/public/customer report-quality tiers.
+- No report-specific patches.
+- Root-class patches require generalized invariant plus anti-hardcode proof/tests.
+
+## Active Patch Order
+
+Current checkpoint:
+0. SUPPORT_DOC_TREATMENT_CONTRACT_GAP - done/deployed/pass
+1. ACQUISITION_FINANCING_CANONICALIZATION_GAP - done/deployed/pass
+2. UNDERWRITING_DATA_COVERAGE_HEADLINE_OPTIONAL_LIMITATION_DRIFT - done/deployed/pass
+3. RENDERED_QA_CONTRACT_EXPANSION_FINAL_SWEEP - done/deployed/pass
+4. ROOT-FAMILY_TAXONOMY_AUDIT - done audit-only
+5. CANONICAL VALUE / RENDERED VALUE DRIFT CONTRACTS:
+   - CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - RENT_ROLL_CANONICAL_ANNUAL_TOTAL_DRIFT - done/deployed/pass
+   - OCCUPANCY_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - ACQUISITION_CANONICAL_VALUE_DRIFT - done/deployed/pass
+   - SUPPORT_DOC_CANONICAL_ROLE_RENDER_DRIFT - done/deployed/pass
+6. Admin Diagnostics Slice 1 - done/deployed/pass
+7. Admin Diagnostics Slice 2A - done/merged/deployed/pass
+8. NEXT: canonical consumption audit + Screening-first launch decision. (supersedes controlled live retest batch)
+
+## Fresh-Chat Continuation Prompt
+
+We are continuing InvestorIQ after the May 25/26 Full Underwriting Architecture Audit.
+
+Current controlling status:
+- May 24/25 root-class patches were completed/deployed/pass but live underwriting retests proved Full Underwriting still has structural fragmented-truth failures.
+- Full Underwriting is not public self-serve launch-ready.
+- Screening is the recommended public launch path.
+- Full Underwriting should be invite-only/beta/not public self-serve until canonical-state consolidation; this must not create an ordinary customer admin-review/manual-review outcome.
+- AdminDashboard Slice 2A.2 and Dashboard.jsx launch-copy cleanup are safe/pass.
+- Customer launch audit found missing sample assets as the remaining major public launch blocker.
+- Do not create underwriting sample assets from flawed underwriting PDFs.
+- Emergent is running the Underwriting Renderer Canonical Consumption Audit.
+- Do not run another tactical underwriting patch until the canonical consumption map is reviewed.
+
+Immediate next work:
+1. Complete/review Emergent canonical consumption audit.
+2. Decide Screening-first public launch implementation.
+3. Then scope first architectural Full Underwriting PR.
+
+Do not:
+- start Admin Slice 2B
+- patch another one-off underwriting renderer symptom
+- add classifier keywords/regex branches
+- rotate secrets mid-debug
+- flip DocRaptor production mode yet
+- disable GitHub worker yet
+- generate public underwriting samples from current flawed PDFs
+
+## May 27, 2026 Addendum - Full Underwriting Cleanup Sequence Status
+
+Completed and committed cleanup sequence:
+1. PR 1 - Property-tax per-file binding.
+2. PR 4 - Renderer consumes support-doc taxonomy authority.
+3. PR 2 - Acquisition Triangle Pre-Render Gate.
+4. PR 3 - Refi / Debt Render-State Gate.
+
+PR 2 status summary:
+- Full Proposed Acquisition Debt Sizing table renders only when acquisition triangle is valid/safe.
+- Incomplete, inconsistent, or unsupported acquisition evidence collapses to disclosure.
+- Contradictory purchase price / LTV / stated loan / derived loan fields are suppressed in collapsed mode.
+- Missing/null fees no longer render as 0.0%.
+- Text-derived lender fee does not render unless explicitly structured/verified.
+- Acquisition/proposed financing remains separate from current outstanding debt.
+
+PR 3 status summary:
+- Added refi/debt render-state gate.
+- Refinance/current-debt/DSCR/debt-capacity math surfaces render only when verified current debt basis exists.
+- Source-limited or not-assessed current debt states collapse to disclosure.
+- SCREENING_REFI_DATA_SUFFICIENCY_BLOCK no longer appends financing envelope/debt-capacity math unless debt math is valid.
+- Acquisition-only proposed financing maps to not_assessed for current debt/refi math.
+- Valid verified-current-debt cases preserve existing refi/debt math.
+
+Testing and final-audit sequence update:
+- Do not return to live testing yet.
+- Finish the cleanup-sequence checkpoint first.
+- Then run one final Emergent repo-wide Full Underwriting audit before live testing resumes.
+- Emergent remaining credits are limited (roughly 40) and should be used strategically for that final underwriting/report-surface audit.
+- Final Emergent audit objective: determine whether Full Underwriting is truly elite/launch-ready and catch remaining repo-wide/report-surface issues before additional testing.
+
+Next-step status:
+- PR 1, PR 4, PR 2, PR 3 are complete.
+- PR 5 / UnderwritingState remains deferred unless the final checkpoint indicates it is necessary now.
+- Next likely step after this context update: small audit-only checkpoint to decide whether any remaining micro patches are needed before the final Emergent audit.
+# June 2, 2026 Addendum - Publish-or-Fail Doctrine Lock Completed (Closed)
+
+## Status
+- Publish-or-Fail Doctrine Lock: `CLOSED / PASS WITH KNOWN SAFE INTERNAL LEGACY`.
+- Ordinary customer outcomes are now locked to:
+1. `PUBLISH / READY`
+2. `FAIL CLOSED + CREDIT RESTORED`
+3. Normal processing states while running: `queued`, `extracting`, `underwriting`, `scoring`, `rendering`, `pdf_generating`, `publishing`
+
+## Completed Slices
+1. `qa-action-plan` Slice 1: ordinary `admin_review_required` / `under_review` customer emitters removed/demoted.
+2. `qa-action-plan` Slice 1B: deprecated `admin_review_required` made reason-aware:
+   - core-fail reasons -> fail-closed / legacy internal `user_needs_documents`
+   - known non-core/report-surface reasons -> deliverable
+   - unknown deprecated reasons -> deliverable + `DEPRECATED_ADMIN_REVIEW_REASON_REQUIRES_CLASSIFICATION`
+3. `generate-client-report` Slice 2: hold-return now only for `delivery_gate_status === user_needs_documents`; deprecated `admin_review_required` treated as deliverable for ordinary generator behavior; fail-closed copy aligned.
+4. `admin-run-worker` Slice 3: deprecated `admin_review_required` normalized to deliverable lifecycle behavior; admin-held publishing path removed; non-deliverable required-core/source outcomes fail closed via `applyTerminalFailureOutcome`; entitlement restore preserved.
+5. `Dashboard` Slice 4/4B: customer-visible review/held/needs-doc/publication-held lifecycle labels removed; customer labels now `Ready`, `Failed`, or processing states; fail-closed wording aligned.
+6. `AdminDashboard` Slice 5: legacy review/held semantics relabeled as internal/legacy diagnostics; admin emergency/diagnostic controls preserved.
+7. Final repo search audit: remaining terms classified as safe internal/backend, admin-only legacy, tests, or docs; one unsafe Dashboard review-language leak removed.
+8. Dashboard timing correction: restored acceptable processing-only timing copy:
+   - `Report generation may take up to 24 business hours. You'll be notified when your report is ready.`
+   - no review/held/needs-doc/manual-review framing reintroduced.
+
+## Doctrine Clarifications
+- `user_needs_documents` may remain only as internal/legacy fail-closed alias for required core-document failure.
+- `admin_review_required` may remain only as deprecated/internal/legacy/admin diagnostic metadata.
+- Public/sample/high-value blockers remain distribution metadata and must not block ordinary customer delivery.
+
+## Next Step (Controlled Live Retesting)
+1. Clean Screening lifecycle retest.
+2. Confirm Dashboard processing copy/status behavior.
+3. Confirm published report appears and downloads normally.
+4. Confirm no customer-facing review/hold/needs-doc limbo wording.
+5. Then run controlled Underwriting lifecycle retest.
+
+If live retesting reveals a new issue, start the next hardening family from evidence only.
+## June 3, 2026 Addendum
+
+- Legacy Kill Slice A/A2 complete: `qa-action-plan` delivery authority cleaned, `generate-client-report` delivery aliases cleaned, and `admin-run-worker` canonical worker delivery gate cleaned.
+- Canonical `deliveryDecisionState` is the live authority when present; legacy aliases and compatibility mirrors cannot decide publish, hold, fail-closed, or credit restore.
+- Legacy Kill Slice B complete: support-doc and filename fallback authority demoted to diagnostic/display-only.
+- Filename/doc-type fallback cannot create modeled property-tax support, current-debt truth, section unlocks, DCF/refi/waterfall/advanced modeling, or renovation/acquisition modeled authority.
+- Validated parsed payload and canonical taxonomy remain controlling authority.
+- Legacy Kill Slice C complete: `AdminDashboard` and `queue-metrics` lifecycle wording cleaned; remaining admin review and needs-documents terms are internal triage/diagnostic wording only, not customer lifecycle authority.
+- Final no-change verification audit complete: no decision-capable legacy fallback remnants found in live paths reviewed.
+- Remaining legacy/compatibility strings are inert diagnostics, compatibility mirrors, historical compatibility, or internal triage labels only.
+- Doctrine preserved: normal customer outcome is publish or fail-closed with credit restored; fail-closed only for unusable, missing, contradictory core T12 or Rent Roll, or catastrophic system, storage, or PDF failure.
+- Optional or support issues collapse, omit, qualify, or disclose; admin review is not a normal customer outcome.
+- Proposed or acquisition financing cannot become current debt; appraisal is valuation/context only.
+- Property-tax support can corroborate the T12 tax line only when validated and bound, and must not override modeled T12 values.
+- Codex usage remains limited until June 8; future prompts should stay tight.
+- No DocRaptor flip.
+- No public samples created.
+- No pricing or Stripe changes.
+- No SQL or RPC changes.
+- No new API or serverless routes.
+- Next step after docs update: controlled live retesting from the clean legacy-fallback checkpoint.
+## June 3/4, 2026 Addendum - Strategic Launch Pivot: Enhanced Screening / Acquisition Memo First, Full Underwriting V2 Deferred
+
+- InvestorIQ should launch soon with an enhanced Screening product.
+- Screening should no longer be positioned as a thin or basic screening report.
+- Screening should become the front-line investor-ready memo product by opening only the stable and proven Underwriting sections that are already working reliably.
+- Full Underwriting public launch is temporarily deferred.
+- Underwriting should remain visible on the website as V2.0, coming later, or an integrations-enabled premium product.
+- Product positioning direction: InvestorIQ Acquisition Memo, InvestorIQ Deal Intelligence Memo, InvestorIQ Investment Screening Memo, or InvestorIQ Preliminary Underwriting Memo.
+- Final naming is not yet locked, but the direction is to make Screening feel like a credible investor-facing acquisition memo.
+- Enhanced Screening / Acquisition Memo may justify a higher launch price around $399-$499, while Full Underwriting V2 may later justify a higher premium price point around $1,499 when integrations and deeper underwriting workflows are added.
+- Do not change Stripe or pricing code from this documentation update alone.
+- Stable Underwriting candidate sections for enhanced Screening: cap-rate value indication using T12 NOI; rent upside or mark-to-market summary; implied value sensitivity from rent gap; property-tax corroborating support if provided and validated or bound; document treatment summary; data coverage or source limitations; basic operating-risk scorecard using operating metrics only.
+- Sections that must stay out of enhanced Screening for now: current debt DSCR; refinance stress; acquisition financing debt sizing; proposed or current debt modeling; DCF; equity waterfall; five-year outlook; advanced return projections; complex chart pages; any section requiring debt, refinance, acquisition financing, or future projection assumptions.
+- Enhanced Screening must preserve the reliability advantage of Screening: T12 and Rent Roll remain the core required documents; open only deterministic, source-bound, low-risk sections; do not require current debt, acquisition financing, refinance assumptions, or future projections; unsupported optional or support inputs must collapse, omit, qualify, or disclose; no synthetic values; no public AI wording; no BUY, SELL, or HOLD labels; no admin-review or customer limbo; normal customer outcomes remain publish or fail-closed with credit restored.
+- Full Underwriting should be temporarily closed or deferred from immediate public launch and remain on the website as a future V2.0 premium product positioned around integrations, deeper underwriting workflows, debt and refinance modeling, acquisition financing, DCF and scenarios, a richer investor or lender package, higher-confidence structured source ingestion, and a higher price point.
+- The current live-test interpretation that caused this pivot is recorded as follows: Screening Test 1 passed strongly and looked customer-deliverable; Underwriting Test 2 proved many core sections work, including T12, Rent Roll, current debt recognition, DSCR classification, property-tax support, environmental containment, market survey containment, appraisal containment, and renovation collapse; however, Underwriting still exposes too many advanced-surface, public-sample, and Ken-readiness issues, especially purchase-assumption, acquisition, cap-rate, and document-treatment consistency; rather than hold the business hostage to full Underwriting perfection, launch the reliable product first and move only proven low-risk value into it.
+- Next implementation direction after this documentation checkpoint: a small planning or audit slice, not a broad rewrite; identify exactly which existing collapsed or hidden Underwriting sections can safely be enabled for Screening; map which files control those Screening section gates; recommend the smallest implementation slice to create enhanced Screening or Acquisition Memo; no code changes during that planning or audit unless Rob explicitly asks.
+- Guardrails: no code changes in this docs update; no Stripe or pricing changes; no DocRaptor flip; no public samples; no new API or serverless routes; no SQL or RPC changes; no broad repo audit; preserve limited Codex usage discipline; keep future Codex prompts tight and receipt-only.
+
+---
+
+# June 11, 2026 Addendum - Support-Doc Authority Enforcement Audit Started Before Patch 4
+
+## Current controlling update
+
+After further discussion, the team clarified that Patch 4 must not become another symptom patch.
+
+The next Codex task is now an **audit-only support-document authority enforcement pass** before Patch 4.
+
+Reason:
+
+```text
+InvestorIQ already has canonical / AI-assisted / deterministic support-doc logic in several places.
+
+The issue is not that no canonical support-doc system exists.
+
+The issue is that some downstream consumers still appear able to bypass, duplicate, reinterpret, or ignore canonical support-doc decisions when rendering the Acquisition Memo or building QA/advisory artifacts.
+```
+
+Rob's controlling concern:
+
+```text
+If Ken Dunn ordered 5 Acquisition Memos and each report surfaced 1-3 visible support-doc treatment issues, that would destroy trust in InvestorIQ.
+
+Therefore the system must be forced to obey canonical authority, or every remaining bypass must be destroyed/demoted.
+```
+
+## Revised root interpretation
+
+Do not frame the issue as:
+
+```text
+"we need to invent canonical support-doc authority"
+```
+
+Frame it as:
+
+```text
+"we need to verify where canonical support-doc authority exists, then identify every downstream escape hatch that can still make its own document-role, treatment, allowed-use, financing-context, current-debt, or renovation-context decision."
+```
+
+## Active Codex task now running
+
+Codex is running this audit-only task:
+
+```text
+Support-doc authority enforcement audit for Acquisition Memo launch behavior.
+```
+
+Audit target:
+
+```text
+Find every remaining path where Acquisition Memo support-document role, treatment, allowed use, financing context, current-debt context, renovation/CapEx context, appraisal context, market-survey context, environmental context, or Document Treatment Summary rows can be decided independently of final canonical support-doc authority.
+```
+
+Do not patch during this audit.
+
+## Audit scope
+
+Inspect only the support-doc authority enforcement seam, especially:
+
+```text
+api/generate-client-report.js
+api/_lib/report-surface-contracts.js
+api/_lib/source-report-coverage-qa.js
+api/_lib/report-contract-qa.js
+api/_lib/qa-action-plan.js
+parser/support-doc routing helpers if they feed the above
+helpers that build Document Treatment Summary
+helpers that build Source Context / Support Document Treatment
+helpers that build Preliminary Financing Readiness Summary
+helpers that build Current Debt Context
+helpers that build Proposed Acquisition Financing Context
+helpers that build Renovation / CapEx context
+support-doc role labels / treatment labels / quantitative-use rows
+```
+
+## Audit questions to answer
+
+Codex must identify:
+
+```text
+1. Current highest-authority support-doc role object/function, if any.
+2. Whether that authority produces one canonical role per uploaded file.
+3. Whether it includes allowed uses and forbidden uses.
+4. Every downstream consumer still making its own support-doc role/treatment decision.
+5. Whether each consumer is a bypass, duplicate, reinterpretation risk, or diagnostic-only path.
+6. Whether the bypass can explain Attack Test 8:
+   - purchase assumptions misrouted;
+   - current debt statement missed;
+   - structured Reno Plan treated as Rent Roll.
+7. Minimum Patch 4 file/function set.
+8. Required regression fixtures.
+```
+
+## Required fix classification for each bypass
+
+Codex should classify each bypass as one of:
+
+```text
+DELETE duplicate decision-maker
+DEMOTE to display-only consumer
+FORCE to consume canonical support-doc authority
+KEEP as diagnostic-only, clearly non-authoritative
+NEEDS new canonical support-doc authority if none exists
+```
+
+## Patch 4 remains next
+
+Patch 4 is still required, but it must be based on the audit inventory.
+
+Patch 4 invariant:
+
+```text
+One uploaded support file -> one canonical support-doc role/treatment/allowed-use decision before final render.
+
+All customer-visible Acquisition Memo surfaces consume that decision.
+
+QA checks conformance to that decision instead of re-deciding document role.
+```
+
+Patch 4 must enforce:
+
+```text
+purchase assumptions cannot become current debt, environmental, mortgage-only, or generic support;
+current debt cannot become proposed acquisition financing;
+structured renovation / CapEx plan cannot become Rent Roll;
+appraisal cannot override purchase price, T12 NOI, or Rent Roll values;
+market survey cannot override Rent Roll market rents;
+Phase I cannot become quantitative financial support.
+```
+
+## Do not touch list
+
+The audit and Patch 4 must not touch:
+
+```text
+Screening core behavior
+T12/Rent Roll core math
+delivery gate doctrine
+credit/payment/access
+DSCR/refi/DCF/waterfall/equity-return/deal-score/final-recommendation/V2 surfaces
+pricing/Stripe/SQL/routes/DocRaptor production config/auth/upload gates
+```
+
+## Updated next sequence
+
+```text
+1. Wait for Codex audit receipt.
+2. Review audit receipt for exact bypass inventory.
+3. Create Patch 4 prompt based on audit findings.
+4. Patch only the support-doc authority enforcement seam.
+5. Add regression fixtures, including Final Attack Test 8 support-doc package shape.
+6. Rerun Final Attack Test 8.
+7. Only after Attack Test 8 passes, run a small Acquisition Memo certification batch.
+```
+
+## Fresh-chat continuation note
+
+The next chat should begin with Codex's support-doc authority enforcement audit receipt if available.
+
+Do not start another random test and do not launch Acquisition Memo before Patch 4 + Attack Test 8 rerun.
+
+
+
+---
+
+# June 13, 2026 Addendum - Patch 4C Investigation / Render-Time Canonical Map Wiring Improved But Final Live Render Still Diverges
+
+## Current controlling status
+
+InvestorIQ is still in narrow Acquisition Memo support-doc authority hardening.
+
+Current product posture remains:
+
+```text
+Screening Report:
+Launchable / founder-beta ready from current evidence.
+Do not reopen Screening while fixing Acquisition Memo support-doc authority.
+
+Acquisition Memo:
+NOT launch-cleared.
+Core math, publish path, source-reconciliation disclosure, V2 containment, and purchase assumptions are strong.
+However, support-doc canonical authority is still not sovereign in the live Acquisition Memo HTML/PDF path.
+
+Full Underwriting V2.0:
+Still deferred.
+Do not reopen DSCR/refi/DCF/waterfall/deal-score/final-recommendation surfaces inside Acquisition Memo.
+```
+
+## Patch 4C investigation result
+
+Codex completed a root-cause investigation into why the new canonical support-doc authority / “AI Boss” did not control the live report output.
+
+The important finding:
+
+```text
+The break is not the helper authority path itself.
+The helper path can classify the Stonebridge support docs correctly.
+The break is in api/generate-client-report.js at the live render-time canonical support-doc assembly and final render consumption.
+```
+
+The earlier render-time map was still being built from a weak source selection:
+
+```text
+documentSources + first _parsed artifact per fileId
+```
+
+This allowed stale or incomplete parser artifacts to win before render. The stronger authority rows were being built later for QA/diagnostics, but the visible PDF did not necessarily consume that stronger authority.
+
+Current conclusion:
+
+```text
+The system did not fail because support-doc authority is impossible.
+It failed because the visible Acquisition Memo render path still had at least one weaker/older authority branch or incompatible map-shape branch in control.
+```
+
+## Patch 4C partial implementation status
+
+Codex then began the systemic Patch 4C wiring fix.
+
+Reported changes so far:
+
+```text
+Files changed:
+- api/generate-client-report.js
+- tests/qa/generate-client-report-rent-roll-smoke.js
+
+Validation passed:
+- node --check api/generate-client-report.js
+- node --check tests/qa/generate-client-report-rent-roll-smoke.js
+
+Validation still failing:
+- node tests/qa/generate-client-report-rent-roll-smoke.js
+```
+
+Current smoke failure:
+
+```text
+The live Stonebridge full-render assertion still fails for current debt label propagation.
+Current_Debt_Stonebridge.pdf is present in final HTML, but the visible Debt Support Received / Contextual label is still not making it into the final Acquisition Memo output.
+```
+
+Interpretation:
+
+```text
+Patch 4C is not done yet.
+The helper classification path works.
+The direct Document Treatment helper call works when passed the right canonical rows/map.
+The end-to-end generateClientReport(...) path still diverges from that helper result.
+```
+
+## Newly identified likely downstream gap
+
+After reviewing the uploaded `generate-client-report.js`, the likely remaining bug is a canonical map value-shape mismatch or final call-site overwrite.
+
+Observed field-shape issue:
+
+```text
+buildDocumentTreatmentSummaryHtml canonical-map branch expects resolver-style fields:
+- displayLabel
+- treatment
+- use
+- role
+- authoritySource
+- originalFilename
+
+buildCanonicalSupportDocAuthorityRows emits authority-row-style fields:
+- document_role_label
+- treatment_label
+- use_label
+- canonical_support_doc_role
+- semantic_doc_display_label
+- authority_source / authoritySource
+- original_filename
+```
+
+If the live canonicalSupportDocMap now contains correct authority-row objects, but the renderer reads only resolver-style field names, the renderer can still default to:
+
+```text
+Other Support Document
+Context only
+Listed for auditability only; not used quantitatively.
+```
+
+This explains why:
+
+```text
+1. helper authority rows classify the file correctly;
+2. a direct helper call can render correctly;
+3. full generateClientReport(...) still loses the current-debt label in visible final HTML.
+```
+
+The next patch should normalize both supported field shapes at the consumer boundary instead of adding another authority layer.
+
+## Current suspected exact fix
+
+The next Codex patch should continue Patch 4C and focus only on:
+
+```text
+Canonical map value-shape normalization and final live render consumption.
+```
+
+Specifically:
+
+```text
+In buildDocumentTreatmentSummaryHtml, canonicalSupportDocMap entries must accept both:
+
+Resolver-style object fields:
+- role
+- displayLabel
+- treatment
+- use
+- authoritySource
+- originalFilename
+
+Authority-row-style object fields:
+- canonical_support_doc_role
+- semantic_doc_role
+- document_role_label
+- semantic_doc_display_label
+- treatment_label
+- treatment
+- use_label
+- use
+- treatment_category
+- original_filename
+```
+
+Required local normalization:
+
+```text
+canonicalRole = authority.role || authority.canonical_support_doc_role || authority.semantic_doc_role || "other_support"
+roleLabel = authority.displayLabel || authority.document_role_label || authority.semantic_doc_display_label || "Other Support Document"
+treatmentLabel = authority.treatment || authority.treatment_label || "Context only"
+useLabel = authority.use || authority.use_label || "Listed for auditability only; not used quantitatively."
+category = authority.category || authority.treatment_category || "Listed but Not Quantitatively Modeled"
+originalFilename = authority.originalFilename || authority.original_filename || authority.file_name || authority.filename || fileId
+sourceBasis = authority.authoritySource || authority.authority_source || "canonical_support_doc_authority"
+```
+
+Also inspect active Acquisition Memo call sites for `buildDocumentTreatmentSummaryHtml(...)`:
+
+```text
+1. buildLaunchSourceContextBlock(...) path.
+2. Late DOCUMENT_TREATMENT_SUMMARY replacement path after sourceCoverageQa.
+3. Any Data Coverage / Source Treatment path that can render inside v1_core.
+```
+
+If a v1_core/Acquisition Memo call site still invokes `buildDocumentTreatmentSummaryHtml(...)` without `canonicalSupportDocMap`, patch that call site to pass the same map or prove its output is replaced before final HTML returns.
+
+## Do not broaden the patch
+
+The next Codex prompt must not broaden into:
+
+```text
+Screening
+T12/Rent Roll core math
+rent-roll canonical math
+delivery gate
+credit restore
+pricing / Stripe
+SQL / RPC / Supabase
+Dashboard
+DocRaptor config
+auth / upload gates
+Full Underwriting V2
+DSCR / refi / DCF / waterfall / equity return / deal score / final recommendation
+```
+
+Do not patch test reports.
+Do not hardcode Final Attack Test 8 filenames in production behavior.
+Do not add a new canonical authority architecture.
+Do not add another “AI Boss.”
+
+## Current next Codex prompt status
+
+A tight continuation prompt is ready:
+
+```text
+Patch 4C continuation - Fix live canonical map value shape / final render consumption.
+```
+
+Rob should give Codex that prompt next.
+
+Acceptance for the continuation patch:
+
+```text
+1. node --check api/generate-client-report.js passes.
+2. node --check tests/qa/generate-client-report-rent-roll-smoke.js passes.
+3. node tests/qa/generate-client-report-rent-roll-smoke.js passes.
+4. git diff --check passes.
+5. Full-render smoke shows current debt label propagation:
+   Current_Debt_Stonebridge.pdf / current-debt fixture renders Debt Support Received / Contextual, not Other Support Document.
+6. Structured Reno still renders Structured Renovation / CapEx Plan when source facts support it.
+7. Purchase assumptions remain Purchase Assumptions / Acquisition Context.
+8. No V2 forbidden surfaces appear.
+```
+
+## Current launch posture after this handoff
+
+```text
+Screening:
+Still launchable / founder-beta ready.
+
+Acquisition Memo:
+Still not launch-cleared.
+The current blocker is no longer broad support-doc intelligence generally; it is specifically live canonical authority propagation into final Acquisition Memo render output.
+
+Full Underwriting V2:
+Deferred.
+```
+
+## Current safe sequence
+
+```text
+1. Update MD files with this checkpoint.
+2. Give Codex the Patch 4C continuation prompt.
+3. Require the full-render smoke to pass locally before any live retest.
+4. After local smoke passes, rerun Final Attack Test 8 once.
+5. If live retest passes, stop coding Acquisition Memo and move to launch/outreach/cash motion.
+```
+
+## Emotional / execution context
+
+Rob is under severe time and cash pressure and cannot keep spending days on InvestorIQ.
+
+The controlling discipline from here:
+
+```text
+No more broad audits.
+No more “while we are here.”
+No more adding another boss.
+No more random tests before the smoke passes.
+Find the exact live render propagation gap, patch it, run one regression, then move to launch/outreach/cash.
+```
+
+## Fresh continuation point
+
+Resume from here:
+
+```text
+June 13 Patch 4C handoff.
+Codex improved render-time canonical map wiring but hit usage limit before finishing the final live render gap.
+Helper authority rows classify Stonebridge support docs correctly.
+Direct Document Treatment helper call works.
+End-to-end generateClientReport still fails current debt visible label propagation.
+Likely cause is canonical map value-shape mismatch: Document Treatment expects displayLabel/treatment/use/role, while authority rows provide document_role_label/treatment_label/use_label/canonical_support_doc_role.
+Next Codex prompt should normalize canonical map values at buildDocumentTreatmentSummaryHtml consumer boundary and inspect remaining v1_core call sites.
+Do not broaden scope.
+Do not retest live until node tests/qa/generate-client-report-rent-roll-smoke.js passes.
+```
