@@ -246,7 +246,7 @@ export function reconcileAcquisitionMemoV2SupportDocRole({
     canonicalLabel = roleLabel;
     treatment = "Debt support received / contextual";
     use = "Uploaded existing/current debt context only; not proposed acquisition financing.";
-    category = "Existing Debt â€” Contextual";
+    category = "Existing Debt - Contextual";
   } else if (hasPurchaseAssumptionsEvidence) {
     canonicalRole = "purchase_assumptions";
     authorityBasis = parserPurchaseSignal ? "parser_semantic" : "purchase_assumptions_evidence";
@@ -254,7 +254,7 @@ export function reconcileAcquisitionMemoV2SupportDocRole({
     canonicalLabel = roleLabel;
     treatment = "Acquisition context received";
     use = "Proposed acquisition financing terms and purchase assumptions; not existing/current debt.";
-    category = "Acquisition Assumptions â€” Contextual";
+    category = "Acquisition Assumptions - Contextual";
   } else if (parserCurrentDebtSignal && !parserPurchaseSignal) {
     canonicalRole = "current_debt_context";
     authorityBasis = "parser_semantic";
@@ -262,7 +262,7 @@ export function reconcileAcquisitionMemoV2SupportDocRole({
     canonicalLabel = roleLabel;
     treatment = "Debt support received / contextual";
     use = "Uploaded existing/current debt context only; not proposed acquisition financing.";
-    category = "Existing Debt â€” Contextual";
+    category = "Existing Debt - Contextual";
   } else if (parserPurchaseSignal && !parserCurrentDebtSignal) {
     canonicalRole = "purchase_assumptions";
     authorityBasis = "parser_semantic";
@@ -270,7 +270,7 @@ export function reconcileAcquisitionMemoV2SupportDocRole({
     canonicalLabel = roleLabel;
     treatment = "Acquisition context received";
     use = "Proposed acquisition financing terms and purchase assumptions; not existing/current debt.";
-    category = "Acquisition Assumptions â€” Contextual";
+    category = "Acquisition Assumptions - Contextual";
   }
 
   const acceptedSemanticDocRole = canonicalRole || parserSemanticDocRole || null;
