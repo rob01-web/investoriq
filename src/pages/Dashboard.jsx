@@ -107,10 +107,10 @@ const hairlineRule = {
 };
 
 const CORE_VALID_NEUTRAL_FAILURE_MESSAGE =
-  'Report could not be generated.\n\nInvestorIQ encountered a processing issue while preparing this report. Please try again or contact support if it repeats.';
+  'Generation paused before publication.\n\nNo completed report was published. The issue was logged for review. If a report credit was consumed, credit restoration will be handled according to the report status.\n\nDo not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.';
 
 const CORE_INVALID_DOCUMENT_FAILURE_MESSAGE =
-  'Report could not be generated.\n\nInvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.';
+  'Generation paused before publication.\n\nNo completed report was published. The issue was logged for review. Your report credit has been restored, and you may start a new report with corrected source documents.\n\nDo not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.';
 
 const FAIL_CLOSED_REASON_OR_ERROR_PATTERN =
   /(user_needs_documents|missing_required_source_data|missing_structured_financials|missing_structured_financial_artifacts|missing_required_t12|missing_required_rent_roll|t12_unusable|rent_roll_unusable|missing_required_documents)/i;
@@ -2056,9 +2056,9 @@ useEffect(() => {
                     ? activeDeliveryDecision.customer_message
                     : activeJobForRuns?.status === 'queued' ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
-                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
+                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
-                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Report could not be generated.')
+                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
                     : !reportUploadGate.canGenerate
                     ? (reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.')
                     : 'Complete steps 1 and 2 to generate your report.'}

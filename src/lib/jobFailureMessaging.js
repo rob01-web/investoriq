@@ -48,11 +48,11 @@ function classifyMissingDocumentCategory(job = {}) {
 
 function buildNeutralSystemFailureCopy({ creditRestored = false } = {}) {
   return {
-    title: creditRestored ? 'Generation failed - credit restored' : 'Generation failed',
+    title: creditRestored ? 'Generation paused before publication - credit restored' : 'Generation paused before publication',
     body: creditRestored
-      ? 'Generation failed before publication. No report was published, and your report credit has been returned to your account.'
-      : 'Generation failed before publication. No report was published. If this was a platform-side failure, your report credit will be restored automatically.',
-    nextStep: 'You can try generating again. If this repeats, contact hello@investoriq.tech and include the property name.',
+      ? 'Generation paused before publication. No completed report was published. The issue was logged for review, and your report credit has been returned to your account.'
+      : 'Generation paused before publication. No completed report was published. The issue was logged for review. If a report credit was consumed, credit restoration will be handled according to the report status.',
+    nextStep: 'Do not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.',
     referenceCode: 'REPORT_GENERATION_FAILED',
     creditLine: creditRestored ? 'Your report credit has been returned to your account.' : null,
   };
@@ -187,9 +187,9 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   }
 
   return {
-    title: 'Report could not be generated',
-    body: 'InvestorIQ could not generate this report. No report was published.',
-    nextStep: 'Please try again or contact hello@investoriq.tech if this repeats.',
+    title: 'Generation paused before publication',
+    body: 'Generation paused before publication. No completed report was published. The issue was logged for review.',
+    nextStep: 'Do not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.',
     referenceCode,
     creditLine,
   };

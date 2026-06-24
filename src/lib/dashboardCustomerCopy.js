@@ -1,8 +1,8 @@
 const CORE_VALID_NEUTRAL_FAILURE_MESSAGE =
-  'Report could not be generated.\n\nInvestorIQ encountered a processing issue while preparing this report. Please try again or contact support if it repeats.';
+  'Generation paused before publication.\n\nNo completed report was published. The issue was logged for review. If a report credit was consumed, credit restoration will be handled according to the report status.\n\nDo not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.';
 
 const CORE_INVALID_DOCUMENT_FAILURE_MESSAGE =
-  'Report could not be generated.\n\nInvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.';
+  'Generation paused before publication.\n\nNo completed report was published. The issue was logged for review. Your report credit has been restored, and you may start a new report with corrected source documents.\n\nDo not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.';
 
 const FAIL_CLOSED_REASON_OR_ERROR_PATTERN =
   /(user_needs_documents|missing_required_source_data|missing_structured_financials|missing_structured_financial_artifacts|missing_required_t12|missing_required_rent_roll|t12_unusable|rent_roll_unusable|missing_required_documents)/i;
