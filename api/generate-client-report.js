@@ -46,6 +46,7 @@ import {
 } from "./_lib/acquisition-memo-boss-contract.js";
 import { runAcquisitionMemoV2Pipeline } from "./_lib/acquisition-memo-v2-pipeline.js";
 import { runScreeningReportPipeline } from "./_lib/screening-report-pipeline.js";
+import * as screeningReportRenderer from "./_lib/screening-report-renderer.js";
 import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
@@ -9289,7 +9290,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       classificationState?.visibleClassificationState?.label || classificationState?.visibleLabel || computedCoverClassificationLabel;
     const screeningVisibleClassificationForConsumers =
       effectiveReportMode === "screening_v1"
-        ? resolveScreeningClassificationConsumerLabel({
+        ? screeningReportRenderer.resolveScreeningClassificationConsumerLabel({
             canonicalVisibleLabel: coverClassificationLabel,
             localVisibleLabel: screeningVisibleClassificationLabel,
             screeningClass,
@@ -9398,7 +9399,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_VALUE}}", driver3?.value || "");
     finalHtml = replaceAll(finalHtml, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
     if (effectiveReportMode === "screening_v1") {
-      finalHtml = sanitizeScreeningRankedDriversHtml(finalHtml);
+      finalHtml = screeningReportRenderer.sanitizeScreeningRankedDriversHtml(finalHtml);
     }
     // Ranked drivers are screening-only and only render when a true pressure driver exists.
     if (effectiveReportMode === "v1_core" || !driver1) {
@@ -10231,7 +10232,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       "{{T12_PER_UNIT_ROWS}}",
       buildT12PerUnitRows(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
     );
-    const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
+    const screeningIncomeForensicsHtml = screeningReportRenderer.buildScreeningIncomeForensicsHtml({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
@@ -10243,13 +10244,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       "{{SCREENING_INCOME_FORENSICS_BLOCK}}",
       screeningIncomeForensicsHtml
     );
-    const screeningExpenseHtml = buildScreeningExpenseStructureHtml({
+    const screeningExpenseHtml = screeningReportRenderer.buildScreeningExpenseStructureHtml({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
       formatCurrency,
     });
-    const screeningNoiHtml = buildScreeningNoiStabilityHtml({
+    const screeningNoiHtml = screeningReportRenderer.buildScreeningNoiStabilityHtml({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
@@ -10262,7 +10263,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       screeningExpenseHtml
     );
     finalHtml = replaceAll(finalHtml, "{{SCREENING_NOI_STABILITY_BLOCK}}", screeningNoiHtml);
-    const screeningRentRollHtml = buildScreeningRentRollDistributionHtml({
+    const screeningRentRollHtml = screeningReportRenderer.buildScreeningRentRollDistributionHtml({
       computedRentRoll,
       rentRollPayload,
       formatCurrency,
@@ -11437,7 +11438,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       }
     }
     const optionalSectionState = underwritingState?.core?.optionalSections || null;
-    dataCoverageBlockHtml = buildScreeningDataCoverageSummary({
+    dataCoverageBlockHtml = screeningReportRenderer.buildScreeningDataCoverageSummary({
       t12Payload,
       computedRentRoll,
       rentRollPayload,
@@ -11821,30 +11822,34 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
             ? safeHtml.html
             : String(safeHtml || "");
       let htmlString = sanitizeTypography(htmlStringRaw);
-      const harnessDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
-        reportMode: effectiveReportMode,
-        documentSources,
-        currentDebtAssessmentState,
-        canonicalAcquisitionState:
-          underwritingState?.core?.acquisition?.assumptionState ||
-          acquisitionAssumptionState ||
-          null,
-        loanTermSheetTermsPayload,
-        acquisitionTermsPayload,
-        hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
-        renovationDisplayMode,
-        renovationPayload,
-        propertyTaxPayload,
-        propertyTaxBindingState,
-        documentQuantitativeUsageMap,
-        canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
-        renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
-      });
+      const isScreeningSealedLaneHarness = effectiveReportMode === "screening_v1";
+      const isSealedCustomerOutputHarness = Boolean(acquisitionMemoV2OwnsFinalHtml || isScreeningSealedLaneHarness);
+      const harnessDocumentTreatmentHtml = isSealedCustomerOutputHarness
+        ? ""
+        : buildDocumentTreatmentSummaryHtml({
+            reportMode: effectiveReportMode,
+            documentSources,
+            currentDebtAssessmentState,
+            canonicalAcquisitionState:
+              underwritingState?.core?.acquisition?.assumptionState ||
+              acquisitionAssumptionState ||
+              null,
+            loanTermSheetTermsPayload,
+            acquisitionTermsPayload,
+            hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
+            renovationDisplayMode,
+            renovationPayload,
+            propertyTaxPayload,
+            propertyTaxBindingState,
+            documentQuantitativeUsageMap,
+            canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
+            renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
+          });
       // V2-owned final HTML is a sealed orchestrator output. Keep legacy document-treatment replacement
       // and other post-render mutation cascades out of this branch.
       if (acquisitionMemoV2OwnsFinalHtml) {
         htmlString = acquisitionMemoV2Finalization?.html || htmlString;
-      } else if (typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
+      } else if (!isSealedCustomerOutputHarness && typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
         htmlString = htmlString.replace(
           /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
           `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
@@ -12445,7 +12450,9 @@ if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acqu
 // --- V2 SOURCE AUTHORITY BRIDGE END ---
   let qaHtml = sanitizeTypography(dedupeDataNotAvailableBySection(htmlString));
 const isAcqMemoV2FinalHtml = effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && Boolean(acquisitionMemoV2Bridge?.acquisitionMemoProjection);
-if (!isAcqMemoV2FinalHtml) {
+const isScreeningSealedLane = effectiveReportMode === "screening_v1";
+const isSealedCustomerOutput = Boolean(isAcqMemoV2FinalHtml || isScreeningSealedLane);
+if (!isSealedCustomerOutput) {
 const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
 const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
   qaHtmlBeforeFinalSourceReconciliationGuard,
@@ -12614,9 +12621,11 @@ try {
       : null;
   if (screeningLaneOutput?.html) {
     finalHtml = screeningLaneOutput.html;
+    qaHtml = screeningLaneOutput.html;
   }
   if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
     finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;
+    qaHtml = finalHtml;
   }
   if (
     effectiveReportMode !== "screening_v1" &&
@@ -13232,8 +13241,8 @@ if (docraptorMode === "production" && !allowProductionPdf) {
 try {
   docHtml = sanitizeTypography(qaHtml);
   // V2-owned final HTML remains under orchestrator/Boss control; legacy reconciliation and section-heal
-  // guards stay fenced to the non-V2 path.
-  if (!isAcqMemoV2FinalHtml) {
+  // guards stay fenced to non-sealed legacy paths.
+  if (!isSealedCustomerOutput) {
     const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
       docHtml,
       sourceReconciliationState
@@ -13276,7 +13285,7 @@ try {
         matched_snippets_after: docFinalSourceReconciliationGuard.matched_snippets_after,
       });
     }
-  } else {
+  } else if (isAcqMemoV2FinalHtml) {
     const finalBossCompliance = acquisitionMemoV2Finalization ||
       (await runAcquisitionMemoV2Pipeline({
         acquisitionMemoV2DocumentArgs,
