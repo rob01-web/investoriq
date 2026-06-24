@@ -4,6 +4,8 @@
  * All downstream consumers must treat this output as immutable authority.
  */
 
+import { reconcileAcquisitionMemoV2SupportDocRole } from "./acquisition-memo-v2-role-reconciler.js";
+
 function toArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -781,6 +783,12 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
     acceptedTruth.debtBasis === "current_debt_context" ||
     /current debt|current mortgage|debt statement/i.test(acceptedTruth.semanticDocDisplayLabel)
   );
+  const roleReconciliation = reconcileAcquisitionMemoV2SupportDocRole({
+    file,
+    artifacts,
+    acceptedTruth,
+  });
+  const reconciledCanonicalRole = String(roleReconciliation?.canonicalRole || "").trim();
   if (hasT12Filename || (isSpreadsheetMimeType(mimeType) && explicitSemanticRole === "t12")) {
     const extractedFacts = buildExtractedFacts("core_t12", text, artifacts);
     return {
@@ -822,10 +830,14 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
   }
 
   if (
-    acceptedCurrentDebtTruth ||
-    (positiveCurrentDebtEvidence && !acceptedPurchaseAssumptionsTruth) ||
-    (hasCurrentDebtFilename && !acceptedPurchaseAssumptionsTruth) ||
-    ((explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context" || explicitDebtBasis === "current_debt" || explicitDebtBasis === "current_debt_context") && !acceptedPurchaseAssumptionsTruth)
+    reconciledCanonicalRole === "current_debt_context" ||
+    (!reconciledCanonicalRole &&
+      (
+        acceptedCurrentDebtTruth ||
+        (positiveCurrentDebtEvidence && !acceptedPurchaseAssumptionsTruth) ||
+        (hasCurrentDebtFilename && !acceptedPurchaseAssumptionsTruth) ||
+        ((explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context" || explicitDebtBasis === "current_debt" || explicitDebtBasis === "current_debt_context") && !acceptedPurchaseAssumptionsTruth)
+      ))
   ) {
     const extractedFacts = buildExtractedFacts("current_debt_context", text);
     return {
@@ -841,48 +853,31 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      acceptedSemanticDocRole: acceptedTruth.semanticDocRole || explicitSemanticRole || "current_debt_context",
-      acceptedDebtBasis: acceptedTruth.debtBasis || explicitDebtBasis || "current_debt_context",
-      acceptedSemanticDocDisplayLabel: acceptedTruth.semanticDocDisplayLabel || "Existing Debt Context / Current Mortgage / Debt Statement",
+      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || acceptedTruth.semanticDocRole || explicitSemanticRole || "current_debt_context",
+      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || acceptedTruth.debtBasis || explicitDebtBasis || "current_debt_context",
+      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || acceptedTruth.semanticDocDisplayLabel || "Existing Debt Context / Current Mortgage / Debt Statement",
       acceptedSourceTruth: {
-        hasPurchaseAssumptions: acceptedPurchaseAssumptionsTruth,
+        hasPurchaseAssumptions: Boolean(roleReconciliation?.acceptedSourceTruth?.hasPurchaseAssumptions),
         hasCurrentDebt: true,
       },
-      provenance: buildProvenance(
-        file,
-        acceptedTruth.semanticDocRole === "current_debt" || acceptedTruth.semanticDocRole === "current_debt_context"
-          ? "parser_semantic"
-          : acceptedTruth.debtBasis === "current_debt" || acceptedTruth.debtBasis === "current_debt_context"
-            ? "debt_basis_signal"
-            : hasCurrentDebtFilename
-              ? "filename_heuristic"
-              : positiveCurrentDebtEvidence
-                ? "keyword_match"
-                : "parser_semantic",
-        text
-      ),
-      authorityBasis:
-        acceptedTruth.semanticDocRole === "current_debt" || acceptedTruth.semanticDocRole === "current_debt_context"
-          ? "parser_semantic"
-          : acceptedTruth.debtBasis === "current_debt" || acceptedTruth.debtBasis === "current_debt_context"
-            ? "debt_basis_signal"
-            : hasCurrentDebtFilename
-              ? "filename_heuristic"
-              : explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context"
-                ? "parser_semantic"
-                : "keyword_match",
+      provenance: buildProvenance(file, roleReconciliation.authorityBasis || "current_debt_evidence", text),
+      authorityBasis: roleReconciliation.authorityBasis || "current_debt_evidence",
     };
   }
 
   if (
-    acceptedPurchaseAssumptionsTruth ||
-    ((explicitSemanticRole === "purchase_assumptions" || explicitDebtBasis === "acquisition_financing_assumption" || explicitDebtBasis === "proposed_acquisition") &&
-      !acceptedCurrentDebtTruth &&
-      !explicitAppraisalText &&
-      !explicitMarketSurveyText &&
-      !explicitPhaseIText) ||
-    (hasAssumptionFilename && !acceptedCurrentDebtTruth) ||
-    (explicitPurchaseAssumptionsText && !explicitAppraisalText && !explicitMarketSurveyText && !explicitPhaseIText && !acceptedCurrentDebtTruth)
+    reconciledCanonicalRole === "purchase_assumptions" ||
+    (!reconciledCanonicalRole &&
+      (
+        acceptedPurchaseAssumptionsTruth ||
+        ((explicitSemanticRole === "purchase_assumptions" || explicitDebtBasis === "acquisition_financing_assumption" || explicitDebtBasis === "proposed_acquisition") &&
+          !acceptedCurrentDebtTruth &&
+          !explicitAppraisalText &&
+          !explicitMarketSurveyText &&
+          !explicitPhaseIText) ||
+        (hasAssumptionFilename && !acceptedCurrentDebtTruth) ||
+        (explicitPurchaseAssumptionsText && !explicitAppraisalText && !explicitMarketSurveyText && !explicitPhaseIText && !acceptedCurrentDebtTruth)
+      ))
   ) {
     const extractedFacts = buildExtractedFacts("purchase_assumptions", text);
     return {
@@ -898,38 +893,15 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      acceptedSemanticDocRole: acceptedTruth.semanticDocRole || explicitSemanticRole || "purchase_assumptions",
-      acceptedDebtBasis: acceptedTruth.debtBasis || explicitDebtBasis || "acquisition_financing_assumption",
-      acceptedSemanticDocDisplayLabel: acceptedTruth.semanticDocDisplayLabel || "Purchase Assumptions / Proposed Acquisition Financing Context",
+      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || acceptedTruth.semanticDocRole || explicitSemanticRole || "purchase_assumptions",
+      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || acceptedTruth.debtBasis || explicitDebtBasis || "acquisition_financing_assumption",
+      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || acceptedTruth.semanticDocDisplayLabel || "Purchase Assumptions / Proposed Acquisition Financing Context",
       acceptedSourceTruth: {
         hasPurchaseAssumptions: true,
-        hasCurrentDebt: acceptedCurrentDebtTruth,
+        hasCurrentDebt: Boolean(roleReconciliation?.acceptedSourceTruth?.hasCurrentDebt),
       },
-      provenance: buildProvenance(
-        file,
-        acceptedTruth.semanticDocRole === "purchase_assumptions"
-          ? "parser_semantic"
-          : acceptedTruth.debtBasis === "acquisition_financing_assumption"
-            ? "debt_basis_signal"
-            : explicitDebtBasis === "proposed_acquisition"
-              ? "debt_basis_signal"
-              : hasAssumptionFilename
-                ? "filename_heuristic"
-                : "keyword_match",
-        text
-      ),
-      authorityBasis:
-        acceptedTruth.semanticDocRole === "purchase_assumptions"
-          ? "parser_semantic"
-          : acceptedTruth.debtBasis === "acquisition_financing_assumption"
-            ? "debt_basis_signal"
-            : explicitSemanticRole === "purchase_assumptions"
-              ? "parser_semantic"
-              : explicitDebtBasis === "proposed_acquisition"
-                ? "debt_basis_signal"
-                : hasAssumptionFilename
-                  ? "filename_heuristic"
-                  : "keyword_match",
+      provenance: buildProvenance(file, roleReconciliation.authorityBasis || "purchase_assumptions_evidence", text),
+      authorityBasis: roleReconciliation.authorityBasis || "purchase_assumptions_evidence",
     };
   }
 
