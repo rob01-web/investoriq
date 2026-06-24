@@ -9,6 +9,7 @@ export async function runAcquisitionMemoV2Pipeline({
   );
   return {
     ...finalization,
+    sealedCustomerOutput: true,
     sealedLane: "acquisition_memo_v2_lane",
     acquisitionMemoV2OwnsFinalHtml: true,
   };

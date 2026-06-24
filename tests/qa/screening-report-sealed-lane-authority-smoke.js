@@ -19,6 +19,9 @@ assert.match(reportSource, /screeningReportRenderer\.buildScreeningNoiStabilityH
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningRentRollDistributionHtml\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningDataCoverageSummary\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningRefiSufficiencyTable\(/);
+assert.match(reportSource, /function assertSealedOutputImmutable\(/);
+assert.match(reportSource, /screeningLaneOutput = assertSealedOutputImmutable\(/);
+assert.match(reportSource, /sealedCustomerOutput: true/);
 
 const activeRouteOwnedScreeningHelperSnippets = [
   "function resolveScreeningClassificationConsumerLabel",
@@ -45,17 +48,17 @@ for (const snippet of legacyOnlyRouteOwnedScreeningHelperSnippets) {
   assert.equal(reportSource.includes(snippet), true, `Expected legacy-only quarantine for ${snippet}`);
 }
 
-const screeningLaneAnchor = reportSource.indexOf("const screeningLaneOutput =");
+const screeningLaneAnchor = reportSource.search(/\b(?:const|let)\s+screeningLaneOutput\s*=/);
 const screeningPipelineCallAnchor = reportSource.indexOf("runScreeningReportPipeline({", screeningLaneAnchor);
-const screeningQaAssignmentAnchor = reportSource.indexOf("qaHtml = screeningLaneOutput.html;", screeningPipelineCallAnchor);
+const screeningSealedQaAssignmentAnchor = reportSource.search(/qaHtml = screeningLaneOutput\.qaHtml \|\| screeningLaneOutput\.html;/);
 const acquisitionTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({", screeningLaneAnchor);
 const v2FinalAssignmentAnchor = reportSource.indexOf("finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;", screeningLaneAnchor);
 
 assert.ok(screeningLaneAnchor >= 0, "Missing Screening sealed lane output anchor");
 assert.ok(screeningPipelineCallAnchor > screeningLaneAnchor, "Missing Screening sealed lane pipeline call");
-assert.ok(screeningQaAssignmentAnchor > screeningPipelineCallAnchor, "Screening qaHtml must come from Screening lane output");
-assert.ok(acquisitionTreatmentAnchor > screeningQaAssignmentAnchor, "Acquisition document treatment block must occur after Screening lane output");
-assert.ok(v2FinalAssignmentAnchor > screeningQaAssignmentAnchor, "V2 final assignment must occur after Screening lane output");
+assert.ok(screeningSealedQaAssignmentAnchor > screeningPipelineCallAnchor, "Screening qaHtml must come from Screening lane output");
+assert.ok(acquisitionTreatmentAnchor > screeningSealedQaAssignmentAnchor, "Acquisition document treatment block must occur after Screening lane output");
+assert.ok(v2FinalAssignmentAnchor > screeningSealedQaAssignmentAnchor, "V2 final assignment must occur after Screening lane output");
 
 const treatmentConditionStart = reportSource.lastIndexOf("if (", acquisitionTreatmentAnchor);
 const treatmentConditionSlice = reportSource.slice(treatmentConditionStart, acquisitionTreatmentAnchor);

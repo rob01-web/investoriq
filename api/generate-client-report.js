@@ -102,6 +102,28 @@ function isTestHarnessAllowed() {
 function hasTestHarnessFields(body = {}) {
   return Boolean(body) && typeof body === "object" && Object.keys(body).some((key) => key.startsWith("__test_"));
 }
+function assertSealedOutputImmutable(sealedOutput, lane) {
+  if (!sealedOutput || typeof sealedOutput !== "object") {
+    throw new Error(`Invalid sealed output for ${lane || "unknown"} lane`);
+  }
+  if (sealedOutput.sealedCustomerOutput !== true) {
+    throw new Error(`Unsealed output returned from ${lane || "unknown"} lane`);
+  }
+  const metadata =
+    sealedOutput.metadata && typeof sealedOutput.metadata === "object"
+      ? Object.freeze({ ...sealedOutput.metadata })
+      : sealedOutput.metadata;
+  const deliveryState =
+    sealedOutput.deliveryState && typeof sealedOutput.deliveryState === "object"
+      ? Object.freeze({ ...sealedOutput.deliveryState })
+      : sealedOutput.deliveryState;
+  return Object.freeze({
+    ...sealedOutput,
+    lane: String(sealedOutput.lane || lane || "").trim() || lane || "unknown",
+    metadata,
+    deliveryState,
+  });
+}
 function sanitizeReportIdentityTitle(value) {
   const raw = sanitizePropertyNameDisplayText(value)?.trim() || String(value || "").trim();
   return raw.replace(/^(?:generation failed|report generation failed|report failed|render failed|generation error|error|failed)\s*[-:–—]\s*/i, "").trim() || raw || "Property";
@@ -11698,7 +11720,18 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           html: htmlString,
           compliance: { ok: true, violations: [] },
         };
-        acquisitionMemoV2Finalization = finalHarnessBossCompliance;
+        acquisitionMemoV2Finalization = assertSealedOutputImmutable({
+          ...finalHarnessBossCompliance,
+          sealedCustomerOutput: true,
+          lane: "acquisition_memo_v2",
+          qaHtml: finalHarnessBossCompliance.qaHtml || finalHarnessBossCompliance.html || htmlString,
+          metadata: {
+            bossCompliance: finalHarnessBossCompliance.bossCompliance || finalHarnessBossCompliance.compliance || null,
+            customerSurfaceModelValidation: finalHarnessBossCompliance.customerSurfaceModelValidation || null,
+            customerSurfaceHtmlValidation: finalHarnessBossCompliance.customerSurfaceHtmlValidation || null,
+          },
+          deliveryState: finalHarnessBossCompliance.compliance || null,
+        }, "acquisition_memo_v2");
         htmlString = finalHarnessBossCompliance.html;
         if (!finalHarnessBossCompliance.compliance?.ok) {
           return res.status(500).json({
@@ -12444,24 +12477,49 @@ try {
     sourceCoverageQa.rendered_text_signals = renderedSignals;
   }
   sourceCoverageQaResult = sourceCoverageQa;
-  const screeningLaneOutput =
-    effectiveReportMode === "screening_v1"
-      ? runScreeningReportPipeline({
+    let screeningLaneOutput =
+      effectiveReportMode === "screening_v1"
+        ? runScreeningReportPipeline({
           finalHtml,
           qaHtml,
           reportMode: effectiveReportMode,
           sourceCoverageQa: sourceCoverageQaResult,
           deliveryGateDecisionResult,
         })
-      : null;
-  if (screeningLaneOutput?.html) {
-    finalHtml = screeningLaneOutput.html;
-    qaHtml = screeningLaneOutput.html;
-  }
-  if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+        : null;
+    if (screeningLaneOutput?.html) {
+      screeningLaneOutput = assertSealedOutputImmutable({
+        ...screeningLaneOutput,
+        sealedCustomerOutput: true,
+        lane: "screening",
+        qaHtml: screeningLaneOutput.qaHtml || screeningLaneOutput.html,
+        metadata: {
+          reportMode: effectiveReportMode,
+          sourceCoverageQa: sourceCoverageQaResult,
+        },
+        deliveryState: deliveryGateDecisionResult || null,
+      }, "screening");
+      finalHtml = screeningLaneOutput.html;
+      qaHtml = screeningLaneOutput.qaHtml || screeningLaneOutput.html;
+    }
+    if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
+    acquisitionMemoV2Finalization = acquisitionMemoV2Finalization
+      ? assertSealedOutputImmutable({
+          ...acquisitionMemoV2Finalization,
+          sealedCustomerOutput: true,
+          lane: "acquisition_memo_v2",
+          qaHtml: acquisitionMemoV2Finalization.qaHtml || acquisitionMemoV2Finalization.html,
+          metadata: {
+            bossCompliance: acquisitionMemoV2Finalization.bossCompliance || acquisitionMemoV2Finalization.compliance || null,
+            customerSurfaceModelValidation: acquisitionMemoV2Finalization.customerSurfaceModelValidation || null,
+            customerSurfaceHtmlValidation: acquisitionMemoV2Finalization.customerSurfaceHtmlValidation || null,
+          },
+          deliveryState: acquisitionMemoV2Finalization.compliance || null,
+        }, "acquisition_memo_v2")
+      : acquisitionMemoV2Finalization;
     finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;
     qaHtml = finalHtml;
-  }
+    }
   if (
     effectiveReportMode !== "screening_v1" &&
     !(effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.renderedAcquisitionMemo) &&
@@ -13129,7 +13187,18 @@ try {
         html: docHtml,
         compliance: { ok: true, violations: [] },
       };
-    acquisitionMemoV2Finalization = finalBossCompliance;
+    acquisitionMemoV2Finalization = assertSealedOutputImmutable({
+      ...finalBossCompliance,
+      sealedCustomerOutput: true,
+      lane: "acquisition_memo_v2",
+      qaHtml: finalBossCompliance.qaHtml || finalBossCompliance.html || docHtml,
+      metadata: {
+        bossCompliance: finalBossCompliance.bossCompliance || finalBossCompliance.compliance || null,
+        customerSurfaceModelValidation: finalBossCompliance.customerSurfaceModelValidation || null,
+        customerSurfaceHtmlValidation: finalBossCompliance.customerSurfaceHtmlValidation || null,
+      },
+      deliveryState: finalBossCompliance.compliance || null,
+    }, "acquisition_memo_v2");
     docHtml = finalBossCompliance.html;
     if (!finalBossCompliance.compliance?.ok) {
       console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {
@@ -13292,6 +13361,7 @@ export const __test__ = {
   resolveCanonicalRefiDebtBasis,
   buildRefiDebtRenderState,
   buildRefiStabilityModel,
+  buildScreeningRefiSufficiencyTable: screeningReportRenderer.buildScreeningRefiSufficiencyTable,
   buildFinancingEnvelopeGrid,
   buildAcquisitionMemoSummaryCard,
   buildOperatingSnapshotCard,
@@ -13310,10 +13380,16 @@ export const __test__ = {
   buildRendererCanonicalState,
   applyFinalSourceReconciliationRenderGuard,
   applyFinalSectionHealRenderGuards,
+  buildScreeningIncomeForensicsHtml: screeningReportRenderer.buildScreeningIncomeForensicsHtml,
+  buildScreeningExpenseStructureHtml: screeningReportRenderer.buildScreeningExpenseStructureHtml,
+  buildScreeningNoiStabilityHtml: screeningReportRenderer.buildScreeningNoiStabilityHtml,
+  buildScreeningRentRollDistributionHtml: screeningReportRenderer.buildScreeningRentRollDistributionHtml,
+  sanitizeScreeningRankedDriversHtml: screeningReportRenderer.sanitizeScreeningRankedDriversHtml,
   buildRenovationBudgetRows,
   buildRenovationBudgetCardHtml,
   buildRenovationExecutionRows,
   buildRenovationExecutionCardHtml,
+  buildScreeningDataCoverageSummary: screeningReportRenderer.buildScreeningDataCoverageSummary,
   buildT12SummaryHtml,
   resolveCanonicalT12GprValue,
   materiallyDifferent,
@@ -13323,6 +13399,7 @@ export const __test__ = {
   buildCanonicalSupportDocAuthorityRows,
   resolveCanonicalDataCoverageHeadlineState,
   normalizeVisibleReportClassification,
+  resolveScreeningClassificationConsumerLabel: screeningReportRenderer.resolveScreeningClassificationConsumerLabel,
   shouldRenderCanonicalSection,
   shouldApplyTierOneStripCascade,
   resolveMarketContextSectionVisibility,

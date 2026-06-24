@@ -37,6 +37,10 @@ assert.match(reportSource, /screeningReportRenderer\.buildScreeningNoiStabilityH
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningRentRollDistributionHtml\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningDataCoverageSummary\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningRefiSufficiencyTable\(/);
+assert.match(reportSource, /function assertSealedOutputImmutable\(/);
+assert.match(reportSource, /screeningLaneOutput = assertSealedOutputImmutable\(/);
+assert.match(reportSource, /acquisitionMemoV2Finalization = assertSealedOutputImmutable\(/);
+assert.match(reportSource, /sealedCustomerOutput: true/);
 
 const activeRouteOwnedScreeningHelperSnippets = [
   "function resolveScreeningClassificationConsumerLabel",
@@ -82,7 +86,7 @@ for (const term of sealedOutputTerms) {
   assert.equal(fs.readFileSync(path, "utf8").includes(term), true, `Missing ${term} in ${path}`);
 }
 
-const forbiddenRouteAuthorityAfterSealedOutput = reportSource.slice(reportSource.indexOf("const screeningLaneOutput ="));
+const forbiddenRouteAuthorityAfterSealedOutput = reportSource.slice(reportSource.search(/\b(?:const|let)\s+screeningLaneOutput\s*=/));
 assert.equal(/if \(!isAcqMemoV2FinalHtml\)\s*\{[\s\S]*applyFinalSourceReconciliationRenderGuard/.test(forbiddenRouteAuthorityAfterSealedOutput), false);
 assert.equal(/if \(!isAcqMemoV2FinalHtml\)\s*\{[\s\S]*applyFinalSectionHealRenderGuards/.test(forbiddenRouteAuthorityAfterSealedOutput), false);
 assert.equal(/if \(!isAcqMemoV2FinalHtml\)\s*\{[\s\S]*buildDocumentTreatmentSummaryHtml/.test(forbiddenRouteAuthorityAfterSealedOutput), false);
