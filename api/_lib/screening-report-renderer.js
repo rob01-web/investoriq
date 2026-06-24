@@ -6,12 +6,19 @@ import {
   formatInterestRatePercent,
   formatYears,
   formatCapPercentExact,
+  replaceAll,
 } from "./report-formatting-helpers.js";
 import {
   buildSourceReconciliationRenderState,
   buildSourceReconciliationNarrativeProminencePolicy,
   resolveCanonicalRentRollAnnualTotals,
 } from "./report-surface-contracts.js";
+import {
+  stripMarkedSection,
+  stripT12DetailSubsection,
+  stripEmptyHeadingBlocks,
+  stripChartBlockByAlt,
+} from "./report-html-helpers.js";
 
 const DATA_NOT_AVAILABLE = "Not assessed";
 
@@ -498,4 +505,347 @@ export function buildScreeningRentRollDistributionHtml({
   if (Number.isFinite(totalMarketAnnual)) metricsRows.push(`<tr><td>Annual Market Rent (Total)</td><td>${formatCurrency(totalMarketAnnual)}</td></tr>`);
   const metricsHtml = metricsRows.length > 0 ? `<table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${metricsRows.join("")}</tbody></table>` : "";
   return `<div class="card no-break">${metricsHtml}</div>`;
+}
+
+export function buildScreeningCustomerOutput({
+  finalHtml = "",
+  reportMode = "screening_v1",
+  screeningVisibleClassificationLabel = "",
+  screeningClass = "",
+  dealScoreState = null,
+  t12Payload = null,
+  computedRentRoll = null,
+  rentRollPayload = null,
+  formatCurrency,
+  sourceReconciliationState = null,
+  sourceReconciliationNarrativePolicy = null,
+  currentDebtAssessmentState = null,
+  mortgagePayload = null,
+  loanTermSheetTermsPayload = null,
+  financials = null,
+  sharedRefiDebtRenderState = null,
+  primaryPressurePoint = "",
+  whyLine = "",
+  decisionContextHtml = "",
+  miniSensitivityHtml = "",
+  driver1 = null,
+  driver2 = null,
+  driver3 = null,
+  execNoiText = DATA_NOT_AVAILABLE,
+  execUnitsText = DATA_NOT_AVAILABLE,
+  execOccupancyTokenText = DATA_NOT_AVAILABLE,
+  execAnnualInPlaceTokenText = DATA_NOT_AVAILABLE,
+  execEgiText = DATA_NOT_AVAILABLE,
+  execOpexText = DATA_NOT_AVAILABLE,
+  execOpexRatioText = DATA_NOT_AVAILABLE,
+  execNoiMarginText = DATA_NOT_AVAILABLE,
+  execBreakEvenText = DATA_NOT_AVAILABLE,
+  execOccupancy = null,
+  expenseRatioR = null,
+  noiMarginR = null,
+  breakEvenOccR = null,
+  marketRentPremiumRatio = null,
+  currentDebtDscrForDisplay = null,
+  screeningHasSufficientData = true,
+  hasSourceReconciliationVariance = false,
+  sourceCoverageQa = null,
+  documentSources = [],
+  sourceCoverageQaResult = null,
+  acquisitionMemoRenderContext = null,
+  underwritingState = null,
+  sectionEligibilityState = null,
+  dataCoverageState = null,
+  optionalSectionState = null,
+  renovationReturnAssumptionsPresent = false,
+  renovationDisplayMode = null,
+  renovationPayload = null,
+  propertyTaxPayload = null,
+  propertyTaxBindingState = null,
+  documentQuantitativeUsageMap = null,
+  documentSourcesHtml = "",
+  canRenderRefi = false,
+  debtCapitalRowsHtml = "",
+  refiCollapseGridHtml = "",
+  dcfTableHtml = "",
+  scenarioTableHtml = "",
+  scenarioTrajectoryChartHtml = "",
+  dealScoreRows = [],
+  buildT12IncomeRows,
+  buildT12ExpenseRows,
+  buildT12PerUnitRows,
+  rrUnits = null,
+  t12EgiValue = null,
+  t12TotalExpensesValue = null,
+  t12NoiValue = null,
+  t12ExpenseRatioValue = DATA_NOT_AVAILABLE,
+  buildFinancingEnvelopeGrid,
+  alignDealScorecardVisibleClassificationHtml,
+  resolveCanonicalDataCoverageHeadlineState,
+  buildDealScorecardState,
+  buildScreeningRefiSufficiencyTable,
+  sourceReconciliationCapActive = false,
+  coreSupportInsufficient = false,
+  debtCoverageConstraintActive = false,
+} = {}) {
+  let html = String(finalHtml || "");
+
+  const coverClassificationLabel =
+    screeningVisibleClassificationLabel ||
+    screeningClass ||
+    "Stable";
+  const screeningVisibleClassificationForConsumers = resolveScreeningClassificationConsumerLabel({
+    canonicalVisibleLabel: coverClassificationLabel,
+    localVisibleLabel: screeningVisibleClassificationLabel,
+    screeningClass,
+  });
+
+  html = replaceAll(html, "{{OPERATING_PROFILE_CLASSIFICATION}}", coverClassificationLabel);
+  const verdictCssClass = coverClassificationLabel === "Stable" ? "verdict-stable"
+    : /^Review\b/i.test(coverClassificationLabel) ? "verdict-sensitized"
+    : coverClassificationLabel === "High Risk" || coverClassificationLabel === "Fragile" ? "verdict-fragile"
+    : coverClassificationLabel === "Constrained" ? "verdict-sensitized"
+    : coverClassificationLabel === "Outside Parameters" ? "verdict-fragile"
+    : "";
+  html = replaceAll(html, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
+  html = replaceAll(html, "{{COVER_VERDICT_LABEL}}", reportMode === "screening_v1" ? "SCREENING<br/>SIGNAL" : "ACQUISITION<br/>MEMO");
+  html = replaceAll(html, "{{EXEC_VERDICT_LABEL}}", reportMode === "screening_v1" ? "SCREENING SIGNAL" : "ACQUISITION MEMO");
+
+  const coverNoi = execNoiText !== DATA_NOT_AVAILABLE ? execNoiText : "";
+  const coverER = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : "";
+  const coverNM = Number.isFinite(noiMarginR) ? formatPercent1(noiMarginR) : "";
+  const coverUnits = execUnitsText !== DATA_NOT_AVAILABLE ? execUnitsText : "";
+  if (coverUnits && coverNoi && coverER && coverNM) {
+    html = replaceAll(html, "{{COVER_UNITS}}", coverUnits);
+    html = replaceAll(html, "{{COVER_NOI}}", coverNoi);
+    html = replaceAll(html, "{{COVER_EXPENSE_RATIO}}", coverER);
+    html = replaceAll(html, "{{COVER_NOI_MARGIN}}", coverNM);
+  } else {
+    html = stripMarkedSection(html, "COVER_METRIC_STRIP");
+  }
+
+  {
+    const snapRows = [];
+    const coverSnapshotValueStyle = "color:#F9FAFB;font-size:11px;font-weight:600;";
+    const _coverRrUnits = Number(computedRentRoll?.total_units);
+    const unitCount = Number.isFinite(_coverRrUnits) && _coverRrUnits > 0 ? _coverRrUnits : null;
+    if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
+    const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
+    if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
+    const modeLabel = reportMode === "screening_v1" ? "Preliminary Screening" : "Acquisition Memo";
+    snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="${coverSnapshotValueStyle}">${modeLabel}</div></div>`);
+    const snapHtml = snapRows.length > 0 ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>` : "";
+    html = replaceAll(html, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
+  }
+
+  const reportTypeLabel = reportMode === "screening_v1"
+    ? "Preliminary Investment Screening Memorandum"
+    : "Acquisition Memo";
+  html = replaceAll(html, "{{REPORT_TYPE_LABEL}}", reportTypeLabel);
+  html = replaceAll(html, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
+  html = replaceAll(html, "{{PRIMARY_PRESSURE_POINT}}", primaryPressurePoint);
+
+  if (whyLine || decisionContextHtml || miniSensitivityHtml || sourceReconciliationNarrativePolicy?.disclosure_label) {
+    const reconciliationDisclosureLine =
+      sourceReconciliationNarrativePolicy?.executive_summary_allowed &&
+      !sourceReconciliationNarrativePolicy?.primary_pressure_point_allowed &&
+      sourceReconciliationNarrativePolicy?.disclosure_label
+        ? `<p class="exec-signal-line">${escapeHtml(sourceReconciliationNarrativePolicy.disclosure_label)}</p>`
+        : "";
+    const pressureLabel = String(primaryPressurePoint || "").startsWith("Primary Constraint:")
+      ? "Primary Constraint"
+      : "Primary Pressure Point";
+    const pressureText = pressureLabel === "Primary Constraint"
+      ? String(primaryPressurePoint || "").replace(/^Primary Constraint:\s*/i, "")
+      : primaryPressurePoint;
+    const pressureAnchor = `<div class="verdict-pressure">Primary Pressure Point &mdash; ${escapeHtml(primaryPressurePoint)}</div>`;
+    const pressureReplacement = `<div class="verdict-pressure">${pressureLabel}: ${escapeHtml(pressureText)}</div>${
+      whyLine ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>` : ""
+    }${reconciliationDisclosureLine}${decisionContextHtml}${miniSensitivityHtml}`;
+    if (html.includes(pressureAnchor)) {
+      html = html.replace(pressureAnchor, pressureReplacement);
+    }
+  }
+
+  html = replaceAll(html, "{{DRIVER_1_LABEL}}", driver1?.label || "");
+  html = replaceAll(html, "{{DRIVER_1_VALUE}}", driver1?.value || "");
+  html = replaceAll(html, "{{DRIVER_1_TRIGGER}}", driver1?.trigger || "");
+  html = replaceAll(html, "{{DRIVER_2_LABEL}}", driver2?.label || "");
+  html = replaceAll(html, "{{DRIVER_2_VALUE}}", driver2?.value || "");
+  html = replaceAll(html, "{{DRIVER_2_TRIGGER}}", driver2?.trigger || "");
+  html = replaceAll(html, "{{DRIVER_3_LABEL}}", driver3?.label || "");
+  html = replaceAll(html, "{{DRIVER_3_VALUE}}", driver3?.value || "");
+  html = replaceAll(html, "{{DRIVER_3_TRIGGER}}", driver3?.trigger || "");
+  if (reportMode === "screening_v1") {
+    html = sanitizeScreeningRankedDriversHtml(html);
+  }
+  if (reportMode === "v1_core" || !driver1) {
+    html = stripMarkedSection(html, "EXEC_RANKED_DRIVERS");
+  }
+
+  const screeningIncomeForensicsHtml = buildScreeningIncomeForensicsHtml({
+    t12Payload,
+    computedRentRoll,
+    rentRollPayload,
+    formatCurrency,
+    sourceReconciliationState,
+  });
+  html = replaceAll(html, "{{SCREENING_INCOME_FORENSICS_BLOCK}}", screeningIncomeForensicsHtml);
+  const screeningExpenseHtml = buildScreeningExpenseStructureHtml({
+    t12Payload,
+    computedRentRoll,
+    rentRollPayload,
+    formatCurrency,
+  });
+  const screeningNoiHtml = buildScreeningNoiStabilityHtml({
+    t12Payload,
+    computedRentRoll,
+    rentRollPayload,
+    formatCurrency,
+    sourceReconciliationState,
+  });
+  html = replaceAll(html, "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}", screeningExpenseHtml);
+  html = replaceAll(html, "{{SCREENING_NOI_STABILITY_BLOCK}}", screeningNoiHtml);
+  const screeningRentRollHtml = buildScreeningRentRollDistributionHtml({
+    computedRentRoll,
+    rentRollPayload,
+    formatCurrency,
+  });
+  html = replaceAll(html, "{{SCREENING_RENT_ROLL_BLOCK}}", screeningRentRollHtml);
+
+  const screeningRefiSufficiencyHtml =
+    reportMode === "screening_v1"
+      ? ""
+      : (() => {
+          const sufficiencyHtml = buildScreeningRefiSufficiencyTable({
+            financials,
+            t12Payload,
+            currentDebtAssessmentState,
+            mortgagePayload,
+            loanTermSheetTermsPayload,
+          });
+          const financingEnvelopeHtml = sharedRefiDebtRenderState?.allowDebtMath
+            ? buildFinancingEnvelopeGrid(
+                coerceNumber(t12Payload?.net_operating_income),
+                Number.isFinite(rrUnits) && rrUnits > 0 ? rrUnits : Number(computedRentRoll?.total_units)
+              )
+            : "";
+          return sufficiencyHtml + financingEnvelopeHtml;
+        })();
+  html = replaceAll(html, "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}", screeningRefiSufficiencyHtml);
+
+  let screeningCoverageHtml = "";
+  const sectionEligibility = sectionEligibilityState || underwritingState?.core?.sections?.eligibilityState || null;
+  const dataCoverage = dataCoverageState || underwritingState?.core?.dataCoverage || null;
+  const optionalSection = optionalSectionState || underwritingState?.core?.optionalSections || null;
+  screeningCoverageHtml = buildScreeningDataCoverageSummary({
+    t12Payload,
+    computedRentRoll,
+    rentRollPayload,
+    mortgagePayload,
+    loanTermSheetTermsPayload,
+    financials,
+    effectiveReportMode: reportMode,
+    supportingUnderwritingDocsUsed: Boolean(canRenderRefi || String(debtCapitalRowsHtml || "").trim().length > 0 || String(refiCollapseGridHtml || "").trim().length > 0 || String(dcfTableHtml || "").includes("(appraisal)") || String(scenarioTableHtml || "").includes("(appraisal)")),
+    hasUploadedFiles: Array.isArray(documentSources) && documentSources.length > 0 && Boolean(documentSourcesHtml),
+    documentSources,
+    currentDebtAssessmentState,
+    sourceReconciliationState,
+    sectionEligibility,
+    dataCoverageState: dataCoverage,
+    optionalSectionState: optionalSection,
+    hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
+    renovationDisplayMode,
+    renovationPayload,
+    propertyTaxPayload,
+    propertyTaxBindingState,
+    documentQuantitativeUsageMap,
+    supportDocAuthorityRows: acquisitionMemoRenderContext?.supportDocAuthorityRows || null,
+    canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
+    renderedDocumentTreatmentRowsOut: [],
+  });
+  html = replaceAll(html, "{{SCREENING_DATA_COVERAGE_BLOCK}}", screeningCoverageHtml);
+
+  html = replaceAll(html, "{{REPORT_MODE}}", reportMode);
+  const t12IncomeLines = Array.isArray(t12Payload?.income_lines)
+    ? t12Payload.income_lines
+    : Array.isArray(t12Payload?.income_breakdown)
+      ? t12Payload.income_breakdown
+      : Array.isArray(t12Payload?.line_items)
+        ? t12Payload.line_items.filter((entry) => String(entry?.category ?? "").trim().toLowerCase() === "income")
+        : [];
+  const t12ExpenseLines = Array.isArray(t12Payload?.expense_lines)
+    ? t12Payload.expense_lines
+    : Array.isArray(t12Payload?.expense_breakdown)
+      ? t12Payload.expense_breakdown
+      : Array.isArray(t12Payload?.line_items)
+        ? t12Payload.line_items.filter((entry) => String(entry?.category ?? "").trim().toLowerCase() === "expense")
+        : [];
+  const normalizeT12LineRows = (collection = [], amountKeys = []) =>
+    collection
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+        const label = String(entry.line_item ?? entry.label ?? entry.name ?? entry.item ?? "").trim();
+        const amount = amountKeys
+          .map((key) => coerceNumber(entry?.[key]))
+          .find((value) => Number.isFinite(value));
+        if (!label || !Number.isFinite(amount)) return null;
+        return { label, amount };
+      })
+      .filter(Boolean);
+  const t12IncomeRowsData = normalizeT12LineRows(t12IncomeLines, ["amount_ttm", "ttm_amount", "annual_amount", "annual", "ytd", "total_amount", "amount", "value", "ttm", "total"]);
+  const t12ExpenseRowsData = normalizeT12LineRows(t12ExpenseLines, ["amount_ttm", "ttm_amount", "annual_amount", "annual", "ytd", "total_amount", "amount", "value", "ttm", "total"]);
+  const localT12EgiValue = Number.isFinite(t12EgiValue) ? t12EgiValue : coerceNumber(t12Payload?.effective_gross_income ?? t12Payload?.egi ?? t12Payload?.gross_potential_rent);
+  const localT12TotalExpensesValue = Number.isFinite(t12TotalExpensesValue) ? t12TotalExpensesValue : coerceNumber(t12Payload?.total_operating_expenses ?? t12Payload?.opex);
+  const localT12NoiValue = Number.isFinite(t12NoiValue) ? t12NoiValue : coerceNumber(t12Payload?.net_operating_income ?? t12Payload?.noi);
+  const t12IncomeRows = t12IncomeRowsData.length > 0
+    ? t12IncomeRowsData.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td>${formatCurrency(row.amount)}</td></tr>`).join("")
+    : Number.isFinite(localT12EgiValue)
+      ? `<tr><td colspan="2" style="color:#64748b;font-style:italic;">No line-item detail available. Effective Gross Income (TTM): ${formatCurrency(localT12EgiValue)}.</td></tr>`
+      : "";
+  const t12ExpenseRows = t12ExpenseRowsData.length > 0
+    ? t12ExpenseRowsData.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td>${formatCurrency(row.amount)}</td></tr>`).join("")
+    : Number.isFinite(localT12TotalExpensesValue)
+      ? `<tr><td colspan="2" style="color:#64748b;font-style:italic;">No line-item detail available. Total Operating Expenses (TTM): ${formatCurrency(localT12TotalExpensesValue)}.</td></tr>`
+      : "";
+  html = replaceAll(html, "{{T12_INCOME_ROWS}}", reportMode === "screening_v1" ? "" : (t12IncomeRows || ""));
+  html = replaceAll(html, "{{T12_EXPENSE_ROWS}}", reportMode === "screening_v1" ? "" : (t12ExpenseRows || ""));
+  if (!String(t12IncomeRows || "").trim()) {
+    html = stripMarkedSection(html, "T12_INCOME_TABLE");
+    html = stripT12DetailSubsection(html, "Income Reconstruction (TTM)");
+  }
+  if (!String(t12ExpenseRows || "").trim()) {
+    html = stripMarkedSection(html, "T12_EXPENSE_TABLE");
+    html = stripT12DetailSubsection(html, "Operating Expenses (TTM)");
+  }
+  html = stripEmptyHeadingBlocks(html);
+  html = replaceAll(html, "{{T12_EGI}}", Number.isFinite(localT12EgiValue) ? formatCurrency(localT12EgiValue) : DATA_NOT_AVAILABLE);
+  html = replaceAll(html, "{{T12_TOTAL_EXPENSES}}", Number.isFinite(localT12TotalExpensesValue) ? formatCurrency(localT12TotalExpensesValue) : DATA_NOT_AVAILABLE);
+  html = replaceAll(html, "{{T12_NOI}}", Number.isFinite(localT12NoiValue) ? formatCurrency(localT12NoiValue) : DATA_NOT_AVAILABLE);
+  html = replaceAll(html, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
+  const localRrUnits = Number.isFinite(rrUnits)
+    ? rrUnits
+    : Number(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+  const t12PerUnitRows = Number.isFinite(localT12EgiValue) || Number.isFinite(localT12TotalExpensesValue) || Number.isFinite(localT12NoiValue)
+    ? [
+        Number.isFinite(localT12EgiValue) ? `<tr><td>EGI / Unit</td><td>${formatCurrency(localT12EgiValue / Math.max(1, Number(localRrUnits) || 1))}</td></tr>` : "",
+        Number.isFinite(localT12TotalExpensesValue) ? `<tr><td>OpEx / Unit</td><td>${formatCurrency(localT12TotalExpensesValue / Math.max(1, Number(localRrUnits) || 1))}</td></tr>` : "",
+        Number.isFinite(localT12NoiValue) ? `<tr><td>NOI / Unit</td><td>${formatCurrency(localT12NoiValue / Math.max(1, Number(localRrUnits) || 1))}</td></tr>` : "",
+      ].filter(Boolean).join("")
+    : "";
+  html = replaceAll(html, "{{T12_PER_UNIT_ROWS}}", t12PerUnitRows);
+
+  html = stripEmptyHeadingBlocks(html);
+  html = stripChartBlockByAlt(html, "Deal Score Radar");
+  html = stripChartBlockByAlt(html, "Deal Score Bar");
+
+  if (reportMode === "screening_v1") {
+    html = html.replace(/<p class="small" style="margin-top:8px;">\s*This report is a preliminary investment screening memorandum\. Full refinance, debt, and valuation modeling are provided in the Underwriting Report\.\s*<\/p>/i, "");
+  }
+
+  return {
+    html,
+    qaHtml: html,
+    screeningVisibleClassificationForConsumers,
+    screeningCoverageHtml,
+  };
 }

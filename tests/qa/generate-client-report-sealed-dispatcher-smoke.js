@@ -29,6 +29,7 @@ const screeningDispatchAnchor = reportSource.indexOf("runScreeningReportPipeline
 const v2DispatchAnchor = reportSource.indexOf("runAcquisitionMemoV2Pipeline({");
 assert.ok(screeningDispatchAnchor >= 0, "Missing Screening lane dispatch");
 assert.ok(v2DispatchAnchor >= 0, "Missing Acquisition Memo V2 lane dispatch");
+assert.match(reportSource, /screeningReportRenderer\.buildScreeningCustomerOutput\(/);
 assert.match(reportSource, /screeningReportRenderer\.resolveScreeningClassificationConsumerLabel\(/);
 assert.match(reportSource, /screeningReportRenderer\.sanitizeScreeningRankedDriversHtml\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningIncomeForensicsHtml\(/);
@@ -74,6 +75,7 @@ const finalHarnessPipelineAnchor = reportSource.indexOf("const finalHarnessBossC
 const fullHtmlSuccessAnchor = reportSource.indexOf("boss_compliance: acquisitionMemoV2Finalization?.bossCompliance || acquisitionMemoV2Finalization?.compliance || null", finalHarnessPipelineAnchor);
 assert.ok(finalHarnessPipelineAnchor >= 0, "V2 full-html success must run through the V2 pipeline");
 assert.ok(fullHtmlSuccessAnchor > finalHarnessPipelineAnchor, "V2 full-html success must expose post-pipeline compliance");
+assert.match(reportSource, /if \(effectiveReportMode === "screening_v1"\) \{\s*const screeningFinalization = screeningReportRenderer\.buildScreeningCustomerOutput\(/s);
 
 const sealedOutputTerms = [
   "sealedLane: \"screening_lane\"",

@@ -59,6 +59,7 @@ assert.ok(screeningPipelineCallAnchor > screeningLaneAnchor, "Missing Screening 
 assert.ok(screeningSealedQaAssignmentAnchor > screeningPipelineCallAnchor, "Screening qaHtml must come from Screening lane output");
 assert.ok(acquisitionTreatmentAnchor > screeningSealedQaAssignmentAnchor, "Acquisition document treatment block must occur after Screening lane output");
 assert.ok(v2FinalAssignmentAnchor > screeningSealedQaAssignmentAnchor, "V2 final assignment must occur after Screening lane output");
+assert.match(reportSource, /screeningReportRenderer\.buildScreeningCustomerOutput\(/);
 
 const treatmentConditionStart = reportSource.lastIndexOf("if (", acquisitionTreatmentAnchor);
 const treatmentConditionSlice = reportSource.slice(treatmentConditionStart, acquisitionTreatmentAnchor);
@@ -77,6 +78,7 @@ assert.equal(/acquisition-memo-v2/i.test(screeningPipelineSource), false);
 assert.equal(/Boss|CustomerSurfaceModel|AcquisitionMemo/i.test(screeningPipelineSource), false);
 assert.match(screeningPipelineSource, /sealedLane: "screening_lane"/);
 assert.match(screeningPipelineSource, /sealedCustomerOutput: true/);
+assert.match(screeningRendererSource, /export function buildScreeningCustomerOutput/);
 assert.match(screeningRendererSource, /export function resolveScreeningClassificationConsumerLabel/);
 assert.match(screeningRendererSource, /export function sanitizeScreeningRankedDriversHtml/);
 assert.match(screeningRendererSource, /export function buildScreeningDataCoverageSummary/);
@@ -84,6 +86,7 @@ assert.match(screeningRendererSource, /export function buildScreeningIncomeForen
 assert.match(screeningRendererSource, /export function buildScreeningExpenseStructureHtml/);
 assert.match(screeningRendererSource, /export function buildScreeningNoiStabilityHtml/);
 assert.match(screeningRendererSource, /export function buildScreeningRentRollDistributionHtml/);
+assert.match(screeningRendererSource, /export function buildScreeningRefiSufficiencyTable/);
 
 const forbiddenScreeningCrossTouchPatterns = [
   /runAcquisitionMemoV2Pipeline/,

@@ -123,6 +123,7 @@ assert.ok(acquisitionDocTreatmentAnchor >= 0, "Missing acquisition document-trea
 assert.ok(v2FinalizationAnchor >= 0, "Missing acquisition V2 finalization anchor");
 assert.ok(screeningLaneOutputAnchor < acquisitionDocTreatmentAnchor, "Screening lane output must be established before document-treatment mutation");
 assert.ok(screeningLaneOutputAnchor < v2FinalizationAnchor, "Screening lane output must be established before V2 finalization mutation");
+assert.match(reportSource, /screeningReportRenderer\.buildScreeningCustomerOutput\(/);
 
 assert.match(reportSource, /buildScreeningDataCoverageSummary\(/);
 assert.match(reportSource, /buildScreeningIncomeForensicsHtml\(/);
