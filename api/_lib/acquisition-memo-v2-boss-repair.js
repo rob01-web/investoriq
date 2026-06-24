@@ -49,6 +49,34 @@ const REPAIRABLE_PATH_TO_SECTIONS = [
   ["html.methodology", ["methodologyDataTransparency"]],
 ];
 
+const REPAIRABLE_INTERNAL_LANGUAGE_PATTERNS = [
+  /<!--[\s\S]*?(?:IQ_SOURCE_AUTHORITY|Boss Contract|CustomerSurfaceModel|Source Authority|V2 Canonical Package|canonical source package|V2 projection|semantic_doc_role|parser|stack trace)[\s\S]*?-->/gi,
+  /\bBoss Contract\b/gi,
+  /\bCustomerSurfaceModel\b/gi,
+  /\bSource Authority\b/gi,
+  /\bV2 Canonical Package\b/gi,
+  /\bcanonical source package\b/gi,
+  /\bV2 projection\b/gi,
+  /\bassertion code names\b/gi,
+  /\bstack trace\b/gi,
+];
+
+const REPAIRABLE_ADVANCED_SURFACE_PATTERNS = [
+  /\bDSCR\b/gi,
+  /\brefinance\b/gi,
+  /\brefi\b/gi,
+  /\bDCF\b/gi,
+  /\bwaterfall\b/gi,
+  /\bequity return\b/gi,
+  /\bdeal score\b/gi,
+  /\bloan approval\b/gi,
+  /\brenovation ROI\b/gi,
+  /\bpayback analysis\b/gi,
+  /\bNOI impact\b/gi,
+  /\bvalue impact\b/gi,
+  /\bimplementation modeling\b/gi,
+];
+
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -193,5 +221,21 @@ export function applyAcquisitionMemoV2BossRepairPlan(customerSurfaceModel, repai
     };
   }
 
+  return repaired;
+}
+
+export function repairAcquisitionMemoV2HtmlForRepairPlan(html, repairPlan = null) {
+  if (typeof html !== "string" || !repairPlan) return html;
+  const hasRepairableHtmlIssue =
+    Array.isArray(repairPlan.forbiddenSurface) && repairPlan.forbiddenSurface.length > 0;
+  if (!hasRepairableHtmlIssue) return html;
+
+  let repaired = html;
+  for (const pattern of REPAIRABLE_INTERNAL_LANGUAGE_PATTERNS) {
+    repaired = repaired.replace(pattern, "");
+  }
+  for (const pattern of REPAIRABLE_ADVANCED_SURFACE_PATTERNS) {
+    repaired = repaired.replace(pattern, "");
+  }
   return repaired;
 }

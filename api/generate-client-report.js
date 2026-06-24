@@ -45,6 +45,7 @@ import {
   validateAcquisitionMemoBossContract,
 } from "./_lib/acquisition-memo-boss-contract.js";
 import { runAcquisitionMemoV2Pipeline } from "./_lib/acquisition-memo-v2-pipeline.js";
+import { buildAcquisitionMemoV2FinalDeliveryDecision } from "./_lib/acquisition-memo-v2-final-decision.js";
 import { runScreeningReportPipeline } from "./_lib/screening-report-pipeline.js";
 import * as screeningReportRenderer from "./_lib/screening-report-renderer.js";
 import {
@@ -123,6 +124,35 @@ function assertSealedOutputImmutable(sealedOutput, lane) {
     metadata,
     deliveryState,
   });
+}
+async function persistFinalAcquisitionMemoV2ComplianceDiagnostics({
+  jobId = null,
+  userId = null,
+  diagnostics = null,
+  finalDeliveryDecision = null,
+} = {}) {
+  if (!jobId) return;
+  try {
+    const timestamp = new Date().toISOString().replace(/:/g, "-");
+    const { error } = await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId || null,
+        user_id: userId || null,
+        type: "final_acquisition_memo_v2_compliance_diagnostics",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId || "unknown"}/final_acquisition_memo_v2_compliance_diagnostics/${timestamp}.json`,
+        payload: {
+          diagnostics: diagnostics || null,
+          finalDeliveryDecision: finalDeliveryDecision || null,
+        },
+      },
+    ]);
+    if (error) {
+      console.error("Failed to write final_acquisition_memo_v2_compliance_diagnostics artifact:", error);
+    }
+  } catch (err) {
+    console.error("Failed to persist final Acquisition Memo V2 compliance diagnostics:", err?.message || err);
+  }
 }
 function sanitizeReportIdentityTitle(value) {
   const raw = sanitizePropertyNameDisplayText(value)?.trim() || String(value || "").trim();
@@ -11733,13 +11763,22 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           deliveryState: finalHarnessBossCompliance.compliance || null,
         }, "acquisition_memo_v2");
         htmlString = finalHarnessBossCompliance.html;
-        if (!finalHarnessBossCompliance.compliance?.ok) {
+        const finalHarnessDeliveryDecision =
+          finalHarnessBossCompliance.finalDeliveryDecision ||
+          buildAcquisitionMemoV2FinalDeliveryDecision({
+            finalization: finalHarnessBossCompliance,
+            coreGate: acquisitionMemoBossContract?.coreGate || null,
+            diagnostics: finalHarnessBossCompliance.finalComplianceDiagnostics || null,
+          });
+        if (!finalHarnessDeliveryDecision.customer_publish_eligible) {
           return res.status(500).json({
             success: false,
             report_type: reportType,
             report_mode: effectiveReportMode,
             error: "Final Acquisition Memo V2 HTML failed Boss compliance",
             boss_compliance: finalHarnessBossCompliance.compliance || null,
+            final_v2_delivery_decision: finalHarnessDeliveryDecision,
+            final_v2_compliance_diagnostics: finalHarnessBossCompliance.finalComplianceDiagnostics || null,
             final_html: null,
           });
         }
@@ -11750,6 +11789,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         report_mode: effectiveReportMode,
         final_html: htmlString,
         boss_compliance: acquisitionMemoV2Finalization?.bossCompliance || acquisitionMemoV2Finalization?.compliance || null,
+        final_v2_delivery_decision: acquisitionMemoV2Finalization?.finalDeliveryDecision || null,
+        final_v2_compliance_diagnostics: acquisitionMemoV2Finalization?.finalComplianceDiagnostics || null,
         customer_surface_model_validation: acquisitionMemoV2Finalization?.customerSurfaceModelValidation || null,
         customer_surface_html_validation: acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation || null,
       });
@@ -13200,13 +13241,43 @@ try {
       deliveryState: finalBossCompliance.compliance || null,
     }, "acquisition_memo_v2");
     docHtml = finalBossCompliance.html;
-    if (!finalBossCompliance.compliance?.ok) {
+    const finalV2DeliveryDecision = buildAcquisitionMemoV2FinalDeliveryDecision({
+      finalization: finalBossCompliance,
+      qaActionPlan: qaActionPlanResult,
+      reportContractQa: reportContractQaResult,
+      deliveryGateDecision: deliveryGateDecisionResult,
+      coreGate: acquisitionMemoBossContract?.coreGate || null,
+      repairPlan: finalBossCompliance.finalComplianceDiagnostics?.repairPlan || null,
+      diagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
+    });
+    acquisitionMemoV2Finalization = assertSealedOutputImmutable({
+      ...acquisitionMemoV2Finalization,
+      finalDeliveryDecision: finalV2DeliveryDecision,
+      metadata: {
+        ...(acquisitionMemoV2Finalization.metadata || {}),
+        finalDeliveryDecision: finalV2DeliveryDecision,
+        finalComplianceDiagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
+      },
+      deliveryState: finalV2DeliveryDecision,
+    }, "acquisition_memo_v2");
+    if (!finalV2DeliveryDecision.customer_publish_eligible) {
+      await persistFinalAcquisitionMemoV2ComplianceDiagnostics({
+        jobId: jobId || null,
+        userId: effectiveUserId || null,
+        diagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
+        finalDeliveryDecision: finalV2DeliveryDecision,
+      });
       console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {
         violations: finalBossCompliance.compliance?.violations || [],
+        finalDeliveryDecision: finalV2DeliveryDecision,
       });
       const finalBossError = new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
       finalBossError.code = "REPORT_GENERATION_FAILED";
-      finalBossError.context = finalBossCompliance.compliance || null;
+      finalBossError.context = {
+        compliance: finalBossCompliance.compliance || null,
+        finalDeliveryDecision: finalV2DeliveryDecision,
+        finalComplianceDiagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
+      };
       throw finalBossError;
     }
   }
