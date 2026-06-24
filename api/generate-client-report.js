@@ -136,27 +136,6 @@ function normalizeVisibleReportClassification({
   });
   return state.label;
 }
-function resolveScreeningClassificationConsumerLabel({
-  canonicalVisibleLabel = "",
-  localVisibleLabel = "",
-  screeningClass = "",
-} = {}) {
-  const approvedLabels = new Set([
-    "Stable",
-    "Sensitized",
-    "Fragile",
-    "Review - Source Reconciliation Disclosure",
-    "Review - Insufficient Core Support",
-    "Review - Debt Coverage Constraint",
-  ]);
-  const canonical = String(canonicalVisibleLabel || "").trim();
-  if (approvedLabels.has(canonical)) return canonical;
-  const local = String(localVisibleLabel || "").trim();
-  if (approvedLabels.has(local)) return local;
-  const screening = String(screeningClass || "").trim();
-  if (approvedLabels.has(screening)) return screening;
-  return "";
-}
 function alignDealScorecardVisibleClassificationHtml(dealScoreTableHtml, visibleClassificationLabel) {
   if (typeof dealScoreTableHtml !== "string" || !dealScoreTableHtml.trim()) return dealScoreTableHtml || "";
   if (typeof visibleClassificationLabel !== "string" || !visibleClassificationLabel.trim()) return dealScoreTableHtml;
@@ -1663,33 +1642,6 @@ function hasMeaningfulNarrative(html) {
   if (!html.replace(/<[^>]*>/g, "").trim()) return false;
   return true;
 }
-function sanitizeScreeningRankedDriversHtml(html) {
-  if (typeof html !== "string") return html;
-  const sectionPattern = /<!-- BEGIN EXEC_RANKED_DRIVERS -->([\s\S]*?)<!-- END EXEC_RANKED_DRIVERS -->/g;
-  return html.replace(sectionPattern, (_full, body) => {
-    if (typeof body !== "string" || !body.trim()) return "";
-    let nextBody = body.replace(/<li>([\s\S]*?)<\/li>/gi, (row, inner) => {
-      const plain = String(inner || "")
-        .replace(/<[^>]*>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (!plain) return "";
-      if (
-        /^\d+\.\s*:\s*\(trigger:\s*\)$/i.test(plain) ||
-        /^:\s*\(trigger:\s*\)$/i.test(plain) ||
-        /^\(trigger:\s*\)$/i.test(plain) ||
-        /^:$/i.test(plain)
-      ) {
-        return "";
-      }
-      return row;
-    });
-    nextBody = nextBody.replace(/<ol>\s*<\/ol>/gi, "");
-    const hasValidRow = /<li>[\s\S]*?<\/li>/i.test(nextBody);
-    return hasValidRow ? `<!-- BEGIN EXEC_RANKED_DRIVERS -->${nextBody}<!-- END EXEC_RANKED_DRIVERS -->` : "";
-  });
-}
-
 function dedupeDataNotAvailableBySection(html) {
   if (typeof html !== "string") return html;
   const sectionPattern = /<!-- BEGIN ([A-Z0-9_]+) -->([\s\S]*?)<!-- END \1 -->/g;
@@ -5682,124 +5634,7 @@ function buildAcquisitionFinancingReadinessHtml({
   ].filter(Boolean);
   return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Proposed Acquisition Financing Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">This is source-bound proposed acquisition financing context only. It is not loan approval, lender commitment, credit decision, refinance sufficiency analysis, or debt-service underwriting.</p><table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Input</th><th style="text-align:left;padding:4px 8px;background:#F8FAFC;color:#1e293b;border:1px solid #E5E7EB;">Value</th></tr></thead><tbody>${rows.map(([label, value]) => `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(label)}</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(value)}</td></tr>`).join("")}</tbody></table></div>`;
 }
-function buildScreeningRefiSufficiencyTable({
-  financials,
-  t12Payload,
-  currentDebtAssessmentState = null,
-  mortgagePayload = null,
-  loanTermSheetTermsPayload = null,
-} = {}) {
-  const f = financials && typeof financials === "object" ? financials : {};
-  const refiDebtRenderState = buildRefiDebtRenderState({
-    currentDebtAssessmentState,
-    mortgagePayload,
-    loanTermSheetTermsPayload,
-    financials: f,
-    t12Payload,
-  });
-  if (!refiDebtRenderState.allowDebtMath) {
-    if (refiDebtRenderState.status === "source_limited") {
-      return `<p>Debt/refinance metrics were source-limited because the uploaded debt evidence did not verify a current outstanding debt balance sufficient for refinance analysis.</p>`;
-    }
-    return `<p>Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided.</p>`;
-  }
-  const canonicalRefiDebtBasis = refiDebtRenderState.canonicalRefiDebtBasis;
-  const canonicalRefiInterestRate = coerceNumber(canonicalRefiDebtBasis?.interestRatePct);
-  const canonicalRefiAmortYears = coerceNumber(canonicalRefiDebtBasis?.amortYears);
-  const noiFromT12 = coerceNumber(t12Payload?.net_operating_income);
-  const noiFromFinancials = coerceNumber(f.noi_base);
-  const noiValue = Number.isFinite(noiFromT12) ? noiFromT12 : noiFromFinancials;
-  const formatBps = (x) => `${Math.round(Number(x))} bps`;
-  const formatPercentArray = (arr) =>
-    `[${arr.map((entry) => formatPercent1(coerceNumber(entry))).join(", ")}]`;
-  const formatBpsArray = (arr) =>
-    `[${arr.map((entry) => formatBps(coerceNumber(entry))).join(", ")}]`;
-  const isPresentScalar = (value) => Number.isFinite(value) && value > 0;
-  const isPresentArray = (value) =>
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.every((entry) => Number.isFinite(coerceNumber(entry)));
-  const rows = [
-    {
-      label: "NOI (base)",
-      present: isPresentScalar(noiValue),
-      value: Number.isFinite(noiValue) ? formatCurrency(noiValue) : " - ",
-    },
-    {
-      label: "Current loan balance",
-      present: isPresentScalar(coerceNumber(canonicalRefiDebtBasis.debtBalance)),
-      value: Number.isFinite(coerceNumber(canonicalRefiDebtBasis.debtBalance))
-        ? formatCurrency(coerceNumber(canonicalRefiDebtBasis.debtBalance))
-        : " - ",
-    },
-    {
-      label: "Max LTV",
-      present: isPresentScalar(coerceNumber(f.refi_ltv_max)),
-      value: Number.isFinite(coerceNumber(f.refi_ltv_max))
-        ? formatPercent1(coerceNumber(f.refi_ltv_max))
-        : " - ",
-    },
-    {
-      label: "Minimum DSCR",
-      present: isPresentScalar(coerceNumber(f.refi_dscr_min)),
-      value: Number.isFinite(coerceNumber(f.refi_dscr_min))
-        ? formatMultiple(coerceNumber(f.refi_dscr_min))
-        : " - ",
-    },
-    {
-      label: "Interest rate",
-      present: isPresentScalar(canonicalRefiInterestRate),
-      value: Number.isFinite(canonicalRefiInterestRate)
-        ? formatInterestRatePercent(canonicalRefiInterestRate)
-        : " - ",
-    },
-    {
-      label: "Amortization (years)",
-      present: isPresentScalar(canonicalRefiAmortYears),
-      value: Number.isFinite(canonicalRefiAmortYears)
-        ? formatYears(canonicalRefiAmortYears)
-        : " - ",
-    },
-    {
-      label: "Refinance cap rate",
-      present: isPresentScalar(coerceNumber(f.refi_cap_rate_base)),
-      value: Number.isFinite(coerceNumber(f.refi_cap_rate_base))
-        ? formatCapPercentExact(coerceNumber(f.refi_cap_rate_base))
-        : " - ",
-    },
-    {
-      label: "NOI stress shocks",
-      present: isPresentArray(f.stress_noi_shocks),
-      value: isPresentArray(f.stress_noi_shocks)
-        ? escapeHtml(formatPercentArray(f.stress_noi_shocks))
-        : " - ",
-    },
-    {
-      label: "Cap rate stress (bps)",
-      present: isPresentArray(f.stress_cap_rate_bps),
-      value: isPresentArray(f.stress_cap_rate_bps)
-        ? escapeHtml(formatBpsArray(f.stress_cap_rate_bps))
-        : " - ",
-    },
-    {
-      label: "Rate stress (bps)",
-      present: isPresentArray(f.stress_rate_bps),
-      value: isPresentArray(f.stress_rate_bps)
-        ? escapeHtml(formatBpsArray(f.stress_rate_bps))
-        : " - ",
-    },
-  ];
-  const rowsHtml = rows
-    .map(
-      (row) =>
-        `<tr><td>${escapeHtml(row.label)}</td><td>${
-          row.present ? "Present" : "Missing"
-        }</td><td>${row.value}</td></tr>`
-    )
-    .join("");
-  return `<p>Advanced financing sufficiency not produced due to insufficient inputs.</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether required inputs are present in uploaded documents. Missing required inputs prevent advanced financing analysis.</p>`;
-}
-function buildScreeningDataCoverageSummary({
+function legacyOnlyBuildScreeningDataCoverageSummary({
   t12Payload,
   computedRentRoll,
   rentRollPayload,
@@ -6061,7 +5896,7 @@ function isEligiblePositiveExpenseDriver(row) {
   if (!label || !Number.isFinite(amount) || amount <= 0) return false;
   return !/\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|Gross Potential Rent|GPR|NOI)\b/i.test(label);
 }
-function buildScreeningIncomeForensicsHtml({
+function legacyOnlyBuildScreeningIncomeForensicsHtml({
   t12Payload,
   computedRentRoll,
   rentRollPayload,
@@ -6287,7 +6122,7 @@ function buildScreeningIncomeForensicsHtml({
       : incomeCard || expenseCard;
   return `${driverCards}${concentrationLineHtml}${bulletsCard}`;
 }
-function buildScreeningExpenseStructureHtml({
+function legacyOnlyBuildScreeningExpenseStructureHtml({
   t12Payload,
   computedRentRoll,
   rentRollPayload,
@@ -6442,7 +6277,7 @@ function buildScreeningExpenseStructureHtml({
     : "";
   return `${metricsCard}${expenseFlagsCard}${expenseSensCard}`;
 }
-function buildScreeningNoiStabilityHtml({
+function legacyOnlyBuildScreeningNoiStabilityHtml({
   t12Payload,
   computedRentRoll,
   rentRollPayload,
@@ -6908,7 +6743,7 @@ function applyFinalSectionHealRenderGuards(
   outputHtml = stripEmptyHeadingBlocks(outputHtml);
   return sanitizeFinalCustomerHtml(outputHtml);
 }
-function buildScreeningRentRollDistributionHtml({
+function legacyOnlyBuildScreeningRentRollDistributionHtml({
   computedRentRoll,
   rentRollPayload,
   formatCurrency,
@@ -10278,7 +10113,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         ? ""
         : (() => {
             const refiDebtRenderStateForScreeningBlock = sharedRefiDebtRenderState;
-            const sufficiencyHtml = buildScreeningRefiSufficiencyTable({
+            const sufficiencyHtml = screeningReportRenderer.buildScreeningRefiSufficiencyTable({
               financials,
               t12Payload,
               currentDebtAssessmentState,
@@ -13457,7 +13292,6 @@ export const __test__ = {
   resolveCanonicalRefiDebtBasis,
   buildRefiDebtRenderState,
   buildRefiStabilityModel,
-  buildScreeningRefiSufficiencyTable,
   buildFinancingEnvelopeGrid,
   buildAcquisitionMemoSummaryCard,
   buildOperatingSnapshotCard,
@@ -13476,16 +13310,10 @@ export const __test__ = {
   buildRendererCanonicalState,
   applyFinalSourceReconciliationRenderGuard,
   applyFinalSectionHealRenderGuards,
-  buildScreeningIncomeForensicsHtml,
-  buildScreeningExpenseStructureHtml,
-  buildScreeningNoiStabilityHtml,
-  buildScreeningRentRollDistributionHtml,
-  sanitizeScreeningRankedDriversHtml,
   buildRenovationBudgetRows,
   buildRenovationBudgetCardHtml,
   buildRenovationExecutionRows,
   buildRenovationExecutionCardHtml,
-  buildScreeningDataCoverageSummary,
   buildT12SummaryHtml,
   resolveCanonicalT12GprValue,
   materiallyDifferent,
@@ -13495,7 +13323,6 @@ export const __test__ = {
   buildCanonicalSupportDocAuthorityRows,
   resolveCanonicalDataCoverageHeadlineState,
   normalizeVisibleReportClassification,
-  resolveScreeningClassificationConsumerLabel,
   shouldRenderCanonicalSection,
   shouldApplyTierOneStripCascade,
   resolveMarketContextSectionVisibility,

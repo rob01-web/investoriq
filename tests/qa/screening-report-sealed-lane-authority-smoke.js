@@ -18,6 +18,32 @@ assert.match(reportSource, /screeningReportRenderer\.buildScreeningExpenseStruct
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningNoiStabilityHtml\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningRentRollDistributionHtml\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningDataCoverageSummary\(/);
+assert.match(reportSource, /screeningReportRenderer\.buildScreeningRefiSufficiencyTable\(/);
+
+const activeRouteOwnedScreeningHelperSnippets = [
+  "function resolveScreeningClassificationConsumerLabel",
+  "function sanitizeScreeningRankedDriversHtml",
+  "function buildScreeningRefiSufficiencyTable",
+  "function buildScreeningDataCoverageSummary",
+  "function buildScreeningIncomeForensicsHtml",
+  "function buildScreeningExpenseStructureHtml",
+  "function buildScreeningNoiStabilityHtml",
+  "function buildScreeningRentRollDistributionHtml",
+];
+for (const snippet of activeRouteOwnedScreeningHelperSnippets) {
+  assert.equal(reportSource.includes(snippet), false, `Route still defines active Screening helper: ${snippet}`);
+}
+
+const legacyOnlyRouteOwnedScreeningHelperSnippets = [
+  "function legacyOnlyBuildScreeningDataCoverageSummary",
+  "function legacyOnlyBuildScreeningIncomeForensicsHtml",
+  "function legacyOnlyBuildScreeningExpenseStructureHtml",
+  "function legacyOnlyBuildScreeningNoiStabilityHtml",
+  "function legacyOnlyBuildScreeningRentRollDistributionHtml",
+];
+for (const snippet of legacyOnlyRouteOwnedScreeningHelperSnippets) {
+  assert.equal(reportSource.includes(snippet), true, `Expected legacy-only quarantine for ${snippet}`);
+}
 
 const screeningLaneAnchor = reportSource.indexOf("const screeningLaneOutput =");
 const screeningPipelineCallAnchor = reportSource.indexOf("runScreeningReportPipeline({", screeningLaneAnchor);
