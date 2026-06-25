@@ -1369,3 +1369,65 @@ export function renderCompleteAcquisitionMemoV2Html({
     });
   }
 }
+
+export function buildAcquisitionMemoV2DocumentTreatmentSummaryHtml({
+  renderedAcquisitionMemo = null,
+  sourcePackage = null,
+  bossContract = null,
+  customerSurfaceModel = null,
+} = {}) {
+  return renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage, bossContract, customerSurfaceModel);
+}
+
+export function buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtml({
+  renderedAcquisitionMemo = null,
+  acquisitionMemoProjection = null,
+  acquisitionMemoV2Projection = null,
+  customerSurfaceModel = null,
+} = {}) {
+  return renderReadinessSection({
+    renderedAcquisitionMemo,
+    acquisitionMemoProjection: acquisitionMemoV2Projection || acquisitionMemoProjection,
+    customerSurfaceModel,
+  });
+}
+
+export function buildAcquisitionMemoV2AcquisitionFinancingAssumptionsHtml({
+  acquisitionMemoProjection = null,
+  acquisitionMemoV2Projection = null,
+  sourcePackage = null,
+  acquisitionTermsPayload = null,
+  loanTermSheetTermsPayload = null,
+  coreMetrics = null,
+  bossContract = null,
+  customerSurfaceModel = null,
+} = {}) {
+  return renderAcquisitionRequestContextSection({
+    acquisitionMemoProjection: acquisitionMemoV2Projection || acquisitionMemoProjection,
+    sourcePackage,
+    acquisitionTermsPayload,
+    loanTermSheetTermsPayload,
+    coreMetrics,
+    bossContract,
+    customerSurfaceModel,
+  });
+}
+
+export function buildAcquisitionMemoV2AcquisitionFinancingReadinessHtml({
+  acquisitionMemoProjection = null,
+  acquisitionMemoV2Projection = null,
+  sourcePackage = null,
+  loanTermSheetTermsPayload = null,
+  mortgagePayload = null,
+  bossContract = null,
+  customerSurfaceModel = null,
+} = {}) {
+  return renderDebtFinancingContextSection({
+    acquisitionMemoProjection: acquisitionMemoV2Projection || acquisitionMemoProjection,
+    sourcePackage,
+    loanTermSheetTermsPayload,
+    mortgagePayload,
+    bossContract,
+    customerSurfaceModel,
+  });
+}

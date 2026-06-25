@@ -45,7 +45,16 @@ import {
   validateAcquisitionMemoBossContract,
 } from "./_lib/acquisition-memo-boss-contract.js";
 import { runAcquisitionMemoV2Pipeline } from "./_lib/acquisition-memo-v2-pipeline.js";
-import { buildAcquisitionMemoV2FinalDeliveryDecision } from "./_lib/acquisition-memo-v2-final-decision.js";
+import {
+  buildAcquisitionMemoV2SupportDocAuthorityRows as buildAcquisitionMemoV2SupportDocAuthorityRowsLane,
+  canonicalizeAcquisitionMemoV2DocumentTreatmentSources as canonicalizeAcquisitionMemoV2DocumentTreatmentSourcesLane,
+} from "./_lib/acquisition-memo-v2-role-reconciler.js";
+import {
+  buildAcquisitionMemoV2DocumentTreatmentSummaryHtml as buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane,
+  buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtml as buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtmlLane,
+  buildAcquisitionMemoV2AcquisitionFinancingAssumptionsHtml as buildAcquisitionMemoV2AcquisitionFinancingAssumptionsHtmlLane,
+  buildAcquisitionMemoV2AcquisitionFinancingReadinessHtml as buildAcquisitionMemoV2AcquisitionFinancingReadinessHtmlLane,
+} from "./_lib/acquisition-memo-v2-document.js";
 import { runScreeningReportPipeline } from "./_lib/screening-report-pipeline.js";
 import * as screeningReportRenderer from "./_lib/screening-report-renderer.js";
 import {
@@ -2389,7 +2398,7 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
   return { visibleColumns, rows: normalizedRows };
 }
 
-function canonicalizeDocumentTreatmentSources(documentSources = []) {
+function legacyOnlyCanonicalizeDocumentTreatmentSources(documentSources = []) {
   const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
   const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
   const firstFinite = (...values) => {
@@ -2661,7 +2670,7 @@ function canonicalizeDocumentTreatmentSources(documentSources = []) {
   return merged;
 }
 
-function buildCanonicalSupportDocAuthorityRows({
+function legacyOnlyBuildCanonicalSupportDocAuthorityRows({
   documentSources = [],
   artifacts = [],
   loanTermSheetTermsPayload = null,
@@ -3115,7 +3124,7 @@ function buildCanonicalSupportDocAuthorityRows({
   return authorityRows.filter((row) => String(row?.original_filename || "").trim().length > 0);
 }
 
-function buildDocumentTreatmentSummaryHtml({
+function legacyOnlyBuildDocumentTreatmentSummaryHtml({
   documentSources = [],
   supportDocAuthorityRows = null,
   reportMode = null,
@@ -3201,7 +3210,7 @@ function buildDocumentTreatmentSummaryHtml({
   };
   const authoritativeDocumentSources = Array.isArray(supportDocAuthorityRows) && supportDocAuthorityRows.length > 0
     ? supportDocAuthorityRows
-    : canonicalizeDocumentTreatmentSources(documentSources);
+    : legacyOnlyCanonicalizeDocumentTreatmentSources(documentSources);
   const files = authoritativeDocumentSources
     .map((row) => ({
       id: row?.id ?? null,
@@ -4660,7 +4669,7 @@ function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
   return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
 }
 
-function buildPreliminaryFinancingReadinessSummaryHtml({
+function legacyOnlyBuildPreliminaryFinancingReadinessSummaryHtml({
   reportMode = null,
   acquisitionMemoRenderContext = null,
   acquisitionMemoV2Projection = null,
@@ -5001,7 +5010,7 @@ function buildLaunchSourceContextBlock({
   renderedDocumentTreatmentRowsOut = null,
 } = {}) {
   const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported.</p>`;
-  const treatment = buildDocumentTreatmentSummaryHtml({
+  const treatment = legacyOnlyBuildDocumentTreatmentSummaryHtml({
     reportMode,
     documentSources,
     currentDebtAssessmentState,
@@ -5048,7 +5057,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
   return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Uses standardized 25-year amortization input.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
-function buildAcquisitionFinancingAssumptionsHtml({
+function legacyOnlyBuildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload,
   acquisitionTermsPayload = null,
   t12Payload,
@@ -5477,7 +5486,7 @@ function buildAcquisitionFinancingAssumptionsHtml({
   }
   return html;
 }
-function buildAcquisitionFinancingReadinessHtml({
+function legacyOnlyBuildAcquisitionFinancingReadinessHtml({
   loanTermSheetTermsPayload = null,
   acquisitionTermsPayload = null,
   t12Payload = null,
@@ -5918,7 +5927,7 @@ function legacyOnlyBuildScreeningDataCoverageSummary({
     ) > 0 || sourceConstrainedSectionCount > 0
       ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
       : "";
-    const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
+    const treatmentSummaryHtml = legacyOnlyBuildDocumentTreatmentSummaryHtml({
       reportMode: effectiveReportMode,
       documentSources,
       currentDebtAssessmentState,
@@ -6508,7 +6517,7 @@ function legacyOnlyBuildScreeningNoiStabilityHtml({
   )}</tbody></table></div>${screeningFlagsCard}${sensitivityCard}${vacancyBufferCard}`;
 }
 
-function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationState = null) {
+function legacyOnlyApplyFinalSourceReconciliationRenderGuard(html, sourceReconciliationState = null) {
   const inputHtml = String(html || "");
   const renderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
   const canonicalDisplay = renderState?.variance_display || null;
@@ -6669,7 +6678,7 @@ function applyFinalSourceReconciliationRenderGuard(html, sourceReconciliationSta
   };
 }
 
-function applyFinalSectionHealRenderGuards(
+function legacyOnlyApplyFinalSectionHealRenderGuards(
   html,
   {
     effectiveReportMode = null,
@@ -6787,7 +6796,7 @@ function applyFinalSectionHealRenderGuards(
     );
   }
   if (sourceReconciliationState) {
-    outputHtml = applyFinalSourceReconciliationRenderGuard(
+    outputHtml = legacyOnlyApplyFinalSourceReconciliationRenderGuard(
       outputHtml,
       sourceReconciliationState
     ).html;
@@ -9457,7 +9466,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         return !/(t12|rent[_\s-]*roll)/i.test(text);
       })
       : [];
-    const canonicalSupportDocAuthorityRows = buildCanonicalSupportDocAuthorityRows({
+    const canonicalSupportDocAuthorityRows = buildAcquisitionMemoV2SupportDocAuthorityRowsLane({
       documentSources: supportFileRows,
       artifacts: coverageArtifacts,
       loanTermSheetTermsPayload,
@@ -9735,7 +9744,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         acquisitionMemoRenderContext.units,
         acquisitionMemoRenderContext.goingInCapRate ?? appraisalCapRateBase
       );
-      preliminaryFinancingReadinessSummaryBlockHtml = buildPreliminaryFinancingReadinessSummaryHtml({
+      preliminaryFinancingReadinessSummaryBlockHtml = buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtmlLane({
         reportMode: effectiveReportMode,
         acquisitionMemoRenderContext,
         acquisitionMemoV2Projection: acquisitionMemoV2Bridge?.acquisitionMemoProjection || null,
@@ -9776,7 +9785,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       execVerdictExpansionHtml = `${summaryCard}${contextCard}`;
     }
     const acquisitionRenderStateFromBuilder = underwritingState?.core?.acquisition || {};
-    const acquisitionFinancingAssumptionsRender = buildAcquisitionFinancingAssumptionsHtml({
+    const acquisitionFinancingAssumptionsRender = buildAcquisitionMemoV2AcquisitionFinancingAssumptionsHtmlLane({
       loanTermSheetTermsPayload,
       acquisitionTermsPayload,
       t12Payload,
@@ -9795,7 +9804,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       underwritingState.core.acquisition.renderBehavior =
         acquisitionFinancingAssumptionsRender.renderBehavior || null;
     }
-    const acquisitionFinancingReadinessHtml = buildAcquisitionFinancingReadinessHtml({
+    const acquisitionFinancingReadinessHtml = buildAcquisitionMemoV2AcquisitionFinancingReadinessHtmlLane({
       loanTermSheetTermsPayload,
       acquisitionTermsPayload,
       t12Payload,
@@ -10357,7 +10366,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       ? Array.from(acquisitionMemoRenderContext.canonicalSupportDocMap.values()).filter((row) => row && typeof row === "object")
       : Array.isArray(acquisitionMemoRenderContext?.supportDocAuthorityRows) && acquisitionMemoRenderContext.supportDocAuthorityRows.length > 0
       ? acquisitionMemoRenderContext.supportDocAuthorityRows
-      : buildCanonicalSupportDocAuthorityRows({
+      : buildAcquisitionMemoV2SupportDocAuthorityRowsLane({
           documentSources,
           renovationPayload,
         });
@@ -11905,7 +11914,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       const isSealedCustomerOutputHarness = Boolean(acquisitionMemoV2OwnsFinalHtml || isScreeningSealedLaneHarness);
       const harnessDocumentTreatmentHtml = isSealedCustomerOutputHarness
         ? ""
-        : buildDocumentTreatmentSummaryHtml({
+        : buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({
             reportMode: effectiveReportMode,
             documentSources,
             currentDebtAssessmentState,
@@ -11957,11 +11966,11 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         htmlString = finalHarnessBossCompliance.html;
         const finalHarnessDeliveryDecision =
           finalHarnessBossCompliance.finalDeliveryDecision ||
-          buildAcquisitionMemoV2FinalDeliveryDecision({
-            finalization: finalHarnessBossCompliance,
-            coreGate: acquisitionMemoBossContract?.coreGate || null,
-            diagnostics: finalHarnessBossCompliance.finalComplianceDiagnostics || null,
-          });
+          finalHarnessBossCompliance.deliveryState ||
+          null;
+        if (!finalHarnessDeliveryDecision) {
+          throw new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+        }
         if (!finalHarnessDeliveryDecision.customer_publish_eligible) {
           return res.status(500).json({
             success: false,
@@ -12555,12 +12564,12 @@ const isScreeningSealedLane = effectiveReportMode === "screening_v1";
 const isSealedCustomerOutput = Boolean(isAcqMemoV2FinalHtml || isScreeningSealedLane);
 if (!isSealedCustomerOutput) {
 const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
-const finalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
+  const finalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard(
   qaHtmlBeforeFinalSourceReconciliationGuard,
   sourceReconciliationState
 );
 qaHtml = finalSourceReconciliationGuard.html;
-qaHtml = applyFinalSectionHealRenderGuards(qaHtml, {
+qaHtml = legacyOnlyApplyFinalSectionHealRenderGuards(qaHtml, {
   effectiveReportMode,
   reportType,
   currentDebtAssessmentState,
@@ -12688,7 +12697,7 @@ try {
   sourceCoverageQa.support_document_authority_rows = supportDocAuthorityRowsForQa;
   sourceCoverageQa.document_treatment_canonical_rows = supportDocAuthorityRowsForQa.length > 0
     ? supportDocAuthorityRowsForQa
-    : canonicalizeDocumentTreatmentSources(
+    : canonicalizeAcquisitionMemoV2DocumentTreatmentSourcesLane(
       Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : []
     );
   if (typeof finalHtml === "string" && /Proposed Acquisition Financing Context|Source-complete inputs provided \/ available for future underwriting\./i.test(finalHtml)) {
@@ -12759,7 +12768,7 @@ try {
     typeof finalHtml === "string" &&
     finalHtml.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")
   ) {
-    const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({
+    const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({
       reportMode: effectiveReportMode,
       documentSources: Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : [],
       currentDebtAssessmentState,
@@ -13369,12 +13378,12 @@ try {
   // V2-owned final HTML remains under orchestrator/Boss control; legacy reconciliation and section-heal
   // guards stay fenced to non-sealed legacy paths.
   if (!isSealedCustomerOutput) {
-    const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard(
+    const docFinalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard(
       docHtml,
       sourceReconciliationState
     );
     docHtml = docFinalSourceReconciliationGuard.html;
-    docHtml = applyFinalSectionHealRenderGuards(docHtml, {
+    docHtml = legacyOnlyApplyFinalSectionHealRenderGuards(docHtml, {
       effectiveReportMode,
       reportType,
       currentDebtAssessmentState,
@@ -13433,15 +13442,13 @@ try {
       deliveryState: finalBossCompliance.compliance || null,
     }, "acquisition_memo_v2");
     docHtml = finalBossCompliance.html;
-    const finalV2DeliveryDecision = buildAcquisitionMemoV2FinalDeliveryDecision({
-      finalization: finalBossCompliance,
-      qaActionPlan: qaActionPlanResult,
-      reportContractQa: reportContractQaResult,
-      deliveryGateDecision: deliveryGateDecisionResult,
-      coreGate: acquisitionMemoBossContract?.coreGate || null,
-      repairPlan: finalBossCompliance.finalComplianceDiagnostics?.repairPlan || null,
-      diagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
-    });
+    const finalV2DeliveryDecision =
+      finalBossCompliance.finalDeliveryDecision ||
+      finalBossCompliance.deliveryState ||
+      null;
+    if (!finalV2DeliveryDecision) {
+      throw new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+    }
     acquisitionMemoV2Finalization = assertSealedOutputImmutable({
       ...acquisitionMemoV2Finalization,
       finalDeliveryDecision: finalV2DeliveryDecision,
@@ -13616,9 +13623,9 @@ try {
 export const __test__ = {
   normalizeAcquisitionFinancingArtifactPayload,
   alignDealScorecardVisibleClassificationHtml,
-  buildAcquisitionFinancingAssumptionsHtml,
-  buildAcquisitionFinancingReadinessHtml,
-  buildPreliminaryFinancingReadinessSummaryHtml,
+  legacyOnlyBuildAcquisitionFinancingAssumptionsHtml,
+  legacyOnlyBuildAcquisitionFinancingReadinessHtml,
+  legacyOnlyBuildPreliminaryFinancingReadinessSummaryHtml,
   buildCurrentDebtScorecardEntry,
   buildDealScorecardState,
   resolveCanonicalRefiDebtBasis,
@@ -13632,7 +13639,7 @@ export const __test__ = {
   buildLaunchSourceContextBlock,
   buildCapRateValueTable,
   resolveRentPositioningSectionTitle,
-  buildDocumentTreatmentSummaryHtml,
+  legacyOnlyBuildDocumentTreatmentSummaryHtml,
   buildHistoricalCapexDisplayCopy,
   stripEmptyHeadingBlocks,
   stripThinSectionPages,
@@ -13641,8 +13648,8 @@ export const __test__ = {
   buildRenovationDisplayCopy,
   buildFrameworkSensitivityDisplayCopy,
   buildRendererCanonicalState,
-  applyFinalSourceReconciliationRenderGuard,
-  applyFinalSectionHealRenderGuards,
+  legacyOnlyApplyFinalSourceReconciliationRenderGuard,
+  legacyOnlyApplyFinalSectionHealRenderGuards,
   buildScreeningIncomeForensicsHtml: screeningReportRenderer.buildScreeningIncomeForensicsHtml,
   buildScreeningExpenseStructureHtml: screeningReportRenderer.buildScreeningExpenseStructureHtml,
   buildScreeningNoiStabilityHtml: screeningReportRenderer.buildScreeningNoiStabilityHtml,
@@ -13659,7 +13666,7 @@ export const __test__ = {
   resolveSafeAnnualRentTotal,
   resolveOccupancyNoteValue,
   resolveCanonicalLoanTermSheetArtifacts,
-  buildCanonicalSupportDocAuthorityRows,
+  legacyOnlyBuildCanonicalSupportDocAuthorityRows,
   resolveCanonicalDataCoverageHeadlineState,
   normalizeVisibleReportClassification,
   resolveScreeningClassificationConsumerLabel: screeningReportRenderer.resolveScreeningClassificationConsumerLabel,

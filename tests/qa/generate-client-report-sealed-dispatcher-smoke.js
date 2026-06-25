@@ -10,19 +10,30 @@ assert.match(reportSource, /import \* as screeningReportRenderer from "\.\/_lib\
 
 assert.match(reportSource, /const isScreeningSealedLaneHarness = effectiveReportMode === "screening_v1";/);
 assert.match(reportSource, /const isSealedCustomerOutputHarness = Boolean\(acquisitionMemoV2OwnsFinalHtml \|\| isScreeningSealedLaneHarness\);/);
-assert.match(reportSource, /const harnessDocumentTreatmentHtml = isSealedCustomerOutputHarness\s*\?\s*""\s*:\s*buildDocumentTreatmentSummaryHtml/s);
+assert.match(reportSource, /const harnessDocumentTreatmentHtml = isSealedCustomerOutputHarness\s*\?\s*""\s*:\s*buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane/s);
 assert.match(reportSource, /else if \(!isSealedCustomerOutputHarness && typeof htmlString === "string" && htmlString\.includes\("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->"\)\)/);
 
 assert.match(reportSource, /const isAcqMemoV2FinalHtml = effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled/);
 assert.match(reportSource, /const isScreeningSealedLane = effectiveReportMode === "screening_v1";/);
 assert.match(reportSource, /const isSealedCustomerOutput = Boolean\(isAcqMemoV2FinalHtml \|\| isScreeningSealedLane\);/);
+assert.equal(
+  reportSource.includes("buildAcquisitionMemoV2FinalDeliveryDecision("),
+  false,
+  "Route must not build the final V2 delivery decision"
+);
 
 const firstFinalGuard = reportSource.indexOf("const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;");
-const firstFinalGuardCondition = reportSource.slice(reportSource.lastIndexOf("if (", firstFinalGuard), firstFinalGuard);
+const firstFinalGuardCondition = reportSource.slice(
+  reportSource.lastIndexOf("if (!isSealedCustomerOutput)", firstFinalGuard),
+  firstFinalGuard
+);
 assert.match(firstFinalGuardCondition, /!isSealedCustomerOutput/);
 
-const docFinalGuard = reportSource.indexOf("const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard");
-const docFinalGuardCondition = reportSource.slice(reportSource.lastIndexOf("if (", docFinalGuard), docFinalGuard);
+const docFinalGuard = reportSource.indexOf("const docFinalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard");
+const docFinalGuardCondition = reportSource.slice(
+  reportSource.lastIndexOf("if (!isSealedCustomerOutput)", docFinalGuard),
+  docFinalGuard
+);
 assert.match(docFinalGuardCondition, /!isSealedCustomerOutput/);
 
 const screeningDispatchAnchor = reportSource.indexOf("runScreeningReportPipeline({");
@@ -75,6 +86,7 @@ const finalHarnessPipelineAnchor = reportSource.indexOf("const finalHarnessBossC
 const fullHtmlSuccessAnchor = reportSource.indexOf("boss_compliance: acquisitionMemoV2Finalization?.bossCompliance || acquisitionMemoV2Finalization?.compliance || null", finalHarnessPipelineAnchor);
 assert.ok(finalHarnessPipelineAnchor >= 0, "V2 full-html success must run through the V2 pipeline");
 assert.ok(fullHtmlSuccessAnchor > finalHarnessPipelineAnchor, "V2 full-html success must expose post-pipeline compliance");
+assert.match(reportSource, /finalHarnessBossCompliance\.finalDeliveryDecision[\s\S]*finalHarnessBossCompliance\.deliveryState[\s\S]*null/);
 assert.match(reportSource, /if \(effectiveReportMode === "screening_v1"\) \{\s*const screeningFinalization = screeningReportRenderer\.buildScreeningCustomerOutput\(/s);
 
 const sealedOutputTerms = [

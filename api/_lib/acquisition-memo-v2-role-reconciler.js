@@ -311,3 +311,273 @@ export function reconcileAcquisitionMemoV2SupportDocRole({
     },
   };
 }
+
+function normalizeIdentityToken(value) {
+  const token = String(value ?? "").trim().toLowerCase();
+  return token.length > 0 ? token : "";
+}
+
+function collectRowText(row = {}, artifacts = []) {
+  const parts = [];
+  const push = (value) => {
+    const text = String(value ?? "").trim();
+    if (text) parts.push(text);
+  };
+  push(row?.source_text);
+  push(row?.raw_text);
+  push(row?.notes);
+  push(row?.loan_terms_text);
+  push(row?.extracted_text);
+  push(row?.document_text_extracted);
+  push(row?.text);
+  push(row?.excerpt);
+  push(row?.source_original_filename);
+  push(row?.original_filename);
+  push(row?.file_name);
+  push(row?.filename);
+  push(row?.semantic_doc_role);
+  push(row?.semantic_doc_display_label);
+  push(row?.semantic_doc_role_reason);
+  push(row?.debt_basis);
+  for (const artifact of Array.isArray(artifacts) ? artifacts : []) {
+    if (!artifact || typeof artifact !== "object") continue;
+    push(artifact?.source_text);
+    push(artifact?.raw_text);
+    push(artifact?.notes);
+    push(artifact?.loan_terms_text);
+    push(artifact?.extracted_text);
+    push(artifact?.document_text_extracted);
+    push(artifact?.text);
+    push(artifact?.excerpt);
+    push(artifact?.source_original_filename);
+    push(artifact?.original_filename);
+    push(artifact?.file_name);
+    push(artifact?.filename);
+    push(artifact?.semantic_doc_role);
+    push(artifact?.semantic_doc_display_label);
+    push(artifact?.semantic_doc_role_reason);
+    push(artifact?.debt_basis);
+    push(artifact?.payload?.source_text);
+    push(artifact?.payload?.raw_text);
+    push(artifact?.payload?.notes);
+    push(artifact?.payload?.loan_terms_text);
+    push(artifact?.payload?.extracted_text);
+    push(artifact?.payload?.document_text_extracted);
+    push(artifact?.payload?.text);
+    push(artifact?.payload?.excerpt);
+    push(artifact?.payload?.source_original_filename);
+    push(artifact?.payload?.original_filename);
+    push(artifact?.payload?.file_name);
+    push(artifact?.payload?.filename);
+    push(artifact?.payload?.semantic_doc_role);
+    push(artifact?.payload?.semantic_doc_display_label);
+    push(artifact?.payload?.semantic_doc_role_reason);
+    push(artifact?.payload?.debt_basis);
+  }
+  return parts.join("\n");
+}
+
+function getAcquisitionMemoV2SupportDocIdentityKey(row = {}) {
+  const filename = normalizeIdentityToken(row?.original_filename || row?.source_original_filename || row?.file_name || row?.filename);
+  if (filename) return `filename:${filename}`;
+  const id = [
+    row?.source_file_id,
+    row?.file_id,
+    row?.document_id,
+    row?.artifact_file_id,
+    row?.id,
+  ].map(normalizeIdentityToken).find(Boolean);
+  return id ? `id:${id}` : "";
+}
+
+function scoreAcquisitionMemoV2SupportDoc(row = {}, text = "") {
+  const normalizedText = String(text || "").toLowerCase();
+  const explicitRole = normalizeIdentityToken(row?.semantic_doc_role || row?.payload?.semantic_doc_role);
+  const debtBasis = normalizeIdentityToken(row?.debt_basis || row?.payload?.debt_basis);
+  const purchaseSignals =
+    explicitRole === "purchase_assumptions" ||
+    explicitRole === "loan_term_sheet" ||
+    debtBasis === "acquisition_financing_assumption" ||
+    /(purchase assumptions|proposed acquisition financing|purchase price|going[-\s]*in cap|noi basis|ltv|lender fee|financing fee|origination fee)/i.test(normalizedText);
+  const currentDebtSignals =
+    explicitRole === "current_debt_context" ||
+    explicitRole === "current_mortgage_statement" ||
+    debtBasis === "current_debt_context" ||
+    /(current debt|current mortgage|debt statement|outstanding principal|current outstanding balance|monthly payment|maturity date|amortization remaining|current loan balance)/i.test(normalizedText);
+  const renovationSignals =
+    /(renovation|capex|capital expenditure|capital budget|construction budget|scope of work|rent lift|phasing)/i.test(normalizedText);
+  const propertyTaxSignals =
+    /(property tax|tax bill|tax notice|municipal tax)/i.test(normalizedText);
+  const marketSurveySignals =
+    /(market survey|rent survey|rent comp|rent comparable)/i.test(normalizedText);
+  const environmentalSignals =
+    /(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(normalizedText);
+  const appraisalSignals =
+    /(appraisal|appraised value|valuation report|opinion of value)/i.test(normalizedText);
+  const evidenceBonus = (row?.validated === true ? 50 : 0) + (typeof row?.artifact_type === "string" && /_parsed$/i.test(String(row?.artifact_type)) ? 25 : 0);
+  if (currentDebtSignals) return 2000 + evidenceBonus;
+  if (purchaseSignals) return 1800 + evidenceBonus;
+  if (renovationSignals) return 1600 + evidenceBonus;
+  if (propertyTaxSignals) return 1400 + evidenceBonus;
+  if (marketSurveySignals) return 1200 + evidenceBonus;
+  if (environmentalSignals) return 1000 + evidenceBonus;
+  if (appraisalSignals) return 800 + evidenceBonus;
+  return 100 + evidenceBonus;
+}
+
+export function canonicalizeAcquisitionMemoV2DocumentTreatmentSources(documentSources = []) {
+  return buildAcquisitionMemoV2SupportDocAuthorityRows({
+    documentSources,
+  }).map((row) => ({
+    ...row,
+    canonical_document_treatment_identity_key: row?.canonical_document_treatment_identity_key || getAcquisitionMemoV2SupportDocIdentityKey(row),
+  }));
+}
+
+export function buildAcquisitionMemoV2SupportDocAuthorityRows({
+  documentSources = [],
+  artifacts = [],
+  loanTermSheetTermsPayload = null,
+  acquisitionTermsPayload = null,
+  mortgagePayload = null,
+  renovationPayload = null,
+  propertyTaxPayload = null,
+  appraisalPayload = null,
+} = {}) {
+  const rows = [
+    ...(Array.isArray(documentSources) ? documentSources : []),
+    ...(Array.isArray(artifacts) ? artifacts.map((artifact) => artifact?.payload || artifact).filter(Boolean) : []),
+    loanTermSheetTermsPayload,
+    acquisitionTermsPayload,
+    mortgagePayload,
+    renovationPayload,
+    propertyTaxPayload,
+    appraisalPayload,
+  ].filter((row) => row && typeof row === "object");
+
+  if (rows.length === 0) return [];
+
+  const grouped = new Map();
+  rows.forEach((row, index) => {
+    const key = getAcquisitionMemoV2SupportDocIdentityKey(row) || `row:${index}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push({ row, index });
+  });
+
+  const pickCanonical = (row = {}) => {
+    const text = collectRowText(row, artifacts);
+    const roleMatch = reconcileAcquisitionMemoV2SupportDocRole({ file: row, artifacts, acceptedTruth: row });
+    const explicitRole = normalizeIdentityToken(roleMatch?.acceptedSemanticDocRole || row?.semantic_doc_role || row?.payload?.semantic_doc_role);
+    const canonicalRole = roleMatch?.canonicalRole || null;
+    const canonicalLabel = roleMatch?.canonicalLabel || roleMatch?.acceptedSemanticDocDisplayLabel || row?.semantic_doc_display_label || row?.document_role_label || row?.roleLabel || "Other Support Document";
+    const treatmentLabel = roleMatch?.treatment || row?.treatment_label || row?.treatment || "Context only";
+    const useLabel = roleMatch?.use || row?.use_label || row?.use || "Listed for auditability only; not used quantitatively.";
+    const category = roleMatch?.category || row?.treatment_category || "Listed but Not Quantitatively Modeled";
+    const score = scoreAcquisitionMemoV2SupportDoc(row, text);
+
+    if (canonicalRole === "purchase_assumptions" || explicitRole === "purchase_assumptions") {
+      const purchasePrice = firstFinite(row?.purchase_price, row?.acquisition_price, row?.asking_price, row?.purchase_price_amount);
+      const noiBasis = firstFinite(row?.noi_basis, row?.net_operating_income_basis);
+      const goingInCapRate = firstFinite(row?.going_in_cap_rate);
+      const proposedLoanAmount = firstFinite(row?.derived_acquisition_loan_amount, row?.stated_acquisition_loan_amount, row?.loan_amount, row?.proposed_loan_amount);
+      const ltv = firstFinite(row?.ltv);
+      const interestRate = firstFinite(row?.interest_rate);
+      const amortYears = firstFinite(row?.amortization_years, row?.amort_years);
+      const lenderFeePercent = firstFinite(row?.lender_fee_percent, row?.closing_costs_percent, row?.financing_fee_percent, row?.origination_fee_percent);
+      return {
+        ...row,
+        canonical_support_doc_role: "purchase_assumptions",
+        semantic_doc_role: "purchase_assumptions",
+        semantic_doc_display_label: canonicalLabel || "Purchase Assumptions / Acquisition Context",
+        document_role_label: canonicalLabel || "Purchase Assumptions / Acquisition Context",
+        treatment_label: treatmentLabel || "Acquisition context / document-derived acquisition context",
+        use_label: useLabel || "Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth.",
+        treatment_category: category || "Displayed / Limited Use",
+        has_acquisition_support: true,
+        has_proposed_acquisition_financing: true,
+        purchase_price: purchasePrice,
+        acquisition_price: purchasePrice,
+        asking_price: row?.asking_price ?? null,
+        noi_basis: noiBasis,
+        going_in_cap_rate: goingInCapRate,
+        derived_acquisition_loan_amount: proposedLoanAmount,
+        stated_acquisition_loan_amount: firstFinite(row?.stated_acquisition_loan_amount, row?.loan_amount, row?.proposed_loan_amount),
+        loan_amount: firstFinite(row?.loan_amount, row?.proposed_loan_amount),
+        ltv,
+        interest_rate: interestRate,
+        amortization_years: amortYears,
+        amort_years: amortYears,
+        lender_fee_percent: lenderFeePercent,
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "purchase_assumptions_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "current_debt_context" || explicitRole === "current_debt_context" || explicitRole === "current_mortgage_statement") {
+      const outstandingBalance = firstFinite(row?.outstanding_balance, row?.current_outstanding_balance, row?.current_loan_balance);
+      const interestRate = firstFinite(row?.interest_rate);
+      const amortYears = firstFinite(row?.amortization_remaining_years, row?.amortization_years, row?.amort_years);
+      const monthlyPayment = firstFinite(row?.monthly_payment);
+      const ltv = firstFinite(row?.ltv);
+      return {
+        ...row,
+        canonical_support_doc_role: "current_debt_context",
+        semantic_doc_role: "current_debt_context",
+        semantic_doc_display_label: canonicalLabel || "Debt Support Received / Contextual",
+        document_role_label: canonicalLabel || "Debt Support Received / Contextual",
+        treatment_label: treatmentLabel || "Debt support received / contextual",
+        use_label: useLabel || "Uploaded existing/current debt context only; not proposed acquisition financing.",
+        treatment_category: category || "Displayed / Limited Use",
+        has_current_debt_context: true,
+        current_debt_context: true,
+        outstanding_balance: outstandingBalance,
+        current_outstanding_balance: outstandingBalance,
+        current_loan_balance: outstandingBalance,
+        interest_rate: interestRate,
+        amortization_years: amortYears,
+        amort_years: amortYears,
+        monthly_payment: monthlyPayment,
+        ltv,
+        debt_basis: "current_debt_context",
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "current_debt_evidence",
+        score,
+      };
+    }
+
+    return {
+      ...row,
+      canonical_support_doc_role: row?.canonical_support_doc_role || row?.semantic_doc_role || "other_support_context",
+      semantic_doc_role: row?.semantic_doc_role || row?.canonical_support_doc_role || null,
+      semantic_doc_display_label: canonicalLabel,
+      document_role_label: canonicalLabel,
+      treatment_label: treatmentLabel,
+      use_label: useLabel,
+      treatment_category: category,
+      canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+      authoritySource: roleMatch?.authorityBasis || "evidence_only",
+      score,
+    };
+  };
+
+  const authorityRows = [];
+  for (const [key, entries] of grouped.entries()) {
+    entries.sort((left, right) => scoreAcquisitionMemoV2SupportDoc(right.row, collectRowText(right.row, artifacts)) - scoreAcquisitionMemoV2SupportDoc(left.row, collectRowText(left.row, artifacts)) || left.index - right.index);
+    const winner = entries[0]?.row || {};
+    const canonical = pickCanonical(winner);
+    authorityRows.push({
+      ...canonical,
+      original_filename: String(canonical?.original_filename || canonical?.source_original_filename || canonical?.file_name || canonical?.filename || "").trim(),
+      canonical_support_doc_identity_key: key,
+      canonical_document_treatment_identity_key: key,
+      allowed_uses: [canonical?.use_label || "Listed for auditability only; not used quantitatively."],
+      forbidden_uses: [
+        "Does not override T12 or Rent Roll core truth.",
+        "Does not open DSCR, refinance, DCF, waterfall, equity return, deal score, or final recommendation surfaces.",
+      ],
+    });
+  }
+
+  return authorityRows.filter((row) => String(row?.original_filename || "").trim().length > 0);
+}

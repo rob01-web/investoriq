@@ -10,7 +10,7 @@ assert.match(reportSource, /import \* as screeningReportRenderer from "\.\/_lib\
 assert.match(reportSource, /const isScreeningSealedLane = effectiveReportMode === "screening_v1";/);
 assert.match(reportSource, /const isSealedCustomerOutput = Boolean\(isAcqMemoV2FinalHtml \|\| isScreeningSealedLane\);/);
 assert.match(reportSource, /if \(!isSealedCustomerOutput\) \{\s*const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;/s);
-assert.match(reportSource, /if \(!isSealedCustomerOutput\) \{\s*const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard/s);
+assert.match(reportSource, /if \(!isSealedCustomerOutput\) \{\s*const docFinalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard/s);
 assert.match(reportSource, /screeningReportRenderer\.resolveScreeningClassificationConsumerLabel\(/);
 assert.match(reportSource, /screeningReportRenderer\.sanitizeScreeningRankedDriversHtml\(/);
 assert.match(reportSource, /screeningReportRenderer\.buildScreeningIncomeForensicsHtml\(/);
@@ -51,7 +51,7 @@ for (const snippet of legacyOnlyRouteOwnedScreeningHelperSnippets) {
 const screeningLaneAnchor = reportSource.search(/\b(?:const|let)\s+screeningLaneOutput\s*=/);
 const screeningPipelineCallAnchor = reportSource.indexOf("runScreeningReportPipeline({", screeningLaneAnchor);
 const screeningSealedQaAssignmentAnchor = reportSource.search(/qaHtml = screeningLaneOutput\.qaHtml \|\| screeningLaneOutput\.html;/);
-const acquisitionTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({", screeningLaneAnchor);
+const acquisitionTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({", screeningLaneAnchor);
 const v2FinalAssignmentAnchor = reportSource.indexOf("finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;", screeningLaneAnchor);
 
 assert.ok(screeningLaneAnchor >= 0, "Missing Screening sealed lane output anchor");
@@ -70,8 +70,11 @@ const finalQaGuardAnchor = reportSource.indexOf("const qaHtmlBeforeFinalSourceRe
 const finalQaGuardCondition = reportSource.slice(reportSource.lastIndexOf("if (", finalQaGuardAnchor), finalQaGuardAnchor);
 assert.match(finalQaGuardCondition, /!isSealedCustomerOutput/);
 
-const finalDocGuardAnchor = reportSource.indexOf("const docFinalSourceReconciliationGuard = applyFinalSourceReconciliationRenderGuard");
-const finalDocGuardCondition = reportSource.slice(reportSource.lastIndexOf("if (", finalDocGuardAnchor), finalDocGuardAnchor);
+const finalDocGuardAnchor = reportSource.indexOf("const docFinalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard");
+const finalDocGuardCondition = reportSource.slice(
+  reportSource.lastIndexOf("if (!isSealedCustomerOutput)", finalDocGuardAnchor),
+  finalDocGuardAnchor
+);
 assert.match(finalDocGuardCondition, /!isSealedCustomerOutput/);
 
 assert.equal(/acquisition-memo-v2/i.test(screeningPipelineSource), false);

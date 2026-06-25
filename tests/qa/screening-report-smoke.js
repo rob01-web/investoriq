@@ -116,7 +116,7 @@ assert.equal(/Preliminary Financing Readiness Summary/i.test(screeningBranchSour
 assert.equal(/Source Context \/ Support Document Treatment/i.test(screeningBranchSource), false);
 
 const screeningLaneOutputAnchor = reportSource.search(/\b(?:const|let)\s+screeningLaneOutput\s*=/);
-const acquisitionDocTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildDocumentTreatmentSummaryHtml({");
+const acquisitionDocTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({");
 const v2FinalizationAnchor = reportSource.indexOf('if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection)', screeningLaneOutputAnchor);
 assert.ok(screeningLaneOutputAnchor >= 0, "Missing screening lane output anchor");
 assert.ok(acquisitionDocTreatmentAnchor >= 0, "Missing acquisition document-treatment anchor");
