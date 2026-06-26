@@ -76,6 +76,145 @@ function isEligiblePositiveExpenseDriver(row) {
   return !/\b(?:Total Operating Expenses|Total Expenses|subtotal|total|Effective Gross Income|EGI|Gross Potential Rent|GPR|NOI)\b/i.test(label);
 }
 
+function buildScreeningUnitMixRows(unitMix = [], totalUnits = null, formatValue = formatCurrency) {
+  const rows = Array.isArray(unitMix) ? unitMix : [];
+  const total = Number(totalUnits);
+  return rows
+    .map((row) => {
+      const unitType = String(row?.unit_type ?? row?.name ?? row?.label ?? "").trim();
+      if (!unitType) return "";
+      const unitCount = Number(row?.unit_count ?? row?.count);
+      const share = Number.isFinite(unitCount) && Number.isFinite(total) && total > 0
+        ? `${((unitCount / total) * 100).toFixed(1)}%`
+        : "";
+      const inPlace = coerceNumber(row?.avg_in_place_rent ?? row?.in_place_rent);
+      const market = coerceNumber(row?.avg_market_rent ?? row?.market_rent);
+      const avgSqft = coerceNumber(row?.avg_sqft);
+      return `<tr><td>${escapeHtml(unitType)}</td><td>${Number.isFinite(unitCount) ? unitCount : ""}</td><td>${share}</td><td>${Number.isFinite(inPlace) ? formatValue(inPlace) : ""}</td><td>${Number.isFinite(market) ? formatValue(market) : ""}</td><td>${Number.isFinite(avgSqft) ? avgSqft.toLocaleString("en-CA", { maximumFractionDigits: 0 }) : ""}</td></tr>`;
+    })
+    .filter(Boolean)
+    .join("");
+}
+
+function buildScreeningExecVerdictExpansion({
+  computedRentRoll = null,
+  rentRollPayload = null,
+  screeningVisibleClassificationForConsumers = "",
+  expenseRatioR = null,
+  noiMarginR = null,
+  breakEvenOccR = null,
+  sourceReconciliationNarrativePolicy = null,
+  hasSourceReconciliationVariance = false,
+  screeningExplanation = "",
+} = {}) {
+  const rrOccNow = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
+  const rrInPlace = coerceNumber(computedRentRoll?.total_in_place_annual ?? computedRentRoll?.annual_in_place_rent);
+  const rrMarket = coerceNumber(computedRentRoll?.total_market_annual ?? computedRentRoll?.annual_market_rent);
+  const rrUpsidePct = coerceNumber(computedRentRoll?.rent_to_market_gap) ??
+    (Number.isFinite(rrInPlace) && Number.isFinite(rrMarket) && rrInPlace > 0 ? (rrMarket - rrInPlace) / rrInPlace : null);
+  const erPctStr = Number.isFinite(expenseRatioR) ? `${(expenseRatioR * 100).toFixed(1)}%` : null;
+  const nmPctStr = Number.isFinite(noiMarginR) ? `${(noiMarginR * 100).toFixed(1)}%` : null;
+  const parts = [];
+  if (Number.isFinite(rrOccNow)) parts.push(`The property is ${formatPercent1(rrOccNow)} occupied`);
+  if (Number.isFinite(rrUpsidePct) && rrUpsidePct > 0) parts.push(`carries reported rent-to-market upside of ${formatPercent1(rrUpsidePct)}`);
+  let thesisText = parts.length > 0 ? `${parts.join(" and ")}. ` : "";
+  if (screeningVisibleClassificationForConsumers === "Sensitized" && erPctStr && nmPctStr) {
+    thesisText += `NOI margin compression to ${nmPctStr}, primarily attributable to a ${erPctStr} expense ratio, supports a Sensitized classification. Operating improvement sensitivity is tied to expense-ratio reduction and the observed rent-to-market gap.`;
+  } else if (screeningVisibleClassificationForConsumers === "Fragile" && erPctStr) {
+    thesisText += `An expense ratio of ${erPctStr} and compressed margins classify the profile as Fragile. Material operational improvement is required.`;
+  } else if (screeningVisibleClassificationForConsumers === "Stable") {
+    thesisText += "Operating results remain stable based on uploaded operating data.";
+  } else if (screeningExplanation) {
+    thesisText += screeningExplanation;
+  }
+  const frameworkNote =
+    sourceReconciliationNarrativePolicy?.data_coverage_required === true && hasSourceReconciliationVariance
+      ? "Source reconciliation disclosure remains active. Variance-sensitive conclusions should be treated as constrained until T12 and rent roll evidence reconcile."
+      : "Signals are derived deterministically from uploaded operating evidence only. No financing, debt sizing, or return projection modules are included.";
+  const frameworkCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Framework Note</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(frameworkNote)}</p><p class="small" style="color:#64748b;font-style:italic;">Advanced financing and return-projection modules are outside the Screening Report scope.</p></div>`;
+  const thesisCard = thesisText
+    ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from reported metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
+    : "";
+  return `${frameworkCard}${thesisCard}`;
+}
+
+function buildScreeningExecClassificationRationale({
+  reportMode = "screening_v1",
+  screeningVisibleClassificationForConsumers = "",
+  expenseRatioR = null,
+  noiMarginR = null,
+  breakEvenOccR = null,
+  screeningExplanation = "",
+  screeningClass = "",
+} = {}) {
+  if (reportMode !== "screening_v1") return "";
+  const erStr = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
+  const nmStr = Number.isFinite(noiMarginR) ? formatPercent1(noiMarginR) : null;
+  const beoStr = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
+  if (screeningVisibleClassificationForConsumers === "Stable") {
+    const parts = [];
+    if (erStr) parts.push(`expense ratio of ${erStr}`);
+    if (nmStr) parts.push(`NOI margin of ${nmStr}`);
+    if (beoStr) parts.push(`break-even occupancy of ${beoStr}`);
+    return parts.length > 0
+      ? `Classified STABLE: ${parts.join(", ")} are within institutional operating thresholds.`
+      : "Classified STABLE: operating metrics remain within defined screening thresholds.";
+  }
+  if (screeningVisibleClassificationForConsumers === "Sensitized") {
+    const breaches = [];
+    if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55 && erStr) breaches.push(`elevated operating expense burden (${erStr}) breaches the sensitized threshold`);
+    if (Number.isFinite(noiMarginR) && noiMarginR < 0.45 && nmStr) breaches.push(`compressed NOI margin (${nmStr}) breaches the sensitized threshold`);
+    if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75 && beoStr) breaches.push(`break-even occupancy of ${beoStr} exceeds the 75.0% sensitized threshold`);
+    return breaches.length > 0
+      ? `Operating profile classified as SENSITIZED: ${breaches.join("; ")}.`
+      : `Operating profile classified as SENSITIZED: ${screeningExplanation}`;
+  }
+  if (screeningVisibleClassificationForConsumers === "Fragile") {
+    const breaches = [];
+    if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65 && erStr) breaches.push(`expense ratio of ${erStr} breaches the 65.0% fragile threshold`);
+    if (Number.isFinite(noiMarginR) && noiMarginR < 0.35 && nmStr) breaches.push(`NOI margin of ${nmStr} is critically compressed`);
+    if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85 && beoStr) breaches.push(`break-even occupancy of ${beoStr} breaches the 85.0% fragile threshold`);
+    return breaches.length > 0
+      ? `Classified FRAGILE: ${breaches.join("; ")}.`
+      : `Classified FRAGILE: ${screeningExplanation}`;
+  }
+  if (screeningVisibleClassificationForConsumers === "Review - Source Reconciliation Disclosure") {
+    return "Classification is capped by source reconciliation disclosure pending reconciliation of rent roll and T12 evidence.";
+  }
+  if (screeningVisibleClassificationForConsumers === "Review - Insufficient Core Support") {
+    return "Classification is capped by insufficient core support. Required core operating evidence remains incomplete.";
+  }
+  if (screeningClass === "Insufficient Data") {
+    return "Insufficient operating data to determine classification.";
+  }
+  return "";
+}
+
+function buildScreeningUpsidePathwayHtml({
+  computedRentRoll = null,
+  rentRollPayload = null,
+  formatCurrency,
+  rrUnits = null,
+} = {}) {
+  const totalUnits = Number.isFinite(Number(rrUnits))
+    ? Number(rrUnits)
+    : coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+  const annualTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
+  const annualInPlace = coerceNumber(annualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place);
+  const annualMarket = coerceNumber(annualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
+  if (!Number.isFinite(annualInPlace) || annualInPlace <= 0 || !Number.isFinite(annualMarket) || annualMarket <= annualInPlace) {
+    return "";
+  }
+  const annualGap = annualMarket - annualInPlace;
+  const capRates = [5.0, 6.0, 7.0];
+  const capRows = capRates.map((cap) => {
+    const impliedLift = annualGap / (cap / 100);
+    return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}% cap rate</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
+  }).join("");
+  const unitLabel = Number.isFinite(totalUnits) && totalUnits > 0 ? `${totalUnits.toLocaleString("en-CA")} units` : "current unit mix";
+  return `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;"><p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway: Mark-to-Market Analysis</p><div class="grid-2"><div><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual In-Place Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualInPlace)}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr><tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr></tbody></table><p class="small" style="margin-top:6px;">Source-bound summary for ${escapeHtml(unitLabel)} only. No debt sizing, refinance, or return recommendation is implied.</p></div><div><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table><p class="small" style="margin-top:6px;">Implied value sensitivity reflects annual rent gap capitalized at the selected cap-rate assumption and remains conditional on market-rent capture and occupancy.</p></div></div></div>`;
+}
+
 export function resolveScreeningClassificationConsumerLabel({
   canonicalVisibleLabel = "",
   localVisibleLabel = "",
@@ -586,6 +725,9 @@ export function buildScreeningCustomerOutput({
   sourceReconciliationCapActive = false,
   coreSupportInsufficient = false,
   debtCoverageConstraintActive = false,
+  upsideHtml = "",
+  risksHtml = "",
+  screeningExplanation = "",
 } = {}) {
   let html = String(finalHtml || "");
 
@@ -840,6 +982,76 @@ export function buildScreeningCustomerOutput({
 
   if (reportMode === "screening_v1") {
     html = html.replace(/<p class="small" style="margin-top:8px;">\s*This report is a preliminary investment screening memorandum\. Full refinance, debt, and valuation modeling are provided in the Underwriting Report\.\s*<\/p>/i, "");
+  }
+
+  if (reportMode === "screening_v1") {
+    const suppressUnitLevelRentLift = computedRentRoll?.is_partial_sample === true;
+    const unitMix = suppressUnitLevelRentLift ? null : computedRentRoll?.unit_mix || rentRollPayload?.unit_mix;
+    const totalUnits = computedRentRoll?.total_units ?? rentRollPayload?.total_units ?? rrUnits;
+    const unitMixRows = suppressUnitLevelRentLift
+      ? ""
+      : buildScreeningUnitMixRows(unitMix, totalUnits, formatCurrency);
+    const descriptorUnits = Number.isFinite(Number(rrUnits))
+      ? Number(rrUnits)
+      : coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+    const descriptorLine = Number.isFinite(descriptorUnits) && descriptorUnits > 0
+      ? `${descriptorUnits}-Unit Multifamily`
+      : "";
+    const documentSourcesTableHtml = String(documentSourcesHtml || "").trim()
+      ? documentSourcesHtml
+      : Array.isArray(documentSources) && documentSources.length > 0
+        ? '<p class="small">Document source transparency is required for this report scope. Structured source-treatment details were not available at render time.</p>'
+        : "";
+    const execVerdictExpansionHtml = buildScreeningExecVerdictExpansion({
+      computedRentRoll,
+      rentRollPayload,
+      screeningVisibleClassificationForConsumers,
+      expenseRatioR,
+      noiMarginR,
+      breakEvenOccR,
+      sourceReconciliationNarrativePolicy,
+      hasSourceReconciliationVariance,
+      screeningExplanation,
+    });
+    const execClassificationRationale = buildScreeningExecClassificationRationale({
+      reportMode,
+      screeningVisibleClassificationForConsumers,
+      expenseRatioR,
+      noiMarginR,
+      breakEvenOccR,
+      screeningExplanation,
+      screeningClass,
+    });
+    const unitValueAddUpsidePathwayHtml = buildScreeningUpsidePathwayHtml({
+      computedRentRoll,
+      rentRollPayload,
+      formatCurrency,
+      rrUnits,
+    });
+
+    html = replaceAll(html, "{{EXEC_VERDICT_EXPANSION}}", execVerdictExpansionHtml);
+    html = replaceAll(html, "{{KEY_UPSIDE_DRIVERS_BULLETS}}", String(upsideHtml || ""));
+    html = replaceAll(html, "{{KEY_RISKS_BULLETS}}", String(risksHtml || ""));
+    html = replaceAll(html, "{{PRELIMINARY_FINANCING_READINESS_SUMMARY_BLOCK}}", "");
+    html = stripMarkedSection(html, "SECTION_0_8_PRELIMINARY_FINANCING_READINESS_SUMMARY");
+    if (!descriptorLine) {
+      html = stripMarkedSection(html, "PROPERTY_DESCRIPTOR_LINE");
+    } else {
+      html = replaceAll(html, "{{PROPERTY_DESCRIPTOR_LINE}}", descriptorLine);
+    }
+    html = html.replace(/ - \s*,\s*/g, "");
+    html = html.replace(/-\s*,\s*/g, "");
+    html = html.replace(/\s*,\s*<\/h1>/g, "</h1>");
+    html = replaceAll(html, "{{UNIT_MIX_ROWS}}", unitMixRows);
+    html = replaceAll(html, "{{UNIT_VALUE_ADD_RIGHT_COLUMN}}", "");
+    html = replaceAll(html, "{{UNIT_VALUE_ADD_UPSIDE_PATHWAY}}", unitValueAddUpsidePathwayHtml);
+    html = replaceAll(html, "{{DOCUMENT_SOURCES_TABLE}}", documentSourcesTableHtml);
+    html = replaceAll(html, "{{EXEC_CLASSIFICATION_RATIONALE}}", execClassificationRationale);
+    html = html.replace(/^\s*\{\{EXEC_CLASSIFICATION_RATIONALE\}\}\s*$/gm, "");
+    const leftoverTokens = html.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
+    leftoverTokens.forEach((token) => {
+      html = html.replaceAll(token, "");
+    });
   }
 
   return {

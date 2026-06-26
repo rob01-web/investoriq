@@ -19,17 +19,12 @@ import { buildQaFixRouting } from "./_lib/qa-fix-routing.js";
 import { buildQaActionPlan, buildDeliveryGateDecision, buildCanonicalDeliveryDecisionState } from "./_lib/qa-action-plan.js";
 import {
   buildAcquisitionAssumptionState,
-  buildAssumptionAttributionState,
   buildCurrentDebtAssessmentState,
   buildCanonicalDisplayVerdictState,
   buildCanonicalVisibleClassificationState,
   buildFullUnderwritingSectionEligibility,
   dedupeRenovationMetricRows,
-  formatAssumptionAttributionLabel,
-  formatCurrentDebtAssessmentCopy,
   buildSourceReconciliationRenderState,
-  buildSupportDocTaxonomyState,
-  resolveCanonicalSupportDocAuthority,
   resolveCanonicalRentRollAnnualTotals,
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
@@ -37,6 +32,11 @@ import {
   buildSourceReconciliationNarrativeProminencePolicy,
   sanitizeFinalCustomerHtml,
 } from "./_lib/report-surface-contracts.js";
+import {
+  buildAssumptionAttributionState,
+  formatAssumptionAttributionLabel,
+  formatCurrentDebtAssessmentCopy,
+} from "./_lib/acquisition-memo-v2-surface-copy.js";
 import { buildCanonicalSourcePackage } from "./_lib/canonical-source-package.js";
 import { buildAcquisitionMemoProjection } from "./_lib/acquisition-memo-projection.js";
 import { renderAcquisitionMemo } from "./_lib/acquisition-memo-renderer.js";
@@ -57,6 +57,10 @@ import {
 } from "./_lib/acquisition-memo-v2-document.js";
 import { runScreeningReportPipeline } from "./_lib/screening-report-pipeline.js";
 import * as screeningReportRenderer from "./_lib/screening-report-renderer.js";
+import {
+  buildSupportDocTaxonomyState,
+  resolveCanonicalSupportDocAuthority,
+} from "./_lib/support-doc-taxonomy.js";
 import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
@@ -2593,6 +2597,35 @@ function legacyOnlyCanonicalizeDocumentTreatmentSources(documentSources = []) {
             has_renovation_phasing: false,
           };
         }
+        if (explicitRole === "historical_capex_only") {
+          const rowText = winnerText;
+          const totalBudget = firstFinite(
+            winner.row?.total_budget,
+            winner.row?.total_capex,
+            winner.row?.renovation_budget,
+            extractMoneyNearLabels(rowText, [
+              "total renovation budget",
+              "renovation budget",
+              "capex budget",
+              "capital budget",
+            ])
+          );
+          return {
+            canonical_support_doc_role: "historical_capex_only",
+            semantic_doc_role: "historical_capex_only",
+            semantic_doc_display_label: "Historical Capital Items",
+            document_role_label: "Historical Capital Items",
+            treatment_label: "Context only",
+            use_label: "Historical capital items are displayed for context only.",
+            treatment_category: "Displayed / Limited Use",
+            has_structured_renovation_budget: false,
+            total_budget: totalBudget,
+            budget_rows: Array.isArray(winner.row?.budget_rows) ? winner.row.budget_rows : [],
+            execution_rows: Array.isArray(winner.row?.execution_rows) ? winner.row.execution_rows : [],
+            has_renovation_rent_lift: false,
+            has_renovation_phasing: false,
+          };
+        }
       if (explicitRole === "purchase_assumptions") {
         return {
           canonical_support_doc_role: "purchase_assumptions",
@@ -3510,6 +3543,11 @@ function legacyOnlyBuildDocumentTreatmentSummaryHtml({
   };
   const hasHistoricalOnlyRenovationEvidence = (row = null) => {
     const payloadText = [
+      row?.original_filename,
+      row?.source_text,
+      row?.raw_text,
+      row?.notes,
+      row?.extracted_text,
       renovationPayload?.timing_or_phasing,
       renovationPayload?.interpretation,
       renovationPayload?.budget_note,
@@ -3770,7 +3808,8 @@ function legacyOnlyBuildDocumentTreatmentSummaryHtml({
       hasUsefulCanonicalRole
         ? effectiveCanonicalRole === "renovation_budget" ||
           effectiveCanonicalRole === "structured_renovation_capex_plan" ||
-          effectiveCanonicalRole === "renovation_capex_budget_context"
+          effectiveCanonicalRole === "renovation_capex_budget_context" ||
+          effectiveCanonicalRole === "historical_capex_only"
         : /(^|\b)(renovation|renovation_budget|capex|cap ex|capital expenditure|capital plan|capital budget)(\b|$)/.test(semanticText);
     const supportedLoanTerms =
       hasUsefulCanonicalRole
@@ -9156,6 +9195,18 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       effectiveReportMode === "screening_v1"
         ? (screeningClass === "Fragile" ? "Fragile" : screeningClass)
         : (screeningClass === "Fragile" ? "Fragile" : screeningClass);
+    let sourceCoverageQaResult = null;
+    let renderedQaResult = null;
+    let renderedQaStatus = "not_run";
+    let qaFixRoutingResult = null;
+    let qaManagerReviewResult = null;
+    let reportContractQaResult = null;
+    let qaActionPlanResult = null;
+    let qaDirectorReviewResult = null;
+    let deliveryGateDecisionResult = null;
+    let deliveryDecisionStateResult = null;
+    let sourcePackageQaResult = null;
+
     const computedVisibleLabelInputs = {
       baseClass: baseVisibleClass,
       sourceReconciliationCapActive,
@@ -9237,12 +9288,16 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         sourceCoverageQa: sourceCoverageQaResult,
         documentSources,
         underwritingState,
-        renovationReturnAssumptionsPresent,
-        renovationDisplayMode,
-        renovationPayload,
+        renovationReturnAssumptionsPresent: false,
+        renovationDisplayMode: null,
+        renovationPayload: null,
         propertyTaxPayload,
         propertyTaxBindingState,
         documentQuantitativeUsageMap,
+        documentSourcesHtml,
+        upsideHtml,
+        risksHtml,
+        screeningExplanation,
       });
       const sealedScreeningOutput = runScreeningReportPipeline({
         finalHtml: screeningFinalization.html,
@@ -11495,13 +11550,16 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         sectionEligibilityState,
         dataCoverageState,
         optionalSectionState,
-        renovationReturnAssumptionsPresent,
-        renovationDisplayMode,
-        renovationPayload,
+        renovationReturnAssumptionsPresent: false,
+        renovationDisplayMode: null,
+        renovationPayload: null,
         propertyTaxPayload,
         propertyTaxBindingState,
         documentQuantitativeUsageMap,
         documentSourcesHtml,
+        upsideHtml,
+        risksHtml,
+        screeningExplanation,
         canRenderRefi,
         debtCapitalRowsHtml,
         refiCollapseGridHtml,
@@ -12639,17 +12697,6 @@ if (finalSourceReconciliationGuard.replaced_or_suppressed) {
 }
 }
 let docHtml = qaHtml;
-let sourceCoverageQaResult = null;
-let renderedQaResult = null;
-let renderedQaStatus = "not_run";
-let qaFixRoutingResult = null;
-let qaManagerReviewResult = null;
-let reportContractQaResult = null;
-let qaActionPlanResult = null;
-let qaDirectorReviewResult = null;
-let deliveryGateDecisionResult = null;
-let deliveryDecisionStateResult = null;
-let sourcePackageQaResult = null;
 try {
   const supportDocAuthorityRowsForQa = canonicalSupportDocAuthorityRows;
   const sourceCoverageQa = buildSourceReportCoverageQa({

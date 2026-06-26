@@ -8,10 +8,12 @@ import {
 import { classifyOpenAiError } from "../../lib/openai-error-classifier.js";
 import {
   buildAcquisitionAssumptionState,
-  buildSupportDocTaxonomyState,
   hasCurrentDebtSemanticState,
-  resolveSupportDocDisplayLabel,
 } from "./report-surface-contracts.js";
+import {
+  buildSupportDocTaxonomyState,
+  resolveSupportDocDisplayLabel,
+} from "./support-doc-taxonomy.js";
 
 const SOURCE_PACKAGE_QA_VERSION = "2026.05.07.1";
 const DEFAULT_MODEL =

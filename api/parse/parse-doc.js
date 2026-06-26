@@ -15,7 +15,7 @@ import {
 } from '../../lib/ai-support-doc-recovery.js';
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
-import { buildSupportDocTaxonomyState } from '../_lib/report-surface-contracts.js';
+import { buildSupportDocTaxonomyState } from '../_lib/support-doc-taxonomy.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 

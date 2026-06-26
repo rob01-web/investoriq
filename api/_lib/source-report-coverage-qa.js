@@ -7,11 +7,13 @@ import {
   buildCoreInputSufficiencyState,
   buildRentRollSufficiencyState,
   buildT12SufficiencyState,
-  buildSupportDocTaxonomyState,
   buildSourceReconciliationState,
   hasCurrentDebtSemanticState,
-  resolveSupportDocDisplayLabel,
 } from "./report-surface-contracts.js";
+import {
+  buildSupportDocTaxonomyState,
+  resolveSupportDocDisplayLabel,
+} from "./support-doc-taxonomy.js";
 
 function asNumber(value) {
   const n = Number(value);
