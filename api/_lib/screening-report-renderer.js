@@ -62,6 +62,22 @@ function resolveCanonicalT12GprValue(t12Payload = null) {
   );
 }
 
+export function buildT12PerUnitRows(t12EgiValue = null, t12TotalExpensesValue = null, t12NoiValue = null, rrUnits = null, formatCurrencyFn = formatCurrency) {
+  const unitCount = Number.isFinite(Number(rrUnits)) ? Number(rrUnits) : null;
+  const divisor = Math.max(1, Number(unitCount) || 1);
+  const rows = [];
+  if (Number.isFinite(t12EgiValue)) {
+    rows.push(`<tr><td>EGI / Unit</td><td>${formatCurrencyFn(t12EgiValue / divisor)}</td></tr>`);
+  }
+  if (Number.isFinite(t12TotalExpensesValue)) {
+    rows.push(`<tr><td>OpEx / Unit</td><td>${formatCurrencyFn(t12TotalExpensesValue / divisor)}</td></tr>`);
+  }
+  if (Number.isFinite(t12NoiValue)) {
+    rows.push(`<tr><td>NOI / Unit</td><td>${formatCurrencyFn(t12NoiValue / divisor)}</td></tr>`);
+  }
+  return rows.join("");
+}
+
 function isEligiblePositiveIncomeDriver(row) {
   const label = String(row?.label || "").trim();
   const amount = coerceNumber(row?.amount);
@@ -992,17 +1008,7 @@ export function buildScreeningCustomerOutput({
   html = replaceAll(html, "{{T12_TOTAL_EXPENSES}}", Number.isFinite(localT12TotalExpensesValue) ? formatCurrency(localT12TotalExpensesValue) : DATA_NOT_AVAILABLE);
   html = replaceAll(html, "{{T12_NOI}}", Number.isFinite(localT12NoiValue) ? formatCurrency(localT12NoiValue) : DATA_NOT_AVAILABLE);
   html = replaceAll(html, "{{T12_EXPENSE_RATIO}}", t12ExpenseRatioValue);
-  const localRrUnits = Number.isFinite(rrUnits)
-    ? rrUnits
-    : Number(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
-  const t12PerUnitRows = Number.isFinite(localT12EgiValue) || Number.isFinite(localT12TotalExpensesValue) || Number.isFinite(localT12NoiValue)
-    ? [
-        Number.isFinite(localT12EgiValue) ? `<tr><td>EGI / Unit</td><td>${formatCurrency(localT12EgiValue / Math.max(1, Number(localRrUnits) || 1))}</td></tr>` : "",
-        Number.isFinite(localT12TotalExpensesValue) ? `<tr><td>OpEx / Unit</td><td>${formatCurrency(localT12TotalExpensesValue / Math.max(1, Number(localRrUnits) || 1))}</td></tr>` : "",
-        Number.isFinite(localT12NoiValue) ? `<tr><td>NOI / Unit</td><td>${formatCurrency(localT12NoiValue / Math.max(1, Number(localRrUnits) || 1))}</td></tr>` : "",
-      ].filter(Boolean).join("")
-    : "";
-  html = replaceAll(html, "{{T12_PER_UNIT_ROWS}}", t12PerUnitRows);
+  html = replaceAll(html, "{{T12_PER_UNIT_ROWS}}", buildT12PerUnitRows(localT12EgiValue, localT12TotalExpensesValue, localT12NoiValue, rrUnits));
 
   html = stripEmptyHeadingBlocks(html);
   html = stripChartBlockByAlt(html, "Deal Score Radar");

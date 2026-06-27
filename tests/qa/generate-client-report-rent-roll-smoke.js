@@ -7,7 +7,7 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-run-key";
 
-const { __test__: rawGeneratorTest } = await import("../../api/_lib/generate-client-report-impl.js");
+const renderHelpers = await import("../../api/_lib/report-surface-render-helpers.js");
 const {
   buildCanonicalSupportDocAuthorityRows,
   buildDocumentTreatmentSummaryHtml,
@@ -19,6 +19,7 @@ const {
   buildFrameworkSensitivityDisplayCopy,
 } = await import("../../api/_lib/document-treatment-authority.js");
 const { buildFinancingEnvelopeGrid } = await import("../../api/_lib/screening-report-renderer.js");
+const { resolveScreeningClassificationConsumerLabel } = await import("../../api/_lib/screening-report-renderer.js");
 const {
   buildAcquisitionMemoSummaryCard,
   buildOperatingSnapshotCard,
@@ -66,7 +67,7 @@ const escapeHtmlForTest = (value) => String(value ?? "")
   .replace(/"/g, "&quot;")
   .replace(/'/g, "&#39;");
 const generatorTest = {
-  ...rawGeneratorTest,
+  ...renderHelpers,
   buildCanonicalSupportDocAuthorityRows,
   buildDocumentTreatmentSummaryHtml,
   buildPreliminaryFinancingReadinessSummaryHtml,
@@ -77,6 +78,7 @@ const generatorTest = {
   resolveRenovationDisplayMode,
   buildFrameworkSensitivityDisplayCopy,
   buildFinancingEnvelopeGrid: (noi, units) => buildFinancingEnvelopeGrid(noi, units, { formatCurrency, escapeHtml: escapeHtmlForTest }),
+  resolveScreeningClassificationConsumerLabel,
   buildAcquisitionMemoSummaryCard,
   buildOperatingSnapshotCard,
   buildRentUpsideValueSensitivityCard,
@@ -107,12 +109,13 @@ const healQaCoverage = {
     rent_roll_parsed: { present: true, unit_count: 10, occupancy: 1 },
   },
 };
-const reportSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
+const handlerSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
+const reportSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const contractsSource = fs.readFileSync("api/_lib/report-surface-contracts.js", "utf8");
 const templateSource = fs.readFileSync("api/report-template-runtime.html", "utf8");
-assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(reportSource), false);
-assert.match(reportSource, /Document-Backed Screening Outputs/);
-assert.match(reportSource, /Document-Backed Acquisition Memo Outputs/);
+assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(handlerSource), false);
+assert.match(handlerSource, /import implHandler from "\.\/generate-client-report-impl\.js";/);
+assert.match(handlerSource, /export default async function handler\(req, res\) \{\s+return implHandler\(req, res\);\s+\}/s);
 const legacyFallbackCallCount = (reportSource.match(/resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/g) || []).length;
 assert.equal(legacyFallbackCallCount, 2);
 assert.ok(
@@ -643,7 +646,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /const canonicalOccupancyNoteValue = resolveOccupancyNoteValue\(computedRentRoll, rentRollPayload\)/
+  /const occupancyValue = resolveOccupancyNoteValue\(computedRentRoll, rentRollPayload\)/
 );
 assert.match(
   reportSource,
@@ -1366,7 +1369,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /const isPartialRentRollSample =\s*computedRentRoll\?\.is_partial_sample === true \|\|\s*rentRollPayload\?\.is_partial_sample === true/
+  /const suppressUnitLevelRentLift =\s*computedRentRoll\?\.is_partial_sample === true/
 );
 assert.match(
   reportSource,

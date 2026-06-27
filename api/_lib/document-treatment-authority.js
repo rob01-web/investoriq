@@ -39,7 +39,7 @@ const firstFinite = (...values) => {
   return null;
 };
 
-function isValidAnnualPropertyTaxValue(value) {
+export function isValidAnnualPropertyTaxValue(value) {
   const annualTax = coerceNumber(value);
   if (!Number.isFinite(annualTax) || annualTax <= 0) return false;
   if (annualTax >= 1900 && annualTax <= 2100) return false;

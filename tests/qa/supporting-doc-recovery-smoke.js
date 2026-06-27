@@ -11,7 +11,16 @@ const {
 const {
   buildAcquisitionMemoV2AcquisitionFinancingAssumptionsHtml,
 } = await import("../../api/_lib/acquisition-memo-v2-document.js");
-const { __test__: reportTestHelpers } = await import("../../api/_lib/generate-client-report-impl.js");
+const {
+  buildRenovationBudgetRows,
+  buildRenovationExecutionRows,
+} = await import("../../api/_lib/document-treatment-authority.js");
+const {
+  buildT12SummaryHtml,
+} = await import("../../api/_lib/report-surface-render-helpers.js");
+const {
+  buildScreeningDataCoverageSummary,
+} = await import("../../api/_lib/screening-report-renderer.js");
 const {
   validateAcquisitionPurchaseAssumptionsCandidate,
   validateAppraisalCandidate,
@@ -279,10 +288,10 @@ assert.equal(renovationCandidate.rent_lift, null);
 assert.equal(renovationCandidate.roi, null);
 assert.equal(renovationCandidate.payback_period, null);
 assert.equal(renovationCandidate.execution_rows.length, 2);
-assert.equal(reportTestHelpers.buildRenovationBudgetRows(renovationCandidate.budget_rows, formatCurrency).includes("Exterior / Curb Appeal"), true);
-assert.equal(reportTestHelpers.buildRenovationExecutionRows(renovationCandidate.execution_rows, formatCurrency).includes("Unit Count"), true);
+assert.equal(buildRenovationBudgetRows(renovationCandidate.budget_rows, formatCurrency).includes("Exterior / Curb Appeal"), true);
+assert.equal(buildRenovationExecutionRows(renovationCandidate.execution_rows, formatCurrency).includes("Unit Count"), true);
 
-const renovationExecutionHtml = reportTestHelpers.buildRenovationExecutionRows(
+const renovationExecutionHtml = buildRenovationExecutionRows(
   [
     { metric: "Unit Count", metric_kind: "unit_count", value: 40 },
     { metric: "Unit Count", metric_kind: "unit_count", value: 40 },
@@ -338,7 +347,7 @@ assert.equal(renovationPartialCandidate.rent_lift, null);
 assert.equal(renovationPartialCandidate.roi, null);
 assert.equal(renovationPartialCandidate.payback_period, null);
 assert.equal(renovationPartialCandidate.execution_rows.length, 0);
-assert.equal(reportTestHelpers.buildRenovationExecutionRows(renovationPartialCandidate.execution_rows, formatCurrency), "");
+assert.equal(buildRenovationExecutionRows(renovationPartialCandidate.execution_rows, formatCurrency), "");
 
 assert.equal(
   validateRenovationCandidate(
@@ -665,7 +674,7 @@ const currentMortgageNoBalanceCandidate = validateCurrentMortgageCandidate(
 assert.equal(currentMortgageNoBalanceCandidate.outstanding_balance, null);
 assert(currentMortgageNoBalanceCandidate.parse_warnings.includes("missing_outstanding_balance"));
 
-const t12WithLineItemsHtml = reportTestHelpers.buildT12SummaryHtml(
+const t12WithLineItemsHtml = buildT12SummaryHtml(
   {
     effective_gross_income: 1000000,
     total_operating_expenses: 400000,
@@ -686,7 +695,7 @@ const t12WithLineItemsHtml = reportTestHelpers.buildT12SummaryHtml(
 assert.equal(t12WithLineItemsHtml.includes("Lump-Sum T12"), false);
 assert.equal(t12WithLineItemsHtml.includes("No line-item detail available for this T12 format."), false);
 
-const dataCoverageSummaryHtml = reportTestHelpers.buildScreeningDataCoverageSummary({
+const dataCoverageSummaryHtml = buildScreeningDataCoverageSummary({
   t12Payload: {
     gross_potential_rent: 1000000,
     effective_gross_income: 950000,

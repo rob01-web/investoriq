@@ -68,6 +68,14 @@ import {
 } from "./support-doc-taxonomy.js";
 import {
   buildDocumentTreatmentSummaryHtml,
+  isValidAnnualPropertyTaxValue,
+  resolveRenovationDisplayMode,
+  buildHistoricalCapexDisplayCopy,
+  buildFrameworkSensitivityDisplayCopy,
+  buildRenovationBudgetRows,
+  buildRenovationBudgetCardHtml,
+  buildRenovationExecutionRows,
+  buildRenovationExecutionCardHtml,
 } from "./document-treatment-authority.js";
 import {
   applyAcquisitionMemoV2SourceReconciliationRenderGuard,
@@ -4656,6 +4664,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         upsideHtml,
         risksHtml,
         screeningExplanation,
+        buildT12PerUnitRows: screeningReportRenderer.buildT12PerUnitRows,
       });
       const sealedScreeningOutput = runScreeningReportPipeline({
         finalHtml: screeningFinalization.html,
@@ -5622,7 +5631,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(
       finalHtml,
       "{{T12_PER_UNIT_ROWS}}",
-      buildT12PerUnitRows(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
+      screeningReportRenderer.buildT12PerUnitRows(t12EgiValue, t12TotalExpensesValue, t12NoiValue, rrUnits)
     );
     const screeningIncomeForensicsHtml = screeningReportRenderer.buildScreeningIncomeForensicsHtml({
       t12Payload,
@@ -6920,6 +6929,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         upsideHtml,
         risksHtml,
         screeningExplanation,
+        buildT12PerUnitRows: screeningReportRenderer.buildT12PerUnitRows,
         canRenderRefi,
         debtCapitalRowsHtml,
         refiCollapseGridHtml,
@@ -6929,7 +6939,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         dealScoreRows,
         buildT12IncomeRows,
         buildT12ExpenseRows,
-        buildT12PerUnitRows,
+        buildT12PerUnitRows: screeningReportRenderer.buildT12PerUnitRows,
         rrUnits,
         t12EgiValue,
         t12TotalExpensesValue,

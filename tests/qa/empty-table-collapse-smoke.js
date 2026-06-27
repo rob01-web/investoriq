@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { __test__: generatorTest } = await import("../../api/_lib/generate-client-report-impl.js");
+const { buildScreeningIncomeForensicsHtml } = await import("../../api/_lib/screening-report-renderer.js");
 
-const html = generatorTest.buildScreeningIncomeForensicsHtml({
+const html = buildScreeningIncomeForensicsHtml({
   t12Payload: {
     effective_gross_income: 1000000,
     total_operating_expenses: 400000,

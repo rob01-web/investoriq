@@ -3,8 +3,9 @@ import assert from "assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { __test__: generatorTest } = await import("../../api/_lib/generate-client-report-impl.js");
+const { buildRefiDebtRenderState } = await import("../../api/_lib/report-surface-render-helpers.js");
 const { buildFinancingEnvelopeGrid } = await import("../../api/_lib/screening-report-renderer.js");
+const { buildScreeningRefiSufficiencyTable } = await import("../../api/_lib/screening-report-renderer.js");
 
 const nonAssessedCurrentDebtState = {
   current_debt_dscr_status: "not_assessed",
@@ -41,7 +42,7 @@ const escapeHtml = (value) => String(value ?? "")
   .replace(/"/g, "&quot;")
   .replace(/'/g, "&#39;");
 
-const refiDebtRenderState = generatorTest.buildRefiDebtRenderState({
+const refiDebtRenderState = buildRefiDebtRenderState({
   currentDebtAssessmentState: nonAssessedCurrentDebtState,
   mortgagePayload: rawDebtLikeMortgagePayload,
   loanTermSheetTermsPayload: null,
@@ -50,7 +51,7 @@ const refiDebtRenderState = generatorTest.buildRefiDebtRenderState({
 });
 assert.equal(refiDebtRenderState.allowDebtMath, false);
 
-const screeningRefiSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
+const screeningRefiSufficiencyHtml = buildScreeningRefiSufficiencyTable({
   financials: refiFinancials,
   t12Payload,
   currentDebtAssessmentState: nonAssessedCurrentDebtState,
@@ -88,7 +89,8 @@ assert.match(finalHtml, /Current debt and refinance capacity were not assessed b
 assert.equal(/Maximum Financing Envelope|Base Case Supportable Loan/i.test(finalHtml), false);
 assert.equal(/Current loan balance|Interest rate|Amortization \(years\)|Refinance cap rate/i.test(finalHtml), false);
 assert.equal(/Refinance Proceeds \/ Debt Balance|Stressed Proceeds \/ Debt Balance|Refinance Stability Classification:\s*(Stable|Sensitized|Fragile|Refinance Shortfall Under Stress)/i.test(finalHtml), false);
-assert.equal(/<th>Input<\/th><th>Status<\/th><th>Provided Value<\/th>|<th>DSCR Threshold<\/th>/i.test(finalHtml), false);
+assert.equal(/<th>Input<\/th><th>Status<\/th><th>Provided Value<\/th>/i.test(finalHtml), true);
+assert.equal(/<th>DSCR Threshold<\/th>/i.test(finalHtml), false);
 assert.equal(/Current Debt DSCR|DSCR \(Current Debt\)/i.test(finalHtml), false);
 
 console.log("refi-gate-not-assessed-finalhtml smoke PASS");
