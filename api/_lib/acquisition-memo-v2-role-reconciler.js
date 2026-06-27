@@ -323,6 +323,7 @@ function collectRowText(row = {}, artifacts = []) {
     const text = String(value ?? "").trim();
     if (text) parts.push(text);
   };
+  const rowIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(row);
   push(row?.source_text);
   push(row?.raw_text);
   push(row?.notes);
@@ -341,6 +342,9 @@ function collectRowText(row = {}, artifacts = []) {
   push(row?.debt_basis);
   for (const artifact of Array.isArray(artifacts) ? artifacts : []) {
     if (!artifact || typeof artifact !== "object") continue;
+    const artifactSource = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : artifact;
+    const artifactIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(artifactSource);
+    if (rowIdentityKey && artifactIdentityKey && artifactIdentityKey !== rowIdentityKey) continue;
     push(artifact?.source_text);
     push(artifact?.raw_text);
     push(artifact?.notes);
