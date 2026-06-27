@@ -24,6 +24,7 @@ function collectTextParts(source = {}, artifacts = []) {
     const text = String(value ?? "").trim();
     if (text) parts.push(text);
   };
+  const sourceIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(source);
 
   push(source?.source_text);
   push(source?.raw_text);
@@ -44,6 +45,9 @@ function collectTextParts(source = {}, artifacts = []) {
 
   for (const artifact of toArray(artifacts)) {
     if (!artifact || typeof artifact !== "object") continue;
+    const artifactSource = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : artifact;
+    const artifactIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(artifactSource);
+    if (!sourceIdentityKey || !artifactIdentityKey || artifactIdentityKey !== sourceIdentityKey) continue;
     push(artifact?.source_text);
     push(artifact?.raw_text);
     push(artifact?.notes);
@@ -158,163 +162,91 @@ export function reconcileAcquisitionMemoV2SupportDocRole({
   acceptedTruth = null,
 } = {}) {
   const source = file && typeof file === "object" ? file : {};
-  const text = collectTextParts(source, artifacts);
-  const parserSemanticDocRole = toText(
-    acceptedTruth?.semanticDocRole ||
-      source?.semantic_doc_role ||
-      source?.payload?.semantic_doc_role ||
-      source?.parser_role ||
-      source?.payload?.parser_role
-  );
-  const parserDebtBasis = toText(
-    acceptedTruth?.debtBasis ||
-      source?.debt_basis ||
-      source?.payload?.debt_basis ||
-      source?.parser_debt_basis
-  );
-  const parserDisplayLabel = String(
-    acceptedTruth?.semanticDocDisplayLabel ||
-      source?.semantic_doc_display_label ||
-      source?.payload?.semantic_doc_display_label ||
-      source?.document_role_label ||
-      source?.payload?.document_role_label ||
-      ""
-  ).trim();
-  const hasCurrentDebtEvidence = hasCurrentDebtEvidenceInSource(source, text);
-  const hasPurchaseAssumptionsEvidence = hasPurchaseAssumptionsEvidenceInSource(source, text);
-  const parserCurrentDebtSignal =
-    parserSemanticDocRole === "current_debt" ||
-    parserSemanticDocRole === "current_debt_context" ||
-    parserSemanticDocRole === "current_mortgage_statement" ||
-    parserSemanticDocRole === "current_debt_terms" ||
-    parserSemanticDocRole === "mortgage_statement" ||
-    parserDebtBasis === "current_debt" ||
-    parserDebtBasis === "current_debt_context" ||
-    /current debt|current mortgage|debt statement/i.test(parserDisplayLabel);
-  const parserPurchaseSignal =
-    parserSemanticDocRole === "purchase_assumptions" ||
-    parserSemanticDocRole === "loan_term_sheet" ||
-    parserDebtBasis === "acquisition_financing_assumption" ||
-    parserDebtBasis === "proposed_acquisition" ||
-    /purchase assumptions|proposed acquisition financing/i.test(parserDisplayLabel);
-  const currentDebtScore =
-    (hasCurrentDebtEvidence ? 8 : 0) +
-    (firstFinite(source?.outstanding_balance, source?.current_outstanding_balance, source?.current_loan_balance) != null ? 3 : 0) +
-    (firstFinite(source?.interest_rate) != null ? 2 : 0) +
-    (firstFinite(source?.amortization_remaining_years, source?.amortization_years, source?.amort_years) != null ? 2 : 0) +
-    (String(source?.maturity_date || "").trim().length > 0 ? 2 : 0) +
-    (String(source?.monthly_payment || "").trim().length > 0 ? 1 : 0) +
-    (parserCurrentDebtSignal ? 1 : 0);
-  const purchaseScore =
-    (hasPurchaseAssumptionsEvidence ? 8 : 0) +
-    (firstFinite(source?.purchase_price, source?.acquisition_price, source?.asking_price, source?.purchase_price_amount) != null ? 3 : 0) +
-    (firstFinite(source?.noi_basis, source?.net_operating_income_basis, source?.going_in_cap_rate) != null ? 2 : 0) +
-    (firstFinite(source?.derived_acquisition_loan_amount, source?.stated_acquisition_loan_amount, source?.loan_amount, source?.proposed_loan_amount) != null ? 2 : 0) +
-    (firstFinite(source?.ltv, source?.interest_rate, source?.amortization_years, source?.amort_years, source?.lender_fee_percent, source?.closing_costs_percent, source?.financing_fee_percent, source?.origination_fee_percent) != null ? 2 : 0) +
-    (parserPurchaseSignal ? 1 : 0);
-
-  const currentDebtFacts = {
-    current_outstanding_balance: firstFinite(source?.outstanding_balance, source?.current_outstanding_balance, source?.current_loan_balance),
-    interest_rate: firstFinite(source?.interest_rate),
-    amortization_remaining_years: firstFinite(source?.amortization_remaining_years, source?.amortization_years, source?.amort_years),
-    monthly_payment: firstFinite(source?.monthly_payment),
-    maturity_date: String(source?.maturity_date || "").trim() || null,
-  };
-  const purchaseFacts = {
-    purchase_price: firstFinite(source?.purchase_price, source?.acquisition_price, source?.asking_price, source?.purchase_price_amount),
-    noi_basis: firstFinite(source?.noi_basis, source?.net_operating_income_basis),
-    going_in_cap_rate: firstFinite(source?.going_in_cap_rate),
-    derived_acquisition_loan_amount: firstFinite(source?.derived_acquisition_loan_amount, source?.stated_acquisition_loan_amount, source?.loan_amount, source?.proposed_loan_amount),
-    ltv: firstFinite(source?.ltv),
-    interest_rate: firstFinite(source?.interest_rate),
-    amortization_years: firstFinite(source?.amortization_years, source?.amort_years),
-    lender_fee_percent: firstFinite(source?.lender_fee_percent, source?.closing_costs_percent, source?.financing_fee_percent, source?.origination_fee_percent),
-  };
-
-  let canonicalRole = null;
-  let authorityBasis = "evidence_only";
-  let roleLabel = String(parserDisplayLabel || "").trim();
-  let canonicalLabel = roleLabel || "Other Support Document";
-  let treatment = "Context only";
-  let use = "Listed for auditability only; not used quantitatively.";
-  let category = "Listed but Not Quantitatively Modeled";
-
-  if (hasCurrentDebtEvidence && currentDebtScore >= purchaseScore) {
-    canonicalRole = "current_debt_context";
-    authorityBasis = parserCurrentDebtSignal ? "parser_semantic" : "current_debt_evidence";
-    roleLabel = "Existing Debt Context / Current Mortgage / Debt Statement";
-    canonicalLabel = roleLabel;
-    treatment = "Debt support received / contextual";
-    use = "Uploaded existing/current debt context only; not proposed acquisition financing.";
-    category = "Existing Debt - Contextual";
-  } else if (hasPurchaseAssumptionsEvidence) {
-    canonicalRole = "purchase_assumptions";
-    authorityBasis = parserPurchaseSignal ? "parser_semantic" : "purchase_assumptions_evidence";
-    roleLabel = "Purchase Assumptions / Proposed Acquisition Financing Context";
-    canonicalLabel = roleLabel;
-    treatment = "Acquisition context received";
-    use = "Proposed acquisition financing terms and purchase assumptions; not existing/current debt.";
-    category = "Acquisition Assumptions - Contextual";
-  } else if (parserCurrentDebtSignal && !parserPurchaseSignal) {
-    canonicalRole = "current_debt_context";
-    authorityBasis = "parser_semantic";
-    roleLabel = "Existing Debt Context / Current Mortgage / Debt Statement";
-    canonicalLabel = roleLabel;
-    treatment = "Debt support received / contextual";
-    use = "Uploaded existing/current debt context only; not proposed acquisition financing.";
-    category = "Existing Debt - Contextual";
-  } else if (parserPurchaseSignal && !parserCurrentDebtSignal) {
-    canonicalRole = "purchase_assumptions";
-    authorityBasis = "parser_semantic";
-    roleLabel = "Purchase Assumptions / Proposed Acquisition Financing Context";
-    canonicalLabel = roleLabel;
-    treatment = "Acquisition context received";
-    use = "Proposed acquisition financing terms and purchase assumptions; not existing/current debt.";
-    category = "Acquisition Assumptions - Contextual";
-  }
-
-  const acceptedSemanticDocRole = canonicalRole || parserSemanticDocRole || null;
-  const acceptedDebtBasis = canonicalRole === "current_debt_context"
-    ? "current_debt_context"
-    : canonicalRole === "purchase_assumptions"
-      ? "acquisition_financing_assumption"
-      : parserDebtBasis || null;
-  const acceptedSemanticDocDisplayLabel = canonicalRole
-    ? canonicalLabel
-    : parserDisplayLabel || null;
-
-  return {
-    canonicalRole,
-    canonicalLabel,
-    roleLabel,
-    treatment,
-    use,
-    category,
-    authorityBasis,
-    parserSemanticDocRole: parserSemanticDocRole || null,
-    parserDebtBasis: parserDebtBasis || null,
-    parserDisplayLabel: parserDisplayLabel || null,
-    acceptedSemanticDocRole,
-    acceptedDebtBasis,
-    acceptedSemanticDocDisplayLabel,
-    acceptedSourceTruth: {
-      hasPurchaseAssumptions: canonicalRole === "purchase_assumptions",
-      hasCurrentDebt: canonicalRole === "current_debt_context",
-    },
-    evidence: {
-      currentDebtScore,
-      purchaseScore,
-      hasCurrentDebtEvidence,
-      hasPurchaseAssumptionsEvidence,
-      currentDebtFacts,
-      purchaseFacts,
-    },
-  };
+  return buildAcquisitionMemoV2SupportDocRoleDecision({ source, artifacts, acceptedTruth });
 }
 
 function normalizeIdentityToken(value) {
   const token = String(value ?? "").trim().toLowerCase();
   return token.length > 0 ? token : "";
+}
+
+function normalizeAcquisitionMemoV2CanonicalRole(role = "") {
+  const normalized = normalizeIdentityToken(role);
+  if (
+    normalized === "current_mortgage_statement" ||
+    normalized === "current_debt_terms" ||
+    normalized === "current_debt"
+  ) {
+    return "current_debt_context";
+  }
+  if (normalized === "purchase_assumptions" || normalized === "loan_term_sheet" || normalized === "proposed_acquisition_financing") {
+    return "purchase_assumptions";
+  }
+  if (
+    normalized === "structured_renovation" ||
+    normalized === "structured_renovation_capex_plan" ||
+    normalized === "renovation_budget" ||
+    normalized === "renovation_capex_budget_context" ||
+    normalized === "renovation_capex_context"
+  ) {
+    return "renovation_capex_context";
+  }
+  if (normalized === "environmental_due_diligence" || normalized === "environmental_due_diligence_context") {
+    return "environmental_due_diligence_context";
+  }
+  if (normalized === "appraisal" || normalized === "appraisal_valuation_context") {
+    return "appraisal_valuation_context";
+  }
+  if (normalized === "property_tax" || normalized === "property_tax_support") {
+    return "property_tax_support";
+  }
+  if (normalized === "market_survey" || normalized === "market_survey_context") {
+    return "market_survey_context";
+  }
+  if (normalized === "historical_capex_only") {
+    return "historical_capex_only";
+  }
+  if (normalized === "core_t12" || normalized === "t12") {
+    return "core_t12";
+  }
+  if (normalized === "core_rent_roll" || normalized === "rent_roll") {
+    return "core_rent_roll";
+  }
+  if (normalized === "other_support" || normalized === "other_support_context") {
+    return "other_support_context";
+  }
+  return normalized || "other_support_context";
+}
+
+function hasHistoricalOnlyRenovationSignalsLocal(text = "", source = {}) {
+  const normalizedText = String(text || "").toLowerCase();
+  const sourceText = String([
+    source?.source_text,
+    source?.raw_text,
+    source?.notes,
+    source?.semantic_doc_role_reason,
+    source?.semantic_doc_display_label,
+    source?.timing_or_phasing,
+    source?.budget_note,
+    source?.execution_note,
+  ].filter(Boolean).join(" ")).toLowerCase();
+  return Boolean(
+    /(historical capex|historical capital|past repairs?|prior work|completed work|historical only|historical-only)/i.test(normalizedText) ||
+      /(historical capex|historical capital|past repairs?|prior work|completed work|historical only|historical-only)/i.test(sourceText) ||
+      /(no forward-looking budget|no rent lift|no roi|no payback|no implementation schedule)/i.test(normalizedText) ||
+      /(no forward-looking budget|no rent lift|no roi|no payback|no implementation schedule)/i.test(sourceText) ||
+      /historical/.test(String(source?.timing_or_phasing || "").toLowerCase())
+  );
+}
+
+function hasRenovationEvidenceLocal(text = "", source = {}) {
+  const normalizedText = String(text || "").toLowerCase();
+  return Boolean(
+    /(renovation|capex|capital expenditure|capital budget|construction budget|scope of work|rent lift|phasing)/i.test(normalizedText) ||
+      Array.isArray(source?.budget_rows) && source.budget_rows.length > 0 ||
+      Array.isArray(source?.execution_rows) && source.execution_rows.length > 0 ||
+      firstFinite(source?.total_budget, source?.total_capex, source?.renovation_budget) != null
+  );
 }
 
 function collectRowText(row = {}, artifacts = []) {
@@ -344,7 +276,7 @@ function collectRowText(row = {}, artifacts = []) {
     if (!artifact || typeof artifact !== "object") continue;
     const artifactSource = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : artifact;
     const artifactIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(artifactSource);
-    if (rowIdentityKey && artifactIdentityKey && artifactIdentityKey !== rowIdentityKey) continue;
+    if (!rowIdentityKey || !artifactIdentityKey || artifactIdentityKey !== rowIdentityKey) continue;
     push(artifact?.source_text);
     push(artifact?.raw_text);
     push(artifact?.notes);
@@ -394,39 +326,282 @@ function getAcquisitionMemoV2SupportDocIdentityKey(row = {}) {
   return id ? `id:${id}` : "";
 }
 
-function scoreAcquisitionMemoV2SupportDoc(row = {}, text = "") {
+function buildAcquisitionMemoV2SupportDocRoleDecision({
+  source = {},
+  artifacts = [],
+  acceptedTruth = null,
+} = {}) {
+  const text = collectTextParts(source, artifacts);
   const normalizedText = String(text || "").toLowerCase();
-  const explicitRole = normalizeIdentityToken(row?.semantic_doc_role || row?.payload?.semantic_doc_role);
-  const debtBasis = normalizeIdentityToken(row?.debt_basis || row?.payload?.debt_basis);
-  const purchaseSignals =
-    explicitRole === "purchase_assumptions" ||
-    explicitRole === "loan_term_sheet" ||
-    debtBasis === "acquisition_financing_assumption" ||
-    /(purchase assumptions|proposed acquisition financing|purchase price|going[-\s]*in cap|noi basis|ltv|lender fee|financing fee|origination fee)/i.test(normalizedText);
-  const currentDebtSignals =
-    explicitRole === "current_debt_context" ||
-    explicitRole === "current_mortgage_statement" ||
-    debtBasis === "current_debt_context" ||
-    /(current debt|current mortgage|debt statement|outstanding principal|current outstanding balance|monthly payment|maturity date|amortization remaining|current loan balance)/i.test(normalizedText);
-  const renovationSignals =
-    /(renovation|capex|capital expenditure|capital budget|construction budget|scope of work|rent lift|phasing)/i.test(normalizedText);
-  const propertyTaxSignals =
-    /(property tax|tax bill|tax notice|municipal tax)/i.test(normalizedText);
-  const marketSurveySignals =
-    /(market survey|rent survey|rent comp|rent comparable)/i.test(normalizedText);
-  const environmentalSignals =
-    /(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(normalizedText);
-  const appraisalSignals =
-    /(appraisal|appraised value|valuation report|opinion of value)/i.test(normalizedText);
-  const evidenceBonus = (row?.validated === true ? 50 : 0) + (typeof row?.artifact_type === "string" && /_parsed$/i.test(String(row?.artifact_type)) ? 25 : 0);
-  if (currentDebtSignals) return 2000 + evidenceBonus;
-  if (purchaseSignals) return 1800 + evidenceBonus;
-  if (renovationSignals) return 1600 + evidenceBonus;
-  if (propertyTaxSignals) return 1400 + evidenceBonus;
-  if (marketSurveySignals) return 1200 + evidenceBonus;
-  if (environmentalSignals) return 1000 + evidenceBonus;
-  if (appraisalSignals) return 800 + evidenceBonus;
-  return 100 + evidenceBonus;
+  const parserSemanticDocRole = normalizeIdentityToken(
+    acceptedTruth?.semanticDocRole ||
+      source?.semantic_doc_role ||
+      source?.payload?.semantic_doc_role ||
+      source?.parser_role ||
+      source?.payload?.parser_role
+  );
+  const parserDebtBasis = normalizeIdentityToken(
+    acceptedTruth?.debtBasis ||
+      source?.debt_basis ||
+      source?.payload?.debt_basis ||
+      source?.parser_debt_basis
+  );
+  const parserDisplayLabel = String(
+    acceptedTruth?.semanticDocDisplayLabel ||
+      source?.semantic_doc_display_label ||
+      source?.payload?.semantic_doc_display_label ||
+      source?.document_role_label ||
+      source?.payload?.document_role_label ||
+      ""
+  ).trim();
+  const parserRole = normalizeAcquisitionMemoV2CanonicalRole(parserSemanticDocRole || parserDebtBasis || parserDisplayLabel);
+  const hasCurrentDebtEvidence = hasCurrentDebtEvidenceInSource(source, text);
+  const hasPurchaseAssumptionsEvidence = hasPurchaseAssumptionsEvidenceInSource(source, text);
+  const hasHistoricalOnlyRenovation = hasHistoricalOnlyRenovationSignalsLocal(normalizedText, source);
+  const hasRenovationEvidence = hasRenovationEvidenceLocal(normalizedText, source);
+  const hasEnvironmentalEvidence = Boolean(/(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(normalizedText));
+  const hasAppraisalEvidence = Boolean(
+    /(appraisal|appraised value|valuation report|opinion of value|valuation context)/i.test(normalizedText) ||
+      firstFinite(source?.appraised_value, source?.valuation_value) != null
+  );
+  const hasPropertyTaxEvidence = Boolean(
+    /(property tax|tax bill|tax notice|municipal tax|assessment roll|annual taxes|realty tax|real estate taxes)/i.test(normalizedText) ||
+      firstFinite(source?.annual_tax, source?.tax_amount, source?.property_tax_amount) != null
+  );
+  const hasMarketSurveyEvidence = Boolean(/(market survey|rent survey|rent comp|rent comparable)/i.test(normalizedText));
+  const hasCoreT12Evidence = Boolean(
+    /(t12|trailing 12|trailing twelve)/i.test(normalizedText) ||
+      firstFinite(source?.gross_potential_rent, source?.effective_gross_income, source?.total_operating_expenses, source?.net_operating_income, source?.gross_scheduled_rent) != null
+  );
+  const hasCoreRentRollEvidence = Boolean(
+    /(rent roll|rentroll)/i.test(normalizedText) ||
+      firstFinite(source?.total_units, source?.occupied_units, source?.in_place_rent_annual, source?.market_rent_annual) != null ||
+      Array.isArray(source?.unit_mix) && source.unit_mix.length > 0 ||
+      Array.isArray(source?.units) && source.units.length > 0
+  );
+
+  const currentDebtFieldCount = [
+    firstFinite(source?.outstanding_balance, source?.current_outstanding_balance, source?.current_loan_balance),
+    firstFinite(source?.interest_rate),
+    firstFinite(source?.amortization_remaining_years, source?.amortization_years, source?.amort_years),
+    String(source?.maturity_date || "").trim() || null,
+    firstFinite(source?.monthly_payment),
+  ].filter(Boolean).length;
+  const purchaseFieldCount = [
+    firstFinite(source?.purchase_price, source?.acquisition_price, source?.asking_price, source?.purchase_price_amount),
+    firstFinite(source?.noi_basis, source?.net_operating_income_basis),
+    firstFinite(source?.going_in_cap_rate),
+    firstFinite(source?.derived_acquisition_loan_amount, source?.stated_acquisition_loan_amount, source?.loan_amount, source?.proposed_loan_amount),
+    firstFinite(source?.ltv),
+    firstFinite(source?.interest_rate),
+    firstFinite(source?.amortization_years, source?.amort_years),
+    firstFinite(source?.lender_fee_percent, source?.closing_costs_percent, source?.financing_fee_percent, source?.origination_fee_percent),
+  ].filter(Boolean).length;
+
+  const roleCandidates = [
+    {
+      role: "current_debt_context",
+      score: (hasCurrentDebtEvidence ? 200 : 0) + currentDebtFieldCount * 15 + (parserRole === "current_debt_context" ? 1 : 0),
+      canonicalLabel: "Existing Debt Context / Current Mortgage / Debt Statement",
+      treatment: "Debt support received / contextual",
+      use: "Uploaded existing/current debt context only; not proposed acquisition financing.",
+      category: "Existing Debt - Contextual",
+      acceptedDebtBasis: "current_debt_context",
+      authorityBasis: hasCurrentDebtEvidence ? "current_debt_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasCurrentDebtEvidence || currentDebtFieldCount > 0,
+    },
+    {
+      role: "purchase_assumptions",
+      score: (hasPurchaseAssumptionsEvidence ? 200 : 0) + purchaseFieldCount * 15 + (parserRole === "purchase_assumptions" ? 1 : 0),
+      canonicalLabel: "Purchase Assumptions / Proposed Acquisition Financing Context",
+      treatment: "Acquisition context received",
+      use: "Proposed acquisition financing terms and purchase assumptions; not existing/current debt.",
+      category: "Acquisition Assumptions - Contextual",
+      acceptedDebtBasis: "acquisition_financing_assumption",
+      authorityBasis: hasPurchaseAssumptionsEvidence ? "purchase_assumptions_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasPurchaseAssumptionsEvidence || purchaseFieldCount > 0,
+    },
+    {
+      role: "historical_capex_only",
+      score: (hasHistoricalOnlyRenovation ? 180 : 0) + (parserRole === "historical_capex_only" ? 1 : 0),
+      canonicalLabel: "Historical Capital Items",
+      treatment: "Context only",
+      use: "Historical capital items are displayed for context only.",
+      category: "Displayed / Limited Use",
+      acceptedDebtBasis: "historical_capex_only",
+      authorityBasis: hasHistoricalOnlyRenovation ? "historical_capex_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasHistoricalOnlyRenovation,
+    },
+    {
+      role: "renovation_capex_context",
+      score: (hasRenovationEvidence && !hasHistoricalOnlyRenovation ? 150 : 0) + (parserRole === "renovation_capex_context" ? 1 : 0),
+      canonicalLabel: "Renovation / CapEx Context",
+      treatment: "Context only",
+      use: "Document-stated renovation budget/scope is acknowledged for context only; it does not create ROI, payback, DSCR, refinance, DCF, waterfall, deal score, or final recommendation analysis.",
+      category: "Displayed / Limited Use",
+      acceptedDebtBasis: "renovation_capex_context",
+      authorityBasis: hasRenovationEvidence ? "renovation_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasRenovationEvidence,
+    },
+    {
+      role: "environmental_due_diligence_context",
+      score: (hasEnvironmentalEvidence ? 150 : 0) + (parserRole === "environmental_due_diligence_context" ? 1 : 0),
+      canonicalLabel: "Environmental Due Diligence Context",
+      treatment: "Context only",
+      use: "Environmental due-diligence context only; not used quantitatively.",
+      category: "Listed but Not Quantitatively Modeled",
+      acceptedDebtBasis: "environmental_due_diligence_context",
+      authorityBasis: hasEnvironmentalEvidence ? "environmental_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasEnvironmentalEvidence,
+    },
+    {
+      role: "appraisal_valuation_context",
+      score: (hasAppraisalEvidence ? 140 : 0) + (parserRole === "appraisal_valuation_context" ? 1 : 0),
+      canonicalLabel: "Appraisal Context",
+      treatment: "Context only",
+      use: "Appraisal context only unless structured appraised value is verified; does not override deterministic valuation.",
+      category: "Listed but Not Quantitatively Modeled",
+      acceptedDebtBasis: "appraisal_valuation_context",
+      authorityBasis: hasAppraisalEvidence ? "appraisal_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasAppraisalEvidence,
+    },
+    {
+      role: "property_tax_support",
+      score: (hasPropertyTaxEvidence ? 130 : 0) + (parserRole === "property_tax_support" ? 1 : 0),
+      canonicalLabel: "Property Tax Support",
+      treatment: "Corroborating support",
+      use: "Uploaded support document - not used quantitatively.",
+      category: "Displayed / Limited Use",
+      acceptedDebtBasis: "property_tax_support",
+      authorityBasis: hasPropertyTaxEvidence ? "property_tax_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasPropertyTaxEvidence,
+    },
+    {
+      role: "market_survey_context",
+      score: (hasMarketSurveyEvidence ? 120 : 0) + (parserRole === "market_survey_context" ? 1 : 0),
+      canonicalLabel: "Market Rent Context",
+      treatment: "Context only",
+      use: "Market/rent context only; does not override Rent Roll market rent.",
+      category: "Listed but Not Quantitatively Modeled",
+      acceptedDebtBasis: "market_survey_context",
+      authorityBasis: hasMarketSurveyEvidence ? "market_survey_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasMarketSurveyEvidence,
+    },
+    {
+      role: "core_t12",
+      score: (hasCoreT12Evidence ? 220 : 0) + (parserRole === "core_t12" ? 1 : 0),
+      canonicalLabel: "T12 Core Source",
+      treatment: "Core quantitative source",
+      use: "Verified T12 operating data used as modeled input.",
+      category: "Modeled Inputs",
+      acceptedDebtBasis: "core_t12",
+      authorityBasis: hasCoreT12Evidence ? "core_t12_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasCoreT12Evidence,
+    },
+    {
+      role: "core_rent_roll",
+      score: (hasCoreRentRollEvidence ? 220 : 0) + (parserRole === "core_rent_roll" ? 1 : 0),
+      canonicalLabel: "Rent Roll Core Source",
+      treatment: "Core quantitative source",
+      use: "Verified rent roll data used as modeled input.",
+      category: "Modeled Inputs",
+      acceptedDebtBasis: "core_rent_roll",
+      authorityBasis: hasCoreRentRollEvidence ? "core_rent_roll_evidence" : "parser_semantic",
+      hasPositiveEvidence: hasCoreRentRollEvidence,
+    },
+  ];
+
+  roleCandidates.sort((left, right) => (right.hasPositiveEvidence === true ? 1 : 0) - (left.hasPositiveEvidence === true ? 1 : 0) || (right.score - left.score));
+  const bestCandidate = roleCandidates.find((candidate) => candidate.hasPositiveEvidence === true) || null;
+
+  if (!bestCandidate) {
+    return {
+      canonicalRole: "other_support_context",
+      canonicalLabel: "Other Support Document",
+      roleLabel: "Other Support Document",
+      treatment: "Context only",
+      use: "Listed for auditability only; not used quantitatively.",
+      category: "Listed but Not Quantitatively Modeled",
+      authorityBasis: "no_same_source_positive_evidence",
+      parserSemanticDocRole: parserSemanticDocRole || null,
+      parserDebtBasis: parserDebtBasis || null,
+      parserDisplayLabel: parserDisplayLabel || null,
+      acceptedSemanticDocRole: "other_support_context",
+      acceptedDebtBasis: parserDebtBasis || null,
+      acceptedSemanticDocDisplayLabel: "Other Support Document",
+      acceptedSourceTruth: {
+        hasPurchaseAssumptions: false,
+        hasCurrentDebt: false,
+      },
+      evidence: {
+        roleCandidates,
+        hasCurrentDebtEvidence,
+        hasPurchaseAssumptionsEvidence,
+        hasHistoricalOnlyRenovation,
+        hasRenovationEvidence,
+        hasEnvironmentalEvidence,
+        hasAppraisalEvidence,
+        hasPropertyTaxEvidence,
+        hasMarketSurveyEvidence,
+        hasCoreT12Evidence,
+        hasCoreRentRollEvidence,
+      },
+    };
+  }
+
+  return {
+    canonicalRole: bestCandidate.role,
+    canonicalLabel: bestCandidate.canonicalLabel,
+    roleLabel: bestCandidate.canonicalLabel,
+    treatment: bestCandidate.treatment,
+    use: bestCandidate.use,
+    category: bestCandidate.category,
+    authorityBasis: bestCandidate.authorityBasis,
+    parserSemanticDocRole: parserSemanticDocRole || null,
+    parserDebtBasis: parserDebtBasis || null,
+    parserDisplayLabel: parserDisplayLabel || null,
+    acceptedSemanticDocRole: bestCandidate.role,
+    acceptedDebtBasis: bestCandidate.acceptedDebtBasis || null,
+    acceptedSemanticDocDisplayLabel: bestCandidate.canonicalLabel,
+    acceptedSourceTruth: {
+      hasPurchaseAssumptions: bestCandidate.role === "purchase_assumptions",
+      hasCurrentDebt: bestCandidate.role === "current_debt_context",
+      hasHistoricalCapex: bestCandidate.role === "historical_capex_only",
+      hasRenovationCapex: bestCandidate.role === "renovation_capex_context",
+      hasEnvironmentalDueDiligence: bestCandidate.role === "environmental_due_diligence_context",
+      hasAppraisal: bestCandidate.role === "appraisal_valuation_context",
+      hasPropertyTax: bestCandidate.role === "property_tax_support",
+      hasMarketSurvey: bestCandidate.role === "market_survey_context",
+      hasCoreT12: bestCandidate.role === "core_t12",
+      hasCoreRentRoll: bestCandidate.role === "core_rent_roll",
+    },
+    evidence: {
+      roleCandidates,
+      hasCurrentDebtEvidence,
+      hasPurchaseAssumptionsEvidence,
+      hasHistoricalOnlyRenovation,
+      hasRenovationEvidence,
+      hasEnvironmentalEvidence,
+      hasAppraisalEvidence,
+      hasPropertyTaxEvidence,
+      hasMarketSurveyEvidence,
+      hasCoreT12Evidence,
+      hasCoreRentRollEvidence,
+    },
+  };
+}
+
+function scoreAcquisitionMemoV2SupportDoc(row = {}, text = "") {
+  const decision = buildAcquisitionMemoV2SupportDocRoleDecision({
+    source: row,
+    artifacts: [],
+    acceptedTruth: row,
+  });
+  const canonicalRole = normalizeAcquisitionMemoV2CanonicalRole(decision?.canonicalRole);
+  const candidate = Array.isArray(decision?.evidence?.roleCandidates)
+    ? decision.evidence.roleCandidates.find((entry) => normalizeAcquisitionMemoV2CanonicalRole(entry?.role) === canonicalRole)
+    : null;
+  return Number(candidate?.score || 0);
 }
 
 export function canonicalizeAcquisitionMemoV2DocumentTreatmentSources(documentSources = []) {
@@ -550,17 +725,149 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
       };
     }
 
+    if (canonicalRole === "historical_capex_only" || explicitRole === "historical_capex_only") {
+      return {
+        ...row,
+        canonical_support_doc_role: "historical_capex_only",
+        semantic_doc_role: "historical_capex_only",
+        semantic_doc_display_label: canonicalLabel || "Historical Capital Items",
+        document_role_label: canonicalLabel || "Historical Capital Items",
+        treatment_label: treatmentLabel || "Context only",
+        use_label: useLabel || "Historical capital items are displayed for context only.",
+        treatment_category: category || "Displayed / Limited Use",
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "historical_capex_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "renovation_capex_context" || explicitRole === "renovation_capex_context" || explicitRole === "renovation_budget" || explicitRole === "structured_renovation" || explicitRole === "structured_renovation_capex_plan") {
+      return {
+        ...row,
+        canonical_support_doc_role: "renovation_capex_context",
+        semantic_doc_role: "renovation_capex_context",
+        semantic_doc_display_label: canonicalLabel || "Renovation / CapEx Context",
+        document_role_label: canonicalLabel || "Renovation / CapEx Context",
+        treatment_label: treatmentLabel || "Context only",
+        use_label: useLabel || "Document-stated renovation budget/scope is acknowledged for context only; it does not create ROI, payback, DSCR, refinance, DCF, waterfall, deal score, or final recommendation analysis.",
+        treatment_category: category || "Displayed / Limited Use",
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "renovation_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "environmental_due_diligence_context" || explicitRole === "environmental_due_diligence_context" || explicitRole === "environmental_due_diligence") {
+      return {
+        ...row,
+        canonical_support_doc_role: "environmental_due_diligence_context",
+        semantic_doc_role: "environmental_due_diligence_context",
+        semantic_doc_display_label: canonicalLabel || "Environmental Due Diligence Context",
+        document_role_label: canonicalLabel || "Environmental Due Diligence Context",
+        treatment_label: treatmentLabel || "Context only",
+        use_label: useLabel || "Environmental due-diligence context only; not used quantitatively.",
+        treatment_category: category || "Listed but Not Quantitatively Modeled",
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "environmental_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "appraisal_valuation_context" || explicitRole === "appraisal_valuation_context" || explicitRole === "appraisal") {
+      return {
+        ...row,
+        canonical_support_doc_role: "appraisal_valuation_context",
+        semantic_doc_role: "appraisal_valuation_context",
+        semantic_doc_display_label: canonicalLabel || "Appraisal Context",
+        document_role_label: canonicalLabel || "Appraisal Context",
+        treatment_label: treatmentLabel || "Context only",
+        use_label: useLabel || "Appraisal context only unless structured appraised value is verified; does not override deterministic valuation.",
+        treatment_category: category || "Listed but Not Quantitatively Modeled",
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "appraisal_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "property_tax_support" || explicitRole === "property_tax_support" || explicitRole === "property_tax") {
+      return {
+        ...row,
+        canonical_support_doc_role: "property_tax_support",
+        semantic_doc_role: "property_tax_support",
+        semantic_doc_display_label: canonicalLabel || "Property Tax Support",
+        document_role_label: canonicalLabel || "Property Tax Support",
+        treatment_label: treatmentLabel || "Corroborating support",
+        use_label: useLabel || "Uploaded support document - not used quantitatively.",
+        treatment_category: category || "Displayed / Limited Use",
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "property_tax_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "market_survey_context" || explicitRole === "market_survey_context" || explicitRole === "market_survey") {
+      return {
+        ...row,
+        canonical_support_doc_role: "market_survey_context",
+        semantic_doc_role: "market_survey_context",
+        semantic_doc_display_label: canonicalLabel || "Market Rent Context",
+        document_role_label: canonicalLabel || "Market Rent Context",
+        treatment_label: treatmentLabel || "Context only",
+        use_label: useLabel || "Market/rent context only; does not override Rent Roll market rent.",
+        treatment_category: category || "Listed but Not Quantitatively Modeled",
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "market_survey_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "core_t12" || explicitRole === "core_t12" || explicitRole === "t12") {
+      return {
+        ...row,
+        canonical_support_doc_role: "core_t12",
+        semantic_doc_role: "core_t12",
+        semantic_doc_display_label: canonicalLabel || "T12 Core Source",
+        document_role_label: canonicalLabel || "T12 Core Source",
+        treatment_label: treatmentLabel || "Core quantitative source",
+        use_label: useLabel || "Verified T12 operating data used as modeled input.",
+        treatment_category: category || "Modeled Inputs",
+        has_core_t12: true,
+        core_t12: true,
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "core_t12_evidence",
+        score,
+      };
+    }
+
+    if (canonicalRole === "core_rent_roll" || explicitRole === "core_rent_roll" || explicitRole === "rent_roll") {
+      return {
+        ...row,
+        canonical_support_doc_role: "core_rent_roll",
+        semantic_doc_role: "core_rent_roll",
+        semantic_doc_display_label: canonicalLabel || "Rent Roll Core Source",
+        document_role_label: canonicalLabel || "Rent Roll Core Source",
+        treatment_label: treatmentLabel || "Core quantitative source",
+        use_label: useLabel || "Verified rent roll data used as modeled input.",
+        treatment_category: category || "Modeled Inputs",
+        has_core_rent_roll: true,
+        core_rent_roll: true,
+        canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
+        authoritySource: roleMatch?.authorityBasis || "core_rent_roll_evidence",
+        score,
+      };
+    }
+
     return {
       ...row,
-      canonical_support_doc_role: row?.canonical_support_doc_role || row?.semantic_doc_role || "other_support_context",
-      semantic_doc_role: row?.semantic_doc_role || row?.canonical_support_doc_role || null,
-      semantic_doc_display_label: canonicalLabel,
-      document_role_label: canonicalLabel,
-      treatment_label: treatmentLabel,
-      use_label: useLabel,
-      treatment_category: category,
+      canonical_support_doc_role: "other_support_context",
+      semantic_doc_role: "other_support_context",
+      semantic_doc_display_label: "Other Support Document",
+      document_role_label: "Other Support Document",
+      treatment_label: "Context only",
+      use_label: "Listed for auditability only; not used quantitatively.",
+      treatment_category: "Listed but Not Quantitatively Modeled",
       canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
-      authoritySource: roleMatch?.authorityBasis || "evidence_only",
+      authoritySource: roleMatch?.authorityBasis || "no_same_source_positive_evidence",
       score,
     };
   };
