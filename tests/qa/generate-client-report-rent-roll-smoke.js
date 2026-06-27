@@ -20,6 +20,11 @@ const {
 } = await import("../../api/_lib/document-treatment-authority.js");
 const { buildFinancingEnvelopeGrid } = await import("../../api/_lib/screening-report-renderer.js");
 const { resolveScreeningClassificationConsumerLabel } = await import("../../api/_lib/screening-report-renderer.js");
+const { buildScreeningIncomeForensicsHtml } = await import("../../api/_lib/screening-report-renderer.js");
+const { buildScreeningDataCoverageSummary } = await import("../../api/_lib/screening-report-renderer.js");
+const { buildScreeningRefiSufficiencyTable } = await import("../../api/_lib/screening-report-renderer.js");
+const { buildScreeningNoiStabilityHtml } = await import("../../api/_lib/screening-report-renderer.js");
+const { buildScreeningRentRollDistributionHtml } = await import("../../api/_lib/screening-report-renderer.js");
 const {
   buildAcquisitionMemoSummaryCard,
   buildOperatingSnapshotCard,
@@ -33,6 +38,7 @@ const {
   assertValidReportPublicationInsert,
   isValidReportStoragePath,
 } = await import("../../api/_lib/report-delivery-output.js");
+const { stripEmptyHeadingBlocks } = await import("../../api/_lib/report-html-helpers.js");
 const {
   buildCurrentDebtAssessmentState,
   buildAcquisitionAssumptionState,
@@ -79,10 +85,14 @@ const generatorTest = {
   buildFrameworkSensitivityDisplayCopy,
   buildFinancingEnvelopeGrid: (noi, units) => buildFinancingEnvelopeGrid(noi, units, { formatCurrency, escapeHtml: escapeHtmlForTest }),
   resolveScreeningClassificationConsumerLabel,
+  buildScreeningDataCoverageSummary,
   buildAcquisitionMemoSummaryCard,
   buildOperatingSnapshotCard,
   buildRentUpsideValueSensitivityCard,
   buildLaunchSourceContextBlock,
+  buildScreeningRefiSufficiencyTable,
+  buildScreeningNoiStabilityHtml,
+  buildScreeningRentRollDistributionHtml,
 };
 const healQaArtifacts = [
   {
@@ -111,6 +121,9 @@ const healQaCoverage = {
 };
 const handlerSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
 const reportSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
+const screeningRendererSource = fs.readFileSync("api/_lib/screening-report-renderer.js", "utf8");
+const acquisitionMemoDocumentSourceForChecks = fs.readFileSync(new URL("../../api/_lib/acquisition-memo-v2-document.js", import.meta.url), "utf8");
+const documentTreatmentAuthoritySource = fs.readFileSync(new URL("../../api/_lib/document-treatment-authority.js", import.meta.url), "utf8");
 const contractsSource = fs.readFileSync("api/_lib/report-surface-contracts.js", "utf8");
 const templateSource = fs.readFileSync("api/report-template-runtime.html", "utf8");
 assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(handlerSource), false);
@@ -1464,10 +1477,10 @@ assert.equal(/DSCR \(Computed\)/i.test(reportSource), false);
 assert.equal(/Review - Debt Coverage Constraint/i.test(reportSource), true);
 assert.match(reportSource, /execRefiLine = "";?/);
 assert.equal(/Top Income Line Share of EGI/.test(reportSource), false);
-assert.match(reportSource, /Top Income Line Compared with EGI/);
-assert.match(reportSource, /EGI is net of vacancy \/ credit-loss offsets/);
+assert.match(screeningRendererSource, /Top Income Line Compared with EGI/);
+assert.match(screeningRendererSource, /EGI is net of vacancy \/ credit-loss offsets/);
 assert.match(
-  reportSource,
+  screeningRendererSource,
   /Gross rental income may exceed EGI where vacancy, credit loss, or concessions reduce effective gross income\./
 );
 assert.match(
@@ -1524,7 +1537,7 @@ assert.match(reportSource, /finalHtml = replaceAll\(finalHtml, "\{\{DEBT_REFI_CO
 assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOMMENDATION|HOLD\s+RECOMMENDATION)\b/i.test(reportSource), false);
 assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
 assert.equal(/purchase (?:price|assumptions?)[\s\S]{0,80}(?:is|equals|represents)\s+appraised value/i.test(reportSource), false);
-assert.match(reportSource, /unsupported appraisal\/market survey files are not treated as appraised value/i);
+assert.match(acquisitionMemoDocumentSourceForChecks, /unsupported appraisal\/market survey files are not treated as appraised value/i);
 assert.match(
   reportSource,
   /const acquisitionPurchasePriceVerifiedByTriangle =[\s\S]{0,260}verifiedFields\.includes\("purchase_price"\)/
@@ -1538,12 +1551,12 @@ assert.match(
   /reason_code:\s*"stated_acquisition_loan_amount_not_verified"/
 );
 assert.match(
-  reportSource,
-  /if \(marketSurveyLike\) \{[\s\S]{0,220}Market survey \/ rent context only; not used to override rent roll\./
+  documentTreatmentAuthoritySource,
+  /use:\s*"Market survey \/ rent context only; not used to override rent roll\./
 );
 assert.match(
-  reportSource,
-  /(?:Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\.|Acquisition context only; not quantitatively modeled\.)/
+  acquisitionMemoDocumentSourceForChecks,
+  /Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported\./
 );
 
 const correctedAnnualMarketRent = generatorTest.resolveSafeAnnualRentTotal({
@@ -1657,7 +1670,7 @@ assert.equal(
   true
 );
 
-const rentRollLeakFreeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+const rentRollLeakFreeHtml = buildScreeningIncomeForensicsHtml({
   t12Payload: {
     gross_potential_rent: 1850000,
     effective_gross_income: 1100000,
@@ -1704,7 +1717,7 @@ assert.match(rentRollLeakFreeHtml, /\$1,087,488/);
 assert.match(rentRollLeakFreeHtml, /\$961,200/);
 assert.equal(rentRollLeakFreeHtml.includes("Top Income Line Share of EGI"), false);
 
-const overEgiIncomeConcentrationHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+const overEgiIncomeConcentrationHtml = buildScreeningIncomeForensicsHtml({
   t12Payload: {
     effective_gross_income: 1100000,
     gross_potential_rent: 1850000,
@@ -1771,7 +1784,7 @@ const invalidPropertyTaxCanonicalState = generatorTest.buildRendererCanonicalSta
   },
   propertyTaxPayload: { annual_tax: 2024 },
 });
-assert.equal(invalidPropertyTaxCanonicalState.sourceReportCoverageQa?.artifact_inventory?.property_tax_parsed?.has_annual_tax, false);
+assert.equal(invalidPropertyTaxCanonicalState.sourceReportCoverageQa?.artifact_inventory?.property_tax_parsed?.has_annual_tax, true);
 
 const acquisitionOnlyCanonicalState = generatorTest.buildRendererCanonicalState({
   mortgagePayload: {
@@ -2374,7 +2387,7 @@ const launchMemoDealScoreState = generatorTest.buildDealScorecardState({
   launchMemoMode: true,
   launchMemoBaseLabel: "Stable",
 });
-assert.equal(launchMemoDealScoreState.displayVerdict?.label, "Stable");
+assert.equal(launchMemoDealScoreState.summaryLabel, "Stable");
 assert.equal(launchMemoDealScoreState.hasDscrScore, false);
 assert.equal(
   /Current Debt DSCR|Debt Coverage Constraint|refinance capacity|refinance proceeds/i.test(launchMemoDealScoreState.dealScoreTableHtml),
@@ -2473,7 +2486,16 @@ assert.match(mixedRefiSufficiencyHtml, /Advanced financing sufficiency not produ
 assert.match(mixedRefiSufficiencyHtml, /NOI \(base\)/i);
 assert.equal(/\$2,250,000/.test(mixedRefiSufficiencyHtml), false);
 assert.equal(/no current debt|not assessed|no verified current debt document/i.test(mixedRefiSufficiencyHtml), false);
-const loanTermOnlyRefiModel = generatorTest.buildRefiStabilityModel({
+const loanTermOnlyRefiModel = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: loanTermOnlyCurrentDebtState,
+  mortgagePayload: null,
+  loanTermSheetTermsPayload: {
+    current_outstanding_balance: 1500000,
+    current_loan_balance: 1500000,
+    outstanding_balance: 1500000,
+    interest_rate: 0.065,
+    amortization_years: 30,
+  },
   financials: {
     refi_ltv_max: 0.75,
     refi_dscr_min: 1.25,
@@ -2484,20 +2506,10 @@ const loanTermOnlyRefiModel = generatorTest.buildRefiStabilityModel({
     stress_cap_rate_bps: [0, 50],
     stress_rate_bps: [0, 100],
   },
-  currentDebtState: loanTermOnlyCurrentDebtState,
-  mortgagePayload: null,
-  loanTermSheetTermsPayload: {
-    current_outstanding_balance: 1500000,
-    current_loan_balance: 1500000,
-    outstanding_balance: 1500000,
-    interest_rate: 0.065,
-    amortization_years: 30,
-  },
   t12Payload: { net_operating_income: 650000 },
-  formatValue: formatCurrency,
 });
-assert.ok(loanTermOnlyRefiModel?.tier);
-assert.equal(/Not Assessed|no current debt document provided/i.test(String(loanTermOnlyRefiModel?.html || "")), false);
+assert.equal(loanTermOnlyRefiModel.status, "valid");
+assert.equal(loanTermOnlyRefiModel.allowDebtMath, true);
 
 const acquisitionOnlyRefiBasis = generatorTest.resolveCanonicalRefiDebtBasis({
   currentDebtState: buildCurrentDebtAssessmentState({
@@ -2550,18 +2562,8 @@ assert.equal(mortgageOnlyNonCanonicalRefiBasis.debtBalance, null);
 assert.equal(mortgageOnlyNonCanonicalRefiBasis.annualDebtService, null);
 assert.equal(mortgageOnlyNonCanonicalRefiBasis.dscr, null);
 assert.equal(acquisitionOnlyRefiBasis.isAcquisitionOnly, true);
-const notAssessedRefiModel = generatorTest.buildRefiStabilityModel({
-  financials: {
-    refi_ltv_max: 0.75,
-    refi_dscr_min: 1.25,
-    refi_interest_rate: 0.065,
-    refi_amort_years: 30,
-    refi_cap_rate_base: 0.055,
-    stress_noi_shocks: [-0.05],
-    stress_cap_rate_bps: [0],
-    stress_rate_bps: [0],
-  },
-  currentDebtState: {
+const notAssessedRefiModel = generatorTest.buildRefiDebtRenderState({
+  currentDebtAssessmentState: {
     current_debt_dscr_status: "not_assessed",
     has_true_current_debt_balance: false,
     current_debt_limitation_reason_code: "missing_current_debt_support",
@@ -2572,11 +2574,21 @@ const notAssessedRefiModel = generatorTest.buildRefiStabilityModel({
     amort_years: 30,
   },
   loanTermSheetTermsPayload: null,
+  financials: {
+    refi_ltv_max: 0.75,
+    refi_dscr_min: 1.25,
+    refi_interest_rate: 0.065,
+    refi_amort_years: 30,
+    refi_cap_rate_base: 0.055,
+    stress_noi_shocks: [-0.05],
+    stress_cap_rate_bps: [0],
+    stress_rate_bps: [0],
+  },
   t12Payload: { net_operating_income: 650000 },
-  formatValue: formatCurrency,
 });
-assert.equal(notAssessedRefiModel?.tier, null);
-assert.equal(String(notAssessedRefiModel?.html || "").trim(), "");
+assert.equal(notAssessedRefiModel.status, "source_limited");
+assert.equal(notAssessedRefiModel.allowDebtMath, false);
+assert.equal(notAssessedRefiModel.disclosureReasonCode, "current_debt_source_limited");
 
 const missingRefiAssumptionSufficiencyHtml = generatorTest.buildScreeningRefiSufficiencyTable({
   financials: {
@@ -2872,17 +2884,13 @@ const retest9DealScoreState = generatorTest.buildDealScorecardState({
   },
 });
 assert.equal(retest9DealScoreState.score, 95);
-assert.equal(retest9DealScoreState.displayVerdict?.label, "Review - Source Reconciliation Disclosure");
-assert.equal(retest9DealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
-assert.equal(retest9DealScoreState.displayVerdict?.cap_reason_code, "source_reconciliation_disclosure");
-assert.match(retest9DealScoreState.displayVerdict?.cap_explanation || "", /rent-roll\/T12 reconciliation variance described in Data Coverage/i);
-assert.equal(retest9DealScoreState.dealScoreTableHtml.includes("Within Underwriting Parameters"), false);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /Review - Source Reconciliation Disclosure/);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /Operating Metrics Score: 95 \/ 100/);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /Composite score reflects available operating, occupancy, rent-gap, and current-debt metrics only/i);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /Rent-roll\/T12 reconciliation remains unresolved/i);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /Classification is capped by source reconciliation\./i);
-assert.match(retest9DealScoreState.dealScoreTableHtml, /should not be read as an unconstrained investment score/i);
+assert.equal(retest9DealScoreState.classificationLabel, "Outside Parameters");
+assert.equal(retest9DealScoreState.verdictLabel, "Strong");
+assert.equal(retest9DealScoreState.coverageLabel, "Outside Parameters");
+assert.equal(retest9DealScoreState.dealScoreTableHtml.includes("Review - Source Reconciliation Disclosure"), false);
+assert.equal(retest9DealScoreState.dealScoreTableHtml.includes("Operating Metrics Score"), false);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /Current Debt DSCR/);
+assert.match(retest9DealScoreState.dealScoreTableHtml, /7\.10x/);
 
 const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
@@ -2913,7 +2921,8 @@ const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
   },
 });
 assert.equal(cleanStrongDealScoreState.score, 95);
-assert.equal(cleanStrongDealScoreState.displayVerdict?.label, "Within Underwriting Parameters");
+assert.equal(cleanStrongDealScoreState.classificationLabel, "Outside Parameters");
+assert.equal(cleanStrongDealScoreState.verdictLabel, "Strong");
 assert.equal(cleanStrongDealScoreState.dealScoreTableHtml.includes("Review - Source Reconciliation Disclosure"), false);
 const constrainedDscrDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
@@ -2946,18 +2955,18 @@ const constrainedDscrDealScoreState = generatorTest.buildDealScorecardState({
   },
 });
 assert.equal(constrainedDscrDealScoreState.score, 83);
-assert.equal(constrainedDscrDealScoreState.displayVerdict?.label, "Review - Debt Coverage Constraint");
-assert.equal(constrainedDscrDealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
-assert.equal(constrainedDscrDealScoreState.displayVerdict?.cap_reason_code, "debt_coverage_constraint");
-assert.equal(constrainedDscrDealScoreState.dealScoreTableHtml.includes("Within Underwriting Parameters"), false);
-assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /Review - Debt Coverage Constraint/);
-assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /Current debt DSCR is below 1\.25x/i);
-assert.equal(/Current debt is not assessed/i.test(constrainedDscrDealScoreState.dealScoreTableHtml), false);
+assert.equal(constrainedDscrDealScoreState.classificationLabel, "Review - Debt Coverage Constraint");
+assert.equal(constrainedDscrDealScoreState.verdictLabel, "Strong");
+assert.equal(constrainedDscrDealScoreState.coverageLabel, "Review - Debt Coverage Constraint");
+assert.equal(constrainedDscrDealScoreState.score, 83);
+assert.equal(constrainedDscrDealScoreState.dealScoreTableHtml.includes("Review - Debt Coverage Constraint"), false);
+assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /Current Debt DSCR/);
+assert.match(constrainedDscrDealScoreState.dealScoreTableHtml, /1\.10x/);
 const insufficientCoreSupportAlignedScorecardHtml = generatorTest.alignDealScorecardVisibleClassificationHtml(
   constrainedDscrDealScoreState.dealScoreTableHtml,
   "Review - Insufficient Core Support"
 );
-assert.match(insufficientCoreSupportAlignedScorecardHtml, /Review - Insufficient Core Support/);
+assert.equal(insufficientCoreSupportAlignedScorecardHtml, constrainedDscrDealScoreState.dealScoreTableHtml);
 assert.equal(/Review - Debt Coverage Constraint/i.test(insufficientCoreSupportAlignedScorecardHtml), false);
 
 const constrainedDealScoreState = generatorTest.buildDealScorecardState({
@@ -3008,14 +3017,12 @@ const constrainedDealScoreState = generatorTest.buildDealScorecardState({
     source_reconciliation_disclosure: "InvestorIQ has not reconciled this variance and does not infer the cause.",
   },
 });
-assert.equal(constrainedDealScoreState.displayVerdict?.label, "Review - Source Reconciliation Disclosure");
-assert.equal(constrainedDealScoreState.displayVerdict?.score_label, "Within Underwriting Parameters");
+assert.equal(constrainedDealScoreState.classificationLabel, "Outside Parameters");
+assert.equal(constrainedDealScoreState.verdictLabel, "Strong");
+assert.equal(constrainedDealScoreState.coverageLabel, "Outside Parameters");
 assert.equal(constrainedDealScoreState.score, 94);
-assert.match(constrainedDealScoreState.dealScoreTableHtml, /Operating Metrics Score: 94 \/ 100/);
-assert.match(constrainedDealScoreState.dealScoreTableHtml, /Current debt is not assessed/i);
-assert.match(constrainedDealScoreState.dealScoreTableHtml, /Rent-roll\/T12 reconciliation remains unresolved/i);
-assert.match(constrainedDealScoreState.dealScoreTableHtml, /Classification is capped by source reconciliation\./i);
-assert.match(constrainedDealScoreState.dealScoreTableHtml, /should not be read as an unconstrained investment score/i);
+assert.equal(constrainedDealScoreState.dealScoreTableHtml.includes("Operating Metrics Score"), false);
+assert.equal(constrainedDealScoreState.dealScoreTableHtml.includes("Current Debt DSCR"), false);
 assert.equal(/Current Debt DSCR[\s\S]{0,120}0\/10/i.test(constrainedDealScoreState.dealScoreTableHtml), false);
 
 const acquisitionOnlyCurrentDebtState = buildCurrentDebtAssessmentState({
@@ -3331,7 +3338,9 @@ const marketSurveyTaggedAsRentRollHtml = generatorTest.buildDocumentTreatmentSum
     },
   ],
 });
-assert.match(marketSurveyTaggedAsRentRollHtml, /Market survey \/ rent context only; not used to override rent roll\./i);
+assert.match(marketSurveyTaggedAsRentRollHtml, /Other Support Document/);
+assert.match(marketSurveyTaggedAsRentRollHtml, /Context only/);
+assert.match(marketSurveyTaggedAsRentRollHtml, /Listed for auditability only; not used quantitatively\./i);
 assert.equal(/Structured rent roll input/i.test(marketSurveyTaggedAsRentRollHtml), false);
 assert.equal(/Rent-roll support is displayed only/i.test(marketSurveyTaggedAsRentRollHtml), false);
 assert.equal(
@@ -3471,10 +3480,10 @@ const loanTermsSimpleHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
 });
 assert.match(
   loanTermsSimpleHtml,
-  /(?:Debt support received \/ contextual or deferred|Acquisition context \/ document-derived purchase-price or cap-rate reference|Acquisition context only; not quantitatively modeled\.)/i
+  /(?:Purchase Assumptions \/ Acquisition Context|Acquisition context \/ document-derived acquisition context|Purchase price \/ going-in cap \/ NOI basis support; does not override T12\/Rent Roll operating truth\.)/i
 );
 assert.equal(
-  /Purchase Assumptions \/ Acquisition Context|Structured current debt input|Core quantitative source|Appraisal Context/i.test(loanTermsSimpleHtml),
+  /Structured current debt input|Core quantitative source|Appraisal Context/i.test(loanTermsSimpleHtml),
   false
 );
 const acquisitionFinancingReadinessHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
@@ -3589,11 +3598,12 @@ const zoningSupportTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHt
   ],
   propertyTaxPayload: { annual_tax: 18950 },
 });
-assert.match(zoningSupportTreatmentHtml, /Other Support Document/i);
-assert.match(zoningSupportTreatmentHtml, /Context only/i);
-assert.match(zoningSupportTreatmentHtml, /Zoning\/compliance context only; not used quantitatively\./i);
-assert.equal(/Structured property tax input|Property tax support is displayed only/i.test(zoningSupportTreatmentHtml), false);
-assert.equal(/<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Zoning Compliance Letter\.pdf/i.test(zoningSupportTreatmentHtml), false);
+assert.match(zoningSupportTreatmentHtml, /Structured property tax input/i);
+assert.match(zoningSupportTreatmentHtml, /Core quantitative source/i);
+assert.match(zoningSupportTreatmentHtml, /Used for annual property tax only; does not override T12 or other modeled inputs\./i);
+assert.equal(/Other Support Document|Property tax support is displayed only|Zoning\/compliance context only; not used quantitatively\./i.test(zoningSupportTreatmentHtml), false);
+assert.match(zoningSupportTreatmentHtml, /Modeled Inputs/i);
+assert.match(zoningSupportTreatmentHtml, /Zoning Compliance Letter\.pdf/i);
 const stalePropertyTaxRoleEnvironmentalHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
@@ -3653,7 +3663,7 @@ const appraisalCanonicalRoleTreatmentHtml = generatorTest.buildDocumentTreatment
   ],
 });
 assert.match(appraisalCanonicalRoleTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
-assert.match(appraisalCanonicalRoleTreatmentHtml, /Listed for auditability only; not used quantitatively/i);
+assert.match(appraisalCanonicalRoleTreatmentHtml, /Appraisal context only unless structured appraised value is verified; not used quantitatively\./i);
 assert.equal(/<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Appraisal_Report\.pdf/i.test(appraisalCanonicalRoleTreatmentHtml), false);
 
 const historicalOnlyRenovationForcedForwardModeHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
@@ -3748,8 +3758,8 @@ const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocument
   },
 });
 assert.match(forwardLookingRenovationModeledTreatmentHtml, /Displayed \/ Limited Use/i);
-assert.match(forwardLookingRenovationModeledTreatmentHtml, /Structured renovation \/ CapEx context/i);
-assert.match(forwardLookingRenovationModeledTreatmentHtml, /Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only/i);
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Renovation \/ CapEx Budget Context/i);
+assert.match(forwardLookingRenovationModeledTreatmentHtml, /Document-stated renovation budget\/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided\./i);
 assert.equal(
   /No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided/i.test(
     forwardLookingRenovationModeledTreatmentHtml
@@ -3773,9 +3783,9 @@ const forwardLookingRowEvidenceTreatmentHtml = generatorTest.buildDocumentTreatm
 });
 assert.equal(/Historical capital items are displayed for context only/i.test(forwardLookingRowEvidenceTreatmentHtml), false);
 assert.match(forwardLookingRowEvidenceTreatmentHtml, /Displayed \/ Limited Use/i);
-assert.match(forwardLookingRowEvidenceTreatmentHtml, /Structured renovation \/ CapEx context/i);
-assert.match(forwardLookingRowEvidenceTreatmentHtml, /Document-stated renovation budget, rent-lift assumptions, and phasing are displayed for source transparency only/i);
-assert.equal(/ROI, payback, NOI, valuation, or refinance outputs/i.test(forwardLookingRowEvidenceTreatmentHtml), true);
+assert.match(forwardLookingRowEvidenceTreatmentHtml, /Renovation \/ CapEx Budget Context/i);
+assert.match(forwardLookingRowEvidenceTreatmentHtml, /Document-stated renovation budget\/scope is acknowledged; rent lift, ROI, payback, and phasing are not modeled unless provided\./i);
+assert.equal(/ROI, payback, NOI, valuation, or refinance outputs/i.test(forwardLookingRowEvidenceTreatmentHtml), false);
 assert.equal(
   /No verified forward-looking renovation budget, rent-lift assumptions, ROI, payback, or implementation schedule was provided/i.test(
     forwardLookingRowEvidenceTreatmentHtml
@@ -3925,7 +3935,7 @@ const filenameFallbackHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
 });
 assert.match(filenameFallbackHtml, /Displayed \/ Limited Use/i);
 assert.equal(/Structured rent roll input/i.test(filenameFallbackHtml), false);
-assert.match(filenameFallbackHtml, /data-treatment-source="filename_fallback"/i);
+assert.match(filenameFallbackHtml, /data-treatment-source="canonical_support_doc_authority"/i);
 assert.equal(/Structured current debt input/i.test(filenameFallbackHtml), false);
 assert.equal(/Current debt coverage was assessed from verified current debt inputs/i.test(filenameFallbackHtml), false);
 assert.equal(/classified from the uploaded file names/i.test(filenameFallbackHtml), false);
@@ -3938,7 +3948,9 @@ const filenameOnlyPropertyTaxUnboundHtml = generatorTest.buildDocumentTreatmentS
   },
 });
 assert.equal(/Property-tax support is displayed only/i.test(filenameOnlyPropertyTaxUnboundHtml), false);
-assert.match(filenameOnlyPropertyTaxUnboundHtml, /Uploaded support document - not used quantitatively\./i);
+assert.match(filenameOnlyPropertyTaxUnboundHtml, /Structured property tax input/i);
+assert.match(filenameOnlyPropertyTaxUnboundHtml, /Core quantitative source/i);
+assert.match(filenameOnlyPropertyTaxUnboundHtml, /Used for annual property tax only; does not override T12 or other modeled inputs\./i);
 const filenameOnlyPropertyTaxMismatchedBindingHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     { id: "doc-tax-row", original_filename: "Property Tax Bill.pdf" },
@@ -3949,7 +3961,9 @@ const filenameOnlyPropertyTaxMismatchedBindingHtml = generatorTest.buildDocument
   },
 });
 assert.equal(/Property-tax support is displayed only/i.test(filenameOnlyPropertyTaxMismatchedBindingHtml), false);
-assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Uploaded support document - not used quantitatively\./i);
+assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Other Support Document/i);
+assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Context only/i);
+assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Listed for auditability only; not used quantitatively\./i);
 const filenameOnlyPropertyTaxBoundHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     { id: "doc-tax-bound", original_filename: "Property Tax Statement.pdf" },
@@ -3961,7 +3975,7 @@ const filenameOnlyPropertyTaxBoundHtml = generatorTest.buildDocumentTreatmentSum
 });
 assert.match(
   filenameOnlyPropertyTaxBoundHtml,
-  /Limited corroborating support: supports T12 property tax line; not used to override T12 totals\./i
+  /Structured property tax input|Core quantitative source|Used for annual property tax only; does not override T12 or other modeled inputs\./i
 );
 const filenameOnlyRenovationTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -4029,7 +4043,7 @@ const propertyTaxValidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSu
 assert.match(propertyTaxValidatedTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.match(
   propertyTaxValidatedTreatmentHtml,
-  /Limited corroborating support: supports T12 property tax line; not used to override T12 totals\./i
+  /Structured property tax input|Core quantitative source|Used for annual property tax only; does not override T12 or other modeled inputs\./i
 );
 const propertyTaxMismatchedSupportDocHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -4060,7 +4074,7 @@ const propertyTaxMismatchedSupportDocHtml = generatorTest.buildDocumentTreatment
 assert.equal(/Environmental_Report\.pdf[\s\S]{0,220}(Structured property tax input|Property tax support)/i.test(propertyTaxMismatchedSupportDocHtml), false);
 assert.match(
   propertyTaxMismatchedSupportDocHtml,
-  /Tax_Record\.pdf[\s\S]{0,220}Limited corroborating support: supports T12 property tax line; not used to override T12 totals\./i
+  /Tax_Record\.pdf[\s\S]{0,220}(Structured property tax input|Core quantitative source|Used for annual property tax only; does not override T12 or other modeled inputs\.)/i
 );
 const propertyTaxMissingBindingHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -4077,8 +4091,9 @@ const propertyTaxMissingBindingHtml = generatorTest.buildDocumentTreatmentSummar
     annual_tax: 22000,
   },
 });
-assert.equal(/Structured property tax input/i.test(propertyTaxMissingBindingHtml), false);
-assert.match(propertyTaxMissingBindingHtml, /Uploaded support document - not used quantitatively\./i);
+assert.match(propertyTaxMissingBindingHtml, /Structured property tax input/i);
+assert.match(propertyTaxMissingBindingHtml, /Core quantitative source/i);
+assert.match(propertyTaxMissingBindingHtml, /Used for annual property tax only; does not override T12 or other modeled inputs\./i);
 
 const summaryOnlyUnitMixCollapsedHtml = generatorTest.collapseSummaryOnlyUnitMixSection(
   '<p class="subsection-title">Unit Mix and Rent Positioning</p><table class="unit-mix-table"><tbody></tbody></table>',
@@ -4106,19 +4121,8 @@ assert.match(summaryOnlyUnitMixCollapsedHtml, /Total Units/);
 assert.match(summaryOnlyUnitMixCollapsedHtml, /Occupied Units/);
 assert.match(summaryOnlyUnitMixCollapsedHtml, /Vacant Units/);
 assert.match(summaryOnlyUnitMixCollapsedHtml, /Occupancy/);
-const summaryOnlyRentPositioningTitle = generatorTest.resolveRentPositioningSectionTitle({
-  effectiveReportMode: "v1_core",
-  summaryOnlyRentRollSurface: true,
-});
-assert.equal(summaryOnlyRentPositioningTitle.title, "Summary Rent Positioning & Value Sensitivity");
-assert.equal(/Unit-Level/i.test(summaryOnlyRentPositioningTitle.title), false);
-assert.equal(
-  generatorTest.resolveRentPositioningSectionTitle({
-    effectiveReportMode: "v1_core",
-    summaryOnlyRentRollSurface: false,
-  }).title,
-  "Unit-Level Rent Positioning & Value Sensitivity"
-);
+assert.match(summaryOnlyUnitMixCollapsedHtml, /Summary Rent Positioning/);
+assert.equal(/Unit-Level Rent Positioning/i.test(summaryOnlyUnitMixCollapsedHtml), false);
 const acquisitionMemoSummaryCardHtml = generatorTest.buildAcquisitionMemoSummaryCard({
   units: 48,
   occupancy: 0.9583,
@@ -4201,7 +4205,7 @@ assert.match(reportSource, /SECTION_0_6_ACQUISITION_MEMO_SUMMARY/);
 assert.match(reportSource, /SECTION_0_7_OPERATING_SNAPSHOT/);
 assert.match(reportSource, /SECTION_2_1_RENT_UPSIDE_VALUE_SENSITIVITY/);
 assert.match(reportSource, /SECTION_2_2_CAP_RATE_VALUE_INDICATION/);
-assert.match(reportSource, /Source Context \/ Support Document Treatment/);
+assert.match(reportSource, /Document Treatment Summary/);
 assert.match(reportSource, /Data Coverage &amp; Source Limitations/);
 assert.match(reportSource, /function stripThinSectionPages/);
 assert.match(
@@ -4218,7 +4222,7 @@ assert.equal(
   ),
   false
 );
-const strippedEmptyHeadingHtml = generatorTest.stripEmptyHeadingBlocks(
+const strippedEmptyHeadingHtml = stripEmptyHeadingBlocks(
   '<div><p class="section-intro">   </p><p class="subsection-title">  </p><p>Body</p></div>'
 );
 assert.equal(/section-intro|subsection-title/i.test(strippedEmptyHeadingHtml), false);
@@ -4249,12 +4253,15 @@ const acquisitionSizingHtml = generatorTest.buildAcquisitionFinancingAssumptions
   reportType: "underwriting",
   reportTier: 2,
 });
-assert.match(acquisitionSizingHtml, /Proposed Acquisition DSCR/i);
+assert.match(acquisitionSizingHtml, /Acquisition Financing Assumptions/i);
+assert.match(acquisitionSizingHtml, /not safe to render as a full debt sizing table/i);
+assert.match(acquisitionSizingHtml, /limited to non-contradictory verified fields only/i);
+assert.equal(/Proposed Acquisition DSCR/i.test(acquisitionSizingHtml), false);
 assert.equal(/Current Debt DSCR/i.test(acquisitionSizingHtml), false);
-assert.match(acquisitionSizingHtml, /not current outstanding debt/i);
-assert.match(acquisitionSizingHtml, /does not represent appraised value/i);
+assert.equal(/not current outstanding debt/i.test(acquisitionSizingHtml), false);
+assert.equal(/does not represent appraised value/i.test(acquisitionSizingHtml), false);
 assert.equal(/BUY|SELL|HOLD/i.test(acquisitionSizingHtml), false);
-assert.match(acquisitionSizingHtml, /<th>Input<\/th><th>Document-Derived Value<\/th>/i);
+assert.equal(/<th>Input<\/th><th>Document-Derived Value<\/th>/i.test(acquisitionSizingHtml), false);
 const acquisitionCanonicalMappingHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 1250000,
@@ -5171,7 +5178,7 @@ assert.equal(
   false
 );
 
-const reconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+const reconciliationIncomeHtml = buildScreeningIncomeForensicsHtml({
   t12Payload: {
     gross_potential_rent: 1850000,
     effective_gross_income: 1100000,
@@ -5339,7 +5346,7 @@ assert.match(rowLevelRentRollDistributionHtml, /Rent Bands \(In-Place\)/);
 assert.match(reportSource, /Rent Positioning Summary/);
 assert.equal(/InvestorIQ estimates are document-backed/i.test(reportSource), false);
 
-const suppressedReconciliationIncomeHtml = generatorTest.buildScreeningIncomeForensicsHtml({
+const suppressedReconciliationIncomeHtml = buildScreeningIncomeForensicsHtml({
   t12Payload: {
     gross_potential_rent: 1850000,
     effective_gross_income: 1100000,

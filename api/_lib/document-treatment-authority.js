@@ -411,6 +411,12 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
   ]
     .filter(Boolean)
     .join(" ");
+  const hasEnvironmentalSignals =
+    roleIncludesEnvironmentalMarker(row?.semantic_doc_role) ||
+    roleIncludesEnvironmentalMarker(row?.semantic_doc_display_label) ||
+    roleIncludesEnvironmentalMarker(row?.display_doc_type) ||
+    roleIncludesEnvironmentalMarker(row?.doc_type) ||
+    /phase\s*i|phase\s*1|phase i esa|phase 1 esa|environmental|environment|esa/i.test(environmentalSignalsText);
   const canonicalFromMap =
     canonicalSupportDocMap instanceof Map
       ? canonicalSupportDocMap.get(filename) || canonicalSupportDocMap.get(row?.id) || null
@@ -430,12 +436,22 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
     payload: row,
   });
   const boundPropertyTax =
+    !hasEnvironmentalSignals &&
     canonical?.role === "property_tax" &&
     isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax) &&
     (
       String(propertyTaxPayload?.source_file_id || "").trim() === String(row?.id || row?.file_id || row?.source_file_id || "").trim() ||
       String(propertyTaxPayload?.original_filename || "").trim().toLowerCase() === String(filename).trim().toLowerCase()
     );
+  if (hasEnvironmentalSignals) {
+    return {
+      filename,
+      displayLabel: "Environmental Due Diligence Context",
+      treatment: "Context only",
+      use: "Environmental due-diligence context only; not used quantitatively.",
+      category: "Listed but Not Quantitatively Modeled",
+    };
+  }
   if (boundPropertyTax) {
     return {
       filename,
@@ -551,6 +567,10 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
     use: "Listed for auditability only; not used quantitatively.",
     category: "Listed but Not Quantitatively Modeled",
   };
+}
+
+function roleIncludesEnvironmentalMarker(value) {
+  return /phase\s*i|phase\s*1|phase i esa|phase 1 esa|environmental|environment|esa/i.test(String(value || ""));
 }
 
 export function buildDocumentTreatmentSummaryHtml(args = {}) {
