@@ -295,6 +295,34 @@ export function buildScreeningRefiSufficiencyTable({
   return `<p>${title}</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether required inputs are present in uploaded documents. Missing required inputs prevent advanced financing analysis.</p>`;
 }
 
+export function buildFinancingEnvelopeGrid(noi, units, { formatCurrency, escapeHtml } = {}) {
+  if (!Number.isFinite(noi) || noi <= 0) return "";
+  if (typeof formatCurrency !== "function" || typeof escapeHtml !== "function") return "";
+  const dscrTargets = [
+    { label: "1.10x (CMHC / Insured)", value: 1.10 },
+    { label: "1.25x (Conventional)", value: 1.25 },
+    { label: "1.35x (Conservative)", value: 1.35 },
+  ];
+  const rateScenarios = [5.5, 6.5, 7.5];
+  const n = 25 * 12;
+  function maxLoanAtRate(annualRatePct, dscrTarget) {
+    const monthlyDS = noi / dscrTarget / 12;
+    const r = annualRatePct / 100 / 12;
+    return monthlyDS * (1 - Math.pow(1 + r, -n)) / r;
+  }
+  const headerCells = rateScenarios.map((r) => `<th>${r.toFixed(2)}% Rate</th>`).join("");
+  const bodyRows = dscrTargets
+    .map(({ label, value }) => {
+      const cells = rateScenarios
+        .map((r) => `<td>${formatCurrency(maxLoanAtRate(r, value))}</td>`)
+        .join("");
+      return `<tr><td><strong>${escapeHtml(label)}</strong></td>${cells}</tr>`;
+    })
+    .join("");
+  const unitsNote = Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Uses standardized 25-year amortization input.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
+}
+
 export function buildScreeningDataCoverageSummary({
   t12Payload,
   computedRentRoll,

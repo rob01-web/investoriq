@@ -3295,7 +3295,7 @@ assert.equal(
   true
 );
 assert.equal(/Unsupported Phase I ESA\.pdf[\s\S]{0,220}(Structured property tax input|Property tax support is displayed only)/i.test(documentTreatmentHtml), false);
-assert.match(documentTreatmentHtml, /data-treatment-source="metadata"/i);
+assert.match(documentTreatmentHtml, /data-treatment-source="canonical_support_doc_authority"/i);
 assert.equal(/classified from the uploaded file names/i.test(documentTreatmentHtml), false);
 assert.equal(/public sample|high[- ]value outreach|advisory only|docraptor|vendor/i.test(documentTreatmentHtml), false);
 assert.equal(/Forward-looking renovation support is document-backed/i.test(documentTreatmentHtml), false);
