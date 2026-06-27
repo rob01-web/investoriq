@@ -3,7 +3,8 @@ import assert from "assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
+const { __test__: generatorTest } = await import("../../api/_lib/generate-client-report-impl.js");
+const { buildFinancingEnvelopeGrid } = await import("../../api/_lib/screening-report-renderer.js");
 
 const nonAssessedCurrentDebtState = {
   current_debt_dscr_status: "not_assessed",
@@ -32,6 +33,13 @@ const refiFinancials = {
 const t12Payload = {
   net_operating_income: 640000,
 };
+const formatCurrency = (value) => `$${Number(value).toLocaleString("en-CA", { maximumFractionDigits: 0 })}`;
+const escapeHtml = (value) => String(value ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
 
 const refiDebtRenderState = generatorTest.buildRefiDebtRenderState({
   currentDebtAssessmentState: nonAssessedCurrentDebtState,
@@ -52,7 +60,7 @@ const screeningRefiSufficiencyHtml = generatorTest.buildScreeningRefiSufficiency
 const screeningRefiBlockHtml =
   screeningRefiSufficiencyHtml +
   (refiDebtRenderState.allowDebtMath
-    ? generatorTest.buildFinancingEnvelopeGrid(640000, 42)
+    ? buildFinancingEnvelopeGrid(640000, 42, { formatCurrency, escapeHtml })
     : "");
 
 const notAssessedDisclosureCopy =

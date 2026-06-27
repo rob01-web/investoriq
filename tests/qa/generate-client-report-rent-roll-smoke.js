@@ -7,7 +7,7 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-run-key";
 
-const { __test__: rawGeneratorTest } = await import("../../api/generate-client-report.js");
+const { __test__: rawGeneratorTest } = await import("../../api/_lib/generate-client-report-impl.js");
 const {
   buildCanonicalSupportDocAuthorityRows,
   buildDocumentTreatmentSummaryHtml,
@@ -18,18 +18,13 @@ const {
   resolveRenovationDisplayMode,
   buildFrameworkSensitivityDisplayCopy,
 } = await import("../../api/_lib/document-treatment-authority.js");
-const generatorTest = {
-  ...rawGeneratorTest,
-  buildCanonicalSupportDocAuthorityRows,
-  buildDocumentTreatmentSummaryHtml,
-  buildPreliminaryFinancingReadinessSummaryHtml,
-  buildAcquisitionFinancingAssumptionsHtml,
-  buildAcquisitionFinancingReadinessHtml,
-  buildHistoricalCapexDisplayCopy,
-  buildRenovationDisplayCopy: buildHistoricalCapexDisplayCopy,
-  resolveRenovationDisplayMode,
-  buildFrameworkSensitivityDisplayCopy,
-};
+const { buildFinancingEnvelopeGrid } = await import("../../api/_lib/screening-report-renderer.js");
+const {
+  buildAcquisitionMemoSummaryCard,
+  buildOperatingSnapshotCard,
+  buildRentUpsideValueSensitivityCard,
+  buildLaunchSourceContextBlock,
+} = await import("../../api/_lib/acquisition-memo-v2-document.js");
 const generateClientReport = (await import("../../api/generate-client-report.js")).default;
 const {
   buildDeliveryResponseCompatibilityAliases,
@@ -64,6 +59,29 @@ const formatPercent1 = (value) => {
   const pct = n > 1.5 ? n : n * 100;
   return `${pct.toFixed(1)}%`;
 };
+const escapeHtmlForTest = (value) => String(value ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
+const generatorTest = {
+  ...rawGeneratorTest,
+  buildCanonicalSupportDocAuthorityRows,
+  buildDocumentTreatmentSummaryHtml,
+  buildPreliminaryFinancingReadinessSummaryHtml,
+  buildAcquisitionFinancingAssumptionsHtml,
+  buildAcquisitionFinancingReadinessHtml,
+  buildHistoricalCapexDisplayCopy,
+  buildRenovationDisplayCopy: buildHistoricalCapexDisplayCopy,
+  resolveRenovationDisplayMode,
+  buildFrameworkSensitivityDisplayCopy,
+  buildFinancingEnvelopeGrid: (noi, units) => buildFinancingEnvelopeGrid(noi, units, { formatCurrency, escapeHtml: escapeHtmlForTest }),
+  buildAcquisitionMemoSummaryCard,
+  buildOperatingSnapshotCard,
+  buildRentUpsideValueSensitivityCard,
+  buildLaunchSourceContextBlock,
+};
 const healQaArtifacts = [
   {
     type: "t12_parsed",
@@ -89,7 +107,7 @@ const healQaCoverage = {
     rent_roll_parsed: { present: true, unit_count: 10, occupancy: 1 },
   },
 };
-const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const reportSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
 const contractsSource = fs.readFileSync("api/_lib/report-surface-contracts.js", "utf8");
 const templateSource = fs.readFileSync("api/report-template-runtime.html", "utf8");
 assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(reportSource), false);
@@ -4170,10 +4188,11 @@ assert.match(sourceContextBlockHtml, /Acquisition context is limited to verified
 assert.match(sourceContextBlockHtml, /Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis\./i);
 assert.equal(/<table>\s*<\/table>/.test(sourceContextBlockHtml), false);
 assert.match(reportSource, /function buildRentPositioningSummaryCard/);
-assert.match(reportSource, /function buildAcquisitionMemoSummaryCard/);
-assert.match(reportSource, /function buildOperatingSnapshotCard/);
-assert.match(reportSource, /function buildRentUpsideValueSensitivityCard/);
-assert.match(reportSource, /function buildLaunchSourceContextBlock/);
+const acquisitionMemoDocumentSource = fs.readFileSync(new URL("../../api/_lib/acquisition-memo-v2-document.js", import.meta.url), "utf8");
+assert.match(acquisitionMemoDocumentSource, /export function buildAcquisitionMemoSummaryCard/);
+assert.match(acquisitionMemoDocumentSource, /export function buildOperatingSnapshotCard/);
+assert.match(acquisitionMemoDocumentSource, /export function buildRentUpsideValueSensitivityCard/);
+assert.match(acquisitionMemoDocumentSource, /export function buildLaunchSourceContextBlock/);
 assert.match(reportSource, /function resolveRentPositioningSectionTitle/);
 assert.match(reportSource, /SECTION_0_6_ACQUISITION_MEMO_SUMMARY/);
 assert.match(reportSource, /SECTION_0_7_OPERATING_SNAPSHOT/);

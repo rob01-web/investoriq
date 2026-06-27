@@ -2,17 +2,24 @@ import assert from "assert";
 import fs from "fs";
 
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const handlerSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
+const implSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const pipelineSource = fs.readFileSync("api/_lib/acquisition-memo-v2-pipeline.js", "utf8");
 const orchestratorSource = fs.readFileSync("api/_lib/acquisition-memo-v2-orchestrator.js", "utf8");
 const documentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
 const roleReconcilerSource = fs.readFileSync("api/_lib/acquisition-memo-v2-role-reconciler.js", "utf8");
 const bossRepairSource = fs.readFileSync("api/_lib/acquisition-memo-v2-boss-repair.js", "utf8");
 
-assert.match(reportSource, /import \{ runAcquisitionMemoV2Pipeline \} from "\.\/_lib\/acquisition-memo-v2-pipeline\.js";/);
+assert.match(reportSource, /import handler from "\.\/_lib\/generate-client-report-handler\.js";/);
+assert.match(reportSource, /export default handler;/);
+assert.equal(reportSource.includes("__test__"), false, "Public route must not expose __test__");
+assert.match(handlerSource, /import implHandler from "\.\/generate-client-report-impl\.js";/);
+assert.match(handlerSource, /export default async function handler\(req, res\)/);
+assert.equal(handlerSource.includes("__test__"), false, "Internal handler wrapper must not expose __test__");
 assert.equal(
-  reportSource.includes("buildAcquisitionMemoV2FinalDeliveryDecision("),
+  implSource.includes("buildAcquisitionMemoV2FinalDeliveryDecision("),
   false,
-  "Route must not build the final V2 delivery decision"
+  "Implementation must not build the final V2 delivery decision in the route layer"
 );
 for (const snippet of [
   "function buildCanonicalSupportDocAuthorityRows",
@@ -23,7 +30,8 @@ for (const snippet of [
   "function applyFinalSourceReconciliationRenderGuard",
   "function applyFinalSectionHealRenderGuards",
 ]) {
-  assert.equal(reportSource.includes(snippet), false, `Route must not define active Acquisition Memo helper: ${snippet}`);
+  assert.equal(reportSource.includes(snippet), false, `Public route must not define active Acquisition Memo helper: ${snippet}`);
+  assert.equal(handlerSource.includes(snippet), false, `Handler wrapper must not define active Acquisition Memo helper: ${snippet}`);
 }
 for (const snippet of [
   "function legacyOnlyBuildCanonicalSupportDocAuthorityRows",
@@ -34,7 +42,8 @@ for (const snippet of [
   "function legacyOnlyApplyFinalSourceReconciliationRenderGuard",
   "function legacyOnlyApplyFinalSectionHealRenderGuards",
 ]) {
-  assert.equal(reportSource.includes(snippet), false, `Route must not retain detached legacy helper definition: ${snippet}`);
+  assert.equal(reportSource.includes(snippet), false, `Public route must not retain detached legacy helper definition: ${snippet}`);
+  assert.equal(handlerSource.includes(snippet), false, `Handler wrapper must not retain detached legacy helper definition: ${snippet}`);
 }
 assert.match(pipelineSource, /finalizeAcquisitionMemoV2Html/);
 assert.match(pipelineSource, /sealedLane: "acquisition_memo_v2_lane"/);
@@ -54,11 +63,11 @@ assert.match(roleReconcilerSource, /canonicalRole/);
 assert.match(roleReconcilerSource, /acceptedSourceTruth/);
 assert.match(bossRepairSource, /forbiddenSurface/);
 
-const fullHarnessV2Anchor = reportSource.indexOf("if (acquisitionMemoV2OwnsFinalHtml) {");
-const fullHarnessReturnAnchor = reportSource.indexOf("return res.status(200).json", fullHarnessV2Anchor);
+const fullHarnessV2Anchor = implSource.indexOf("if (acquisitionMemoV2OwnsFinalHtml) {");
+const fullHarnessReturnAnchor = implSource.indexOf("return res.status(200).json", fullHarnessV2Anchor);
 assert.ok(fullHarnessV2Anchor >= 0, "Missing full-render V2 sealed output anchor");
 assert.ok(fullHarnessReturnAnchor > fullHarnessV2Anchor, "Missing full-render final_html return after V2 anchor");
-const fullHarnessV2Slice = reportSource.slice(fullHarnessV2Anchor, fullHarnessReturnAnchor);
+const fullHarnessV2Slice = implSource.slice(fullHarnessV2Anchor, fullHarnessReturnAnchor);
 assert.match(fullHarnessV2Slice, /runAcquisitionMemoV2Pipeline/);
 assert.equal(/buildDocumentTreatmentSummaryHtml\(/.test(fullHarnessV2Slice), false);
 assert.equal(/replaceMarkedSection\(/.test(fullHarnessV2Slice), false);
@@ -67,26 +76,26 @@ assert.equal(/applyFinalSourceReconciliationRenderGuard\(/.test(fullHarnessV2Sli
 assert.equal(/applyFinalSectionHealRenderGuards\(/.test(fullHarnessV2Slice), false);
 assert.match(fullHarnessV2Slice, /finalHarnessBossCompliance\.finalDeliveryDecision[\s\S]*finalHarnessBossCompliance\.deliveryState[\s\S]*null/);
 
-const finalHtmlAssignmentAnchor = reportSource.indexOf("finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;");
-const documentTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({", finalHtmlAssignmentAnchor);
+const finalHtmlAssignmentAnchor = implSource.indexOf("finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;");
+const documentTreatmentAnchor = implSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({", finalHtmlAssignmentAnchor);
 assert.ok(finalHtmlAssignmentAnchor >= 0, "Missing V2 sealed finalHtml assignment");
 assert.ok(documentTreatmentAnchor > finalHtmlAssignmentAnchor, "Missing route-level document treatment block after V2 assignment");
-const treatmentConditionSlice = reportSource.slice(reportSource.lastIndexOf("if (", documentTreatmentAnchor), documentTreatmentAnchor);
+const treatmentConditionSlice = implSource.slice(implSource.lastIndexOf("if (", documentTreatmentAnchor), documentTreatmentAnchor);
 assert.match(treatmentConditionSlice, /effectiveReportMode !== "screening_v1"/);
 assert.match(treatmentConditionSlice, /!\(\s*effectiveReportMode === "v1_core"[\s\S]*acqMemoV2SourceAuthorityEnabled[\s\S]*acquisitionMemoV2Bridge\?\.renderedAcquisitionMemo[\s\S]*\)/);
 
-const pdfDocHtmlAnchor = reportSource.indexOf("docHtml = sanitizeTypography(qaHtml);");
-const pdfBossGuardAnchor = reportSource.indexOf("const finalBossCompliance = acquisitionMemoV2Finalization ||", pdfDocHtmlAnchor);
-const pdfPostAnchor = reportSource.indexOf("pdfResponse = await axios.post(", pdfBossGuardAnchor);
+const pdfDocHtmlAnchor = implSource.indexOf("docHtml = sanitizeTypography(qaHtml);");
+const pdfBossGuardAnchor = implSource.indexOf("const finalBossCompliance = acquisitionMemoV2Finalization ||", pdfDocHtmlAnchor);
+const pdfPostAnchor = implSource.indexOf("pdfResponse = await axios.post(", pdfBossGuardAnchor);
 assert.ok(pdfDocHtmlAnchor >= 0, "Missing PDF docHtml anchor");
 assert.ok(pdfBossGuardAnchor > pdfDocHtmlAnchor, "V2 Boss/model gate must run after docHtml preparation");
 assert.ok(pdfPostAnchor > pdfBossGuardAnchor, "PDF handoff must occur after V2 Boss/model gate");
 
-const pdfSealedGuardSlice = reportSource.slice(pdfDocHtmlAnchor, pdfBossGuardAnchor);
+const pdfSealedGuardSlice = implSource.slice(pdfDocHtmlAnchor, pdfBossGuardAnchor);
 assert.match(pdfSealedGuardSlice, /if \(!isSealedCustomerOutput\)/);
 assert.match(pdfSealedGuardSlice, /else if \(isAcqMemoV2FinalHtml\)/);
 
-const postBossToPdfSlice = reportSource.slice(pdfBossGuardAnchor, pdfPostAnchor);
+const postBossToPdfSlice = implSource.slice(pdfBossGuardAnchor, pdfPostAnchor);
 assert.match(postBossToPdfSlice, /finalBossCompliance\.finalDeliveryDecision[\s\S]*finalBossCompliance\.deliveryState[\s\S]*null/);
 for (const forbiddenMutation of [
   "buildDocumentTreatmentSummaryHtml(",

@@ -11,7 +11,7 @@ const {
 const {
   buildAcquisitionMemoV2AcquisitionFinancingAssumptionsHtml,
 } = await import("../../api/_lib/acquisition-memo-v2-document.js");
-const { __test__: reportTestHelpers } = await import("../../api/generate-client-report.js");
+const { __test__: reportTestHelpers } = await import("../../api/_lib/generate-client-report-impl.js");
 const {
   validateAcquisitionPurchaseAssumptionsCandidate,
   validateAppraisalCandidate,

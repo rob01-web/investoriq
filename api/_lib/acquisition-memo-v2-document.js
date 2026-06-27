@@ -1,4 +1,5 @@
 import { toCapRatio, toRateRatio } from "./report-number-helpers.js";
+import { buildDocumentTreatmentSummaryHtml } from "./document-treatment-authority.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -139,6 +140,141 @@ function formatCapRateValue(noiBasis, capRatePct) {
   const noi = Number(noiBasis);
   if (!Number.isFinite(noi) || !Number.isFinite(capRatio) || capRatio <= 0) return "";
   return formatMoney(noi / capRatio);
+}
+
+export function buildAcquisitionMemoSummaryCard({
+  units = null,
+  occupancy = null,
+  annualInPlace = null,
+  annualMarket = null,
+  annualUpsideRatio = null,
+  purchasePrice = null,
+  goingInCapRate = null,
+  noi = null,
+  formatCurrency,
+  formatPercent1,
+} = {}) {
+  const rows = [];
+  if (Number.isFinite(units) && units > 0) rows.push(`<tr><td>Units</td><td>${Math.round(units)}</td></tr>`);
+  if (Number.isFinite(occupancy)) rows.push(`<tr><td>Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>`);
+  if (Number.isFinite(annualInPlace)) rows.push(`<tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr>`);
+  if (Number.isFinite(annualMarket)) rows.push(`<tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr>`);
+  if (Number.isFinite(annualUpsideRatio)) rows.push(`<tr><td>Annual Rent Upside</td><td>${formatPercent1(annualUpsideRatio)}</td></tr>`);
+  if (Number.isFinite(purchasePrice)) rows.push(`<tr><td>Purchase Price</td><td>${formatCurrency(purchasePrice)}</td></tr>`);
+  if (Number.isFinite(goingInCapRate)) rows.push(`<tr><td>Going-In Cap Rate</td><td>${formatPercent1(goingInCapRate)}</td></tr>`);
+  if (Number.isFinite(noi)) rows.push(`<tr><td>NOI Basis</td><td>${formatCurrency(noi)}</td></tr>`);
+  if (!rows.length) return "";
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Acquisition Memo Summary</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Source-bound acquisition memo summary using verified operating metrics and acquisition context. Additional modeling remains deferred unless explicitly supported by the report family and verified source basis.</p></div>`;
+}
+
+export function buildOperatingSnapshotCard({
+  units = null,
+  occupancy = null,
+  annualInPlace = null,
+  egi = null,
+  operatingExpenses = null,
+  noi = null,
+  expenseRatio = null,
+  noiMargin = null,
+  breakEvenOccupancy = null,
+  formatCurrency,
+  formatPercent1,
+} = {}) {
+  const rows = [];
+  if (Number.isFinite(units) && units > 0) rows.push(`<tr><td>Units</td><td>${Math.round(units)}</td></tr>`);
+  if (Number.isFinite(occupancy)) rows.push(`<tr><td>Occupancy</td><td>${formatPercent1(occupancy)}</td></tr>`);
+  if (Number.isFinite(annualInPlace)) rows.push(`<tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr>`);
+  if (Number.isFinite(egi)) rows.push(`<tr><td>Effective Gross Income</td><td>${formatCurrency(egi)}</td></tr>`);
+  if (Number.isFinite(operatingExpenses)) rows.push(`<tr><td>Operating Expenses</td><td>${formatCurrency(operatingExpenses)}</td></tr>`);
+  if (Number.isFinite(noi)) rows.push(`<tr><td>NOI</td><td>${formatCurrency(noi)}</td></tr>`);
+  if (Number.isFinite(expenseRatio)) rows.push(`<tr><td>Expense Ratio</td><td>${formatPercent1(expenseRatio)}</td></tr>`);
+  if (Number.isFinite(noiMargin)) rows.push(`<tr><td>NOI Margin</td><td>${formatPercent1(noiMargin)}</td></tr>`);
+  if (Number.isFinite(breakEvenOccupancy)) rows.push(`<tr><td>Break-Even Occupancy</td><td>${formatPercent1(breakEvenOccupancy)}</td></tr>`);
+  if (!rows.length) return "";
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Snapshot</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Snapshot is built from verified operating inputs only. No forward projection assumptions are introduced.</p></div>`;
+}
+
+export function buildRentUpsideValueSensitivityCard({
+  annualInPlace = null,
+  annualMarket = null,
+  formatCurrency,
+} = {}) {
+  if (!Number.isFinite(annualInPlace) || annualInPlace <= 0 || !Number.isFinite(annualMarket) || annualMarket <= annualInPlace) return "";
+  const annualGap = annualMarket - annualInPlace;
+  const capRates = [5.0, 6.0, 7.0];
+  const capRows = capRates.map((cap) => {
+    const impliedLift = annualGap / (cap / 100);
+    return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}% cap rate</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
+  }).join("");
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Upside / Value Sensitivity</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr><tr style="background:#FEFCE8;font-weight:700;"><td style="color:#B8860B;">Annual Gross Rent Upside</td><td style="color:#B8860B;">${formatCurrency(annualGap)}</td></tr></tbody></table><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table></div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Implied value sensitivity capitalizes the verified annual rent gap at standardized cap-rate assumptions. It remains conditional on market-rent capture and occupancy.</p></div>`;
+}
+
+export function buildLaunchSourceContextBlock({
+  reportMode = null,
+  documentSources = [],
+  currentDebtAssessmentState = null,
+  canonicalAcquisitionState = null,
+  loanTermSheetTermsPayload = null,
+  acquisitionTermsPayload = null,
+  hasForwardLookingRenovationInputs = false,
+  renovationDisplayMode = null,
+  renovationPayload = null,
+  propertyTaxPayload = null,
+  propertyTaxBindingState = null,
+  documentQuantitativeUsageMap = null,
+  supportDocAuthorityRows = null,
+  canonicalSupportDocMap = null,
+  renderedDocumentTreatmentRowsOut = null,
+} = {}) {
+  const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported.</p>`;
+  const treatment = buildDocumentTreatmentSummaryHtml({
+    reportMode,
+    documentSources,
+    currentDebtAssessmentState,
+    canonicalAcquisitionState,
+    loanTermSheetTermsPayload,
+    acquisitionTermsPayload,
+    hasForwardLookingRenovationInputs,
+    renovationDisplayMode,
+    renovationPayload,
+    propertyTaxPayload,
+    propertyTaxBindingState,
+    documentQuantitativeUsageMap,
+    supportDocAuthorityRows,
+    canonicalSupportDocMap,
+    renderedDocumentTreatmentRowsOut,
+  });
+  const excludedDeferredHtml = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Excluded / Deferred Analysis</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.</p></div>`;
+  return `${intro}<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${treatment}<!-- END DOCUMENT_TREATMENT_SUMMARY -->${excludedDeferredHtml}`;
+}
+
+export function buildCapRateValueTable(noi, units, documentDerivedCapRate = null, { formatCurrency, formatCapPercentExact } = {}) {
+  if (!Number.isFinite(noi) || noi <= 0) return "";
+  if (typeof formatCurrency !== "function" || typeof formatCapPercentExact !== "function") return "";
+  const capRates = [0.05, 0.06, 0.07];
+  const docCapRate = toCapRatio(documentDerivedCapRate);
+  const addDocumentDerivedCapRate =
+    Number.isFinite(docCapRate) &&
+    docCapRate > 0 &&
+    !capRates.some((rate) => Math.abs(rate - docCapRate) < 0.0001);
+  const tableRates = [...capRates];
+  if (addDocumentDerivedCapRate) {
+    tableRates.push(docCapRate);
+  }
+  const rows = tableRates
+    .map((r) => {
+      const val = noi / r;
+      const perUnit = Number.isFinite(units) && units > 0 ? val / units : null;
+      const label = addDocumentDerivedCapRate && Math.abs(r - docCapRate) < 0.0001
+        ? `${formatCapPercentExact(r)} (document derived)`
+        : `${(r * 100).toFixed(1)}%`;
+      return `<tr><td>${label}</td><td>${formatCurrency(val)}</td><td>${perUnit !== null ? formatCurrency(perUnit) : "-"}</td></tr>`;
+    })
+    .join("");
+  const footnote = addDocumentDerivedCapRate
+    ? `Derived from reported NOI of ${formatCurrency(noi)}. Standardized framework benchmarks are shown with any valid document-derived cap rate. Purchase price and unsupported appraisal/market survey files are not treated as appraised value.`
+    : `Derived from reported NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced, and do not represent appraised value.`;
+  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
 }
 
 function getSupportDocs(sourcePackage = null) {
