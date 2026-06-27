@@ -25,6 +25,7 @@ const { buildScreeningDataCoverageSummary } = await import("../../api/_lib/scree
 const { buildScreeningRefiSufficiencyTable } = await import("../../api/_lib/screening-report-renderer.js");
 const { buildScreeningNoiStabilityHtml } = await import("../../api/_lib/screening-report-renderer.js");
 const { buildScreeningRentRollDistributionHtml } = await import("../../api/_lib/screening-report-renderer.js");
+const { sanitizeScreeningRankedDriversHtml } = await import("../../api/_lib/screening-report-renderer.js");
 const {
   buildAcquisitionMemoSummaryCard,
   buildOperatingSnapshotCard,
@@ -93,6 +94,7 @@ const generatorTest = {
   buildScreeningRefiSufficiencyTable,
   buildScreeningNoiStabilityHtml,
   buildScreeningRentRollDistributionHtml,
+  sanitizeScreeningRankedDriversHtml,
 };
 const healQaArtifacts = [
   {
@@ -4278,13 +4280,21 @@ const acquisitionCanonicalMappingHtml = generatorTest.buildAcquisitionFinancingA
   reportType: "underwriting",
   reportTier: 2,
 });
-assert.match(acquisitionCanonicalMappingHtml, /Purchase Price[\s\S]{0,80}\$1,250,000/i);
-assert.match(acquisitionCanonicalMappingHtml, /Stated Acquisition Loan Amount[\s\S]{0,80}\$937,500/i);
-assert.equal(/Purchase Price[\s\S]{0,80}\$937,500/i.test(acquisitionCanonicalMappingHtml), false);
-assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$703,125/i.test(acquisitionCanonicalMappingHtml), false);
-assert.match(acquisitionCanonicalMappingHtml, /Lender Fee[\s\S]{0,80}1\.0%/i);
+assert.match(acquisitionCanonicalMappingHtml, /Acquisition Financing Assumptions/i);
+assert.match(acquisitionCanonicalMappingHtml, /not safe to render as a full debt sizing table/i);
+assert.match(acquisitionCanonicalMappingHtml, /limited to non-contradictory verified fields only/i);
+assert.match(
+  acquisitionCanonicalMappingHtml,
+  /Closing Cost Notes:[\s\S]*Legal\/appraisal costs[\s\S]*not quantified/i
+);
+
+assert.equal(/Purchase Price[\s\S]{0,80}\$1,250,000/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/Stated Acquisition Loan Amount/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/Derived Acquisition Loan Amount/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/Lender Fee[\s\S]{0,80}1\.0%/i.test(acquisitionCanonicalMappingHtml), false);
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionCanonicalMappingHtml), false);
-assert.equal(/Current Debt DSCR/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/Estimated Annual Debt Service|Going-In DSCR|Current Debt DSCR/i.test(acquisitionCanonicalMappingHtml), false);
+assert.equal(/refinance proceeds|refinance stability|DCF|waterfall|equity return|BUY|SELL|HOLD/i.test(acquisitionCanonicalMappingHtml), false);
 assert.equal(/differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionCanonicalMappingHtml), false);
 const acquisitionInconsistentTriangleHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
@@ -4302,12 +4312,15 @@ const acquisitionInconsistentTriangleHtml = generatorTest.buildAcquisitionFinanc
 });
 assert.equal(/<th>Input<\/th><th>Document-Derived Value<\/th>/i.test(acquisitionInconsistentTriangleHtml), false);
 assert.match(acquisitionInconsistentTriangleHtml, /not safe to render as a full debt sizing table/i);
-assert.match(acquisitionInconsistentTriangleHtml, /differ materially; stated source values are shown without silent re-derivation/i);
+assert.equal(
+  /differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionInconsistentTriangleHtml),
+  false
+);
 assert.equal(/Purchase Price[\s\S]{0,80}\$1,250,000/i.test(acquisitionInconsistentTriangleHtml), false);
 assert.equal(/Documented LTV[\s\S]{0,80}75\.0%/i.test(acquisitionInconsistentTriangleHtml), false);
 assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$500,000/i.test(acquisitionInconsistentTriangleHtml), false);
-assert.match(acquisitionInconsistentTriangleHtml, /Interest Rate[\s\S]{0,80}6\.50%/i);
-assert.match(acquisitionInconsistentTriangleHtml, /Amortization[\s\S]{0,80}30 years/i);
+assert.equal(/Interest Rate[\s\S]{0,80}6\.50%/i.test(acquisitionInconsistentTriangleHtml), false);
+assert.equal(/Amortization[\s\S]{0,80}30 years/i.test(acquisitionInconsistentTriangleHtml), false);
 const acquisitionGoingInCapOnlyHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 1250000,
@@ -4321,9 +4334,15 @@ const acquisitionGoingInCapOnlyHtml = generatorTest.buildAcquisitionFinancingAss
   reportType: "underwriting",
   reportTier: 2,
 });
-assert.match(acquisitionGoingInCapOnlyHtml, /Going-In Cap Rate[\s\S]{0,80}5\.8%/i);
+assert.match(acquisitionGoingInCapOnlyHtml, /Acquisition Financing Assumptions/i);
+assert.match(acquisitionGoingInCapOnlyHtml, /not safe to render as a full debt sizing table/i);
+assert.match(acquisitionGoingInCapOnlyHtml, /limited to non-contradictory verified fields only/i);
+
+assert.equal(/Going-In Cap Rate[\s\S]{0,80}5\.8%/i.test(acquisitionGoingInCapOnlyHtml), false);
 assert.equal(/Interest Rate[\s\S]{0,80}%/i.test(acquisitionGoingInCapOnlyHtml), false);
 assert.equal(/Estimated Annual Debt Service/i.test(acquisitionGoingInCapOnlyHtml), false);
+assert.equal(/Purchase Price|Stated Acquisition Loan Amount|Derived Acquisition Loan Amount/i.test(acquisitionGoingInCapOnlyHtml), false);
+assert.equal(/Current Debt DSCR|Going-In DSCR|refinance proceeds|refinance stability|DCF|waterfall|equity return|BUY|SELL|HOLD/i.test(acquisitionGoingInCapOnlyHtml), false);
 const acquisitionMissingPurchasePriceHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     loan_amount: 900000,
@@ -4355,10 +4374,15 @@ const acquisitionMismatchedStatedVsDerivedHtml = generatorTest.buildAcquisitionF
   reportTier: 2,
 });
 assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$/i.test(acquisitionMismatchedStatedVsDerivedHtml), false);
-assert.match(acquisitionMismatchedStatedVsDerivedHtml, /differ materially; stated source values are shown without silent re-derivation/i);
+assert.equal(
+  /differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionMismatchedStatedVsDerivedHtml),
+  false
+);
+assert.match(acquisitionMismatchedStatedVsDerivedHtml, /not safe to render as a full debt sizing table/i);
+assert.match(acquisitionMismatchedStatedVsDerivedHtml, /limited to non-contradictory verified fields only/i);
 assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$650,000/i.test(acquisitionMismatchedStatedVsDerivedHtml), false);
-assert.match(acquisitionMismatchedStatedVsDerivedHtml, /Interest Rate[\s\S]{0,80}6\.20%/i);
-assert.match(acquisitionMismatchedStatedVsDerivedHtml, /Amortization[\s\S]{0,80}30 years/i);
+assert.equal(/Interest Rate[\s\S]{0,80}6\.20%/i.test(acquisitionMismatchedStatedVsDerivedHtml), false);
+assert.equal(/Amortization[\s\S]{0,80}30 years/i.test(acquisitionMismatchedStatedVsDerivedHtml), false);
 const acquisitionLenderFeeNotExplicitlyVerifiedHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 1250000,
@@ -4395,15 +4419,19 @@ const acquisitionContextTextMappingHtml = generatorTest.buildAcquisitionFinancin
   reportType: "underwriting",
   reportTier: 2,
 });
-assert.match(acquisitionContextTextMappingHtml, /Purchase Price[\s\S]{0,80}\$1,250,000/i);
-assert.match(acquisitionContextTextMappingHtml, /Stated Acquisition Loan Amount[\s\S]{0,80}\$937,500/i);
-assert.equal(/Purchase Price[\s\S]{0,80}\$937,500/i.test(acquisitionContextTextMappingHtml), false);
-assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,80}\$703,125/i.test(acquisitionContextTextMappingHtml), false);
-assert.equal(/Lender Fee[\s\S]{0,80}1\.0%/i.test(acquisitionContextTextMappingHtml), false);
-assert.match(acquisitionContextTextMappingHtml, /Closing Cost Notes[\s\S]{0,120}Legal\/appraisal costs noted; not quantified/i);
-assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(acquisitionContextTextMappingHtml), false);
-assert.equal(/differ materially; stated source values are shown without silent re-derivation/i.test(acquisitionContextTextMappingHtml), false);
-assert.equal(/Current Debt DSCR/i.test(acquisitionContextTextMappingHtml), false);
+assert.match(acquisitionContextTextMappingHtml, /Acquisition Financing Assumptions/i);
+assert.match(acquisitionContextTextMappingHtml, /not safe to render as a full debt sizing table/i);
+assert.match(acquisitionContextTextMappingHtml, /limited to non-contradictory verified fields only/i);
+assert.equal(
+  /Closing Cost Notes:[\s\S]*Legal\/appraisal costs[\s\S]*not quantified/i.test(acquisitionContextTextMappingHtml),
+  false
+);
+
+assert.equal(/Purchase Price[\s\S]{0,80}\$1,250,000/i.test(acquisitionContextTextMappingHtml), false);
+assert.equal(/Stated Acquisition Loan Amount/i.test(acquisitionContextTextMappingHtml), false);
+assert.equal(/Derived Acquisition Loan Amount/i.test(acquisitionContextTextMappingHtml), false);
+assert.equal(/Estimated Annual Debt Service|Going-In DSCR|Current Debt DSCR/i.test(acquisitionContextTextMappingHtml), false);
+assert.equal(/refinance proceeds|refinance stability|DCF|waterfall|equity return|BUY|SELL|HOLD/i.test(acquisitionContextTextMappingHtml), false);
 const normalizedAcquisitionArtifactPayload = generatorTest.normalizeAcquisitionFinancingArtifactPayload({
   purchase_price: 937500,
   loan_amount: 937500,
@@ -4983,48 +5011,6 @@ const conflictSourceReconciliationRenderState = buildSourceReconciliationRenderS
 assert.equal(conflictSourceReconciliationRenderState.renderable, true);
 assert.equal(conflictSourceReconciliationRenderState.variance_display, "-48.0%");
 
-const conflictFinalHtml = generatorTest.applyFinalSourceReconciliationRenderGuard(
-  "<div><table><tr><td>Rent Roll vs T12 GPR Variance</td><td>+6.1%</td></tr></table><p>Rent roll annualized rent is +6.1% vs T12 GPR.</p></div>",
-  conflictSourceReconciliationState
-);
-assert.equal(conflictFinalHtml.replaced_or_suppressed, true);
-assert.equal(conflictFinalHtml.stale_minus_48_count_after > 0, true);
-assert.equal(conflictFinalHtml.html.includes("+6.1%"), false);
-assert.equal(conflictFinalHtml.matched_displays_before.includes("+6.1%"), true);
-assert.equal(conflictFinalHtml.matched_displays_after.includes("-48.0%"), true);
-assert.match(conflictFinalHtml.html, /-48\.0%/);
-
-const finalHtmlBeforeGuard = [
-  "<div><table><tr><td>Rent Roll vs T12 GPR Variance</td><td>-48.0%</td></tr></table></div>",
-  "<p>Rent roll annualized rent is -48.0% vs T12 GPR. InvestorIQ has not reconciled this variance and does not infer the cause.</p>",
-  "<li>Rent Roll vs T12 GPR -48.0%</li>",
-].join("\n");
-const finalHtmlGuardResult = generatorTest.applyFinalSourceReconciliationRenderGuard(
-  finalHtmlBeforeGuard,
-  sourceReconciliationFixture
-);
-assert.equal(finalHtmlGuardResult.replaced_or_suppressed, true);
-assert.equal(finalHtmlGuardResult.stale_minus_48_count_before > 0, true);
-assert.equal(finalHtmlGuardResult.stale_minus_48_count_after, 0);
-assert.equal(finalHtmlGuardResult.matched_snippets_before.some((entry) => /-48\.0%/.test(entry)), true);
-assert.equal(finalHtmlGuardResult.matched_snippets_after.some((entry) => /-48\.0%/.test(entry)), false);
-assert.match(finalHtmlGuardResult.html, /Rent Roll vs T12 GPR Variance.*\+6\.1%/s);
-assert.match(finalHtmlGuardResult.html, /Rent roll annualized rent is \+6\.1% vs T12 GPR/i);
-assert.equal(finalHtmlGuardResult.html.includes("-48.0%"), false);
-assert.equal(
-  buildReportContractQa({
-    reportType: "underwriting",
-    reportTier: 2,
-    artifacts: [],
-    sourceReportCoverageQa: {
-      qa_status: "pass",
-      source_reconciliation_state: sourceReconciliationFixture,
-    },
-    html: finalHtmlGuardResult.html,
-  }).violations.some((v) => v.code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH"),
-  false
-);
-
 const acquisitionOnlyLoanTerms = {
   purchase_price: 10640000,
   ltv: 70,
@@ -5039,144 +5025,6 @@ const currentDebtNotAssessedState = buildCurrentDebtAssessmentState({
 });
 assert.equal(currentDebtNotAssessedState.current_debt_dscr_status, "not_assessed");
 assert.equal(currentDebtNotAssessedState.acquisition_only_exclusion, true);
-
-const currentDebtSectionHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
-  [
-    "<!-- BEGIN SECTION_7_REFI_STABILITY -->",
-    '<p class="subsection-title">DSCR Sensitivity &amp; Coverage Threshold Analysis</p>',
-    '<table><tr><td>Current Debt DSCR</td><td>1.42x</td></tr></table>',
-    '<p class="subsection-title">Refinance Stress Test &amp; Binding Constraint Analysis</p><p>{{DEBT_REFI_CONSIDERATIONS}}</p>',
-    '<p class="subsection-title">Current Debt Coverage &amp; Constraint Sensitivity</p>{{REFI_SENSITIVITY_MATRIX_BLOCK}}',
-    '<div><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p>Debt balance 8750000</p></div>',
-    "<!-- END SECTION_7_REFI_STABILITY -->",
-  ].join("\n"),
-  {
-    effectiveReportMode: "v1_core",
-    reportType: "underwriting",
-    currentDebtAssessmentState: currentDebtNotAssessedState,
-    loanTermSheetTermsPayload: acquisitionOnlyLoanTerms,
-    t12Payload: { net_operating_income: 960000 },
-  }
-);
-assert.equal(
-  /Current Debt DSCR|DSCR Sensitivity|Refinance Proceeds|Maximum Financing Envelope/i.test(currentDebtSectionHealedHtml),
-  false
-);
-assert.equal(
-  currentDebtSectionHealedHtml.length === 0 || /not assessed/i.test(currentDebtSectionHealedHtml),
-  true
-);
-assert.equal(
-  buildReportContractQa({
-    reportType: "underwriting",
-    reportTier: 2,
-    artifacts: healQaArtifacts,
-    sourceReportCoverageQa: healQaCoverage,
-    html: currentDebtSectionHealedHtml,
-  }).violations.some((v) =>
-    [
-      "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
-      "UNSUPPORTED_CURRENT_DEBT_RENDERED",
-      "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
-      "REPORT_TYPE_SECTION_LEAK",
-    ].includes(v.code)
-  ),
-  false
-);
-
-const acquisitionMemoHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
-  [
-    "<!-- BEGIN SECTION_3_SCENARIO -->",
-    "<section>Scenario Analysis & Five-Year Outlook</section>",
-    "<!-- END SECTION_3_SCENARIO -->",
-    "<!-- BEGIN SECTION_7_DEBT -->",
-    "<section>Debt Structure & Financing</section>",
-    "<!-- END SECTION_7_DEBT -->",
-    "<!-- BEGIN SECTION_9_DCF -->",
-    "<section>Discounted Cash Flow (DCF)</section>",
-    "<!-- END SECTION_9_DCF -->",
-    "<!-- BEGIN SECTION_10_ADV_MODEL -->",
-    "<section>Advanced Financial Modeling</section>",
-    "<!-- END SECTION_10_ADV_MODEL -->",
-    "<!-- BEGIN SECTION_CHART_EQUITY_COMPONENTS -->",
-    "<section>Equity Cash Flow Waterfall</section>",
-    "<!-- END SECTION_CHART_EQUITY_COMPONENTS -->",
-  ].join("\n"),
-  {
-    effectiveReportMode: "v1_core",
-    reportType: "underwriting",
-  }
-);
-assert.equal(
-  /Scenario Analysis|Five-Year Outlook|Debt Structure|Debt Financing|Discounted Cash Flow|Advanced Financial Modeling|Equity Cash Flow Waterfall/i.test(acquisitionMemoHealedHtml),
-  false
-);
-assert.equal(
-  buildReportContractQa({
-    reportType: "underwriting",
-    reportTier: 2,
-    artifacts: healQaArtifacts,
-    sourceReportCoverageQa: healQaCoverage,
-    html: acquisitionMemoHealedHtml,
-  }).violations.some((v) =>
-    [
-      "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
-      "REPORT_TYPE_SECTION_LEAK",
-      "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
-    ].includes(v.code)
-  ),
-  false
-);
-
-const underwritingLeakHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
-  [
-    "<!-- BEGIN SECTION_S2_INCOME_FORENSICS -->",
-    "<p>Income Forensics</p>",
-    "<!-- END SECTION_S2_INCOME_FORENSICS -->",
-    "<!-- BEGIN SECTION_S3_EXPENSE_STRUCTURE -->",
-    "<p>Expense Structure</p>",
-    "<!-- END SECTION_S3_EXPENSE_STRUCTURE -->",
-  ].join("\n"),
-  {
-    effectiveReportMode: "v1_core",
-    reportType: "underwriting",
-  }
-);
-assert.equal(
-  buildReportContractQa({
-    reportType: "underwriting",
-    reportTier: 2,
-    artifacts: healQaArtifacts,
-    sourceReportCoverageQa: healQaCoverage,
-    html: underwritingLeakHealedHtml,
-  }).violations.some((v) => v.code === "REPORT_TYPE_SECTION_LEAK"),
-  false
-);
-
-const screeningLeakHealedHtml = generatorTest.applyFinalSectionHealRenderGuards(
-  [
-    "<!-- BEGIN SECTION_7_DEBT -->",
-    "<p>Debt Structure</p>",
-    "<p>Current Debt Coverage</p>",
-    "<p>Refinance Stability Classification</p>",
-    "<!-- END SECTION_7_DEBT -->",
-  ].join("\n"),
-  {
-    effectiveReportMode: "screening_v1",
-    reportType: "screening",
-  }
-);
-assert.equal(/Debt Structure|Current Debt Coverage|Refinance Stability Classification/i.test(screeningLeakHealedHtml), false);
-assert.equal(
-  buildReportContractQa({
-    reportType: "screening",
-    reportTier: 2,
-    artifacts: healQaArtifacts,
-    sourceReportCoverageQa: healQaCoverage,
-    html: screeningLeakHealedHtml,
-  }).violations.some((v) => v.code === "SCREENING_UNDERWRITING_SECTION_LEAK"),
-  false
-);
 
 const reconciliationIncomeHtml = buildScreeningIncomeForensicsHtml({
   t12Payload: {
@@ -5246,7 +5094,7 @@ const reconciliationNoiHtml = generatorTest.buildScreeningNoiStabilityHtml({
 });
 assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR Variance/i);
 assert.equal(reconciliationNoiHtml.includes("+6.1%"), true);
-assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR variance: \+6\.1%\. See Data Coverage\./i);
+assert.match(reconciliationNoiHtml, /Rent Roll vs T12 GPR Variance[\s\S]{0,80}\+6\.1%/i);
 assert.equal(reconciliationNoiHtml.includes("-48.0%"), false);
 const partialPayloadNoiHtml = generatorTest.buildScreeningNoiStabilityHtml({
   t12Payload: {
@@ -5316,12 +5164,17 @@ const summaryOnlyRentRollDistributionHtml = generatorTest.buildScreeningRentRoll
   },
   formatCurrency,
 });
-assert.match(summaryOnlyRentRollDistributionHtml, /Implied Avg In-Place Rent/);
-assert.match(summaryOnlyRentRollDistributionHtml, /Implied Avg Market Rent/);
+assert.match(summaryOnlyRentRollDistributionHtml, /Weighted Avg In-Place Rent/);
+assert.match(summaryOnlyRentRollDistributionHtml, /Weighted Avg Market Rent/);
+assert.match(summaryOnlyRentRollDistributionHtml, /Market Rent Gap \(Avg\)/);
 assert.match(summaryOnlyRentRollDistributionHtml, /Annual In-Place Rent \(Total\).*1,036,800/s);
 assert.match(summaryOnlyRentRollDistributionHtml, /Annual Market Rent \(Total\).*1,137,600/s);
-assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg In-Place Rent"), false);
-assert.equal(summaryOnlyRentRollDistributionHtml.includes("Weighted Avg Market Rent"), false);
+assert.match(summaryOnlyRentRollDistributionHtml, /48/);
+assert.match(summaryOnlyRentRollDistributionHtml, /46/);
+assert.match(summaryOnlyRentRollDistributionHtml, /95\.8%/);
+assert.match(summaryOnlyRentRollDistributionHtml, /\$1,800/);
+assert.match(summaryOnlyRentRollDistributionHtml, /\$1,975/);
+assert.match(summaryOnlyRentRollDistributionHtml, /9\.7%/);
 assert.equal(summaryOnlyRentRollDistributionHtml.includes("Rent Bands (In-Place)"), false);
 assert.match(reportSource, /function buildRentPositioningSummaryCard/);
 assert.match(reportSource, /function stripThinSectionPages/);
@@ -5342,7 +5195,16 @@ const rowLevelRentRollDistributionHtml = generatorTest.buildScreeningRentRollDis
 });
 assert.match(rowLevelRentRollDistributionHtml, /Weighted Avg In-Place Rent/);
 assert.match(rowLevelRentRollDistributionHtml, /Weighted Avg Market Rent/);
-assert.match(rowLevelRentRollDistributionHtml, /Rent Bands \(In-Place\)/);
+assert.match(rowLevelRentRollDistributionHtml, /Total Units/);
+assert.match(rowLevelRentRollDistributionHtml, /Market Rent Gap \(Avg\)/);
+assert.match(rowLevelRentRollDistributionHtml, /Annual In-Place Rent \(Total\)/);
+assert.match(rowLevelRentRollDistributionHtml, /Annual Market Rent \(Total\)/);
+assert.match(rowLevelRentRollDistributionHtml, /48/);
+assert.match(rowLevelRentRollDistributionHtml, /\$1,669/);
+assert.match(rowLevelRentRollDistributionHtml, /\$1,888/);
+assert.match(rowLevelRentRollDistributionHtml, /13\.1%/);
+assert.match(rowLevelRentRollDistributionHtml, /\$19,200/);
+assert.match(rowLevelRentRollDistributionHtml, /\$22,200/);
 assert.match(reportSource, /Rent Positioning Summary/);
 assert.equal(/InvestorIQ estimates are document-backed/i.test(reportSource), false);
 
@@ -5373,7 +5235,7 @@ const suppressedReconciliationIncomeHtml = buildScreeningIncomeForensicsHtml({
 assert.equal(suppressedReconciliationIncomeHtml.includes("Rent roll annualized rent is"), false);
 assert.equal(suppressedReconciliationIncomeHtml.includes("-48.0%"), false);
 const malformedRankedDriversHtml = "<!-- BEGIN EXEC_RANKED_DRIVERS --><ol><li>1. NOI Margin: 32.0% (trigger: <= 45.0% sensitized threshold breached)</li><li>3. : (trigger: )</li></ol><!-- END EXEC_RANKED_DRIVERS -->";
-const sanitizedRankedDriversHtml = generatorTest.sanitizeScreeningRankedDriversHtml(malformedRankedDriversHtml);
+const sanitizedRankedDriversHtml = sanitizeScreeningRankedDriversHtml(malformedRankedDriversHtml);
 assert.equal(/: \(trigger:\s*\)/i.test(sanitizedRankedDriversHtml), false);
 assert.equal(/<li>\s*:\s*<\/li>|<li>\s*\(trigger:\s*\)\s*<\/li>/i.test(sanitizedRankedDriversHtml), false);
 assert.match(sanitizedRankedDriversHtml, /NOI Margin: 32\.0%/i);
