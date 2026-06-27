@@ -62,12 +62,12 @@ import {
   resolveCanonicalSupportDocAuthority,
 } from "./_lib/support-doc-taxonomy.js";
 import {
-  buildCanonicalSupportDocAuthorityRows as legacyOnlyBuildCanonicalSupportDocAuthorityRows,
-  buildDocumentTreatmentSummaryHtml as legacyOnlyBuildDocumentTreatmentSummaryHtml,
-  buildPreliminaryFinancingReadinessSummaryHtml as legacyOnlyBuildPreliminaryFinancingReadinessSummaryHtml,
-  buildAcquisitionFinancingAssumptionsHtml as legacyOnlyBuildAcquisitionFinancingAssumptionsHtml,
-  buildAcquisitionFinancingReadinessHtml as legacyOnlyBuildAcquisitionFinancingReadinessHtml,
+  buildDocumentTreatmentSummaryHtml,
 } from "./_lib/document-treatment-authority.js";
+import {
+  applyAcquisitionMemoV2SourceReconciliationRenderGuard,
+  applyAcquisitionMemoV2SectionHealRenderGuards,
+} from "./_lib/acquisition-memo-v2-boss-repair.js";
 import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
@@ -2409,7 +2409,7 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
   return { visibleColumns, rows: normalizedRows };
 }
 
-function _detachedRouteAuthorityCanonicalizeDocumentTreatmentSources(documentSources = []) {
+function obsoleteDetachedRouteCanonicalizeDocumentTreatmentSources(documentSources = []) {
   const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
   const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
   const firstFinite = (...values) => {
@@ -2710,7 +2710,7 @@ function _detachedRouteAuthorityCanonicalizeDocumentTreatmentSources(documentSou
   return merged;
 }
 
-function _detachedRouteAuthoritySupportDocRows({
+function obsoleteDetachedRouteSupportDocRows({
   documentSources = [],
   artifacts = [],
   loanTermSheetTermsPayload = null,
@@ -3164,7 +3164,7 @@ function _detachedRouteAuthoritySupportDocRows({
   return authorityRows.filter((row) => String(row?.original_filename || "").trim().length > 0);
 }
 
-function _detachedRouteAuthorityDocumentTreatmentSummary({
+function obsoleteDetachedRouteDocumentTreatmentSummary({
   documentSources = [],
   supportDocAuthorityRows = null,
   reportMode = null,
@@ -4715,7 +4715,7 @@ function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
   return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
 }
 
-function _detachedRouteAuthorityPrelimReadiness({
+function obsoleteDetachedRoutePrelimReadiness({
   reportMode = null,
   acquisitionMemoRenderContext = null,
   acquisitionMemoV2Projection = null,
@@ -5056,7 +5056,7 @@ function buildLaunchSourceContextBlock({
   renderedDocumentTreatmentRowsOut = null,
 } = {}) {
   const intro = `<p class="small" style="margin:0 0 10px 0;color:#374151;line-height:1.6;">Modeled core inputs are limited to T12 and Rent Roll. Corroborating support includes validated property tax support when annual tax evidence aligns with the T12 tax line. Market survey, broker email, appraisal summary, Phase I ESA / environmental, zoning / compliance, and CapEx / renovation notes remain context-only unless explicitly validated for quantitative use. Acquisition context is limited to verified purchase assumptions and document-derived cap-rate reference where supported.</p>`;
-  const treatment = legacyOnlyBuildDocumentTreatmentSummaryHtml({
+  const treatment = buildDocumentTreatmentSummaryHtml({
     reportMode,
     documentSources,
     currentDebtAssessmentState,
@@ -5103,7 +5103,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
   return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Uses standardized 25-year amortization input.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
-function _detachedRouteAuthorityAcquisitionAssumptions({
+function obsoleteDetachedRouteAcquisitionAssumptions({
   loanTermSheetTermsPayload,
   acquisitionTermsPayload = null,
   t12Payload,
@@ -5532,7 +5532,7 @@ function _detachedRouteAuthorityAcquisitionAssumptions({
   }
   return html;
 }
-function _detachedRouteAuthorityAcquisitionReadiness({
+function obsoleteDetachedRouteAcquisitionReadiness({
   loanTermSheetTermsPayload = null,
   acquisitionTermsPayload = null,
   t12Payload = null,
@@ -5973,7 +5973,7 @@ function legacyOnlyBuildScreeningDataCoverageSummary({
     ) > 0 || sourceConstrainedSectionCount > 0
       ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
       : "";
-    const treatmentSummaryHtml = legacyOnlyBuildDocumentTreatmentSummaryHtml({
+    const treatmentSummaryHtml = buildDocumentTreatmentSummaryHtml({
       reportMode: effectiveReportMode,
       documentSources,
       currentDebtAssessmentState,
@@ -6563,293 +6563,6 @@ function legacyOnlyBuildScreeningNoiStabilityHtml({
   )}</tbody></table></div>${screeningFlagsCard}${sensitivityCard}${vacancyBufferCard}`;
 }
 
-function legacyOnlyApplyFinalSourceReconciliationRenderGuard(html, sourceReconciliationState = null) {
-  const inputHtml = String(html || "");
-  const renderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
-  const canonicalDisplay = renderState?.variance_display || null;
-  const disclosure =
-    renderState?.source_reconciliation_disclosure ||
-    "InvestorIQ has not reconciled this variance and does not infer the cause.";
-  const staleVarianceRegex = /-48\.0%/g;
-  const snippetPatterns = [
-    /Rent Roll vs T12 GPR Variance[^<\n]{0,160}/gi,
-    /Rent roll annualized rent is[^<\n]{0,220}/gi,
-    /Source reconciliation variance of[^<\n]{0,220}/gi,
-  ];
-  const displayPatterns = [
-    /<tr[^>]*>\s*<td>\s*Rent Roll vs T12 GPR Variance\s*<\/td>\s*<td>\s*([+\-]?\d+(?:\.\d+)?)%\s*<\/td>\s*<\/tr>/gi,
-    /Rent roll annualized rent is\s*([+\-]?\d+(?:\.\d+)?)%\s*vs\s*T12 GPR/gi,
-    /Source reconciliation variance of\s*([+\-]?\d+(?:\.\d+)?)%\s*between rent roll and T12 gross potential rent requires review\./gi,
-    /<li>\s*Rent Roll vs T12 GPR\s*([+\-]?\d+(?:\.\d+)?)%\s*<\/li>/gi,
-  ];
-  const extractSnippets = (text) =>
-    snippetPatterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[0])).slice(0, 10);
-  const extractVarianceDisplays = (text) =>
-    displayPatterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => {
-      const display = match[1];
-      const numericDisplay = Number(display);
-      return Number.isFinite(numericDisplay)
-        ? `${numericDisplay >= 0 ? "+" : "-"}${Math.abs(numericDisplay).toFixed(1)}%`
-        : null;
-    }).filter(Boolean)).slice(0, 10);
-  const matchedSnippetsBefore = extractSnippets(inputHtml);
-  const matchedDisplaysBefore = extractVarianceDisplays(inputHtml);
-  const staleMinus48CountBefore = (inputHtml.match(staleVarianceRegex) || []).length;
-
-  let outputHtml = inputHtml;
-  const normalizeOrRemove = (pattern, replacement) => {
-    outputHtml = outputHtml.replace(pattern, replacement);
-  };
-
-  if (renderState?.renderable && canonicalDisplay) {
-    normalizeOrRemove(
-      /<tr><td>Rent Roll vs T12 GPR Variance<\/td><td>[^<]*<\/td><\/tr>/gi,
-      `<tr><td>Rent Roll vs T12 GPR Variance</td><td>${escapeHtml(canonicalDisplay)}</td></tr>`
-    );
-    normalizeOrRemove(
-      /Rent Roll vs T12 GPR Variance\s*[+\-]?\d+(?:\.\d+)?%/gi,
-      `Rent Roll vs T12 GPR Variance ${escapeHtml(canonicalDisplay)}`
-    );
-    normalizeOrRemove(
-      /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR\.\s*InvestorIQ has not reconciled this variance and does not infer the cause\./gi,
-      `Rent roll annualized rent is ${escapeHtml(canonicalDisplay)} vs T12 GPR. ${escapeHtml(disclosure)}`
-    );
-    normalizeOrRemove(
-      /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR/gi,
-      `Rent roll annualized rent is ${escapeHtml(canonicalDisplay)} vs T12 GPR`
-    );
-    normalizeOrRemove(
-      /<li>\s*Rent Roll vs T12 GPR\s*[+\-]?\d+(?:\.\d+)?%\s*<\/li>/gi,
-      `<li>Rent Roll vs T12 GPR ${escapeHtml(canonicalDisplay)}</li>`
-    );
-    normalizeOrRemove(
-      /Source reconciliation variance of\s*[+\-]?\d+(?:\.\d+)?%\s*between rent roll and T12 gross potential rent requires review\./gi,
-      `Source reconciliation variance of ${escapeHtml(canonicalDisplay)} between rent roll and T12 gross potential rent requires review.`
-    );
-  } else {
-    normalizeOrRemove(/<tr><td>Rent Roll vs T12 GPR Variance<\/td><td>[^<]*<\/td><\/tr>/gi, "");
-    normalizeOrRemove(/Rent Roll vs T12 GPR Variance\s*[+\-]?\d+(?:\.\d+)?%/gi, "");
-    normalizeOrRemove(
-      /Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR\.\s*InvestorIQ has not reconciled this variance and does not infer the cause\./gi,
-      ""
-    );
-    normalizeOrRemove(/Rent roll annualized rent is\s*[+\-]?\d+(?:\.\d+)?%\s*vs\s*T12 GPR/gi, "");
-    normalizeOrRemove(/<li>\s*Rent Roll vs T12 GPR\s*[+\-]?\d+(?:\.\d+)?%\s*<\/li>/gi, "");
-    normalizeOrRemove(
-      /Source reconciliation variance of\s*[+\-]?\d+(?:\.\d+)?%\s*between rent roll and T12 gross potential rent requires review\./gi,
-      ""
-    );
-    normalizeOrRemove(
-      /Source reconciliation variance of\s*[+\-]?\d+(?:\.\d+)?%\s*between rent roll and T12 gross potential rent requires review\./gi,
-      ""
-    );
-  }
-
-  let matchedSnippetsAfter = extractSnippets(outputHtml);
-  let matchedDisplaysAfter = extractVarianceDisplays(outputHtml);
-  let staleMinus48CountAfter = (outputHtml.match(staleVarianceRegex) || []).length;
-  let changed = outputHtml !== inputHtml;
-  const renderableDisplay = canonicalDisplay && renderState?.renderable;
-  let displayMismatchAfter =
-    renderableDisplay
-      ? matchedDisplaysAfter.some((display) => display !== canonicalDisplay) ||
-        matchedDisplaysAfter.length === 0 && (
-          /Rent Roll vs T12 GPR Variance/i.test(outputHtml) ||
-          /Rent roll annualized rent is/i.test(outputHtml) ||
-          /Source reconciliation variance of/i.test(outputHtml)
-        )
-      : matchedDisplaysAfter.length > 0;
-  if (displayMismatchAfter) {
-    const fallbackHtml = outputHtml
-      .replace(staleVarianceRegex, "")
-      .replace(/<tr[^>]*>\s*<td>\s*Rent Roll vs T12 GPR Variance\s*<\/td>\s*<td>[\s\S]*?<\/td>\s*<\/tr>/gi, "")
-      .replace(/Rent Roll vs T12 GPR Variance[^<\n]{0,160}/gi, "")
-      .replace(/Rent roll annualized rent is[^<\n]{0,220}/gi, "")
-      .replace(/Source reconciliation variance of[^<\n]{0,220}/gi, "");
-    const fallbackMatchedSnippets = extractSnippets(fallbackHtml);
-    const fallbackMatchedDisplays = extractVarianceDisplays(fallbackHtml);
-    const fallbackStaleMinus48Count = (fallbackHtml.match(staleVarianceRegex) || []).length;
-    const fallbackMismatch =
-      renderableDisplay
-        ? fallbackMatchedDisplays.some((display) => display !== canonicalDisplay) ||
-          fallbackMatchedDisplays.length === 0 && (
-            /Rent Roll vs T12 GPR Variance/i.test(fallbackHtml) ||
-            /Rent roll annualized rent is/i.test(fallbackHtml) ||
-            /Source reconciliation variance of/i.test(fallbackHtml)
-          )
-        : fallbackMatchedDisplays.length > 0;
-    outputHtml = fallbackHtml;
-    matchedSnippetsAfter = fallbackMatchedSnippets;
-    matchedDisplaysAfter = fallbackMatchedDisplays;
-    staleMinus48CountAfter = fallbackStaleMinus48Count;
-    changed = outputHtml !== inputHtml;
-    displayMismatchAfter = fallbackMismatch;
-    if (displayMismatchAfter) {
-      console.error("[investoriq] source_reconciliation_final_guard_postcheck_failed", {
-        canonical_display: canonicalDisplay,
-        renderable: Boolean(renderState?.renderable),
-        matched_displays_before: matchedDisplaysBefore,
-        matched_displays_after: matchedDisplaysAfter,
-        matched_snippets_before: matchedSnippetsBefore,
-        matched_snippets_after: matchedSnippetsAfter,
-        stale_minus_48_count_before: staleMinus48CountBefore,
-        stale_minus_48_count_after: staleMinus48CountAfter,
-        replaced_or_suppressed: changed,
-      });
-    }
-  }
-  if (changed) {
-    console.warn("[investoriq] source_reconciliation_final_guard", {
-      canonical_display: canonicalDisplay,
-      renderable: Boolean(renderState?.renderable),
-      matched_displays_before: matchedDisplaysBefore,
-      matched_displays_after: matchedDisplaysAfter,
-      matched_snippets_before: matchedSnippetsBefore,
-      matched_snippets_after: matchedSnippetsAfter,
-      stale_minus_48_count_before: staleMinus48CountBefore,
-      stale_minus_48_count_after: staleMinus48CountAfter,
-      replaced_or_suppressed: true,
-    });
-  }
-  return {
-    html: outputHtml,
-    render_state: renderState,
-    matched_snippets_before: matchedSnippetsBefore,
-    matched_snippets_after: matchedSnippetsAfter,
-    matched_displays_before: matchedDisplaysBefore,
-    matched_displays_after: matchedDisplaysAfter,
-    stale_minus_48_count_before: staleMinus48CountBefore,
-    stale_minus_48_count_after: staleMinus48CountAfter,
-    replaced_or_suppressed: changed,
-  };
-}
-
-function legacyOnlyApplyFinalSectionHealRenderGuards(
-  html,
-  {
-    effectiveReportMode = null,
-    reportType = null,
-    currentDebtAssessmentState = null,
-    mortgagePayload = null,
-    loanTermSheetTermsPayload = null,
-    financials = null,
-    t12Payload = null,
-    sourceReconciliationState = null,
-  } = {}
-) {
-  let outputHtml = String(html || "");
-  const acquisitionFinancingReadinessInputsUsable =
-    String(effectiveReportMode || "").trim().toLowerCase() === "v1_core" &&
-    (
-      currentDebtAssessmentState?.has_proposed_acquisition_financing === true ||
-      String(loanTermSheetTermsPayload?.debt_basis || "").toLowerCase().includes("acquisition") ||
-      String(loanTermSheetTermsPayload?.semantic_doc_role || "").trim().toLowerCase() === "purchase_assumptions" ||
-      (
-        Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price)) &&
-        (
-          Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.stated_acquisition_loan_amount)) ||
-          Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.loan_amount)) ||
-          Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.derived_acquisition_loan_amount)) ||
-          Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.ltv))
-        ) &&
-        Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.interest_rate)) &&
-        Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.amortization_years ?? loanTermSheetTermsPayload?.amort_years)) &&
-        Number.isFinite(coerceNumber(t12Payload?.net_operating_income))
-      )
-    );
-  const currentDebtNeedsHeal = Boolean(
-    buildRefiDebtRenderState({
-      currentDebtAssessmentState,
-      mortgagePayload,
-      loanTermSheetTermsPayload,
-      financials,
-      t12Payload,
-    })?.allowDebtMath !== true
-  );
-  if (effectiveReportMode === "screening_v1") {
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_REFI_STABILITY");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT_TABLES");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_8_DEAL_SCORE");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_9_DCF");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_10_ADV_MODEL");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_11_FINAL_RECS");
-    outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
-  } else if (effectiveReportMode === "v1_core") {
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_3_SCENARIO");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_3");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_5_RISK");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_6_RENOVATION");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_REFI_STABILITY");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT_TABLES");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_8_DEAL_SCORE");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_9_DCF");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_9_DCF_TABLE");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_10_ADV_MODEL");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_10_DCF_SUMMARY");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_10_COMPARABLE_CONTEXT");
-    outputHtml = stripMarkedSection(outputHtml, "RELATIVE_POSITIONING");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_11_FINAL_RECS");
-    outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_DEAL_SCORE_RADAR");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_DEAL_SCORE_BAR");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_EXPENSE_RATIO");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_EQUITY_COMPONENTS");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_BREAKEVEN");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_RISK_RADAR");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_CHART_RENOVATION");
-    if (!acquisitionFinancingReadinessInputsUsable) {
-      outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT");
-    }
-  }
-  if (effectiveReportMode === "v1_core" || String(reportType || "").trim().length > 0) {
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_S6_RENOVATION");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_S6_REFI_DATA_SUFFICIENCY");
-  }
-  if (currentDebtNeedsHeal) {
-    const currentDebtNotAssessedRenderCopy = currentDebtNotAssessedCopy({
-      currentDebtState: currentDebtAssessmentState,
-      mortgagePayload,
-      loanTermSheetTermsPayload,
-      t12Noi: coerceNumber(t12Payload?.net_operating_income),
-    });
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_REFI_STABILITY");
-    outputHtml = stripMarkedSection(outputHtml, "SECTION_7_DEBT_TABLES");
-    outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
-    outputHtml = outputHtml.replace(
-      /<p class="subsection-title">DSCR Sensitivity &amp; Coverage Threshold Analysis<\/p>[\s\S]*?<p class="small" style="margin-top:8px;">[\s\S]*?<\/p>/i,
-      `<p class="small">${escapeHtml(currentDebtNotAssessedRenderCopy.explanation)}</p>`
-    );
-    outputHtml = outputHtml.replace(
-      /<p class="subsection-title">Refinance Stress Test &amp; Binding Constraint Analysis<\/p>[\s\S]*?<p>\s*\{\{DEBT_REFI_CONSIDERATIONS\}\}\s*<\/p>/i,
-      ""
-    );
-    outputHtml = outputHtml.replace(
-      /<p class="subsection-title">Current Debt Coverage &amp; Constraint Sensitivity<\/p>[\s\S]*?\{\{REFI_SENSITIVITY_MATRIX_BLOCK\}\}/i,
-      ""
-    );
-    outputHtml = replaceAll(outputHtml, "{{DEBT_DSCR_NOTE}}", currentDebtNotAssessedRenderCopy.explanation);
-    outputHtml = replaceAll(outputHtml, "{{DEBT_REFI_CONSIDERATIONS}}", currentDebtNotAssessedRenderCopy.explanation);
-    outputHtml = replaceAll(outputHtml, "{{REFI_SENSITIVITY_MATRIX_BLOCK}}", "");
-    outputHtml = outputHtml.replace(
-      /<tr[^>]*>\s*<td[^>]*>\s*Current Debt DSCR\s*<\/td>[\s\S]*?<\/tr>/gi,
-      ""
-    );
-    outputHtml = outputHtml.replace(
-      /<div[^>]*>\s*<p class="subsection-title">Maximum Financing Envelope \(Standardized Framework\)<\/p>[\s\S]*?<\/div>/gi,
-      ""
-    );
-  }
-  if (sourceReconciliationState) {
-    outputHtml = legacyOnlyApplyFinalSourceReconciliationRenderGuard(
-      outputHtml,
-      sourceReconciliationState
-    ).html;
-  }
-  outputHtml = stripEmptyHeadingBlocks(outputHtml);
-  return sanitizeFinalCustomerHtml(outputHtml);
-}
 function legacyOnlyBuildScreeningRentRollDistributionHtml({
   computedRentRoll,
   rentRollPayload,
@@ -12629,12 +12342,12 @@ const isScreeningSealedLane = effectiveReportMode === "screening_v1";
 const isSealedCustomerOutput = Boolean(isAcqMemoV2FinalHtml || isScreeningSealedLane);
 if (!isSealedCustomerOutput) {
 const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;
-  const finalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard(
+  const finalSourceReconciliationGuard = applyAcquisitionMemoV2SourceReconciliationRenderGuard(
   qaHtmlBeforeFinalSourceReconciliationGuard,
   sourceReconciliationState
 );
 qaHtml = finalSourceReconciliationGuard.html;
-qaHtml = legacyOnlyApplyFinalSectionHealRenderGuards(qaHtml, {
+qaHtml = applyAcquisitionMemoV2SectionHealRenderGuards(qaHtml, {
   effectiveReportMode,
   reportType,
   currentDebtAssessmentState,
@@ -12642,6 +12355,12 @@ qaHtml = legacyOnlyApplyFinalSectionHealRenderGuards(qaHtml, {
   loanTermSheetTermsPayload,
   financials,
   t12Payload,
+  sourceReconciliationState,
+  deps: {
+    buildRefiDebtRenderState,
+    currentDebtNotAssessedCopy,
+    coerceNumber,
+  },
 });
 const finalSourceReconciliationGuardDiagnostic = {
   event: "source_reconciliation_final_guard_diagnostic",
@@ -13432,12 +13151,12 @@ try {
   // V2-owned final HTML remains under orchestrator/Boss control; legacy reconciliation and section-heal
   // guards stay fenced to non-sealed legacy paths.
   if (!isSealedCustomerOutput) {
-    const docFinalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard(
+    const docFinalSourceReconciliationGuard = applyAcquisitionMemoV2SourceReconciliationRenderGuard(
       docHtml,
       sourceReconciliationState
     );
     docHtml = docFinalSourceReconciliationGuard.html;
-    docHtml = legacyOnlyApplyFinalSectionHealRenderGuards(docHtml, {
+    docHtml = applyAcquisitionMemoV2SectionHealRenderGuards(docHtml, {
       effectiveReportMode,
       reportType,
       currentDebtAssessmentState,
@@ -13445,6 +13164,12 @@ try {
       loanTermSheetTermsPayload,
       financials,
       t12Payload,
+      sourceReconciliationState,
+      deps: {
+        buildRefiDebtRenderState,
+        currentDebtNotAssessedCopy,
+        coerceNumber,
+      },
     });
     const docFinalSourceReconciliationGuardHasMismatch =
       docFinalSourceReconciliationGuard.render_state?.renderable
@@ -13694,8 +13419,6 @@ export const __test__ = {
   stripThinSectionPages,
   collapseSummaryOnlyUnitMixSection,
   buildRendererCanonicalState,
-  legacyOnlyApplyFinalSourceReconciliationRenderGuard,
-  legacyOnlyApplyFinalSectionHealRenderGuards,
   buildScreeningIncomeForensicsHtml: screeningReportRenderer.buildScreeningIncomeForensicsHtml,
   buildScreeningExpenseStructureHtml: screeningReportRenderer.buildScreeningExpenseStructureHtml,
   buildScreeningNoiStabilityHtml: screeningReportRenderer.buildScreeningNoiStabilityHtml,

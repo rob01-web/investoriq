@@ -399,6 +399,18 @@ function buildAuthorityRows(args = {}) {
 
 function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, canonicalSupportDocMap = null } = {}) {
   const filename = row?.original_filename || row?.originalFilename || row?.file_name || row?.filename || "Support Document";
+  const environmentalSignalsText = [
+    filename,
+    row?.source_text,
+    row?.raw_text,
+    row?.notes,
+    row?.semantic_doc_role_reason,
+    row?.semantic_doc_display_label,
+    row?.display_doc_type,
+    row?.doc_type,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const canonicalFromMap =
     canonicalSupportDocMap instanceof Map
       ? canonicalSupportDocMap.get(filename) || canonicalSupportDocMap.get(row?.id) || null
@@ -433,13 +445,20 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Modeled Inputs",
     };
   }
+  const canonicalRole = String(row?.canonical_support_doc_role || canonical?.role || "").trim().toLowerCase();
+  const taxonomyRole = String(taxonomy?.semantic_doc_role || "").trim().toLowerCase();
+  const rowSemanticRole = String(row?.semantic_doc_role || "").trim().toLowerCase();
+  const historicalOnlyOverride =
+    taxonomyRole === "historical_capex_only" ||
+    canonicalRole === "historical_capex_only" ||
+    rowSemanticRole === "historical_capex_only";
   const role = String(
-    row?.canonical_support_doc_role ||
-      row?.semantic_doc_role ||
-      canonical?.role ||
-      taxonomy?.semantic_doc_role ||
-      ""
-  ).trim().toLowerCase();
+    historicalOnlyOverride
+      ? "historical_capex_only"
+      : canonicalRole || rowSemanticRole || taxonomyRole || ""
+  )
+    .trim()
+    .toLowerCase();
   if (role === "purchase_assumptions" || role === "proposed_acquisition_financing") {
     return {
       filename,
@@ -503,7 +522,11 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Listed but Not Quantitatively Modeled",
     };
   }
-  if (role.includes("environmental") || role.includes("esa")) {
+  if (
+    role.includes("environmental") ||
+    role.includes("esa") ||
+    /phase\s*i|phase\s*1|phase i esa|phase 1 esa|environmental|environment|esa/i.test(environmentalSignalsText)
+  ) {
     return {
       filename,
       displayLabel: "Environmental Due Diligence Context",
@@ -629,4 +652,3 @@ export function buildAcquisitionFinancingAssumptionsHtml({
   }
   return `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Acquisition Financing Assumptions</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">Acquisition financing inputs were not safe to render as a full debt sizing table.</p><p class="small" style="margin:8px 0 0 0;color:#64748b;">This section is limited to non-contradictory verified fields only.</p>${loanTermSheetTermsPayload?.closing_cost_notes ? `<p class="small" style="margin:8px 0 0 0;color:#64748b;">Closing Cost Notes: ${escapeHtml(String(loanTermSheetTermsPayload.closing_cost_notes).replace(/legal\/appraisal/gi, "Legal/appraisal"))}; not quantified.</p>` : ""}</div>`;
 }
-
