@@ -3,12 +3,16 @@ import assert from "node:assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test";
 
-const { __test__: reportTestHelpers } = await import("../../api/generate-client-report.js");
+const {
+  buildRenovationBudgetCardHtml,
+  buildRenovationExecutionCardHtml,
+  buildRenovationExecutionRows,
+} = await import("../../api/_lib/document-treatment-authority.js");
 const { buildReportContractQa } = await import("../../api/_lib/report-contract-qa.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-US")}`;
 
-const renovationBudgetCardHtml = reportTestHelpers.buildRenovationBudgetCardHtml(
+const renovationBudgetCardHtml = buildRenovationBudgetCardHtml(
   [
     { category: "Exterior / Curb Appeal", estimated_cost: 45000 },
     { category: "Unit Turns", estimated_cost: 120000 },
@@ -23,7 +27,7 @@ assert.equal(renovationBudgetCardHtml.includes("Category"), true);
 assert.equal(renovationBudgetCardHtml.includes("Estimated Cost"), true);
 assert.equal(renovationBudgetCardHtml.includes("<tbody></tbody>"), false);
 
-const renovationExecutionCardHtml = reportTestHelpers.buildRenovationExecutionCardHtml(
+const renovationExecutionCardHtml = buildRenovationExecutionCardHtml(
   [],
   formatCurrency,
   "Return impact is not calculated without document-supported rent lift, timing, and cost recovery assumptions."
@@ -38,7 +42,7 @@ assert.equal(renovationExecutionCardHtml.includes("ROI"), false);
 assert.equal(renovationExecutionCardHtml.includes("payback"), false);
 assert.equal(renovationExecutionCardHtml.includes("implementation schedule"), false);
 
-const renovationExecutionRowsHtml = reportTestHelpers.buildRenovationExecutionRows(
+const renovationExecutionRowsHtml = buildRenovationExecutionRows(
   [
     { metric_kind: "unit_count", value: 40 },
     { metric_kind: "per_unit_cost", value: 25000 },

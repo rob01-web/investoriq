@@ -3,9 +3,11 @@ import assert from "assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
+const {
+  buildAcquisitionFinancingAssumptionsHtml,
+} = await import("../../api/_lib/document-treatment-authority.js");
 
-const unsafeAcquisitionHtml = generatorTest.buildAcquisitionFinancingAssumptionsHtml({
+const unsafeAcquisitionHtml = buildAcquisitionFinancingAssumptionsHtml({
   loanTermSheetTermsPayload: {
     purchase_price: 2100000,
     loan_amount: 840000,

@@ -34,7 +34,7 @@ for (const snippet of [
   "function legacyOnlyApplyFinalSourceReconciliationRenderGuard",
   "function legacyOnlyApplyFinalSectionHealRenderGuards",
 ]) {
-  assert.equal(reportSource.includes(snippet), true, `Expected legacy-only quarantine for ${snippet}`);
+  assert.equal(reportSource.includes(snippet), false, `Route must not retain detached legacy helper definition: ${snippet}`);
 }
 assert.match(pipelineSource, /finalizeAcquisitionMemoV2Html/);
 assert.match(pipelineSource, /sealedLane: "acquisition_memo_v2_lane"/);

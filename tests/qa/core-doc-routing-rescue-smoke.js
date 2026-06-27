@@ -4,14 +4,16 @@ import fs from "fs";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
+const {
+  buildDocumentTreatmentSummaryHtml,
+} = await import("../../api/_lib/document-treatment-authority.js");
 const { inferSupportingDocTypeFromText } = await import("../../api/parse/parse-doc.js");
 
 const parseDocSource = fs.readFileSync("api/parse/parse-doc.js", "utf8");
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 
 // 1) Filename/slot are hints only; not authoritative modeled truth.
-const filenameOnlyRentRollHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+const filenameOnlyRentRollHtml = buildDocumentTreatmentSummaryHtml({
   documentSources: [{ original_filename: "Rent Roll.xlsx" }],
 });
 assert.equal(/Structured rent roll input/i.test(filenameOnlyRentRollHtml), false);
@@ -21,7 +23,7 @@ assert.equal(
 );
 assert.match(filenameOnlyRentRollHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
 
-const filenameOnlyT12Html = generatorTest.buildDocumentTreatmentSummaryHtml({
+const filenameOnlyT12Html = buildDocumentTreatmentSummaryHtml({
   documentSources: [{ original_filename: "T12.pdf" }],
 });
 assert.equal(/Structured operating input/i.test(filenameOnlyT12Html), false);
@@ -40,7 +42,7 @@ assert.match(workerSource, /missingStructuredArtifacts\.push\('rent_roll'\)/);
 assert.match(workerSource, /missingStructuredArtifacts\.push\('t12_or_operating_statement'\)/);
 
 // 3) Unsafe rescue must fail closed / remain limited-use.
-const marketSurveyHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+const marketSurveyHtml = buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
       original_filename: "market_rent_survey_context_only.txt",
@@ -53,7 +55,7 @@ const marketSurveyHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
 assert.match(marketSurveyHtml, /Market survey \/ rent context only; not used to override rent roll\./i);
 assert.equal(/Structured rent roll input/i.test(marketSurveyHtml), false);
 
-const brokerContextHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+const brokerContextHtml = buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
       original_filename: "Broker_Email_Context.msg",
@@ -65,7 +67,7 @@ const brokerContextHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
 });
 assert.equal(/Structured operating input|Structured rent roll input/i.test(brokerContextHtml), false);
 
-const environmentalNotTaxHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+const environmentalNotTaxHtml = buildDocumentTreatmentSummaryHtml({
   documentSources: [
     {
       original_filename: "Phase_I_Environmental.pdf",

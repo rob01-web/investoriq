@@ -8,20 +8,27 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
 process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-run-key";
 
 const { __test__: rawGeneratorTest } = await import("../../api/generate-client-report.js");
+const {
+  buildCanonicalSupportDocAuthorityRows,
+  buildDocumentTreatmentSummaryHtml,
+  buildPreliminaryFinancingReadinessSummaryHtml,
+  buildAcquisitionFinancingAssumptionsHtml,
+  buildAcquisitionFinancingReadinessHtml,
+  buildHistoricalCapexDisplayCopy,
+  resolveRenovationDisplayMode,
+  buildFrameworkSensitivityDisplayCopy,
+} = await import("../../api/_lib/document-treatment-authority.js");
 const generatorTest = {
   ...rawGeneratorTest,
-  buildDocumentTreatmentSummaryHtml:
-    rawGeneratorTest.buildDocumentTreatmentSummaryHtml ||
-    rawGeneratorTest.legacyOnlyBuildDocumentTreatmentSummaryHtml,
-  buildPreliminaryFinancingReadinessSummaryHtml:
-    rawGeneratorTest.buildPreliminaryFinancingReadinessSummaryHtml ||
-    rawGeneratorTest.legacyOnlyBuildPreliminaryFinancingReadinessSummaryHtml,
-  buildAcquisitionFinancingAssumptionsHtml:
-    rawGeneratorTest.buildAcquisitionFinancingAssumptionsHtml ||
-    rawGeneratorTest.legacyOnlyBuildAcquisitionFinancingAssumptionsHtml,
-  buildAcquisitionFinancingReadinessHtml:
-    rawGeneratorTest.buildAcquisitionFinancingReadinessHtml ||
-    rawGeneratorTest.legacyOnlyBuildAcquisitionFinancingReadinessHtml,
+  buildCanonicalSupportDocAuthorityRows,
+  buildDocumentTreatmentSummaryHtml,
+  buildPreliminaryFinancingReadinessSummaryHtml,
+  buildAcquisitionFinancingAssumptionsHtml,
+  buildAcquisitionFinancingReadinessHtml,
+  buildHistoricalCapexDisplayCopy,
+  buildRenovationDisplayCopy: buildHistoricalCapexDisplayCopy,
+  resolveRenovationDisplayMode,
+  buildFrameworkSensitivityDisplayCopy,
 };
 const generateClientReport = (await import("../../api/generate-client-report.js")).default;
 const {

@@ -3,7 +3,9 @@ import assert from "assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { __test__: generatorTest } = await import("../../api/generate-client-report.js");
+const {
+  buildDocumentTreatmentSummaryHtml,
+} = await import("../../api/_lib/document-treatment-authority.js");
 
 const documentSources = [
   {
@@ -50,7 +52,7 @@ const propertyTaxPayload = {
   original_filename: "Bound_Tax_Document.pdf",
 };
 
-const treatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+const treatmentHtml = buildDocumentTreatmentSummaryHtml({
   documentSources,
   propertyTaxPayload,
 });

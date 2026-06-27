@@ -4,7 +4,11 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test";
 
 const { validateRenovationCandidate } = await import("../../lib/ai-support-doc-recovery.js");
-const { __test__: reportTestHelpers } = await import("../../api/generate-client-report.js");
+const {
+  resolveRenovationDisplayMode,
+  buildHistoricalCapexDisplayCopy,
+  buildRenovationBudgetCardHtml,
+} = await import("../../api/_lib/document-treatment-authority.js");
 
 const formatCurrency = (value) => `$${Number(value).toLocaleString("en-US")}`;
 
@@ -88,7 +92,7 @@ assert.equal(
   true
 );
 
-const displayMode = reportTestHelpers.resolveRenovationDisplayMode({
+const displayMode = resolveRenovationDisplayMode({
   renovationPayload: validated,
   financials: {},
   hasForwardLookingRenovationInputs: false,
@@ -96,12 +100,12 @@ const displayMode = reportTestHelpers.resolveRenovationDisplayMode({
 });
 assert.equal(displayMode, "forward_looking_with_rent_lift");
 
-const displayCopy = reportTestHelpers.buildHistoricalCapexDisplayCopy({
+const displayCopy = buildHistoricalCapexDisplayCopy({
   renovationDisplayMode: displayMode,
 });
 assert.match(displayCopy.execution_note, /ROI, payback, and cost recovery are not modeled/i);
 
-const budgetCard = reportTestHelpers.buildRenovationBudgetCardHtml(
+const budgetCard = buildRenovationBudgetCardHtml(
   validated.budget_rows,
   formatCurrency,
   displayCopy.budget_note
@@ -112,7 +116,7 @@ assert.match(budgetCard, /\$21,000/i);
 assert.match(budgetCard, /\$21,600/i);
 assert.equal(/\bNOI\b|\bROI\b|payback/i.test(budgetCard), false);
 
-const budgetOnlyMode = reportTestHelpers.resolveRenovationDisplayMode({
+const budgetOnlyMode = resolveRenovationDisplayMode({
   renovationPayload: {
     total_budget: 50000,
     budget_rows: [{ category: "Common Area Paint", estimated_cost: 50000, scope_of_work: "Paint" }],

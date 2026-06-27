@@ -62,6 +62,13 @@ import {
   resolveCanonicalSupportDocAuthority,
 } from "./_lib/support-doc-taxonomy.js";
 import {
+  buildCanonicalSupportDocAuthorityRows as legacyOnlyBuildCanonicalSupportDocAuthorityRows,
+  buildDocumentTreatmentSummaryHtml as legacyOnlyBuildDocumentTreatmentSummaryHtml,
+  buildPreliminaryFinancingReadinessSummaryHtml as legacyOnlyBuildPreliminaryFinancingReadinessSummaryHtml,
+  buildAcquisitionFinancingAssumptionsHtml as legacyOnlyBuildAcquisitionFinancingAssumptionsHtml,
+  buildAcquisitionFinancingReadinessHtml as legacyOnlyBuildAcquisitionFinancingReadinessHtml,
+} from "./_lib/document-treatment-authority.js";
+import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
   assertValidReportPublicationInsert,
@@ -2402,7 +2409,7 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
   return { visibleColumns, rows: normalizedRows };
 }
 
-function legacyOnlyCanonicalizeDocumentTreatmentSources(documentSources = []) {
+function _detachedRouteAuthorityCanonicalizeDocumentTreatmentSources(documentSources = []) {
   const normalizeToken = (value) => String(value ?? "").trim().toLowerCase();
   const normalizeText = (value) => normalizeToken(value).replace(/\s+/g, " ");
   const firstFinite = (...values) => {
@@ -2703,7 +2710,7 @@ function legacyOnlyCanonicalizeDocumentTreatmentSources(documentSources = []) {
   return merged;
 }
 
-function legacyOnlyBuildCanonicalSupportDocAuthorityRows({
+function _detachedRouteAuthoritySupportDocRows({
   documentSources = [],
   artifacts = [],
   loanTermSheetTermsPayload = null,
@@ -3157,7 +3164,7 @@ function legacyOnlyBuildCanonicalSupportDocAuthorityRows({
   return authorityRows.filter((row) => String(row?.original_filename || "").trim().length > 0);
 }
 
-function legacyOnlyBuildDocumentTreatmentSummaryHtml({
+function _detachedRouteAuthorityDocumentTreatmentSummary({
   documentSources = [],
   supportDocAuthorityRows = null,
   reportMode = null,
@@ -4708,7 +4715,7 @@ function buildCapRateValueTable(noi, units, documentDerivedCapRate = null) {
   return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
 }
 
-function legacyOnlyBuildPreliminaryFinancingReadinessSummaryHtml({
+function _detachedRouteAuthorityPrelimReadiness({
   reportMode = null,
   acquisitionMemoRenderContext = null,
   acquisitionMemoV2Projection = null,
@@ -5096,7 +5103,7 @@ function buildFinancingEnvelopeGrid(noi, units) {
     Number.isFinite(units) && units > 0 ? `, ${units} units` : "";
   return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Maximum Financing Envelope (Standardized Framework)</p><p class="small" style="margin-bottom:8px;">Maximum supportable loan principal at each DSCR threshold and interest rate. Anchor: reported NOI of <strong>${formatCurrency(noi)}</strong>${escapeHtml(unitsNote)}. Uses standardized 25-year amortization input.</p><div class="base-case-financing"><strong>Base Case Supportable Loan (6.50% Rate, 1.25x DSCR):</strong> ${formatCurrency(maxLoanAtRate(6.5, 1.25))}</div><table><thead><tr><th>DSCR Threshold</th>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><div class="financing-interpretation">At 6.50% interest and 1.25x DSCR, the reported NOI supports the principal shown above. Financing capacity declines as interest rates increase or DSCR requirements tighten. Grid reflects standardized framework thresholds only.</div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Interest rates and DSCR thresholds are standardized framework inputs, not document-sourced. Grid shows maximum financing supportable by the reported NOI at each scenario.</p></div>`;
 }
-function legacyOnlyBuildAcquisitionFinancingAssumptionsHtml({
+function _detachedRouteAuthorityAcquisitionAssumptions({
   loanTermSheetTermsPayload,
   acquisitionTermsPayload = null,
   t12Payload,
@@ -5525,7 +5532,7 @@ function legacyOnlyBuildAcquisitionFinancingAssumptionsHtml({
   }
   return html;
 }
-function legacyOnlyBuildAcquisitionFinancingReadinessHtml({
+function _detachedRouteAuthorityAcquisitionReadiness({
   loanTermSheetTermsPayload = null,
   acquisitionTermsPayload = null,
   t12Payload = null,
@@ -13670,9 +13677,6 @@ try {
 export const __test__ = {
   normalizeAcquisitionFinancingArtifactPayload,
   alignDealScorecardVisibleClassificationHtml,
-  legacyOnlyBuildAcquisitionFinancingAssumptionsHtml,
-  legacyOnlyBuildAcquisitionFinancingReadinessHtml,
-  legacyOnlyBuildPreliminaryFinancingReadinessSummaryHtml,
   buildCurrentDebtScorecardEntry,
   buildDealScorecardState,
   resolveCanonicalRefiDebtBasis,
@@ -13686,14 +13690,9 @@ export const __test__ = {
   buildLaunchSourceContextBlock,
   buildCapRateValueTable,
   resolveRentPositioningSectionTitle,
-  legacyOnlyBuildDocumentTreatmentSummaryHtml,
-  buildHistoricalCapexDisplayCopy,
   stripEmptyHeadingBlocks,
   stripThinSectionPages,
   collapseSummaryOnlyUnitMixSection,
-  resolveRenovationDisplayMode,
-  buildRenovationDisplayCopy,
-  buildFrameworkSensitivityDisplayCopy,
   buildRendererCanonicalState,
   legacyOnlyApplyFinalSourceReconciliationRenderGuard,
   legacyOnlyApplyFinalSectionHealRenderGuards,
@@ -13713,7 +13712,6 @@ export const __test__ = {
   resolveSafeAnnualRentTotal,
   resolveOccupancyNoteValue,
   resolveCanonicalLoanTermSheetArtifacts,
-  legacyOnlyBuildCanonicalSupportDocAuthorityRows,
   resolveCanonicalDataCoverageHeadlineState,
   normalizeVisibleReportClassification,
   resolveScreeningClassificationConsumerLabel: screeningReportRenderer.resolveScreeningClassificationConsumerLabel,
@@ -13724,3 +13722,4 @@ export const __test__ = {
   resolveDocumentSourcesSectionVisibility,
   shouldStripDataCoverageSectionByRenderedCopy,
 };
+
