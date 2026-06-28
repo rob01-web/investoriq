@@ -23,17 +23,14 @@ import {
   buildCanonicalDisplayVerdictState,
   buildCanonicalVisibleClassificationState,
   buildFullUnderwritingSectionEligibility,
-  dedupeRenovationMetricRows,
   buildSourceReconciliationRenderState,
   resolveCanonicalRentRollAnnualTotals,
   formatRenovationMetricValue,
   normalizeRenovationMetricKind,
   buildSourceReconciliationState,
   buildSourceReconciliationNarrativeProminencePolicy,
-  sanitizeFinalCustomerHtml,
 } from "./report-surface-contracts.js";
 import {
-  buildAssumptionAttributionState,
   formatAssumptionAttributionLabel,
   formatCurrentDebtAssessmentCopy,
 } from "./acquisition-memo-v2-surface-copy.js";
@@ -63,10 +60,6 @@ import {
 import { runScreeningReportPipeline } from "./screening-report-pipeline.js";
 import * as screeningReportRenderer from "./screening-report-renderer.js";
 import {
-  buildSupportDocTaxonomyState,
-  resolveCanonicalSupportDocAuthority,
-} from "./support-doc-taxonomy.js";
-import {
   isValidAnnualPropertyTaxValue,
   resolveRenovationDisplayMode,
   buildHistoricalCapexDisplayCopy,
@@ -95,7 +88,6 @@ import {
   formatCurrency,
   formatPercent,
   formatPercent1,
-  formatPercentExactDisplay,
   formatCapPercentExact,
   formatInterestRatePercent,
   formatMultiple,
