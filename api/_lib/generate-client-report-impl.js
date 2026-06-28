@@ -2067,37 +2067,6 @@ function resolveOccupancyNoteValue(computedRentRoll = null, rentRollPayload = nu
     : null;
   return trustedSummaryOccupancy ?? computedRentRoll?.occupancy ?? rentRollPayload?.occupancy;
 }
-function deriveOccFromRentRollUnits(rentRollPayload) {
-  const rrRowsRaw =
-    rentRollPayload?.units ||
-    rentRollPayload?.rows ||
-    rentRollPayload?.rent_roll ||
-    rentRollPayload?.data ||
-    [];
-  const rrRows = Array.isArray(rrRowsRaw) ? rrRowsRaw : [];
-  if (rrRows.length === 0) return null;
-  const unitRows = rrRows.filter((u) => {
-    const id =
-      u?.unit ??
-      u?.unit_number ??
-      u?.unit_no ??
-      u?.unit_id ??
-      u?.unitid ??
-      u?.suite ??
-      u?.apt ??
-      u?.apartment;
-    return String(id ?? "").trim().length > 0;
-  });
-  if (unitRows.length === 0) return null;
-  const total = unitRows.length;
-  const occupied = unitRows.reduce((acc, u) => {
-    const s = String(u?.status || u?.unit_status || "").toLowerCase();
-    if (s.includes("occupied")) return acc + 1;
-    const r = coerceNumber(u?.in_place_rent ?? u?.current_rent ?? u?.rent);
-    return Number.isFinite(r) && r > 0 ? acc + 1 : acc;
-  }, 0);
-  return total > 0 ? occupied / total : null;
-}
 function resolveCanonicalT12GprValue(t12Payload = null) {
   return coerceNumber(
     t12Payload?.gross_potential_rent ??
