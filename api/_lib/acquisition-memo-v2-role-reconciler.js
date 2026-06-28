@@ -604,6 +604,37 @@ function scoreAcquisitionMemoV2SupportDoc(row = {}, text = "") {
   return Number(candidate?.score || 0);
 }
 
+function getAcquisitionMemoV2SupportDocSelectionPriority(row = {}, artifacts = []) {
+  const roleMatch = reconcileAcquisitionMemoV2SupportDocRole({ file: row, artifacts, acceptedTruth: row });
+  const canonicalRole = normalizeAcquisitionMemoV2CanonicalRole(
+    roleMatch?.canonicalRole || row?.canonical_support_doc_role || row?.semantic_doc_role || row?.payload?.semantic_doc_role
+  );
+  switch (canonicalRole) {
+    case "core_t12":
+      return 1000;
+    case "core_rent_roll":
+      return 990;
+    case "current_debt_context":
+      return 980;
+    case "purchase_assumptions":
+      return 970;
+    case "historical_capex_only":
+      return 960;
+    case "renovation_capex_context":
+      return 950;
+    case "environmental_due_diligence_context":
+      return 940;
+    case "property_tax_support":
+      return 930;
+    case "market_survey_context":
+      return 920;
+    case "appraisal_valuation_context":
+      return 910;
+    default:
+      return 0;
+  }
+}
+
 export function canonicalizeAcquisitionMemoV2DocumentTreatmentSources(documentSources = []) {
   return buildAcquisitionMemoV2SupportDocAuthorityRows({
     documentSources,
@@ -874,7 +905,14 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
 
   const authorityRows = [];
   for (const [key, entries] of grouped.entries()) {
-    entries.sort((left, right) => scoreAcquisitionMemoV2SupportDoc(right.row, collectRowText(right.row, artifacts)) - scoreAcquisitionMemoV2SupportDoc(left.row, collectRowText(left.row, artifacts)) || left.index - right.index);
+    entries.sort(
+      (left, right) =>
+        getAcquisitionMemoV2SupportDocSelectionPriority(right.row, artifacts) -
+          getAcquisitionMemoV2SupportDocSelectionPriority(left.row, artifacts) ||
+        scoreAcquisitionMemoV2SupportDoc(right.row, collectRowText(right.row, artifacts)) -
+          scoreAcquisitionMemoV2SupportDoc(left.row, collectRowText(left.row, artifacts)) ||
+        left.index - right.index
+    );
     const winner = entries[0]?.row || {};
     const canonical = pickCanonical(winner);
     authorityRows.push({
