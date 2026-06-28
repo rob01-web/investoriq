@@ -67,7 +67,6 @@ import {
   resolveCanonicalSupportDocAuthority,
 } from "./support-doc-taxonomy.js";
 import {
-  buildDocumentTreatmentSummaryHtml,
   isValidAnnualPropertyTaxValue,
   resolveRenovationDisplayMode,
   buildHistoricalCapexDisplayCopy,
