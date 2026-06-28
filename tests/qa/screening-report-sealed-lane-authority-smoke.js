@@ -2,26 +2,37 @@ import assert from "assert";
 import fs from "fs";
 
 const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const handlerSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
+const implSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const screeningPipelineSource = fs.readFileSync("api/_lib/screening-report-pipeline.js", "utf8");
 const screeningRendererSource = fs.readFileSync("api/_lib/screening-report-renderer.js", "utf8");
 
-assert.match(reportSource, /import \{ runScreeningReportPipeline \} from "\.\/_lib\/screening-report-pipeline\.js";/);
-assert.match(reportSource, /import \* as screeningReportRenderer from "\.\/_lib\/screening-report-renderer\.js";/);
-assert.match(reportSource, /const isScreeningSealedLane = effectiveReportMode === "screening_v1";/);
-assert.match(reportSource, /const isSealedCustomerOutput = Boolean\(isAcqMemoV2FinalHtml \|\| isScreeningSealedLane\);/);
-assert.match(reportSource, /if \(!isSealedCustomerOutput\) \{\s*const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;/s);
-assert.match(reportSource, /if \(!isSealedCustomerOutput\) \{\s*const docFinalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard/s);
-assert.match(reportSource, /screeningReportRenderer\.resolveScreeningClassificationConsumerLabel\(/);
-assert.match(reportSource, /screeningReportRenderer\.sanitizeScreeningRankedDriversHtml\(/);
-assert.match(reportSource, /screeningReportRenderer\.buildScreeningIncomeForensicsHtml\(/);
-assert.match(reportSource, /screeningReportRenderer\.buildScreeningExpenseStructureHtml\(/);
-assert.match(reportSource, /screeningReportRenderer\.buildScreeningNoiStabilityHtml\(/);
-assert.match(reportSource, /screeningReportRenderer\.buildScreeningRentRollDistributionHtml\(/);
-assert.match(reportSource, /screeningReportRenderer\.buildScreeningDataCoverageSummary\(/);
-assert.match(reportSource, /screeningReportRenderer\.buildScreeningRefiSufficiencyTable\(/);
-assert.match(reportSource, /function assertSealedOutputImmutable\(/);
-assert.match(reportSource, /screeningLaneOutput = assertSealedOutputImmutable\(/);
-assert.match(reportSource, /sealedCustomerOutput: true/);
+assert.match(reportSource, /import handler from "\.\/_lib\/generate-client-report-handler\.js";/);
+assert.match(reportSource, /export default handler;/);
+assert.equal(reportSource.includes("runScreeningReportPipeline"), false, "Public route must not own Screening pipeline authority");
+assert.equal(reportSource.includes("screeningReportRenderer"), false, "Public route must not own Screening rendering authority");
+assert.equal(reportSource.includes("__test__"), false, "Public route must not expose __test__");
+
+assert.match(handlerSource, /import implHandler from "\.\/generate-client-report-impl\.js";/);
+assert.match(handlerSource, /export default async function handler\(req, res\)/);
+assert.equal(handlerSource.includes("runScreeningReportPipeline"), false, "Handler wrapper must not own Screening pipeline authority");
+assert.equal(handlerSource.includes("screeningReportRenderer"), false, "Handler wrapper must not own Screening rendering authority");
+assert.equal(handlerSource.includes("__test__"), false, "Internal handler wrapper must not expose __test__");
+
+assert.match(implSource, /const isScreeningSealedLane = effectiveReportMode === "screening_v1";/);
+assert.match(implSource, /const isSealedCustomerOutput = Boolean\(isAcqMemoV2FinalHtml \|\| isScreeningSealedLane\);/);
+assert.match(implSource, /if \(!isSealedCustomerOutput\) \{\s*const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;/s);
+assert.match(implSource, /screeningReportRenderer\.resolveScreeningClassificationConsumerLabel\(/);
+assert.match(implSource, /screeningReportRenderer\.sanitizeScreeningRankedDriversHtml\(/);
+assert.match(implSource, /screeningReportRenderer\.buildScreeningIncomeForensicsHtml\(/);
+assert.match(implSource, /screeningReportRenderer\.buildScreeningExpenseStructureHtml\(/);
+assert.match(implSource, /screeningReportRenderer\.buildScreeningNoiStabilityHtml\(/);
+assert.match(implSource, /screeningReportRenderer\.buildScreeningRentRollDistributionHtml\(/);
+assert.match(implSource, /screeningReportRenderer\.buildScreeningDataCoverageSummary\(/);
+assert.match(implSource, /screeningReportRenderer\.buildScreeningRefiSufficiencyTable\(/);
+assert.match(implSource, /function assertSealedOutputImmutable\(/);
+assert.match(implSource, /screeningLaneOutput = assertSealedOutputImmutable\(/);
+assert.match(implSource, /sealedCustomerOutput: true/);
 
 const activeRouteOwnedScreeningHelperSnippets = [
   "function resolveScreeningClassificationConsumerLabel",
@@ -34,45 +45,34 @@ const activeRouteOwnedScreeningHelperSnippets = [
   "function buildScreeningRentRollDistributionHtml",
 ];
 for (const snippet of activeRouteOwnedScreeningHelperSnippets) {
-  assert.equal(reportSource.includes(snippet), false, `Route still defines active Screening helper: ${snippet}`);
+  assert.equal(implSource.includes(snippet), false, `Impl still defines active Screening helper: ${snippet}`);
 }
 
-const legacyOnlyRouteOwnedScreeningHelperSnippets = [
-  "function legacyOnlyBuildScreeningDataCoverageSummary",
-  "function legacyOnlyBuildScreeningIncomeForensicsHtml",
-  "function legacyOnlyBuildScreeningExpenseStructureHtml",
-  "function legacyOnlyBuildScreeningNoiStabilityHtml",
-  "function legacyOnlyBuildScreeningRentRollDistributionHtml",
-];
-for (const snippet of legacyOnlyRouteOwnedScreeningHelperSnippets) {
-  assert.equal(reportSource.includes(snippet), true, `Expected legacy-only quarantine for ${snippet}`);
-}
-
-const screeningLaneAnchor = reportSource.search(/\b(?:const|let)\s+screeningLaneOutput\s*=/);
-const screeningPipelineCallAnchor = reportSource.indexOf("runScreeningReportPipeline({", screeningLaneAnchor);
-const screeningSealedQaAssignmentAnchor = reportSource.search(/qaHtml = screeningLaneOutput\.qaHtml \|\| screeningLaneOutput\.html;/);
-const acquisitionTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({", screeningLaneAnchor);
-const v2FinalAssignmentAnchor = reportSource.indexOf("finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;", screeningLaneAnchor);
+const screeningLaneAnchor = implSource.search(/\b(?:const|let)\s+screeningLaneOutput\s*=/);
+const screeningPipelineCallAnchor = implSource.indexOf("runScreeningReportPipeline({", screeningLaneAnchor);
+const screeningSealedQaAssignmentAnchor = implSource.search(/qaHtml = screeningLaneOutput\.qaHtml \|\| screeningLaneOutput\.html;/);
+const acquisitionTreatmentAnchor = implSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({", screeningLaneAnchor);
+const v2FinalAssignmentAnchor = implSource.indexOf("finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;", screeningLaneAnchor);
 
 assert.ok(screeningLaneAnchor >= 0, "Missing Screening sealed lane output anchor");
 assert.ok(screeningPipelineCallAnchor > screeningLaneAnchor, "Missing Screening sealed lane pipeline call");
 assert.ok(screeningSealedQaAssignmentAnchor > screeningPipelineCallAnchor, "Screening qaHtml must come from Screening lane output");
 assert.ok(acquisitionTreatmentAnchor > screeningSealedQaAssignmentAnchor, "Acquisition document treatment block must occur after Screening lane output");
 assert.ok(v2FinalAssignmentAnchor > screeningSealedQaAssignmentAnchor, "V2 final assignment must occur after Screening lane output");
-assert.match(reportSource, /screeningReportRenderer\.buildScreeningCustomerOutput\(/);
+assert.match(implSource, /screeningReportRenderer\.buildScreeningCustomerOutput\(/);
 
-const treatmentConditionStart = reportSource.lastIndexOf("if (", acquisitionTreatmentAnchor);
-const treatmentConditionSlice = reportSource.slice(treatmentConditionStart, acquisitionTreatmentAnchor);
+const treatmentConditionStart = implSource.lastIndexOf("if (", acquisitionTreatmentAnchor);
+const treatmentConditionSlice = implSource.slice(treatmentConditionStart, acquisitionTreatmentAnchor);
 assert.match(treatmentConditionSlice, /effectiveReportMode !== "screening_v1"/);
 assert.match(treatmentConditionSlice, /!\(\s*effectiveReportMode === "v1_core"[\s\S]*acqMemoV2SourceAuthorityEnabled[\s\S]*acquisitionMemoV2Bridge\?\.renderedAcquisitionMemo[\s\S]*\)/);
 
-const finalQaGuardAnchor = reportSource.indexOf("const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;");
-const finalQaGuardCondition = reportSource.slice(reportSource.lastIndexOf("if (", finalQaGuardAnchor), finalQaGuardAnchor);
+const finalQaGuardAnchor = implSource.indexOf("const qaHtmlBeforeFinalSourceReconciliationGuard = qaHtml;");
+const finalQaGuardCondition = implSource.slice(implSource.lastIndexOf("if (", finalQaGuardAnchor), finalQaGuardAnchor);
 assert.match(finalQaGuardCondition, /!isSealedCustomerOutput/);
 
-const finalDocGuardAnchor = reportSource.indexOf("const docFinalSourceReconciliationGuard = legacyOnlyApplyFinalSourceReconciliationRenderGuard");
-const finalDocGuardCondition = reportSource.slice(
-  reportSource.lastIndexOf("if (!isSealedCustomerOutput)", finalDocGuardAnchor),
+const finalDocGuardAnchor = implSource.indexOf("const docFinalSourceReconciliationGuard = applyAcquisitionMemoV2SourceReconciliationRenderGuard(");
+const finalDocGuardCondition = implSource.slice(
+  implSource.lastIndexOf("if (!isSealedCustomerOutput)", finalDocGuardAnchor),
   finalDocGuardAnchor
 );
 assert.match(finalDocGuardCondition, /!isSealedCustomerOutput/);
