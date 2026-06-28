@@ -74,7 +74,7 @@ assert.equal(/replaceMarkedSection\(/.test(fullHarnessV2Slice), false);
 assert.equal(/stripMarkedSection\(/.test(fullHarnessV2Slice), false);
 assert.equal(/applyFinalSourceReconciliationRenderGuard\(/.test(fullHarnessV2Slice), false);
 assert.equal(/applyFinalSectionHealRenderGuards\(/.test(fullHarnessV2Slice), false);
-assert.match(fullHarnessV2Slice, /finalHarnessBossCompliance\.finalDeliveryDecision[\s\S]*finalHarnessBossCompliance\.deliveryState[\s\S]*null/);
+assert.match(fullHarnessV2Slice, /finalBossCompliance\.finalDeliveryDecision[\s\S]*finalBossCompliance\.deliveryState[\s\S]*null/);
 
 const finalHtmlAssignmentAnchor = implSource.indexOf("finalHtml = acquisitionMemoV2Finalization?.html || finalHtml;");
 const documentTreatmentAnchor = implSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({", finalHtmlAssignmentAnchor);
