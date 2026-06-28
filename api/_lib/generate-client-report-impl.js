@@ -5313,6 +5313,67 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyTitle: displayPropertyTitle,
       },
     };
+    if (acquisitionMemoV2OwnsFinalHtml) {
+      const finalBossCompliance = acquisitionMemoV2Finalization ||
+        (await runAcquisitionMemoV2Pipeline({
+          acquisitionMemoV2DocumentArgs,
+          acquisitionMemoBossContract,
+        })) || {
+          html: "",
+          compliance: { ok: true, violations: [] },
+        };
+      acquisitionMemoV2Finalization = assertSealedOutputImmutable({
+        ...finalBossCompliance,
+        sealedCustomerOutput: true,
+        lane: "acquisition_memo_v2",
+        qaHtml: finalBossCompliance.qaHtml || finalBossCompliance.html || "",
+        metadata: {
+          bossCompliance: finalBossCompliance.bossCompliance || finalBossCompliance.compliance || null,
+          customerSurfaceModelValidation: finalBossCompliance.customerSurfaceModelValidation || null,
+          customerSurfaceHtmlValidation: finalBossCompliance.customerSurfaceHtmlValidation || null,
+        },
+        deliveryState: finalBossCompliance.compliance || null,
+      }, "acquisition_memo_v2");
+      docHtml = finalBossCompliance.html;
+      const finalV2DeliveryDecision =
+        finalBossCompliance.finalDeliveryDecision ||
+        finalBossCompliance.deliveryState ||
+        null;
+      if (!finalV2DeliveryDecision) {
+        throw new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+      }
+      if (!finalV2DeliveryDecision.customer_publish_eligible) {
+        await persistFinalAcquisitionMemoV2ComplianceDiagnostics({
+          jobId: jobId || null,
+          userId: effectiveUserId || null,
+          diagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
+          finalDeliveryDecision: finalV2DeliveryDecision,
+        });
+        console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {
+          violations: finalBossCompliance.compliance?.violations || [],
+          finalDeliveryDecision: finalV2DeliveryDecision,
+        });
+        const finalBossError = new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+        finalBossError.code = "REPORT_GENERATION_FAILED";
+        finalBossError.context = {
+          compliance: finalBossCompliance.compliance || null,
+          finalDeliveryDecision: finalV2DeliveryDecision,
+          finalComplianceDiagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
+        };
+        throw finalBossError;
+      }
+      return res.status(200).json({
+        success: true,
+        report_type: reportType,
+        report_mode: effectiveReportMode,
+        final_html: finalBossCompliance.html || "",
+        boss_compliance: acquisitionMemoV2Finalization?.bossCompliance || acquisitionMemoV2Finalization?.compliance || null,
+        final_v2_delivery_decision: acquisitionMemoV2Finalization?.finalDeliveryDecision || null,
+        final_v2_compliance_diagnostics: acquisitionMemoV2Finalization?.finalComplianceDiagnostics || null,
+        customer_surface_model_validation: acquisitionMemoV2Finalization?.customerSurfaceModelValidation || null,
+        customer_surface_html_validation: acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation || null,
+      });
+    }
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
     }
@@ -7338,91 +7399,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
             ? safeHtml.html
             : String(safeHtml || "");
       let htmlString = sanitizeTypography(htmlStringRaw);
-      const isScreeningSealedLaneHarness = effectiveReportMode === "screening_v1";
-      const isSealedCustomerOutputHarness = Boolean(acquisitionMemoV2OwnsFinalHtml || isScreeningSealedLaneHarness);
-      const harnessDocumentTreatmentHtml = isSealedCustomerOutputHarness
-        ? ""
-        : buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({
-            reportMode: effectiveReportMode,
-            documentSources,
-            currentDebtAssessmentState,
-            canonicalAcquisitionState:
-              underwritingState?.core?.acquisition?.assumptionState ||
-              acquisitionAssumptionState ||
-              null,
-            loanTermSheetTermsPayload,
-            acquisitionTermsPayload,
-            hasForwardLookingRenovationInputs: renovationReturnAssumptionsPresent,
-            renovationDisplayMode,
-            renovationPayload,
-            propertyTaxPayload,
-            propertyTaxBindingState,
-            documentQuantitativeUsageMap,
-            canonicalSupportDocMap: acquisitionMemoRenderContext?.canonicalSupportDocMap || null,
-            renderedDocumentTreatmentRowsOut: renderedDocumentTreatmentRows,
-          });
-      // V2-owned final HTML is a sealed orchestrator output. Keep legacy document-treatment replacement
-      // and other post-render mutation cascades out of this branch.
-      if (acquisitionMemoV2OwnsFinalHtml) {
-        htmlString = acquisitionMemoV2Finalization?.html || htmlString;
-      } else if (!isSealedCustomerOutputHarness && typeof htmlString === "string" && htmlString.includes("<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->")) {
-        htmlString = htmlString.replace(
-          /<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->[\s\S]*?<!-- END DOCUMENT_TREATMENT_SUMMARY -->/,
-          `<!-- BEGIN DOCUMENT_TREATMENT_SUMMARY -->${harnessDocumentTreatmentHtml || ""}<!-- END DOCUMENT_TREATMENT_SUMMARY -->`
-        );
-      }
-      if (acquisitionMemoV2OwnsFinalHtml) {
-        const finalHarnessBossCompliance = acquisitionMemoV2Finalization || await runAcquisitionMemoV2Pipeline({
-          acquisitionMemoV2DocumentArgs,
-          acquisitionMemoBossContract,
-        }) || {
-          html: htmlString,
-          compliance: { ok: true, violations: [] },
-        };
-        acquisitionMemoV2Finalization = assertSealedOutputImmutable({
-          ...finalHarnessBossCompliance,
-          sealedCustomerOutput: true,
-          lane: "acquisition_memo_v2",
-          qaHtml: finalHarnessBossCompliance.qaHtml || finalHarnessBossCompliance.html || htmlString,
-          metadata: {
-            bossCompliance: finalHarnessBossCompliance.bossCompliance || finalHarnessBossCompliance.compliance || null,
-            customerSurfaceModelValidation: finalHarnessBossCompliance.customerSurfaceModelValidation || null,
-            customerSurfaceHtmlValidation: finalHarnessBossCompliance.customerSurfaceHtmlValidation || null,
-          },
-          deliveryState: finalHarnessBossCompliance.compliance || null,
-        }, "acquisition_memo_v2");
-        htmlString = finalHarnessBossCompliance.html;
-        const finalHarnessDeliveryDecision =
-          finalHarnessBossCompliance.finalDeliveryDecision ||
-          finalHarnessBossCompliance.deliveryState ||
-          null;
-        if (!finalHarnessDeliveryDecision) {
-          throw new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
-        }
-        if (!finalHarnessDeliveryDecision.customer_publish_eligible) {
-          return res.status(500).json({
-            success: false,
-            report_type: reportType,
-            report_mode: effectiveReportMode,
-            error: "Final Acquisition Memo V2 HTML failed Boss compliance",
-            boss_compliance: finalHarnessBossCompliance.compliance || null,
-            final_v2_delivery_decision: finalHarnessDeliveryDecision,
-            final_v2_compliance_diagnostics: finalHarnessBossCompliance.finalComplianceDiagnostics || null,
-            final_html: null,
-          });
-        }
-      }
-      return res.status(200).json({
-        success: true,
-        report_type: reportType,
-        report_mode: effectiveReportMode,
-        final_html: htmlString,
-        boss_compliance: acquisitionMemoV2Finalization?.bossCompliance || acquisitionMemoV2Finalization?.compliance || null,
-        final_v2_delivery_decision: acquisitionMemoV2Finalization?.finalDeliveryDecision || null,
-        final_v2_compliance_diagnostics: acquisitionMemoV2Finalization?.finalComplianceDiagnostics || null,
-        customer_surface_model_validation: acquisitionMemoV2Finalization?.customerSurfaceModelValidation || null,
-        customer_surface_html_validation: acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation || null,
-      });
     }
 // 9. Send to DocRaptor (STILL IN TEST MODE)
 const htmlStringRaw =
@@ -9048,48 +9024,3 @@ try {
   } finally {
   }
 }
-
-export const __test__ = {
-  normalizeAcquisitionFinancingArtifactPayload,
-  alignDealScorecardVisibleClassificationHtml,
-  buildCurrentDebtScorecardEntry,
-  buildDealScorecardState,
-  resolveCanonicalRefiDebtBasis,
-  buildRefiDebtRenderState,
-  buildRefiStabilityModel,
-  buildScreeningRefiSufficiencyTable: screeningReportRenderer.buildScreeningRefiSufficiencyTable,
-  buildLaunchSourceContextBlock,
-  buildCapRateValueTable,
-  resolveRentPositioningSectionTitle,
-  stripEmptyHeadingBlocks,
-  stripThinSectionPages,
-  collapseSummaryOnlyUnitMixSection,
-  buildRendererCanonicalState,
-  buildScreeningIncomeForensicsHtml: screeningReportRenderer.buildScreeningIncomeForensicsHtml,
-  buildScreeningExpenseStructureHtml: screeningReportRenderer.buildScreeningExpenseStructureHtml,
-  buildScreeningNoiStabilityHtml: screeningReportRenderer.buildScreeningNoiStabilityHtml,
-  buildScreeningRentRollDistributionHtml: screeningReportRenderer.buildScreeningRentRollDistributionHtml,
-  sanitizeScreeningRankedDriversHtml: screeningReportRenderer.sanitizeScreeningRankedDriversHtml,
-  buildRenovationBudgetRows,
-  buildRenovationBudgetCardHtml,
-  buildRenovationExecutionRows,
-  buildRenovationExecutionCardHtml,
-  buildScreeningDataCoverageSummary: screeningReportRenderer.buildScreeningDataCoverageSummary,
-  buildT12SummaryHtml,
-  resolveCanonicalT12GprValue,
-  materiallyDifferent,
-  resolveSafeAnnualRentTotal,
-  resolveOccupancyNoteValue,
-  resolveCanonicalLoanTermSheetArtifacts,
-  resolveCanonicalDataCoverageHeadlineState,
-  normalizeVisibleReportClassification,
-  resolveScreeningClassificationConsumerLabel: screeningReportRenderer.resolveScreeningClassificationConsumerLabel,
-  shouldRenderCanonicalSection,
-  shouldApplyTierOneStripCascade,
-  resolveMarketContextSectionVisibility,
-  resolveFinalRecommendationSectionVisibility,
-  resolveDocumentSourcesSectionVisibility,
-  shouldStripDataCoverageSectionByRenderedCopy,
-};
-
-
