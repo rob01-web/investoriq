@@ -1557,18 +1557,6 @@ function buildRefiStabilityModel({
   )}</p><table><thead><tr><th>NOI Shock</th><th>Cap Expansion (bps)</th><th>Rate Shock (bps)</th><th>Max Proceeds</th><th>Coverage</th></tr></thead><tbody>${worstRows}</tbody></table></div>${sufficiencyTableHtml}`;
   return { tier: refiTier, evidence, html: refiHtml };
 }
-function normalizeExitCapSourceLabel(value) {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "";
-  const compact = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-  if (compact === "document_derived") return "document derived";
-  if (compact === "standardized_framework" || compact === "standardized_framework_assumption") {
-    return "standardized framework assumption";
-  }
-  if (compact === "user_provided") return "user-provided";
-  if (compact === "unavailable") return "unavailable";
-  return escapeHtml(raw);
-}
 function normalizeCapRatePercent(value) {
   const n = coerceNumber(value);
   if (!Number.isFinite(n) || n <= 0) return null;
