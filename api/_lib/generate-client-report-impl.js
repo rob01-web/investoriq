@@ -2034,13 +2034,6 @@ function buildUnitMixRows(unitMix = [], totalUnits, formatValue) {
     .join("");
   return rows;
 }
-function injectUnitMixTable(html, rowsHtml) {
-  if (!rowsHtml) return html;
-  const regex =
-    /(<p class="subsection-title">Illustrative Unit Mix and Rent Lift<\/p>[\s\S]*?<table>[\s\S]*?<tbody>)([\s\S]*?)(<\/tbody>)/;
-  if (!regex.test(html)) return html;
-  return html.replace(regex, `$1${rowsHtml}$3`);
-}
 function injectOccupancyNote(html, occupancy) {
   if (occupancy === null || occupancy === undefined) return html;
   const occupancyPercent =
