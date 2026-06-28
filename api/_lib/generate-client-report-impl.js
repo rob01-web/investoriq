@@ -2098,25 +2098,6 @@ function buildT12SummaryHtml(t12Payload, formatValue) {
         ${rowHtml}
       </table>`;
 }
-function buildT12KeyMetricRows(t12Payload, formatValue) {
-  if (!t12Payload) return "";
-  const canonicalGpr = resolveCanonicalT12GprValue(t12Payload);
-  const rows = [
-    ["In-Place Gross Potential Rent", canonicalGpr],
-    ["Effective Gross Income (TTM)", t12Payload.effective_gross_income],
-    ["Operating Expenses (TTM)", t12Payload.total_operating_expenses],
-    ["Net Operating Income (TTM)", t12Payload.net_operating_income],
-  ];
-  return rows
-    .map(([label, value]) => {
-      const display = Number.isFinite(Number(value)) ? formatValue(value) : "";
-      return `<tr>
-          <td>${label}</td>
-          <td>${display}</td>
-        </tr>`;
-    })
-    .join("");
-}
 function buildT12IncomeRows(t12Payload, formatValue) {
   if (!t12Payload || typeof t12Payload !== "object") return "";
   const candidateCollection = Array.isArray(t12Payload.income_lines)
@@ -2220,97 +2201,6 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
   }
   if (rows.length < 3) return "";
   return rows.join("");
-}
-function summarizeRenovationBudgetRows(rows, formatValue) {
-  const visibleColumns = {
-    category: false,
-    scope: false,
-    cost: false,
-    unitType: false,
-    unitCount: false,
-    costPerUnit: false,
-    expectedMonthlyRentLift: false,
-    phaseTiming: false,
-    grossAnnualRentLiftPotential: false,
-    percent: false,
-    objective: false,
-  };
-  const normalizedRows = [];
-  for (const row of Array.isArray(rows) ? rows : []) {
-    if (!row || typeof row !== "object") continue;
-    const category = String(row.category ?? row.line_item ?? row.item ?? "").trim();
-    const scope = String(row.scope_of_work ?? row.scope ?? "").trim();
-    const unitType = String(row.unit_type ?? "").trim();
-    const unitCountRaw = row.unit_count ?? "";
-    const unitCountNum = coerceNumber(unitCountRaw);
-    const unitCount = Number.isFinite(unitCountNum) ? String(Math.round(unitCountNum)) : String(unitCountRaw).trim();
-    const costNum = coerceNumber(row.estimated_cost ?? row.cost ?? row.amount);
-    const costRaw = String(row.estimated_cost ?? row.cost ?? row.amount ?? "").trim();
-    const cost = Number.isFinite(costNum) ? formatValue(costNum) : escapeHtml(costRaw);
-    const costPerUnitNum = coerceNumber(row.cost_per_unit);
-    const costPerUnitRaw = String(row.cost_per_unit ?? "").trim();
-    const costPerUnit = Number.isFinite(costPerUnitNum) ? formatValue(costPerUnitNum) : escapeHtml(costPerUnitRaw);
-    const expectedMonthlyRentLiftNum = coerceNumber(row.expected_monthly_rent_lift);
-    const expectedMonthlyRentLiftRaw = String(row.expected_monthly_rent_lift ?? "").trim();
-    const expectedMonthlyRentLift = Number.isFinite(expectedMonthlyRentLiftNum)
-      ? formatValue(expectedMonthlyRentLiftNum)
-      : escapeHtml(expectedMonthlyRentLiftRaw);
-    const phaseTiming = String(row.phase_timing ?? row.timing_or_phasing ?? "").trim();
-    const grossAnnualRentLiftPotential =
-      Number.isFinite(unitCountNum) && Number.isFinite(expectedMonthlyRentLiftNum)
-        ? formatValue(unitCountNum * expectedMonthlyRentLiftNum * 12)
-        : "";
-    const pctKind = normalizeRenovationMetricKind({
-      metric_kind: "percent_of_budget",
-      label: "percent of budget",
-    });
-    const pctRawValue = row.percent_of_budget ?? row.percent ?? row.percentage ?? "";
-    const pctValue = coerceNumber(pctRawValue);
-    const pct = formatRenovationMetricValue({
-      metricKind: pctKind,
-      value: pctValue,
-    });
-    const percent = Number.isFinite(pctValue) ? pct : String(pctRawValue ?? "").trim();
-    const objective = String(row.primary_objective ?? row.objective ?? row.note ?? "").trim();
-    if (
-      !category &&
-      !scope &&
-      !cost &&
-      !unitType &&
-      !unitCount &&
-      !costPerUnit &&
-      !expectedMonthlyRentLift &&
-      !phaseTiming &&
-      !grossAnnualRentLiftPotential &&
-      !percent &&
-      !objective
-    ) continue;
-    visibleColumns.category ||= Boolean(category);
-    visibleColumns.scope ||= Boolean(scope);
-    visibleColumns.cost ||= Boolean(cost);
-    visibleColumns.unitType ||= Boolean(unitType);
-    visibleColumns.unitCount ||= Boolean(unitCount);
-    visibleColumns.costPerUnit ||= Boolean(costPerUnit);
-    visibleColumns.expectedMonthlyRentLift ||= Boolean(expectedMonthlyRentLift);
-    visibleColumns.phaseTiming ||= Boolean(phaseTiming);
-    visibleColumns.grossAnnualRentLiftPotential ||= Boolean(grossAnnualRentLiftPotential);
-    visibleColumns.percent ||= Boolean(percent);
-    visibleColumns.objective ||= Boolean(objective);
-    normalizedRows.push({
-      category,
-      scope,
-      cost,
-      unitType,
-      unitCount,
-      costPerUnit,
-      expectedMonthlyRentLift,
-      phaseTiming,
-      grossAnnualRentLiftPotential,
-      percent,
-      objective,
-    });
-  }
-  return { visibleColumns, rows: normalizedRows };
 }
 // ---------- Dynamic Table Builders ----------
 function buildUnitMixTable(rows = []) {
