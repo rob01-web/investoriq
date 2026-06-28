@@ -2312,15 +2312,6 @@ function summarizeRenovationBudgetRows(rows, formatValue) {
   }
   return { visibleColumns, rows: normalizedRows };
 }
-
-
-function injectKeyMetricsRows(html, rowsHtml) {
-  if (!rowsHtml) return html;
-  const regex =
-    /(<p class="label">Key Metrics Snapshot \(Base Case\)<\/p>[\s\S]*?<table>[\s\S]*?<tbody>)([\s\S]*?)(<\/tbody>)/;
-  if (!regex.test(html)) return html;
-  return html.replace(regex, `$1$2${rowsHtml}$3`);
-}
 // ---------- Dynamic Table Builders ----------
 function buildUnitMixTable(rows = []) {
   if (!rows.length) return "";
