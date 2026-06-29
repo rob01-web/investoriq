@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmailResend } from '../lib/email-resend.js';
 import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
+import { buildReportStoragePath } from './_lib/report-delivery-output.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 const normalizeAuditText = (value) => String(value || '').toLowerCase();
@@ -2271,10 +2272,14 @@ export default async function handler(req, res) {
     throw new Error(`Failed to check existing reports: ${reportErr.message}`);
   }
 
-  if (existingReports && existingReports.length > 0 && existingReports[0].storage_path) {
-    reportId = existingReports[0].id;
-    storagePath = existingReports[0].storage_path;
-    generatorSource = 'existing_report';
+  if (existingReports && existingReports.length > 0) {
+    reportId = existingReports[0].id || null;
+    storagePath =
+      existingReports[0].storage_path ||
+      (reportId ? buildReportStoragePath({ effectiveUserId: job.user_id, reportSeed: reportId }) : null);
+    if (reportId || storagePath) {
+      generatorSource = 'existing_report';
+    }
   }
 }
 
@@ -2337,14 +2342,21 @@ export default async function handler(req, res) {
                   (deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision.coreValidRequiredCoverage) ||
                   resolvedDeliveryDecision.holdDelivery === true ||
                   resolvedDeliveryDecision.customerDeliveryAllowed === false;
+                const resolvedReportId = reportData?.reportId || reportId || null;
+                const resolvedStoragePath =
+                  reportData?.storagePath ||
+                  storagePath ||
+                  (resolvedReportId
+                    ? buildReportStoragePath({ effectiveUserId: job.user_id, reportSeed: resolvedReportId })
+                    : null);
                 if (shouldHoldDeliveryOutcome) {
-                  reportId = reportData?.reportId || null;
-                  storagePath = reportData?.storagePath || null;
-                } else if (!reportData?.reportId) {
+                  reportId = resolvedReportId;
+                  storagePath = resolvedStoragePath;
+                } else if (!resolvedReportId) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 } else {
-                  reportId = reportData.reportId;
-                  storagePath = `${job.user_id}/${reportId}.pdf`;
+                  reportId = resolvedReportId;
+                  storagePath = resolvedStoragePath;
                 }
               }
             }

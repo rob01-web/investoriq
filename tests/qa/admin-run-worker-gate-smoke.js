@@ -5,7 +5,12 @@ const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 
 assert.match(
   workerSource,
-  /const shouldHoldDeliveryOutcome =[\s\S]{0,260}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,260}resolvedDeliveryDecision\.customerDeliveryAllowed === false[\s\S]{0,260}if \(shouldHoldDeliveryOutcome\)\s*\{[\s\S]{0,260}reportId = reportData\?\.reportId \|\| null;[\s\S]{0,260}storagePath = reportData\?\.storagePath \|\| null;[\s\S]{0,260}\} else if \(!reportData\?\.reportId\)\s*\{[\s\S]{0,160}generatorError = `Report generation failed/
+  /import { buildReportStoragePath } from '\.\/_lib\/report-delivery-output\.js';/
+);
+
+assert.match(
+  workerSource,
+  /const shouldHoldDeliveryOutcome =[\s\S]{0,260}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,260}resolvedDeliveryDecision\.customerDeliveryAllowed === false[\s\S]{0,260}const resolvedReportId = reportData\?\.reportId \|\| reportId \|\| null;[\s\S]{0,360}const resolvedStoragePath =[\s\S]{0,360}buildReportStoragePath\(\{ effectiveUserId: job\.user_id, reportSeed: resolvedReportId \}\)[\s\S]{0,260}if \(shouldHoldDeliveryOutcome\)\s*\{[\s\S]{0,260}reportId = resolvedReportId;[\s\S]{0,260}storagePath = resolvedStoragePath;[\s\S]{0,260}\} else if \(!resolvedReportId\)\s*\{[\s\S]{0,160}generatorError = `Report generation failed/
 );
 
 assert.equal(

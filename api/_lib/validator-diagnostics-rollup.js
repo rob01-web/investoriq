@@ -5,6 +5,18 @@ const DERIVED_ALLOWED_CODE_SET = new Set([
   'net_operating_income_derived_from_egi_minus_opex',
 ]);
 
+const RENT_ROLL_STRUCTURAL_ACCEPTED_FIELD_SET = new Set([
+  'total_units',
+  'occupied_units',
+  'vacant_units',
+  'occupancy',
+  'units',
+  'unit_mix',
+  'totals',
+  'coherence',
+  'column_map',
+]);
+
 const OWNER_AREA_CODE_MAP = {
   user_document_quality: new Set([
     'missing_unit_rows',
@@ -169,6 +181,10 @@ export function buildValidatorDiagnosticsRollup({ jobId, reportType, artifacts, 
     const derivedFields = uniqueSorted(extracted.derivedFields);
     const fieldReasonCodes = uniqueSorted(extracted.fieldReasonCodes);
     const rowReasonCodes = uniqueSorted(extracted.rowReasonCodes);
+    const summaryTotalsDisclosureOnly =
+      type === 'rent_roll_parsed' &&
+      reasonCodes.includes('summary_totals_detected') &&
+      acceptedFields.some((field) => RENT_ROLL_STRUCTURAL_ACCEPTED_FIELD_SET.has(field));
 
     for (const code of reasonCodes) {
       pushCount(reasonCodeCounts, code);
@@ -179,7 +195,9 @@ export function buildValidatorDiagnosticsRollup({ jobId, reportType, artifacts, 
     for (const code of fieldReasonCodes) pushCount(fieldReasonCodeCounts, code);
     for (const code of rowReasonCodes) pushCount(rowReasonCodeCounts, code);
 
-    const nonDerivedReasonCodes = reasonCodes.filter((code) => !DERIVED_ALLOWED_CODE_SET.has(code));
+    const nonDerivedReasonCodes = reasonCodes.filter(
+      (code) => !DERIVED_ALLOWED_CODE_SET.has(code) && !(summaryTotalsDisclosureOnly && code === 'summary_totals_detected')
+    );
     const hasRejectedSignals = nonDerivedReasonCodes.length > 0;
     const hasAcceptedSignals = acceptedFields.length > 0 || derivedFields.length > 0;
     const hasOnlyDerivedAllowedReasons = reasonCodes.length > 0 && nonDerivedReasonCodes.length === 0;
@@ -188,9 +206,9 @@ export function buildValidatorDiagnosticsRollup({ jobId, reportType, artifacts, 
       acceptedValidators.add(type);
     } else if (type && hasRejectedSignals) {
       rejectedValidators.add(type);
-    } else if (type && (hasAcceptedSignals || hasOnlyDerivedAllowedReasons)) {
+    } else if (type && (hasAcceptedSignals || hasOnlyDerivedAllowedReasons || summaryTotalsDisclosureOnly)) {
       acceptedValidators.add(type);
-      if (extracted.hasWarnings && !hasAcceptedSignals) warningValidators.add(type);
+      if ((extracted.hasWarnings || summaryTotalsDisclosureOnly) && !hasAcceptedSignals) warningValidators.add(type);
     } else if (type && extracted.hasWarnings) {
       warningValidators.add(type);
     }

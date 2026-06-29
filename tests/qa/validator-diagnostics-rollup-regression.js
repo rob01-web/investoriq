@@ -106,4 +106,26 @@ assert.equal("raw_text" in rollup, false);
 assert.equal(classifyDiagnosticOwnerArea("core_t12_equation_mismatch"), "source_reconciliation");
 assert.equal(classifyDiagnosticOwnerArea("unknown_code_123"), null);
 
+const rentRollSummaryTotalsRollup = buildValidatorDiagnosticsRollup({
+  jobId: "job_rent_roll_summary_totals",
+  reportType: "screening",
+  artifacts: [
+    {
+      type: "rent_roll_parsed",
+      payload: {
+        parser_diagnostics: {
+          validation_reasons: ["summary_totals_detected"],
+          accepted_fields: ["total_units", "occupied_units", "vacant_units", "occupancy", "totals", "coherence"],
+          derived_fields: [],
+        },
+      },
+    },
+  ],
+  timestamp: "2026-05-16T00:00:00.000Z",
+});
+
+assert.equal(rentRollSummaryTotalsRollup.accepted_validators.includes("rent_roll_parsed"), true);
+assert.equal(rentRollSummaryTotalsRollup.rejected_validators.includes("rent_roll_parsed"), false);
+assert.equal(rentRollSummaryTotalsRollup.warning_validators.includes("rent_roll_parsed"), false);
+
 console.log("validator diagnostics rollup regression PASS");
