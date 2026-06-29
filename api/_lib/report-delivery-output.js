@@ -70,21 +70,117 @@ export function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
   return `${userPart}/${seedPart}.pdf`;
 }
 
-async function renderReportPdfBuffer({
+function normalizeReportDownloadArtifactMode(reportDownloadArtifactMode = "") {
+  const normalized = String(reportDownloadArtifactMode || "").trim().toLowerCase();
+  if (!normalized) return "";
+  if (["production", "production_pdf", "prod", "launch"].includes(normalized)) return "production_pdf";
+  if (["test", "test_pdf", "stub", "stub_pdf", "prelaunch"].includes(normalized)) return "stub_pdf";
+  return normalized;
+}
+
+function buildPrelaunchTestPdfBuffer({
+  finalHtml = "",
+  reportType = "",
+  reportSeed = null,
+  propertyName = "",
+  storagePath = "",
+} = {}) {
+  const escapePdfText = (value) =>
+    String(value ?? "")
+      .replace(/\\/g, "\\\\")
+      .replace(/\(/g, "\\(")
+      .replace(/\)/g, "\\)")
+      .replace(/\r?\n/g, " ");
+
+  const bodyLines = [
+    "InvestorIQ prelaunch test artifact. Production PDF generation disabled.",
+    `Report type: ${String(reportType || "").trim() || "unknown"}`,
+    reportSeed ? `Report seed: ${String(reportSeed || "").trim()}` : "",
+    propertyName ? `Property: ${String(propertyName || "").trim()}` : "",
+    storagePath ? `Storage path: ${String(storagePath || "").trim()}` : "",
+    String(finalHtml || "").trim() ? "Sealed customer HTML captured for prelaunch delivery proof." : "",
+  ].filter(Boolean);
+
+  const contentLines = bodyLines.length
+    ? bodyLines.map((line, index) => `${index === 0 ? "" : "0 -18 Td\n"}(${escapePdfText(line)}) Tj`).join("\n")
+    : "(InvestorIQ prelaunch test artifact.) Tj";
+  const contentStream = `BT\n/F1 12 Tf\n72 740 Td\n${contentLines}\nET\n`;
+
+  const header = "%PDF-1.4\n";
+  const objects = [
+    `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`,
+    `2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`,
+    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`,
+    `4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`,
+    `5 0 obj\n<< /Length ${Buffer.byteLength(contentStream, "utf8")} >>\nstream\n${contentStream}endstream\nendobj\n`,
+  ];
+
+  const offsets = [0];
+  let currentOffset = Buffer.byteLength(header, "utf8");
+  for (const object of objects) {
+    offsets.push(currentOffset);
+    currentOffset += Buffer.byteLength(object, "utf8");
+  }
+
+  const xrefEntries = offsets
+    .map((offset, index) => (index === 0 ? "0000000000 65535 f \n" : `${String(offset).padStart(10, "0")} 00000 n \n`))
+    .join("");
+  const xref = `xref\n0 ${offsets.length}\n${xrefEntries}trailer\n<< /Root 1 0 R /Size ${offsets.length} >>\nstartxref\n${currentOffset}\n%%EOF\n`;
+
+  return Buffer.from(`${header}${objects.join("")}${xref}`, "utf8");
+}
+
+export function resolveReportDownloadArtifactMode({
+  reportDownloadArtifactMode = process.env.REPORT_DOWNLOAD_ARTIFACT_MODE || "",
+  allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
+  docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
+  hasDocRaptorApiKey = Boolean(String(process.env.DOCRAPTOR_API_KEY || "").trim()),
+} = {}) {
+  const normalizedMode = normalizeReportDownloadArtifactMode(reportDownloadArtifactMode);
+  if (normalizedMode === "stub_pdf") return "stub_pdf";
+  if (normalizedMode === "production_pdf") {
+    if (docraptorMode !== "production" || !allowProductionPdf || !hasDocRaptorApiKey) {
+      const err = new Error("DOCRAPTOR_NOT_PRODUCTION_MODE");
+      err.code = "DOCRAPTOR_NOT_PRODUCTION_MODE";
+      err.context = {
+        report_download_artifact_mode: normalizedMode,
+        docraptor_mode: docraptorMode,
+        allow_production_pdf: Boolean(allowProductionPdf),
+        has_docraptor_api_key: Boolean(hasDocRaptorApiKey),
+      };
+      throw err;
+    }
+    return "production_pdf";
+  }
+  if (docraptorMode === "production" && allowProductionPdf && hasDocRaptorApiKey) {
+    return "production_pdf";
+  }
+  return "stub_pdf";
+}
+
+export async function renderReportPdfBuffer({
   finalHtml,
   reportType = "",
   allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
   docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
+  reportDownloadArtifactMode = process.env.REPORT_DOWNLOAD_ARTIFACT_MODE || "",
+  reportSeed = null,
+  propertyName = "",
+  storagePath = "",
 } = {}) {
-  if (docraptorMode !== "production" || !allowProductionPdf) {
-    const err = new Error("DOCRAPTOR_NOT_PRODUCTION_MODE");
-    err.code = "DOCRAPTOR_NOT_PRODUCTION_MODE";
-    err.context = {
-      docraptor_mode: docraptorMode,
-      allow_production_pdf: Boolean(allowProductionPdf),
-      report_type: String(reportType || "").trim() || null,
-    };
-    throw err;
+  const artifactMode = resolveReportDownloadArtifactMode({
+    reportDownloadArtifactMode,
+    allowProductionPdf,
+    docraptorMode,
+  });
+  if (artifactMode === "stub_pdf") {
+    return buildPrelaunchTestPdfBuffer({
+      finalHtml,
+      reportType,
+      reportSeed,
+      propertyName,
+      storagePath,
+    });
   }
 
   const pdfResponse = await axios.post(
@@ -118,6 +214,7 @@ export async function ensureReportDownloadArtifact({
   propertyName = "",
   allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
   docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
+  reportDownloadArtifactMode = process.env.REPORT_DOWNLOAD_ARTIFACT_MODE || "",
   renderPdfBuffer = renderReportPdfBuffer,
   createdReportRecord = false,
   bucketName = "generated_reports",
@@ -174,9 +271,11 @@ export async function ensureReportDownloadArtifact({
     reportType,
     allowProductionPdf,
     docraptorMode,
+    reportDownloadArtifactMode,
     job,
     reportSeed,
     propertyName,
+    storagePath: normalizedStoragePath,
   });
 
   const { error: uploadError } = await storageBucket.upload(normalizedStoragePath, pdfBuffer, {
