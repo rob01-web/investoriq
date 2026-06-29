@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmailResend } from '../lib/email-resend.js';
 import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
-import { buildReportStoragePath } from './_lib/report-delivery-output.js';
+import {
+  buildReportStoragePath,
+  resolveOrCreateReportPublicationRecord,
+} from './_lib/report-delivery-output.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 const normalizeAuditText = (value) => String(value || '').toLowerCase();
@@ -2336,15 +2339,34 @@ export default async function handler(req, res) {
                 }
               } else {
                 reportData = await reportRes.json().catch(() => ({}));
-              const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
-              const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
-              const shouldHoldDeliveryOutcome =
+                const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
+                const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
+                const shouldHoldDeliveryOutcome =
                   (deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision.coreValidRequiredCoverage) ||
                   resolvedDeliveryDecision.holdDelivery === true ||
                   resolvedDeliveryDecision.customerDeliveryAllowed === false;
-                const resolvedReportId = reportData?.reportId || reportId || null;
+                let publicationResolution = null;
+                try {
+                  publicationResolution = await resolveOrCreateReportPublicationRecord({
+                    supabaseAdmin,
+                    job,
+                    reportData,
+                    existingReportId: reportId,
+                    existingStoragePath: storagePath,
+                    allowCreate: !shouldHoldDeliveryOutcome,
+                  });
+                } catch (publicationErr) {
+                  generatorError = publicationErr?.message || 'Report generation failed (report publication resolution failed)';
+                  generatorFailurePayload = {
+                    error: generatorError,
+                    has_report_data: Boolean(reportData),
+                    has_final_html: Boolean(reportData?.final_html),
+                    target_url: fetchUrl,
+                  };
+                }
+                const resolvedReportId = publicationResolution?.reportId || reportId || null;
                 const resolvedStoragePath =
-                  reportData?.storagePath ||
+                  publicationResolution?.storagePath ||
                   storagePath ||
                   (resolvedReportId
                     ? buildReportStoragePath({ effectiveUserId: job.user_id, reportSeed: resolvedReportId })
@@ -2352,11 +2374,15 @@ export default async function handler(req, res) {
                 if (shouldHoldDeliveryOutcome) {
                   reportId = resolvedReportId;
                   storagePath = resolvedStoragePath;
+                  generatorSource = publicationResolution?.publicationSource || generatorSource;
+                } else if (generatorError) {
+                  // Leave generatorError in place for the terminal failure handler below.
                 } else if (!resolvedReportId) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 } else {
                   reportId = resolvedReportId;
                   storagePath = resolvedStoragePath;
+                  generatorSource = publicationResolution?.publicationSource || generatorSource;
                 }
               }
             }
@@ -2507,6 +2533,8 @@ export default async function handler(req, res) {
             source: generatorSource,
             report_id: reportId,
             storage_path: storagePath,
+            final_html: typeof reportData?.final_html === 'string' ? reportData.final_html : null,
+            final_html_length: typeof reportData?.final_html === 'string' ? reportData.final_html.length : 0,
             timestamp: nowIso,
           });
 

@@ -5,12 +5,32 @@ const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 
 assert.match(
   workerSource,
-  /import { buildReportStoragePath } from '\.\/_lib\/report-delivery-output\.js';/
+  /import \{\s*buildReportStoragePath,\s*resolveOrCreateReportPublicationRecord,\s*\} from '\.\/_lib\/report-delivery-output\.js';/
 );
 
 assert.match(
   workerSource,
-  /const shouldHoldDeliveryOutcome =[\s\S]{0,260}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,260}resolvedDeliveryDecision\.customerDeliveryAllowed === false[\s\S]{0,260}const resolvedReportId = reportData\?\.reportId \|\| reportId \|\| null;[\s\S]{0,360}const resolvedStoragePath =[\s\S]{0,360}buildReportStoragePath\(\{ effectiveUserId: job\.user_id, reportSeed: resolvedReportId \}\)[\s\S]{0,260}if \(shouldHoldDeliveryOutcome\)\s*\{[\s\S]{0,260}reportId = resolvedReportId;[\s\S]{0,260}storagePath = resolvedStoragePath;[\s\S]{0,260}\} else if \(!resolvedReportId\)\s*\{[\s\S]{0,160}generatorError = `Report generation failed/
+  /publicationResolution = await resolveOrCreateReportPublicationRecord\([\s\S]{0,260}allowCreate:\s*!shouldHoldDeliveryOutcome/
+);
+assert.match(
+  workerSource,
+  /const resolvedReportId = publicationResolution\?\.reportId \|\| reportId \|\| null;/
+);
+assert.match(
+  workerSource,
+  /const resolvedStoragePath =[\s\S]{0,200}publicationResolution\?\.storagePath \|\|[\s\S]{0,200}\(resolvedReportId/
+);
+assert.match(
+  workerSource,
+  /if \(shouldHoldDeliveryOutcome\)\s*\{[\s\S]{0,120}reportId = resolvedReportId;[\s\S]{0,120}storagePath = resolvedStoragePath;/
+);
+assert.match(
+  workerSource,
+  /\} else if \(generatorError\)\s*\{/
+);
+assert.match(
+  workerSource,
+  /\} else if \(!resolvedReportId\)\s*\{/
 );
 
 assert.equal(
@@ -142,6 +162,10 @@ assert.match(generatorErrorWindow, /applyTerminalFailureOutcome\(job,\s*\{/);
 assert.equal(
   /writeStatusTransitionArtifact\(\s*job\.id,\s*'rendering',\s*'failed'/.test(generatorErrorWindow),
   false
+);
+assert.match(
+  workerSource,
+  /final_html:\s*typeof reportData\?\.final_html === 'string' \? reportData\.final_html : null,[\s\S]{0,80}final_html_length:\s*typeof reportData\?\.final_html === 'string' \? reportData\.final_html\.length : 0,/
 );
 assert.match(
   typedGateWindow,

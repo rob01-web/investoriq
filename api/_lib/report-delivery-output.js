@@ -69,6 +69,104 @@ export function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
   return `${userPart}/${seedPart}.pdf`;
 }
 
+export async function resolveOrCreateReportPublicationRecord({
+  supabaseAdmin,
+  job = {},
+  reportData = {},
+  existingReportId = null,
+  existingStoragePath = null,
+  allowCreate = true,
+} = {}) {
+  const effectiveUserId = String(job?.user_id ?? "").trim();
+  const reportType = String(reportData?.report_type ?? job?.report_type ?? "").trim();
+  const reportSeed = String(job?.id ?? reportData?.jobId ?? "").trim();
+  const resolvedReportId = String(reportData?.reportId ?? existingReportId ?? "").trim() || null;
+  const resolvedStoragePath = String(reportData?.storagePath ?? existingStoragePath ?? "").trim() || null;
+
+  if (resolvedReportId && resolvedStoragePath) {
+    return {
+      reportId: resolvedReportId,
+      storagePath: resolvedStoragePath,
+      publicationSource: reportData?.reportId ? "route_response" : existingReportId ? "existing_report" : "resolved_report",
+      createdReportRecord: false,
+    };
+  }
+
+  const derivedStoragePath =
+    effectiveUserId && (resolvedReportId || reportSeed)
+      ? buildReportStoragePath({
+          effectiveUserId,
+          reportSeed: resolvedReportId || reportSeed,
+        })
+      : "";
+
+  if (resolvedReportId) {
+    return {
+      reportId: resolvedReportId,
+      storagePath: derivedStoragePath || resolvedStoragePath || null,
+      publicationSource: reportData?.reportId ? "route_response" : "resolved_report",
+      createdReportRecord: false,
+    };
+  }
+
+  if (!allowCreate) {
+    return {
+      reportId: null,
+      storagePath: null,
+      publicationSource: "creation_disabled",
+      createdReportRecord: false,
+    };
+  }
+
+  if (!effectiveUserId || !reportType || !reportSeed || !reportData?.final_html) {
+    return {
+      reportId: null,
+      storagePath: null,
+      publicationSource: "missing_publication_prereqs",
+      createdReportRecord: false,
+    };
+  }
+
+  if (!supabaseAdmin?.from) {
+    throw new Error("Missing report publication database client");
+  }
+
+  const storagePath = buildReportStoragePath({ effectiveUserId, reportSeed });
+  const propertyName = String(job?.property_name ?? "").trim() || "Property";
+  const { data: reportRow, error: reportCreateError } = await supabaseAdmin
+    .from("reports")
+    .insert([
+      {
+        user_id: effectiveUserId,
+        property_name: propertyName,
+        report_type: reportType,
+        storage_path: storagePath,
+      },
+    ])
+    .select("id")
+    .single();
+
+  if (reportCreateError || !reportRow?.id) {
+    const err = new Error(`Failed to create report record: ${reportCreateError?.message || "unknown error"}`);
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      user_id: effectiveUserId || null,
+      property_name: propertyName,
+      report_type: reportType || null,
+      storage_path: storagePath || null,
+      report_seed: reportSeed || null,
+    };
+    throw err;
+  }
+
+  return {
+    reportId: reportRow.id,
+    storagePath,
+    publicationSource: "created_report",
+    createdReportRecord: true,
+  };
+}
+
 export function assertValidReportPublicationInsert({
   storagePath,
   reportType,
