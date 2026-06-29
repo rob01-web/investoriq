@@ -3,6 +3,7 @@ import { sendEmailResend } from '../lib/email-resend.js';
 import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
 import {
   buildReportStoragePath,
+  ensureReportDownloadArtifact,
   resolveOrCreateReportPublicationRecord,
 } from './_lib/report-delivery-output.js';
 
@@ -2380,9 +2381,38 @@ export default async function handler(req, res) {
                 } else if (!resolvedReportId) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 } else {
-                  reportId = resolvedReportId;
-                  storagePath = resolvedStoragePath;
-                  generatorSource = publicationResolution?.publicationSource || generatorSource;
+                  let artifactResolution = null;
+                  try {
+                    artifactResolution = await ensureReportDownloadArtifact({
+                      supabaseAdmin,
+                      job,
+                      reportId: resolvedReportId,
+                      storagePath: resolvedStoragePath,
+                      finalHtml: reportData?.final_html || "",
+                      reportType: reportData?.report_type || job.report_type || null,
+                      reportSeed: resolvedReportId,
+                      propertyName: job.property_name || "",
+                      createdReportRecord: Boolean(publicationResolution?.createdReportRecord),
+                    });
+                  } catch (artifactErr) {
+                    generatorError = artifactErr?.message || `Report generation failed (${reportRes.status})`;
+                    generatorFailurePayload = {
+                      error: generatorError,
+                      has_report_data: Boolean(reportData),
+                      has_final_html: Boolean(reportData?.final_html),
+                      target_url: fetchUrl,
+                      report_id: resolvedReportId,
+                      storage_path: resolvedStoragePath,
+                    };
+                  }
+                  if (!generatorError) {
+                    reportId = artifactResolution?.reportId || resolvedReportId;
+                    storagePath = artifactResolution?.storagePath || resolvedStoragePath;
+                    generatorSource =
+                      artifactResolution?.artifactSource ||
+                      publicationResolution?.publicationSource ||
+                      generatorSource;
+                  }
                 }
               }
             }

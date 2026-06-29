@@ -5,13 +5,14 @@ const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 
 assert.match(
   workerSource,
-  /import \{\s*buildReportStoragePath,\s*resolveOrCreateReportPublicationRecord,\s*\} from '\.\/_lib\/report-delivery-output\.js';/
+  /import \{\s*buildReportStoragePath,\s*ensureReportDownloadArtifact,\s*resolveOrCreateReportPublicationRecord,\s*\} from '\.\/_lib\/report-delivery-output\.js';/
 );
 
 assert.match(
   workerSource,
   /publicationResolution = await resolveOrCreateReportPublicationRecord\([\s\S]{0,260}allowCreate:\s*!shouldHoldDeliveryOutcome/
 );
+assert.match(workerSource, /ensureReportDownloadArtifact\(\{/);
 assert.match(
   workerSource,
   /const resolvedReportId = publicationResolution\?\.reportId \|\| reportId \|\| null;/
@@ -165,7 +166,11 @@ assert.equal(
 );
 assert.match(
   workerSource,
-  /final_html:\s*typeof reportData\?\.final_html === 'string' \? reportData\.final_html : null,[\s\S]{0,80}final_html_length:\s*typeof reportData\?\.final_html === 'string' \? reportData\.final_html\.length : 0,/
+  /finalHtml:\s*reportData\?\.final_html \|\| ""/
+);
+assert.match(
+  workerSource,
+  /createdReportRecord:\s*Boolean\(publicationResolution\?\.createdReportRecord\),/
 );
 assert.match(
   typedGateWindow,

@@ -1,3 +1,4 @@
+import axios from "axios";
 import { sanitizeFinalCustomerHtml } from "./report-surface-contracts.js";
 
 export function sanitizeTypography(html) {
@@ -67,6 +68,169 @@ export function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
   const seedPart = String(reportSeed ?? "").trim();
   if (!userPart || !seedPart) return "";
   return `${userPart}/${seedPart}.pdf`;
+}
+
+async function renderReportPdfBuffer({
+  finalHtml,
+  reportType = "",
+  allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
+  docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
+} = {}) {
+  if (docraptorMode !== "production" || !allowProductionPdf) {
+    const err = new Error("DOCRAPTOR_NOT_PRODUCTION_MODE");
+    err.code = "DOCRAPTOR_NOT_PRODUCTION_MODE";
+    err.context = {
+      docraptor_mode: docraptorMode,
+      allow_production_pdf: Boolean(allowProductionPdf),
+      report_type: String(reportType || "").trim() || null,
+    };
+    throw err;
+  }
+
+  const pdfResponse = await axios.post(
+    "https://docraptor.com/docs",
+    {
+      test: docraptorMode !== "production",
+      document_content: String(finalHtml || ""),
+      name: "InvestorIQ-ClientReport.pdf",
+      document_type: "pdf",
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${Buffer.from(process.env.DOCRAPTOR_API_KEY + ":").toString("base64")}`,
+      },
+      responseType: "arraybuffer",
+    }
+  );
+
+  return Buffer.isBuffer(pdfResponse.data) ? pdfResponse.data : Buffer.from(pdfResponse.data);
+}
+
+export async function ensureReportDownloadArtifact({
+  supabaseAdmin,
+  job = {},
+  reportId = null,
+  storagePath = null,
+  finalHtml = "",
+  reportType = "",
+  reportSeed = null,
+  propertyName = "",
+  allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
+  docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
+  renderPdfBuffer = renderReportPdfBuffer,
+  createdReportRecord = false,
+  bucketName = "generated_reports",
+} = {}) {
+  const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
+  if (!normalizedStoragePath) {
+    const err = new Error("Missing valid report storage path before download artifact");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      reportId: reportId || null,
+      storagePath: normalizedStoragePath || null,
+      reportType: String(reportType || "").trim() || null,
+      reportSeed: String(reportSeed || "").trim() || null,
+    };
+    throw err;
+  }
+
+  const storageBucket = supabaseAdmin?.storage?.from?.(bucketName);
+  if (!storageBucket) {
+    const err = new Error("Missing report storage client");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      reportId: reportId || null,
+      storagePath: normalizedStoragePath,
+      bucketName,
+    };
+    throw err;
+  }
+
+  const existingCheck = await storageBucket.download(normalizedStoragePath);
+  if (!existingCheck?.error && existingCheck?.data) {
+    return {
+      reportId: reportId || null,
+      storagePath: normalizedStoragePath,
+      artifactSource: "existing_download",
+      verifiedDownloadArtifact: true,
+      createdDownloadArtifact: false,
+    };
+  }
+
+  if (!String(finalHtml || "").trim()) {
+    const err = new Error("Missing final HTML before download artifact");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      reportId: reportId || null,
+      storagePath: normalizedStoragePath,
+      reportType: String(reportType || "").trim() || null,
+    };
+    throw err;
+  }
+
+  const pdfBuffer = await renderPdfBuffer({
+    finalHtml,
+    reportType,
+    allowProductionPdf,
+    docraptorMode,
+    job,
+    reportSeed,
+    propertyName,
+  });
+
+  const { error: uploadError } = await storageBucket.upload(normalizedStoragePath, pdfBuffer, {
+    contentType: "application/pdf",
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (uploadError) {
+    if (createdReportRecord && reportId) {
+      try {
+        await supabaseAdmin.from("reports").delete().eq("id", reportId);
+      } catch (cleanupErr) {
+        console.error("Failed to cleanup report record after storage upload failure:", cleanupErr);
+      }
+    }
+    const err = new Error(`Failed to upload report to storage: ${uploadError.message}`);
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      reportId: reportId || null,
+      storagePath: normalizedStoragePath,
+      bucketName,
+      createdReportRecord: Boolean(createdReportRecord),
+    };
+    throw err;
+  }
+
+  const verifyResult = await storageBucket.download(normalizedStoragePath);
+  if (verifyResult?.error || !verifyResult?.data) {
+    if (createdReportRecord && reportId) {
+      try {
+        await supabaseAdmin.from("reports").delete().eq("id", reportId);
+      } catch (cleanupErr) {
+        console.error("Failed to cleanup report record after storage verification failure:", cleanupErr);
+      }
+    }
+    const err = new Error("Failed to verify report download artifact");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      reportId: reportId || null,
+      storagePath: normalizedStoragePath,
+      bucketName,
+      createdReportRecord: Boolean(createdReportRecord),
+    };
+    throw err;
+  }
+
+  return {
+    reportId: reportId || null,
+    storagePath: normalizedStoragePath,
+    artifactSource: "created_download",
+    verifiedDownloadArtifact: true,
+    createdDownloadArtifact: true,
+  };
 }
 
 export async function resolveOrCreateReportPublicationRecord({
