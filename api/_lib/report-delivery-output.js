@@ -74,6 +74,9 @@ function normalizeReportDownloadArtifactMode(reportDownloadArtifactMode = "") {
   const normalized = String(reportDownloadArtifactMode || "").trim().toLowerCase();
   if (!normalized) return "";
   if (["production", "production_pdf", "prod", "launch"].includes(normalized)) return "production_pdf";
+  if (["docraptor_test_pdf", "docraptor_test", "watermarked_pdf", "watermarked"].includes(normalized)) {
+    return "docraptor_test_pdf";
+  }
   if (["test", "test_pdf", "stub", "stub_pdf", "prelaunch"].includes(normalized)) return "stub_pdf";
   return normalized;
 }
@@ -138,6 +141,18 @@ export function resolveReportDownloadArtifactMode({
 } = {}) {
   const normalizedMode = normalizeReportDownloadArtifactMode(reportDownloadArtifactMode);
   if (normalizedMode === "stub_pdf") return "stub_pdf";
+  if (normalizedMode === "docraptor_test_pdf") {
+    if (!hasDocRaptorApiKey) {
+      const err = new Error("DOCRAPTOR_API_KEY_REQUIRED");
+      err.code = "DOCRAPTOR_API_KEY_REQUIRED";
+      err.context = {
+        report_download_artifact_mode: normalizedMode,
+        has_docraptor_api_key: Boolean(hasDocRaptorApiKey),
+      };
+      throw err;
+    }
+    return "docraptor_test_pdf";
+  }
   if (normalizedMode === "production_pdf") {
     if (docraptorMode !== "production" || !allowProductionPdf || !hasDocRaptorApiKey) {
       const err = new Error("DOCRAPTOR_NOT_PRODUCTION_MODE");
@@ -183,10 +198,11 @@ export async function renderReportPdfBuffer({
     });
   }
 
+  const apiKey = String(process.env.DOCRAPTOR_API_KEY || "").trim();
   const pdfResponse = await axios.post(
     "https://docraptor.com/docs",
     {
-      test: docraptorMode !== "production",
+      test: artifactMode !== "production_pdf",
       document_content: String(finalHtml || ""),
       name: "InvestorIQ-ClientReport.pdf",
       document_type: "pdf",
@@ -194,7 +210,7 @@ export async function renderReportPdfBuffer({
     {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(process.env.DOCRAPTOR_API_KEY + ":").toString("base64")}`,
+        Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}`,
       },
       responseType: "arraybuffer",
     }

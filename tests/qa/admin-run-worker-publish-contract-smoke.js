@@ -144,6 +144,54 @@ try {
   );
   assert.equal(guardDocraptorCalls, 0);
 
+  process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "docraptor_test_pdf";
+  process.env.ALLOW_PRODUCTION_PDF = "false";
+  process.env.DOCRAPTOR_MODE = "test";
+  process.env.DOCRAPTOR_API_KEY = "";
+
+  await assert.rejects(
+    () =>
+      renderReportPdfBuffer({
+        finalHtml: "<html><body>docraptor test missing key</body></html>",
+        reportType: "screening",
+        reportDownloadArtifactMode: "docraptor_test_pdf",
+        allowProductionPdf: false,
+        docraptorMode: "test",
+      }),
+    (err) => err?.code === "DOCRAPTOR_API_KEY_REQUIRED"
+  );
+
+  process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "docraptor_test_pdf";
+  process.env.ALLOW_PRODUCTION_PDF = "false";
+  process.env.DOCRAPTOR_MODE = "test";
+  process.env.DOCRAPTOR_API_KEY = "unit-test-key";
+
+  let docraptorTestCalls = 0;
+  axios.post = async (url, body, options) => {
+    docraptorTestCalls += 1;
+    assert.match(url, /docraptor\.com\/docs/);
+    assert.equal(body.test, true);
+    assert.equal(body.document_type, "pdf");
+    assert.match(body.document_content, /docraptor test render/i);
+    assert.match(String(options.headers.Authorization || ""), /^Basic\s+/);
+    return { data: Buffer.from("%PDF-1.4 docraptor test pdf\n%%EOF\n", "utf8") };
+  };
+
+  const docraptorTestBuffer = await renderReportPdfBuffer({
+    finalHtml: "<html><body>docraptor test render</body></html>",
+    reportType: "screening",
+    reportDownloadArtifactMode: "docraptor_test_pdf",
+    allowProductionPdf: false,
+    docraptorMode: "test",
+    reportSeed: "report-docraptor-test-123",
+    propertyName: "Generic Property",
+    storagePath: "user-123/report-docraptor-test-123.pdf",
+  });
+
+  assert.equal(Buffer.isBuffer(docraptorTestBuffer), true);
+  assert.match(docraptorTestBuffer.toString("utf8"), /^%PDF-1\.4/);
+  assert.equal(docraptorTestCalls, 1);
+
   process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "test_pdf";
   process.env.ALLOW_PRODUCTION_PDF = "false";
   process.env.DOCRAPTOR_MODE = "test";
