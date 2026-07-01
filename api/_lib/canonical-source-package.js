@@ -831,13 +831,10 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
 
   if (
     reconciledCanonicalRole === "current_debt_context" ||
-    (!reconciledCanonicalRole &&
-      (
-        acceptedCurrentDebtTruth ||
-        (positiveCurrentDebtEvidence && !acceptedPurchaseAssumptionsTruth) ||
-        (hasCurrentDebtFilename && !acceptedPurchaseAssumptionsTruth) ||
-        ((explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context" || explicitDebtBasis === "current_debt" || explicitDebtBasis === "current_debt_context") && !acceptedPurchaseAssumptionsTruth)
-      ))
+    acceptedCurrentDebtTruth ||
+    positiveCurrentDebtEvidence ||
+    (hasCurrentDebtFilename && !acceptedPurchaseAssumptionsTruth) ||
+    ((explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context" || explicitDebtBasis === "current_debt" || explicitDebtBasis === "current_debt_context") && !acceptedPurchaseAssumptionsTruth)
   ) {
     const extractedFacts = buildExtractedFacts("current_debt_context", text);
     return {
@@ -853,15 +850,15 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || acceptedTruth.semanticDocRole || explicitSemanticRole || "current_debt_context",
-      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || acceptedTruth.debtBasis || explicitDebtBasis || "current_debt_context",
-      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || acceptedTruth.semanticDocDisplayLabel || "Existing Debt Context / Current Mortgage / Debt Statement",
+      acceptedSemanticDocRole: "current_debt_context",
+      acceptedDebtBasis: "current_debt_context",
+      acceptedSemanticDocDisplayLabel: "Existing Debt Context / Current Mortgage / Debt Statement",
       acceptedSourceTruth: {
         hasPurchaseAssumptions: Boolean(roleReconciliation?.acceptedSourceTruth?.hasPurchaseAssumptions),
         hasCurrentDebt: true,
       },
-      provenance: buildProvenance(file, roleReconciliation.authorityBasis || "current_debt_evidence", text),
-      authorityBasis: roleReconciliation.authorityBasis || "current_debt_evidence",
+      provenance: buildProvenance(file, "current_debt_evidence", text),
+      authorityBasis: "current_debt_evidence",
     };
   }
 

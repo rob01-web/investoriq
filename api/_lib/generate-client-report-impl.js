@@ -1178,7 +1178,6 @@ function resolveCanonicalLoanTermSheetArtifacts(loanArtifacts = []) {
   const currentDebtArtifact =
     currentDebtCandidate &&
     currentDebtCandidate.currentDebtScore > 0 &&
-    !currentDebtCandidate.acquisitionOnlySignals &&
     currentDebtCandidate.explicitCurrentDebtProof
       ? currentDebtCandidate.row
       : null;
@@ -3195,6 +3194,7 @@ export default async function handler(req, res) {
     let htmlTemplate = fs.readFileSync(templatePath, "utf8");
     // 3. Inject property identity
     let finalHtml = htmlTemplate;
+    let docHtml = "";
     const propertyName = sanitizeReportIdentityTitle(property_name || jobPropertyName || "");
     const propertyAddress = property_address || "";
     const propertyTitle = property_title || "";
@@ -7820,7 +7820,7 @@ if (finalSourceReconciliationGuard.replaced_or_suppressed) {
   });
 }
 }
-let docHtml = qaHtml;
+docHtml = qaHtml;
 try {
   const supportDocAuthorityRowsForQa = canonicalSupportDocAuthorityRows;
   const sourceCoverageQa = buildSourceReportCoverageQa({

@@ -1,4 +1,5 @@
 import assert from "assert/strict";
+import fs from "fs";
 
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
@@ -31,6 +32,17 @@ const finalHtml = `
   <p class="small">Proposed acquisition financing is not current outstanding debt.</p>
 </section>
 `;
+
+const implSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
+const docHtmlDeclarationAnchor = implSource.indexOf('let docHtml = "";');
+const sealedV2Anchor = implSource.indexOf("if (acquisitionMemoV2OwnsFinalHtml) {");
+const docHtmlAssignmentAnchor = implSource.indexOf("docHtml = finalBossCompliance.html;", sealedV2Anchor);
+
+assert.ok(docHtmlDeclarationAnchor >= 0, "Expected docHtml declaration not found");
+assert.ok(sealedV2Anchor >= 0, "Expected sealed Acquisition Memo V2 branch not found");
+assert.ok(docHtmlDeclarationAnchor < sealedV2Anchor, "docHtml must be declared before the sealed V2 branch");
+assert.ok(docHtmlAssignmentAnchor > sealedV2Anchor, "docHtml assignment must occur inside the sealed V2 branch");
+assert.equal(implSource.includes("let docHtml = qaHtml;"), false, "docHtml must not be redeclared after qaHtml");
 
 assert.match(
   finalHtml,

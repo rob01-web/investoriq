@@ -42,11 +42,29 @@ function collectTextParts(source = {}, artifacts = []) {
   push(source?.semantic_doc_display_label);
   push(source?.semantic_doc_role_reason);
   push(source?.debt_basis);
+  push(source?.payload?.source_text);
+  push(source?.payload?.raw_text);
+  push(source?.payload?.notes);
+  push(source?.payload?.loan_terms_text);
+  push(source?.payload?.extracted_text);
+  push(source?.payload?.document_text_extracted);
+  push(source?.payload?.text);
+  push(source?.payload?.excerpt);
+  push(source?.payload?.source_original_filename);
+  push(source?.payload?.original_filename);
+  push(source?.payload?.file_name);
+  push(source?.payload?.filename);
+  push(source?.payload?.semantic_doc_role);
+  push(source?.payload?.semantic_doc_display_label);
+  push(source?.payload?.semantic_doc_role_reason);
+  push(source?.payload?.debt_basis);
 
   for (const artifact of toArray(artifacts)) {
     if (!artifact || typeof artifact !== "object") continue;
     const artifactSource = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : artifact;
-    const artifactIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(artifactSource);
+    const artifactIdentityKey =
+      getAcquisitionMemoV2SupportDocIdentityKey(artifactSource) ||
+      getAcquisitionMemoV2SupportDocIdentityKey(artifact);
     if (!sourceIdentityKey || !artifactIdentityKey || artifactIdentityKey !== sourceIdentityKey) continue;
     push(artifact?.source_text);
     push(artifact?.raw_text);
@@ -272,10 +290,28 @@ function collectRowText(row = {}, artifacts = []) {
   push(row?.semantic_doc_display_label);
   push(row?.semantic_doc_role_reason);
   push(row?.debt_basis);
+  push(row?.payload?.source_text);
+  push(row?.payload?.raw_text);
+  push(row?.payload?.notes);
+  push(row?.payload?.loan_terms_text);
+  push(row?.payload?.extracted_text);
+  push(row?.payload?.document_text_extracted);
+  push(row?.payload?.text);
+  push(row?.payload?.excerpt);
+  push(row?.payload?.source_original_filename);
+  push(row?.payload?.original_filename);
+  push(row?.payload?.file_name);
+  push(row?.payload?.filename);
+  push(row?.payload?.semantic_doc_role);
+  push(row?.payload?.semantic_doc_display_label);
+  push(row?.payload?.semantic_doc_role_reason);
+  push(row?.payload?.debt_basis);
   for (const artifact of Array.isArray(artifacts) ? artifacts : []) {
     if (!artifact || typeof artifact !== "object") continue;
     const artifactSource = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : artifact;
-    const artifactIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(artifactSource);
+    const artifactIdentityKey =
+      getAcquisitionMemoV2SupportDocIdentityKey(artifactSource) ||
+      getAcquisitionMemoV2SupportDocIdentityKey(artifact);
     if (!rowIdentityKey || !artifactIdentityKey || artifactIdentityKey !== rowIdentityKey) continue;
     push(artifact?.source_text);
     push(artifact?.raw_text);
@@ -314,16 +350,26 @@ function collectRowText(row = {}, artifacts = []) {
 }
 
 function getAcquisitionMemoV2SupportDocIdentityKey(row = {}) {
-  const filename = normalizeIdentityToken(row?.original_filename || row?.source_original_filename || row?.file_name || row?.filename);
-  if (filename) return `filename:${filename}`;
   const id = [
+    row?.fileId,
+    row?.sourceFileId,
     row?.source_file_id,
     row?.file_id,
     row?.document_id,
     row?.artifact_file_id,
     row?.id,
   ].map(normalizeIdentityToken).find(Boolean);
-  return id ? `id:${id}` : "";
+  if (id) return `id:${id}`;
+  const filename = normalizeIdentityToken(
+    row?.original_filename ||
+      row?.originalFilename ||
+      row?.source_original_filename ||
+      row?.sourceOriginalFilename ||
+      row?.file_name ||
+      row?.fileName ||
+      row?.filename
+  );
+  return filename ? `filename:${filename}` : "";
 }
 
 function buildAcquisitionMemoV2SupportDocRoleDecision({
@@ -401,7 +447,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
   const roleCandidates = [
     {
       role: "current_debt_context",
-      score: (hasCurrentDebtEvidence ? 200 : 0) + currentDebtFieldCount * 15 + (parserRole === "current_debt_context" ? 1 : 0),
+      score: (hasCurrentDebtEvidence ? 200 : 0) + currentDebtFieldCount * 15,
       canonicalLabel: "Existing Debt Context / Current Mortgage / Debt Statement",
       treatment: "Debt support received / contextual",
       use: "Uploaded existing/current debt context only; not proposed acquisition financing.",
@@ -412,7 +458,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "purchase_assumptions",
-      score: (hasPurchaseAssumptionsEvidence ? 200 : 0) + purchaseFieldCount * 15 + (parserRole === "purchase_assumptions" ? 1 : 0),
+      score: (hasPurchaseAssumptionsEvidence ? 200 : 0) + purchaseFieldCount * 15,
       canonicalLabel: "Purchase Assumptions / Proposed Acquisition Financing Context",
       treatment: "Acquisition context received",
       use: "Proposed acquisition financing terms and purchase assumptions; not existing/current debt.",
@@ -423,7 +469,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "historical_capex_only",
-      score: (hasHistoricalOnlyRenovation ? 180 : 0) + (parserRole === "historical_capex_only" ? 1 : 0),
+      score: (hasHistoricalOnlyRenovation ? 180 : 0),
       canonicalLabel: "Historical Capital Items",
       treatment: "Context only",
       use: "Historical capital items are displayed for context only.",
@@ -434,7 +480,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "renovation_capex_context",
-      score: (hasRenovationEvidence && !hasHistoricalOnlyRenovation ? 150 : 0) + (parserRole === "renovation_capex_context" ? 1 : 0),
+      score: (hasRenovationEvidence && !hasHistoricalOnlyRenovation ? 150 : 0),
       canonicalLabel: "Renovation / CapEx Context",
       treatment: "Context only",
       use: "Document-stated renovation budget/scope is acknowledged for context only; it does not create ROI, payback, DSCR, refinance, DCF, waterfall, deal score, or final recommendation analysis.",
@@ -445,7 +491,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "environmental_due_diligence_context",
-      score: (hasEnvironmentalEvidence ? 150 : 0) + (parserRole === "environmental_due_diligence_context" ? 1 : 0),
+      score: (hasEnvironmentalEvidence ? 150 : 0),
       canonicalLabel: "Environmental Due Diligence Context",
       treatment: "Context only",
       use: "Environmental due-diligence context only; not used quantitatively.",
@@ -456,7 +502,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "appraisal_valuation_context",
-      score: (hasAppraisalEvidence ? 140 : 0) + (parserRole === "appraisal_valuation_context" ? 1 : 0),
+      score: (hasAppraisalEvidence ? 140 : 0),
       canonicalLabel: "Appraisal Context",
       treatment: "Context only",
       use: "Appraisal context only unless structured appraised value is verified; does not override deterministic valuation.",
@@ -467,7 +513,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "property_tax_support",
-      score: (hasPropertyTaxEvidence ? 130 : 0) + (parserRole === "property_tax_support" ? 1 : 0),
+      score: (hasPropertyTaxEvidence ? 130 : 0),
       canonicalLabel: "Property Tax Support",
       treatment: "Corroborating support",
       use: "Uploaded support document - not used quantitatively.",
@@ -478,7 +524,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "market_survey_context",
-      score: (hasMarketSurveyEvidence ? 120 : 0) + (parserRole === "market_survey_context" ? 1 : 0),
+      score: (hasMarketSurveyEvidence ? 120 : 0),
       canonicalLabel: "Market Rent Context",
       treatment: "Context only",
       use: "Market/rent context only; does not override Rent Roll market rent.",
@@ -489,7 +535,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "core_t12",
-      score: (hasCoreT12Evidence ? 220 : 0) + (parserRole === "core_t12" ? 1 : 0),
+      score: (hasCoreT12Evidence ? 220 : 0),
       canonicalLabel: "T12 Core Source",
       treatment: "Core quantitative source",
       use: "Verified T12 operating data used as modeled input.",
@@ -500,7 +546,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     {
       role: "core_rent_roll",
-      score: (hasCoreRentRollEvidence ? 220 : 0) + (parserRole === "core_rent_roll" ? 1 : 0),
+      score: (hasCoreRentRollEvidence ? 220 : 0),
       canonicalLabel: "Rent Roll Core Source",
       treatment: "Core quantitative source",
       use: "Verified rent roll data used as modeled input.",
