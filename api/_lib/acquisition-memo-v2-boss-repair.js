@@ -22,6 +22,11 @@ const REPAIRABLE_BOSS_CODES = new Map([
   ["ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "acquisitionRequestContext"],
   ["CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "currentDebtContext"],
   ["PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "proposedFinancingContext"],
+  ["UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS", "unitMix"],
+  ["UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT", "unitMix"],
+  ["CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST", "capRateValueIndication"],
+  ["NO_ZERO_CAP_RATE", "capRateValueIndication"],
+  ["T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT", "operatingStatementTTMSummary"],
   ["DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED", "documentTreatment"],
   ["UNSUPPORTED_RENOVATION_MODELING_SURFACE", "renovationContext"],
   ["UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE", "appraisalContext"],
@@ -31,6 +36,14 @@ const REPAIRABLE_BOSS_CODES = new Map([
   ["ACCEPTED_CURRENT_DEBT_LOST", "currentDebtContext"],
   ["HTML_PURCHASE_ASSUMPTIONS_FALSE_MISSING", "acquisitionRequestContext"],
   ["HTML_CURRENT_DEBT_FALSE_MISSING", "currentDebtContext"],
+  ["HTML_UNIT_MIX_LABEL_MISSING", "unitMix"],
+  ["HTML_UNIT_MIX_COUNT_MISSING", "unitMix"],
+  ["HTML_UNIT_MIX_CURRENT_RENT_MISSING", "unitMix"],
+  ["HTML_UNIT_MIX_MARKET_RENT_MISSING", "unitMix"],
+  ["HTML_UNIT_MIX_SPREAD_MISSING", "unitMix"],
+  ["HTML_FALSE_UNIT_MIX_FALLBACK", "unitMix"],
+  ["HTML_T12_EXPENSE_LABEL_MISSING", "operatingStatementTTMSummary"],
+  ["HTML_T12_EXPENSE_AMOUNT_MISSING", "operatingStatementTTMSummary"],
   ["HTML_LENDER_FEE_MISSING", "acquisitionRequestContext"],
   ["HTML_PROPOSED_LOAN_MISSING", "acquisitionRequestContext"],
   ["HTML_PROPOSED_LTV_MISSING", "acquisitionRequestContext"],
@@ -43,9 +56,15 @@ const REPAIRABLE_PATH_TO_SECTIONS = [
   ["model.supportSourcesByRole.current_debt_context", ["currentDebtContext"]],
   ["model.sections.acquisitionRequestContext", ["acquisitionRequestContext", "proposedFinancingContext"]],
   ["model.sections.currentDebtContext", ["currentDebtContext"]],
+  ["model.sections.unitMix", ["unitMix"]],
+  ["model.sections.capRateValueIndication", ["capRateValueIndication"]],
+  ["model.sections.operatingStatementTTMSummary", ["operatingStatementTTMSummary"]],
   ["model.sections.proposedFinancingContext", ["proposedFinancingContext"]],
   ["html.acquisitionRequestContext", ["acquisitionRequestContext", "proposedFinancingContext"]],
   ["html.currentDebtContext", ["currentDebtContext"]],
+  ["html.unitMix", ["unitMix"]],
+  ["html.capRateValueIndication", ["capRateValueIndication"]],
+  ["html.operatingStatementTTMSummary", ["operatingStatementTTMSummary"]],
   ["html.proposedFinancingContext", ["proposedFinancingContext"]],
   ["html.appraisalContext", ["appraisalContext"]],
   ["html.renovationContext", ["renovationContext"]],
@@ -143,9 +162,6 @@ function isCoreFatalPath(path = "", code = "") {
   return Boolean(
     normalizedPath.includes("model.coresources.coret12") ||
       normalizedPath.includes("model.coresources.corerentroll") ||
-      normalizedPath.includes("html.unitmix") ||
-      normalizedPath.includes("html.capratevalueindication") ||
-      normalizedPath.includes("html.operatingstatementttmsummary") ||
       normalizedPath.includes("html.internal") ||
       normalizedCode === "model_core_t12_missing" ||
       normalizedCode === "model_core_rent_roll_missing" ||

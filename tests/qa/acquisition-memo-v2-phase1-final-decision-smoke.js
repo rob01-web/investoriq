@@ -39,6 +39,55 @@ assert.equal(repairedPublishDecision.classifications.repairableOptionalSupport, 
 assert.equal(repairedPublishDecision.repair.attempted, true);
 assert.equal(repairedPublishDecision.repair.repairedHtmlRevalidated, true);
 
+const repairableDisplayDecision = buildAcquisitionMemoV2FinalDeliveryDecision({
+  finalization: {
+    compliance: {
+      ok: false,
+      violations: [
+        { code: "HTML_UNIT_MIX_LABEL_MISSING", severity: "critical", section: "html.unitMix" },
+        { code: "HTML_CURRENT_DEBT_BALANCE_MISSING", severity: "critical", section: "html.currentDebtContext" },
+      ],
+    },
+    bossCompliance: { ok: false, fatal_core: [] },
+    customerSurfaceModelValidation: { ok: true, issues: [] },
+    customerSurfaceHtmlValidation: {
+      ok: false,
+      issues: [
+        { code: "HTML_UNIT_MIX_LABEL_MISSING", severity: "critical", path: "html.unitMix" },
+        { code: "HTML_CURRENT_DEBT_BALANCE_MISSING", severity: "critical", path: "html.currentDebtContext" },
+      ],
+    },
+  },
+  qaActionPlan: { customer_delivery_ready: true, report_publishable: true },
+  reportContractQa: { contract_status: "warn", report_quality_status: "warn", customer_delivery_ready: true },
+  deliveryGateDecision: {
+    delivery_gate_status: "deliverable",
+    customer_delivery_ready: true,
+    customer_publish_eligible: true,
+    report_publishable: true,
+  },
+  coreGate: validCoreGate,
+  repairPlan: {
+    coreFatal: [],
+    repairableOptionalSupport: [
+      { code: "HTML_UNIT_MIX_LABEL_MISSING" },
+      { code: "HTML_CURRENT_DEBT_BALANCE_MISSING" },
+    ],
+    forbiddenSurface: [],
+    repairableSectionKeys: ["unitMix", "currentDebtContext"],
+  },
+  diagnostics: {
+    repairAttempted: true,
+    repairedHtmlRevalidated: true,
+  },
+});
+
+assert.equal(repairableDisplayDecision.customer_publish_eligible, true);
+assert.equal(repairableDisplayDecision.report_publishable, true);
+assert.equal(repairableDisplayDecision.fatalCategory, null);
+assert.equal(repairableDisplayDecision.blockingReasons.length, 0);
+assert.equal(repairableDisplayDecision.classifications.trueCoreFatal, false);
+
 const hardForbiddenDecision = buildAcquisitionMemoV2FinalDeliveryDecision({
   finalization: {
     compliance: {

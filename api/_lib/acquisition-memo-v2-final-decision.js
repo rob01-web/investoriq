@@ -39,16 +39,21 @@ function hasCoreFatalSignal(finalization = {}, coreGate = null, repairPlan = nul
 function hasUnsafeFinalHtmlSignal(finalization = {}) {
   const htmlIssues = asArray(finalization?.customerSurfaceHtmlValidation?.issues);
   const bossFatal = asArray(finalization?.bossCompliance?.fatal_core);
-  return htmlIssues.some((issue) => {
-    const code = normalizeCode(issue?.code);
-    const path = normalizeStatus(issue?.path);
-    return (
-      code.includes("HTML_") ||
-      path.includes("html.") ||
-      code.includes("FORBIDDEN") ||
-      code.includes("INTERNAL")
-    );
-  }) || bossFatal.length > 0;
+  return (
+    htmlIssues.some((issue) => {
+      const code = normalizeCode(issue?.code);
+      const path = normalizeStatus(issue?.path);
+      const severity = normalizeStatus(issue?.severity);
+      return (
+        severity === "fatal_core" ||
+        code.includes("FORBIDDEN") ||
+        path.includes("forbidden") ||
+        code.includes("INTERNAL") ||
+        path.includes("internal")
+      );
+    }) ||
+    bossFatal.length > 0
+  );
 }
 
 function hasRepairableOptionalSignal(repairPlan = null) {
@@ -79,7 +84,7 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const complianceOk = Boolean(final?.compliance?.ok && bossOk && modelOk && htmlOk);
   const coreFatal = hasCoreFatalSignal(final, coreGate, repairPlan);
   const repairableOptional = hasRepairableOptionalSignal(repairPlan);
-  const unsafeFinalHtml = !complianceOk && !coreFatal && hasUnsafeFinalHtmlSignal(final);
+  const unsafeFinalHtml = hasUnsafeFinalHtmlSignal(final);
   const advisoryOnly =
     !coreFatal &&
     !unsafeFinalHtml &&
@@ -89,7 +94,12 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
       return severity === "advisory" || severity === "warning";
     });
 
-  const publishable = complianceOk && !coreFatal && !unsafeFinalHtml;
+  const publishable = Boolean(
+    coreGate?.publishAllowed !== false &&
+    modelOk &&
+    !coreFatal &&
+    !unsafeFinalHtml
+  );
   const fatalCategory = publishable
     ? null
     : coreFatal
@@ -103,8 +113,8 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const blockingReasons = [];
   if (coreFatal) blockingReasons.push("true_core_fatal");
   if (unsafeFinalHtml) blockingReasons.push("true_unrepaired_unsafe_final_html");
-  if (!complianceOk && repairableOptional) blockingReasons.push("repairable_optional_support_unresolved_after_repair");
-  if (!complianceOk && blockingReasons.length === 0) blockingReasons.push("final_compliance_unresolved");
+  if (!publishable && repairableOptional) blockingReasons.push("repairable_optional_support_unresolved_after_repair");
+  if (!publishable && blockingReasons.length === 0) blockingReasons.push("final_compliance_unresolved");
 
   return {
     version: DECISION_VERSION,

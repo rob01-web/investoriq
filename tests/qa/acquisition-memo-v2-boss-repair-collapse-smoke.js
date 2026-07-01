@@ -211,6 +211,12 @@ const renderedHtml = renderCompleteAcquisitionMemoV2Html({
   },
 });
 
+assert.match(renderedHtml, /Unit Mix and Rent Positioning/i);
+assert.match(renderedHtml, /1BR/i);
+assert.match(renderedHtml, /2BR/i);
+assert.match(renderedHtml, /Debt \/ Financing Context/i);
+assert.match(renderedHtml, /Current Outstanding Balance/i);
+
 const hostileHtml = renderedHtml.replace(
   /<tr><td>Lender \/ Origination Fee<\/td><td style="font-weight:600;">[^<]*<\/td><\/tr>/i,
   ""
@@ -287,6 +293,42 @@ assert.equal(repairedHtmlValidation.ok, true, JSON.stringify(repairedHtmlValidat
 assert.equal(validateAcquisitionMemoRenderAgainstBossContract(repairedBossContract, repairedHtml).ok, true);
 assert.equal(/No purchase assumptions uploaded/i.test(repairedHtml), false);
 assert.equal(/No current debt evidence/i.test(repairedHtml), false);
+
+const repairableDisplayViolations = {
+  ok: false,
+  violations: [
+    { code: "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS", severity: "critical", section: "unitMix" },
+    { code: "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED", severity: "critical", section: "currentDebtContext" },
+    { code: "CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST", severity: "critical", section: "capRateValueIndication" },
+    { code: "T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT", severity: "critical", section: "operatingStatementTTMSummary" },
+  ],
+};
+const repairableDisplayHtmlValidation = {
+  ok: false,
+  issues: [
+    { code: "HTML_UNIT_MIX_LABEL_MISSING", severity: "critical", path: "html.unitMix" },
+    { code: "HTML_CURRENT_DEBT_BALANCE_MISSING", severity: "critical", path: "html.currentDebtContext" },
+    { code: "HTML_T12_EXPENSE_LABEL_MISSING", severity: "critical", path: "html.operatingStatementTTMSummary" },
+    { code: "HTML_T12_EXPENSE_AMOUNT_MISSING", severity: "critical", path: "html.operatingStatementTTMSummary" },
+  ],
+};
+const repairableDisplayPlan = buildAcquisitionMemoV2BossRepairPlan({
+  bossCompliance: repairableDisplayViolations,
+  customerSurfaceModelValidation: modelValidation,
+  customerSurfaceHtmlValidation: repairableDisplayHtmlValidation,
+});
+assert.equal(repairableDisplayPlan.coreFatal.length, 0, JSON.stringify(repairableDisplayPlan, null, 2));
+assert.equal(repairableDisplayPlan.shouldRetry, true, JSON.stringify(repairableDisplayPlan, null, 2));
+assert.ok(repairableDisplayPlan.repairableSectionKeys.includes("unitMix"), JSON.stringify(repairableDisplayPlan, null, 2));
+assert.ok(repairableDisplayPlan.repairableSectionKeys.includes("currentDebtContext"), JSON.stringify(repairableDisplayPlan, null, 2));
+assert.ok(repairableDisplayPlan.repairableSectionKeys.includes("capRateValueIndication"), JSON.stringify(repairableDisplayPlan, null, 2));
+assert.ok(repairableDisplayPlan.repairableSectionKeys.includes("operatingStatementTTMSummary"), JSON.stringify(repairableDisplayPlan, null, 2));
+
+const repairableCollapsedModel = applyAcquisitionMemoV2BossRepairPlan(customerSurfaceModel, repairableDisplayPlan);
+assert.equal(repairableCollapsedModel.sections.unitMix.status, "collapsed");
+assert.equal(repairableCollapsedModel.sections.currentDebtContext.status, "collapsed");
+assert.equal(repairableCollapsedModel.sections.capRateValueIndication.status, "collapsed");
+assert.equal(repairableCollapsedModel.sections.operatingStatementTTMSummary.status, "collapsed");
 
 const collapseableForbiddenHtml = `${repairedHtml}\n<div>DSCR refinance DCF waterfall equity return deal score loan approval</div>`;
 const collapseableForbiddenValidation = validateAcquisitionMemoRenderAgainstBossContract(repairedBossContract, collapseableForbiddenHtml);
