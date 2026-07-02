@@ -531,20 +531,18 @@ function assertNormalizedVisibleTextContains({ finalHtml, normalizedText, patter
   }, null, 2));
 }
 
-function assertFinalHandoffIsCurrent(fileSource) {
-  const harnessStart = fileSource.indexOf("if (isFullRenderHarness) {");
-  const harnessFinalize = fileSource.indexOf("const finalHarnessBossCompliance = acquisitionMemoV2Finalization || await runAcquisitionMemoV2Pipeline({", harnessStart);
-  const harnessReturn = fileSource.indexOf("return res.status(200).json({", harnessFinalize);
-  const docRaptorStart = fileSource.indexOf("// 9. Send to DocRaptor (STILL IN TEST MODE)", harnessReturn);
-  const pdfFinalize = fileSource.indexOf("const finalBossCompliance = acquisitionMemoV2Finalization ||", docRaptorStart);
-  assert.ok(harnessStart >= 0, "missing full render harness block");
-  assert.ok(harnessFinalize >= 0, "missing harness boss compliance finalize");
-  assert.ok(harnessReturn >= 0, "missing harness return");
-  assert.ok(docRaptorStart >= 0, "missing docraptor block");
-  assert.ok(pdfFinalize >= 0, "missing pdf boss compliance finalize");
-  assert.ok(harnessFinalize < harnessReturn, "final harness boss compliance must happen before harness return");
-  assert.ok(harnessReturn < docRaptorStart, "harness return must happen before DocRaptor handoff");
-  assert.ok(docRaptorStart < pdfFinalize, "pdf boss compliance must happen after DocRaptor block begins");
+function assertFinalHandoffIsCurrent(routeSource, implSource) {
+  assert.match(routeSource, /import handler from "\.\/_lib\/generate-client-report-handler\.js";/);
+  assert.match(routeSource, /export default handler;/);
+  assert.ok(!/finalHarnessBossCompliance/.test(routeSource), "route wrapper must not expose the legacy full render harness");
+
+  assert.match(implSource, /const finalBossCompliance = acquisitionMemoV2Finalization \|\|/);
+  assert.ok(implSource.includes("const finalV2DeliveryDecision ="), "sealed handoff must resolve a final delivery decision");
+  assert.ok(implSource.includes("finalBossCompliance.finalDeliveryDecision ||"), "sealed handoff must prefer the product-owned delivery decision");
+  assert.ok(implSource.includes("finalBossCompliance.deliveryState ||"), "sealed handoff must still fall back to the delivery state");
+  assert.ok(implSource.includes("null;"), "sealed handoff must terminate the delivery decision expression");
+  assert.match(implSource, /return res\.status\(200\)\.json\(\{/);
+  assert.ok(!/finalHarnessBossCompliance/.test(implSource), "impl sealed handoff must use the current finalBossCompliance path");
 }
 
 const requestBody = buildNormalPathPayload();
@@ -561,7 +559,8 @@ await generateClientReport(
 );
 
 const reportSource = readFileSync(new URL("../../api/generate-client-report.js", import.meta.url), "utf8");
-assertFinalHandoffIsCurrent(reportSource);
+const implSource = readFileSync(new URL("../../api/_lib/generate-client-report-impl.js", import.meta.url), "utf8");
+assertFinalHandoffIsCurrent(reportSource, implSource);
 
 assert.equal(handlerResponse.statusCode, 200);
 const finalPdfHandoffHtml = String(handlerResponse.body?.final_html || "");

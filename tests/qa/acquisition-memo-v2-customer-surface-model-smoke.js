@@ -404,8 +404,8 @@ assert.equal(model.supportSourcesByRole.market_survey_context.canonicalRole, "ma
 assert.equal(model.supportSourcesByRole.environmental_context.canonicalRole, "environmental_context");
 assert.equal(model.supportSourcesByRole.purchase_assumptions.acceptedSemanticDocRole, "purchase_assumptions");
 assert.equal(model.supportSourcesByRole.purchase_assumptions.acceptedDebtBasis, "acquisition_financing_assumption");
-assert.equal(model.supportSourcesByRole.current_debt_context.acceptedSemanticDocRole, "current_debt");
-assert.equal(model.supportSourcesByRole.current_debt_context.acceptedDebtBasis, "current_debt");
+assert.equal(model.supportSourcesByRole.current_debt_context.acceptedSemanticDocRole, "current_debt_context");
+assert.equal(model.supportSourcesByRole.current_debt_context.acceptedDebtBasis, "current_debt_context");
 assert.equal(model.sourceTruth.accepted.purchaseAssumptionsPresent, true);
 assert.equal(model.sourceTruth.accepted.currentDebtPresent, true);
 

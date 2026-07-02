@@ -1,0 +1,305 @@
+{
+  "analysis_artifacts_rows": [
+    {
+      "id": "artifact-t12-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "t12_parsed",
+      "file_id": "t12-file",
+      "original_filename": "Replay_T12.xlsx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/t12_parsed/2026-06-24T00-00-00.000Z.json",
+      "created_at": "2026-06-24T00:00:00.000Z",
+      "payload": {
+        "source_file_id": "t12-file",
+        "source_original_filename": "Replay_T12.xlsx",
+        "semantic_doc_role": "t12",
+        "semantic_doc_display_label": "Core Quantitative Source - Trailing 12-Month Income Statement",
+        "t12_parsed": {
+          "income_lines": [
+            {
+              "label": "Effective Gross Income",
+              "amount": 1500000
+            }
+          ],
+          "expense_lines": [
+            {
+              "label": "Property Taxes",
+              "amount": 185000
+            },
+            {
+              "label": "Insurance",
+              "amount": 72000
+            },
+            {
+              "label": "Repairs & Maintenance",
+              "amount": 104000
+            },
+            {
+              "label": "Utilities",
+              "amount": 86000
+            },
+            {
+              "label": "Property Management",
+              "amount": 60000
+            },
+            {
+              "label": "Payroll / Admin",
+              "amount": 28000
+            }
+          ],
+          "effective_gross_income": 1500000,
+          "total_operating_expenses": 555000,
+          "net_operating_income": 945000,
+          "gross_potential_rent": 1718400
+        }
+      }
+    },
+    {
+      "id": "artifact-rent-roll-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "rent_roll_parsed",
+      "file_id": "rent-roll-file",
+      "original_filename": "Replay_Rent_Roll.xlsx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/rent_roll_parsed/2026-06-24T00-01-00.000Z.json",
+      "created_at": "2026-06-24T00:01:00.000Z",
+      "payload": {
+        "source_file_id": "rent-roll-file",
+        "source_original_filename": "Replay_Rent_Roll.xlsx",
+        "semantic_doc_role": "rent_roll",
+        "semantic_doc_display_label": "Core Quantitative Source - Rent Roll",
+        "rent_roll_parsed": {
+          "total_units": 64,
+          "occupied_units": 60,
+          "vacant_units": 4,
+          "occupancy": 0.9375,
+          "avg_in_place_rent": 22695,
+          "avg_market_rent": 26850,
+          "total_in_place_annual": 1432800,
+          "total_market_annual": 1718400,
+          "rent_to_market_gap": 0.1994459833795014,
+          "unit_mix": [
+            {
+              "unit_type": "1BR",
+              "count": 32,
+              "current_rent": 1850,
+              "market_rent": 2050,
+              "avg_sqft": 720
+            },
+            {
+              "unit_type": "2BR",
+              "count": 32,
+              "current_rent": 1881,
+              "market_rent": 2425,
+              "avg_sqft": 940
+            }
+          ],
+          "units": [
+            {
+              "unit_type": "1BR",
+              "count": 32,
+              "current_rent": 1850,
+              "market_rent": 2050,
+              "avg_sqft": 720
+            },
+            {
+              "unit_type": "2BR",
+              "count": 32,
+              "current_rent": 1881,
+              "market_rent": 2425,
+              "avg_sqft": 940
+            }
+          ],
+          "annual_in_place_rent": 1432800,
+          "annual_market_rent": 1718400
+        }
+      }
+    },
+    {
+      "id": "artifact-assumptions-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "document_text_extracted",
+      "file_id": "assumptions-file",
+      "original_filename": "Replay_Purchase_Assumptions.pdf",
+      "mime_type": "application/pdf",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/document_text_extracted/assumptions-file.json",
+      "created_at": "2026-06-24T00:02:00.000Z",
+      "payload": {
+        "source_file_id": "assumptions-file",
+        "source_original_filename": "Replay_Purchase_Assumptions.pdf",
+        "semantic_doc_role": "purchase_assumptions",
+        "debt_basis": "acquisition_financing_assumption",
+        "semantic_doc_display_label": "Purchase Assumptions / Proposed Acquisition Financing Context",
+        "document_text_extracted": "Purchase Assumptions / Proposed Acquisition Financing\nPurchase Price $13,500,000\nNOI Basis $945,000\nGoing-In Cap Reference 7.00%\nProposed Acquisition Loan $9,450,000\nLTV 70.0%\nInterest Rate 5.95%\nAmortization 30 years\nLender Fee 0.85%"
+      }
+    },
+    {
+      "id": "artifact-current-debt-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "loan_term_sheet_parsed",
+      "file_id": "current-debt-file",
+      "original_filename": "Replay_Current_Debt.pdf",
+      "mime_type": "application/pdf",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/loan_term_sheet_parsed/current-debt-file.json",
+      "created_at": "2026-06-24T00:03:00.000Z",
+      "payload": {
+        "source_file_id": "current-debt-file",
+        "source_original_filename": "Replay_Current_Debt.pdf",
+        "semantic_doc_role": "purchase_assumptions",
+        "debt_basis": "proposed_acquisition",
+        "semantic_doc_display_label": "Purchase Assumptions / Proposed Acquisition Financing Context",
+        "document_text_extracted": "Existing Current Debt Statement\nThis is an existing/current debt context document. It is separate from proposed acquisition financing.\nCurrent Outstanding Balance $6,800,000\nInterest Rate 4.85%\nAmortization Remaining 24 years\nMonthly Payment $39,250\nMaturity Date 2029-11-01",
+        "loan_term_sheet_parsed": {
+          "outstanding_balance": 6800000,
+          "interest_rate": 0.0485,
+          "amortization_years": 24,
+          "monthly_payment": 39250,
+          "maturity_date": "2029-11-01"
+        },
+        "current_debt_parsed": {
+          "current_outstanding_balance": 6800000,
+          "interest_rate": 0.0485,
+          "amortization_remaining_years": 24,
+          "monthly_payment": 39250,
+          "maturity_date": "2029-11-01"
+        }
+      }
+    },
+    {
+      "id": "artifact-reno-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "document_text_extracted",
+      "file_id": "reno-file",
+      "original_filename": "Replay_Reno_Plan.pdf",
+      "mime_type": "application/pdf",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/document_text_extracted/reno-file.json",
+      "created_at": "2026-06-24T00:04:00.000Z",
+      "payload": {
+        "source_file_id": "reno-file",
+        "source_original_filename": "Replay_Reno_Plan.pdf",
+        "semantic_doc_role": "renovation_plan",
+        "semantic_doc_display_label": "Structured Renovation / CapEx Plan",
+        "document_text_extracted": "Structured Renovation / CapEx Plan\nTotal Renovation Budget $1,280,000\n1BR Interiors 20 units x $18,500/unit; expected rent lift $225/month; Months 1-18\n2BR Interiors 18 units x $24,000/unit; expected rent lift $325/month; Months 1-24\nCommon Area Refresh $210,000\nExterior / Security $115,000\nContingency $153,000"
+      }
+    },
+    {
+      "id": "artifact-appraisal-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "document_text_extracted",
+      "file_id": "appraisal-file",
+      "original_filename": "Replay_Appraisal_Summary.pdf",
+      "mime_type": "application/pdf",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/document_text_extracted/appraisal-file.json",
+      "created_at": "2026-06-24T00:05:00.000Z",
+      "payload": {
+        "source_file_id": "appraisal-file",
+        "source_original_filename": "Replay_Appraisal_Summary.pdf",
+        "semantic_doc_role": "appraisal",
+        "semantic_doc_display_label": "Appraisal Summary / Valuation Context",
+        "document_text_extracted": "Appraisal Summary / Valuation Context\nThis appraisal-style summary is provided as valuation context only."
+      }
+    },
+    {
+      "id": "artifact-survey-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "document_text_extracted",
+      "file_id": "survey-file",
+      "original_filename": "Replay_Market_Survey.pdf",
+      "mime_type": "application/pdf",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/document_text_extracted/survey-file.json",
+      "created_at": "2026-06-24T00:06:00.000Z",
+      "payload": {
+        "source_file_id": "survey-file",
+        "source_original_filename": "Replay_Market_Survey.pdf",
+        "semantic_doc_role": "market_survey",
+        "semantic_doc_display_label": "Market Rent Survey Context",
+        "document_text_extracted": "Market Rent Survey Context\nThis survey provides market rent context only."
+      }
+    },
+    {
+      "id": "artifact-phase-file",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "document_text_extracted",
+      "file_id": "phase-file",
+      "original_filename": "Replay_Phase_I_ESA.pdf",
+      "mime_type": "application/pdf",
+      "bucket": "analysis",
+      "object_path": "analysis_jobs/retest19-artifact-replay/document_text_extracted/phase-file.json",
+      "created_at": "2026-06-24T00:07:00.000Z",
+      "payload": {
+        "source_file_id": "phase-file",
+        "source_original_filename": "Replay_Phase_I_ESA.pdf",
+        "semantic_doc_role": "phase_i_esa",
+        "semantic_doc_display_label": "Environmental Due Diligence Context / Phase I ESA",
+        "document_text_extracted": "Environmental Due Diligence Context / Phase I ESA\nThis document is environmental context only and is not used quantitatively."
+      }
+    },
+    {
+      "id": "artifact-source-package-qa",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "source_package_qa_advisory",
+      "bucket": "internal",
+      "object_path": "analysis_jobs/retest19-artifact-replay/source_package_qa_advisory/2026-06-24T00-08-00.000Z.json",
+      "created_at": "2026-06-24T00:08:00.000Z",
+      "payload": {
+        "source_package_qa": {
+          "currentDebtPresent": true,
+          "purchaseAssumptionsPresent": true,
+          "support_doc_authority_rows": [
+            {
+              "file_id": "current-debt-file",
+              "canonical_role": "current_debt_context",
+              "semantic_doc_role": "current_debt_context",
+              "semantic_doc_display_label": "Existing Debt Context / Current Mortgage / Debt Statement"
+            },
+            {
+              "file_id": "assumptions-file",
+              "canonical_role": "purchase_assumptions",
+              "semantic_doc_role": "purchase_assumptions",
+              "semantic_doc_display_label": "Purchase Assumptions / Proposed Acquisition Financing Context"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "artifact-final-compliance",
+      "job_id": "retest19-artifact-replay",
+      "user_id": "user_retest19_replay",
+      "type": "final_acquisition_memo_v2_compliance_diagnostics",
+      "bucket": "internal",
+      "object_path": "analysis_jobs/retest19-artifact-replay/final_acquisition_memo_v2_compliance_diagnostics/2026-06-24T00-09-00.000Z.json",
+      "created_at": "2026-06-24T00:09:00.000Z",
+      "payload": {
+        "finalBossComplianceOk": true,
+        "repairPlan": {
+          "coreFatal": [],
+          "shouldRetry": false
+        },
+        "repairAttempted": false,
+        "repairedHtmlRevalidated": true,
+        "finalDeliveryDecision": {
+          "fatalCategory": "advisory_only",
+          "report_publishable": true,
+          "customer_publish_eligible": true
+        }
+      }
+    }
+  ]
+}
