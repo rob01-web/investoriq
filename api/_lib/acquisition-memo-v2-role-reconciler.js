@@ -379,6 +379,7 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
 } = {}) {
   const text = collectTextParts(source, artifacts);
   const normalizedText = String(text || "").toLowerCase();
+  const acceptedSourceIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(source);
   const parserSemanticDocRole = normalizeIdentityToken(
     acceptedTruth?.semanticDocRole ||
       source?.semantic_doc_role ||
@@ -561,6 +562,16 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
   const bestCandidate = roleCandidates.find((candidate) => candidate.hasPositiveEvidence === true) || null;
 
   if (!bestCandidate) {
+    const acceptedProvenance = {
+      acceptedSourceIdentityKey,
+      acceptedSemanticDocRole: "other_support_context",
+      acceptedDebtBasis: null,
+      acceptedSemanticDocDisplayLabel: "Other Support Document",
+      authorityBasis: "no_same_source_positive_evidence",
+      parserSemanticDocRole: parserSemanticDocRole || null,
+      parserDebtBasis: parserDebtBasis || null,
+      parserDisplayLabel: parserDisplayLabel || null,
+    };
     return {
       canonicalRole: "other_support_context",
       canonicalLabel: "Other Support Document",
@@ -573,8 +584,10 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
       parserDebtBasis: parserDebtBasis || null,
       parserDisplayLabel: parserDisplayLabel || null,
       acceptedSemanticDocRole: "other_support_context",
-      acceptedDebtBasis: parserDebtBasis || null,
+      acceptedDebtBasis: null,
       acceptedSemanticDocDisplayLabel: "Other Support Document",
+      acceptedSourceIdentityKey,
+      acceptedProvenance,
       acceptedSourceTruth: {
         hasPurchaseAssumptions: false,
         hasCurrentDebt: false,
@@ -595,6 +608,17 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     };
   }
 
+  const acceptedProvenance = {
+    acceptedSourceIdentityKey,
+    acceptedSemanticDocRole: bestCandidate.role,
+    acceptedDebtBasis: bestCandidate.acceptedDebtBasis || null,
+    acceptedSemanticDocDisplayLabel: bestCandidate.canonicalLabel,
+    authorityBasis: bestCandidate.authorityBasis,
+    parserSemanticDocRole: parserSemanticDocRole || null,
+    parserDebtBasis: parserDebtBasis || null,
+    parserDisplayLabel: parserDisplayLabel || null,
+  };
+
   return {
     canonicalRole: bestCandidate.role,
     canonicalLabel: bestCandidate.canonicalLabel,
@@ -609,6 +633,8 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     acceptedSemanticDocRole: bestCandidate.role,
     acceptedDebtBasis: bestCandidate.acceptedDebtBasis || null,
     acceptedSemanticDocDisplayLabel: bestCandidate.canonicalLabel,
+    acceptedSourceIdentityKey,
+    acceptedProvenance,
     acceptedSourceTruth: {
       hasPurchaseAssumptions: bestCandidate.role === "purchase_assumptions",
       hasCurrentDebt: bestCandidate.role === "current_debt_context",
@@ -653,7 +679,7 @@ function scoreAcquisitionMemoV2SupportDoc(row = {}, text = "") {
 function getAcquisitionMemoV2SupportDocSelectionPriority(row = {}, artifacts = []) {
   const roleMatch = reconcileAcquisitionMemoV2SupportDocRole({ file: row, artifacts, acceptedTruth: row });
   const canonicalRole = normalizeAcquisitionMemoV2CanonicalRole(
-    roleMatch?.canonicalRole || row?.canonical_support_doc_role || row?.semantic_doc_role || row?.payload?.semantic_doc_role
+    roleMatch?.canonicalRole || roleMatch?.acceptedSemanticDocRole || ""
   );
   switch (canonicalRole) {
     case "core_t12":
@@ -723,13 +749,21 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
   const pickCanonical = (row = {}) => {
     const text = collectRowText(row, artifacts);
     const roleMatch = reconcileAcquisitionMemoV2SupportDocRole({ file: row, artifacts, acceptedTruth: row });
-    const explicitRole = normalizeIdentityToken(roleMatch?.acceptedSemanticDocRole || row?.semantic_doc_role || row?.payload?.semantic_doc_role);
-    const canonicalRole = roleMatch?.canonicalRole || null;
+    const explicitRole = normalizeIdentityToken(roleMatch?.acceptedSemanticDocRole);
+    const canonicalRole = normalizeAcquisitionMemoV2CanonicalRole(roleMatch?.canonicalRole || roleMatch?.acceptedSemanticDocRole || "");
     const canonicalLabel = roleMatch?.canonicalLabel || roleMatch?.acceptedSemanticDocDisplayLabel || row?.semantic_doc_display_label || row?.document_role_label || row?.roleLabel || "Other Support Document";
     const treatmentLabel = roleMatch?.treatment || row?.treatment_label || row?.treatment || "Context only";
     const useLabel = roleMatch?.use || row?.use_label || row?.use || "Listed for auditability only; not used quantitatively.";
     const category = roleMatch?.category || row?.treatment_category || "Listed but Not Quantitatively Modeled";
     const score = scoreAcquisitionMemoV2SupportDoc(row, text);
+    const acceptedAuthorityFields = {
+      acceptedSemanticDocRole: roleMatch?.acceptedSemanticDocRole || canonicalRole || null,
+      acceptedDebtBasis: roleMatch?.acceptedDebtBasis || null,
+      acceptedSemanticDocDisplayLabel: roleMatch?.acceptedSemanticDocDisplayLabel || canonicalLabel || null,
+      acceptedSourceIdentityKey: roleMatch?.acceptedSourceIdentityKey || getAcquisitionMemoV2SupportDocIdentityKey(row),
+      acceptedSourceTruth: roleMatch?.acceptedSourceTruth || null,
+      acceptedProvenance: roleMatch?.acceptedProvenance || null,
+    };
 
     if (canonicalRole === "purchase_assumptions" || explicitRole === "purchase_assumptions") {
       const purchasePrice = firstFinite(row?.purchase_price, row?.acquisition_price, row?.asking_price, row?.purchase_price_amount);
@@ -767,6 +801,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "purchase_assumptions_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -799,6 +834,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "current_debt_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -815,6 +851,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "historical_capex_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -831,6 +868,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "renovation_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -847,6 +885,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "environmental_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -863,6 +902,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "appraisal_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -879,6 +919,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "property_tax_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -895,6 +936,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "market_survey_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -913,6 +955,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "core_t12_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -931,6 +974,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
         canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
         authoritySource: roleMatch?.authorityBasis || "core_rent_roll_evidence",
         score,
+        ...acceptedAuthorityFields,
       };
     }
 
@@ -946,6 +990,7 @@ export function buildAcquisitionMemoV2SupportDocAuthorityRows({
       canonical_document_treatment_identity_key: getAcquisitionMemoV2SupportDocIdentityKey(row),
       authoritySource: roleMatch?.authorityBasis || "no_same_source_positive_evidence",
       score,
+      ...acceptedAuthorityFields,
     };
   };
 

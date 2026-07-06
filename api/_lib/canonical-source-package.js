@@ -200,21 +200,43 @@ function collectAcceptedSupportDocTruth(artifacts = []) {
     semanticDocDisplayLabel: null,
     hasPurchaseAssumptions: false,
     hasCurrentDebt: false,
+    authorityBasis: null,
+    provenance: null,
   };
   for (const artifact of toArray(artifacts)) {
     if (!artifact || typeof artifact !== "object") continue;
-    const semanticDocRole = String(artifact?.semantic_doc_role ?? artifact?.payload?.semantic_doc_role ?? "").trim().toLowerCase();
-    const debtBasis = String(artifact?.debt_basis ?? artifact?.payload?.debt_basis ?? "").trim().toLowerCase();
+    const semanticDocRole = String(
+      artifact?.acceptedSemanticDocRole ??
+        artifact?.accepted_semantic_doc_role ??
+        artifact?.canonical_support_doc_role ??
+        artifact?.payload?.acceptedSemanticDocRole ??
+        artifact?.payload?.accepted_semantic_doc_role ??
+        artifact?.payload?.canonical_support_doc_role ??
+        ""
+    ).trim().toLowerCase();
+    const debtBasis = String(
+      artifact?.acceptedDebtBasis ??
+        artifact?.accepted_debt_basis ??
+        artifact?.payload?.acceptedDebtBasis ??
+        artifact?.payload?.accepted_debt_basis ??
+        ""
+    ).trim().toLowerCase();
     const semanticDocDisplayLabel = String(
-      artifact?.semantic_doc_display_label ??
-        artifact?.payload?.semantic_doc_display_label ??
-        artifact?.document_role_label ??
-        artifact?.payload?.document_role_label ??
+      artifact?.acceptedSemanticDocDisplayLabel ??
+        artifact?.accepted_semantic_doc_display_label ??
+        artifact?.payload?.acceptedSemanticDocDisplayLabel ??
+        artifact?.payload?.accepted_semantic_doc_display_label ??
         ""
     ).trim();
     if (!truth.semanticDocRole && semanticDocRole) truth.semanticDocRole = semanticDocRole;
     if (!truth.debtBasis && debtBasis) truth.debtBasis = debtBasis;
     if (!truth.semanticDocDisplayLabel && semanticDocDisplayLabel) truth.semanticDocDisplayLabel = semanticDocDisplayLabel;
+    if (!truth.authorityBasis) {
+      truth.authorityBasis = artifact?.authorityBasis || artifact?.authority_basis || artifact?.payload?.authorityBasis || artifact?.payload?.authority_basis || null;
+    }
+    if (!truth.provenance) {
+      truth.provenance = artifact?.provenance || artifact?.acceptedProvenance || artifact?.accepted_provenance || artifact?.payload?.provenance || null;
+    }
     if (
       semanticDocRole === "purchase_assumptions" ||
       debtBasis === "acquisition_financing_assumption" ||
@@ -831,10 +853,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
 
   if (
     reconciledCanonicalRole === "current_debt_context" ||
-    acceptedCurrentDebtTruth ||
-    positiveCurrentDebtEvidence ||
-    (hasCurrentDebtFilename && !acceptedPurchaseAssumptionsTruth) ||
-    ((explicitSemanticRole === "current_debt" || explicitSemanticRole === "current_debt_context" || explicitDebtBasis === "current_debt" || explicitDebtBasis === "current_debt_context") && !acceptedPurchaseAssumptionsTruth)
+    (!reconciledCanonicalRole && (acceptedCurrentDebtTruth || positiveCurrentDebtEvidence || (hasCurrentDebtFilename && !acceptedPurchaseAssumptionsTruth)))
   ) {
     const extractedFacts = buildExtractedFacts("current_debt_context", text);
     return {
@@ -857,8 +876,9 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
         hasPurchaseAssumptions: Boolean(roleReconciliation?.acceptedSourceTruth?.hasPurchaseAssumptions),
         hasCurrentDebt: true,
       },
-      provenance: buildProvenance(file, "current_debt_evidence", text),
-      authorityBasis: "current_debt_evidence",
+      provenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation?.authorityBasis || "current_debt_evidence", text),
+      acceptedProvenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation?.authorityBasis || "current_debt_evidence", text),
+      authorityBasis: roleReconciliation?.authorityBasis || "current_debt_evidence",
     };
   }
 
@@ -890,22 +910,21 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || acceptedTruth.semanticDocRole || explicitSemanticRole || "purchase_assumptions",
-      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || acceptedTruth.debtBasis || explicitDebtBasis || "acquisition_financing_assumption",
-      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || acceptedTruth.semanticDocDisplayLabel || "Purchase Assumptions / Proposed Acquisition Financing Context",
+      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || "purchase_assumptions",
+      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || "acquisition_financing_assumption",
+      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || "Purchase Assumptions / Proposed Acquisition Financing Context",
       acceptedSourceTruth: {
         hasPurchaseAssumptions: true,
         hasCurrentDebt: Boolean(roleReconciliation?.acceptedSourceTruth?.hasCurrentDebt),
       },
-      provenance: buildProvenance(file, roleReconciliation.authorityBasis || "purchase_assumptions_evidence", text),
+      provenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "purchase_assumptions_evidence", text),
+      acceptedProvenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "purchase_assumptions_evidence", text),
       authorityBasis: roleReconciliation.authorityBasis || "purchase_assumptions_evidence",
     };
   }
 
   if (
-    explicitSemanticRole === "renovation_plan" ||
-    hasRenovationFilename ||
-    structuredRenovationEvidence
+    reconciledCanonicalRole === "renovation_capex_context"
   ) {
     const extractedFacts = buildExtractedFacts("structured_renovation_capex_plan", text);
     return {
@@ -921,12 +940,17 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      provenance: buildProvenance(file, explicitSemanticRole === "renovation_plan" ? "parser_semantic" : hasRenovationFilename ? "filename_heuristic" : "keyword_match", text),
-      authorityBasis: explicitSemanticRole === "renovation_plan" ? "parser_semantic" : hasRenovationFilename ? "filename_heuristic" : "keyword_match",
+      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || "renovation_capex_context",
+      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || "renovation_capex_context",
+      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || "Structured Renovation / CapEx Plan",
+      acceptedSourceTruth: roleReconciliation.acceptedSourceTruth || null,
+      provenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "renovation_evidence", text),
+      acceptedProvenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "renovation_evidence", text),
+      authorityBasis: roleReconciliation.authorityBasis || "renovation_evidence",
     };
   }
 
-  if (explicitSemanticRole === "appraisal" || hasAppraisalFilename || explicitAppraisalText) {
+  if (reconciledCanonicalRole === "appraisal_valuation_context") {
     const extractedFacts = buildExtractedFacts("appraisal_context", text);
     return {
       role: "appraisal_context",
@@ -941,12 +965,17 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      provenance: buildProvenance(file, explicitSemanticRole === "appraisal" ? "parser_semantic" : "filename_heuristic", text),
-      authorityBasis: explicitSemanticRole === "appraisal" ? "parser_semantic" : "filename_heuristic",
+      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || "appraisal_valuation_context",
+      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || "appraisal_valuation_context",
+      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || "Appraisal / Valuation Context",
+      acceptedSourceTruth: roleReconciliation.acceptedSourceTruth || null,
+      provenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "appraisal_evidence", text),
+      acceptedProvenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "appraisal_evidence", text),
+      authorityBasis: roleReconciliation.authorityBasis || "appraisal_evidence",
     };
   }
 
-  if (explicitSemanticRole === "market_survey" || hasMarketSurveyFilename || explicitMarketSurveyText) {
+  if (reconciledCanonicalRole === "market_survey_context") {
     const extractedFacts = buildExtractedFacts("market_survey_context", text);
     return {
       role: "market_survey_context",
@@ -961,17 +990,17 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      provenance: buildProvenance(file, explicitSemanticRole === "market_survey" ? "parser_semantic" : "filename_heuristic", text),
-      authorityBasis: explicitSemanticRole === "market_survey" ? "parser_semantic" : "filename_heuristic",
+      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || "market_survey_context",
+      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || "market_survey_context",
+      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || "Market Rent Survey Context",
+      acceptedSourceTruth: roleReconciliation.acceptedSourceTruth || null,
+      provenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "market_survey_evidence", text),
+      acceptedProvenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "market_survey_evidence", text),
+      authorityBasis: roleReconciliation.authorityBasis || "market_survey_evidence",
     };
   }
 
-  if (
-    explicitSemanticRole === "phase_i_esa" ||
-    explicitSemanticRole === "environmental" ||
-    hasEnvironmentalFilename ||
-    explicitPhaseIText
-  ) {
+  if (reconciledCanonicalRole === "environmental_due_diligence_context") {
     const extractedFacts = buildExtractedFacts("environmental_context", text);
     return {
       role: "environmental_context",
@@ -986,8 +1015,13 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       extractedFacts,
       sourceEvidence: { filename: originalFilename || null, textSnippet: text ? text.slice(0, 500) : null },
       sourceAuthorityVersion: "v2",
-      provenance: buildProvenance(file, explicitSemanticRole === "phase_i_esa" || explicitSemanticRole === "environmental" ? "parser_semantic" : "filename_heuristic", text),
-      authorityBasis: explicitSemanticRole === "phase_i_esa" || explicitSemanticRole === "environmental" ? "parser_semantic" : "filename_heuristic",
+      acceptedSemanticDocRole: roleReconciliation.acceptedSemanticDocRole || "environmental_due_diligence_context",
+      acceptedDebtBasis: roleReconciliation.acceptedDebtBasis || "environmental_due_diligence_context",
+      acceptedSemanticDocDisplayLabel: roleReconciliation.acceptedSemanticDocDisplayLabel || "Environmental Due Diligence / Phase I ESA Context",
+      acceptedSourceTruth: roleReconciliation.acceptedSourceTruth || null,
+      provenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "environmental_evidence", text),
+      acceptedProvenance: roleReconciliation?.acceptedProvenance || buildProvenance(file, roleReconciliation.authorityBasis || "environmental_evidence", text),
+      authorityBasis: roleReconciliation.authorityBasis || "environmental_evidence",
     };
   }
 
@@ -1099,7 +1133,9 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
       acceptedSemanticDocRole: authority.acceptedSemanticDocRole || null,
       acceptedDebtBasis: authority.acceptedDebtBasis || null,
       acceptedSemanticDocDisplayLabel: authority.acceptedSemanticDocDisplayLabel || null,
+      acceptedSourceIdentityKey: authority.acceptedSourceIdentityKey || authority.acceptedProvenance?.acceptedSourceIdentityKey || null,
       acceptedSourceTruth: authority.acceptedSourceTruth || null,
+      acceptedProvenance: authority.acceptedProvenance || authority.provenance || null,
     });
   }
 
@@ -1195,7 +1231,9 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
           acceptedSemanticDocRole: authority.acceptedSemanticDocRole || null,
           acceptedDebtBasis: authority.acceptedDebtBasis || null,
           acceptedSemanticDocDisplayLabel: authority.acceptedSemanticDocDisplayLabel || null,
+          acceptedSourceIdentityKey: authority.acceptedSourceIdentityKey || authority.acceptedProvenance?.acceptedSourceIdentityKey || null,
           acceptedSourceTruth: authority.acceptedSourceTruth || null,
+          acceptedProvenance: authority.acceptedProvenance || authority.provenance || null,
         });
       }
   }

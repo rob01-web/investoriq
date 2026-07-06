@@ -139,21 +139,35 @@ function toArrayLike(value) {
 }
 
 function uniqueKeyForSupportDoc(doc) {
+  const acceptedIdentity = String(doc?.acceptedSourceIdentityKey || doc?.accepted_source_identity_key || "").trim();
+  if (acceptedIdentity) return acceptedIdentity;
+  const fileId = String(doc?.fileId || "").trim();
+  if (fileId) return `file:${fileId}`;
+  const originalFilename = String(doc?.originalFilename || doc?.sourceEvidence?.filename || "").trim();
+  if (originalFilename) return `filename:${originalFilename.toLowerCase()}`;
   return [
-    String(doc?.fileId || "").trim(),
-    String(doc?.originalFilename || "").trim(),
-    String(doc?.canonicalRole || doc?.role || "").trim(),
+    "anonymous",
     String(doc?.sourceKind || "").trim(),
+    String(doc?.canonicalRole || doc?.role || "").trim(),
+    String(doc?.canonicalLabel || doc?.roleLabel || "").trim(),
   ].join("|");
 }
 
 function normalizeSupportDocRecord(doc, sourceLabel = null) {
   const source = truthyObject(doc);
   if (!source) return null;
+  const acceptedSemanticDocRole = source.acceptedSemanticDocRole || source.accepted_semantic_doc_role || null;
+  const acceptedDebtBasis = source.acceptedDebtBasis || source.accepted_debt_basis || null;
+  const acceptedSemanticDocDisplayLabel =
+    source.acceptedSemanticDocDisplayLabel || source.accepted_semantic_doc_display_label || null;
+  const acceptedSourceIdentityKey =
+    source.acceptedSourceIdentityKey || source.accepted_source_identity_key || null;
+  const acceptedProvenance =
+    source.acceptedProvenance || source.accepted_provenance || source.provenance || null;
   return normalizeBossContractFact({
     fileId: source.fileId || source.file_id || source.id || null,
     originalFilename: source.originalFilename || source.original_filename || source.filename || null,
-    canonicalRole: source.canonicalRole || source.role || source.semantic_doc_role || null,
+    canonicalRole: source.canonicalRole || source.canonical_support_doc_role || source.role || acceptedSemanticDocRole || null,
     roleLabel: source.roleLabel || source.role_label || null,
     canonicalLabel: source.canonicalLabel || source.canonical_label || null,
     treatment: source.treatment || null,
@@ -164,6 +178,12 @@ function normalizeSupportDocRecord(doc, sourceLabel = null) {
     forbiddenUses: Array.isArray(source.forbiddenUses) ? source.forbiddenUses : Array.isArray(source.forbidden_uses) ? source.forbidden_uses : [],
     extractedFacts: normalizeBossContractFact(source.extractedFacts || source.extracted_facts || {}),
     sourceEvidence: normalizeBossContractFact(source.sourceEvidence || source.source_evidence || {}),
+    acceptedSemanticDocRole,
+    acceptedDebtBasis,
+    acceptedSemanticDocDisplayLabel,
+    acceptedSourceIdentityKey,
+    acceptedSourceTruth: normalizeBossContractFact(source.acceptedSourceTruth || source.accepted_source_truth || {}),
+    acceptedProvenance: normalizeBossContractFact(acceptedProvenance || {}),
   });
 }
 
@@ -373,6 +393,31 @@ function hasCurrentDebtEvidence(text) {
 
 function promoteCurrentDebtSupportDoc(doc) {
   if (!isPlainObject(doc)) return null;
+  const acceptedSemanticDocRole = String(doc?.acceptedSemanticDocRole || doc?.accepted_semantic_doc_role || doc?.canonicalRole || doc?.role || "").trim().toLowerCase();
+  const acceptedDebtBasis = String(doc?.acceptedDebtBasis || doc?.accepted_debt_basis || "").trim().toLowerCase();
+  const acceptedProvenance = isPlainObject(doc?.acceptedProvenance) ? doc.acceptedProvenance : isPlainObject(doc?.accepted_provenance) ? doc.accepted_provenance : null;
+  const acceptedProvenanceRole = String(
+    acceptedProvenance?.acceptedSemanticDocRole ||
+      acceptedProvenance?.accepted_semantic_doc_role ||
+      acceptedProvenance?.canonicalRole ||
+      acceptedProvenance?.role ||
+      ""
+  ).trim().toLowerCase();
+  const acceptedProvenanceDebtBasis = String(
+    acceptedProvenance?.acceptedDebtBasis ||
+      acceptedProvenance?.accepted_debt_basis ||
+      acceptedProvenance?.debtBasis ||
+      acceptedProvenance?.debt_basis ||
+      ""
+  ).trim().toLowerCase();
+  const acceptedHasPurchaseAssumptions =
+    acceptedSemanticDocRole === "purchase_assumptions" ||
+    acceptedDebtBasis === "acquisition_financing_assumption" ||
+    acceptedProvenanceRole === "purchase_assumptions" ||
+    acceptedProvenanceDebtBasis === "acquisition_financing_assumption" ||
+    Boolean(doc?.acceptedSourceTruth?.hasPurchaseAssumptions || doc?.accepted_source_truth?.hasPurchaseAssumptions) ||
+    Boolean(doc?.acceptedSourceTruth?.has_purchase_assumptions || doc?.accepted_source_truth?.has_purchase_assumptions);
+  if (acceptedHasPurchaseAssumptions) return null;
   const evidenceText = getSupportDocEvidenceText(doc);
   if (!hasCurrentDebtEvidence(evidenceText) && !hasStructuredValues(doc?.extractedFacts?.current_outstanding_balance) && !hasStructuredValues(doc?.extractedFacts?.monthly_payment)) {
     return null;
@@ -904,8 +949,6 @@ function buildAcquisitionMemoBossContract({
   const purchaseAssumptionsDoc = findSupportDocByRole(supportDocs, "purchase_assumptions") || acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions || null;
   const promotedCurrentDebtDoc =
     findSupportDocByRole(supportDocs, "current_debt_context") ||
-    promoteCurrentDebtSupportDoc(findSupportDocByRole(supportDocs, "purchase_assumptions")) ||
-    promoteCurrentDebtSupportDoc(acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions) ||
     promoteCurrentDebtSupportDoc(acquisitionMemoProjection?.supportDocProjection?.currentDebtContext) ||
     null;
   const supplementedCoreT12Facts = supplementT12FactsFromEvidence(normalizeBossContractFact(coreT12?.extractedFacts || {}), coreT12Source);
