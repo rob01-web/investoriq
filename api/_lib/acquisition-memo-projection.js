@@ -8,8 +8,41 @@ function isCanonicalSupportDocEntry(entry) {
   return Boolean(entry) && typeof entry === "object";
 }
 
+function getAcceptedSupportDocRole(entry) {
+  return String(
+    entry?.acceptedSemanticDocRole ||
+      entry?.accepted_semantic_doc_role ||
+      entry?.acceptedProvenance?.acceptedSemanticDocRole ||
+      entry?.acceptedProvenance?.accepted_semantic_doc_role ||
+      entry?.accepted_provenance?.acceptedSemanticDocRole ||
+      entry?.accepted_provenance?.accepted_semantic_doc_role ||
+      ""
+  ).trim();
+}
+
+function roleMatchesProjectionBucket(role, bucket) {
+  const normalizedRole = String(role || "").trim();
+  const normalizedBucket = String(bucket || "").trim();
+  if (!normalizedRole || !normalizedBucket) return false;
+  if (normalizedRole === normalizedBucket) return true;
+  const aliases = {
+    structured_renovation_capex_plan: ["renovation_capex_context", "structured_renovation", "structured_renovation_capex_plan", "renovation_budget"],
+    appraisal_context: ["appraisal_valuation_context", "appraisal"],
+    environmental_context: ["environmental_due_diligence_context", "environmental_due_diligence", "phase_i_esa", "environmental", "phase_i"],
+    purchase_assumptions: ["proposed_acquisition_financing"],
+    current_debt_context: ["current_debt", "current_mortgage_statement", "current_debt_terms", "mortgage_statement"],
+    market_survey_context: ["market_survey"],
+  };
+  const bucketAliases = aliases[normalizedBucket] || [];
+  if (bucketAliases.includes(normalizedRole)) return true;
+  const roleAliases = Object.entries(aliases).find(([, values]) => values.includes(normalizedRole));
+  return Boolean(roleAliases && roleAliases[0] === normalizedBucket);
+}
+
 function isSupportRole(entry, role) {
-  return String(entry?.canonicalRole || "").trim() === role;
+  const acceptedRole = getAcceptedSupportDocRole(entry);
+  if (acceptedRole) return roleMatchesProjectionBucket(acceptedRole, role);
+  return roleMatchesProjectionBucket(String(entry?.canonicalRole || "").trim(), role);
 }
 
 function cloneEntry(entry) {

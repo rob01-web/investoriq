@@ -167,7 +167,7 @@ function normalizeSupportDocRecord(doc, sourceLabel = null) {
   return normalizeBossContractFact({
     fileId: source.fileId || source.file_id || source.id || null,
     originalFilename: source.originalFilename || source.original_filename || source.filename || null,
-    canonicalRole: source.canonicalRole || source.canonical_support_doc_role || source.role || acceptedSemanticDocRole || null,
+    canonicalRole: acceptedSemanticDocRole || source.canonicalRole || source.canonical_support_doc_role || source.role || null,
     roleLabel: source.roleLabel || source.role_label || null,
     canonicalLabel: source.canonicalLabel || source.canonical_label || null,
     treatment: source.treatment || null,
@@ -393,20 +393,17 @@ function hasCurrentDebtEvidence(text) {
 
 function promoteCurrentDebtSupportDoc(doc) {
   if (!isPlainObject(doc)) return null;
-  const acceptedSemanticDocRole = String(doc?.acceptedSemanticDocRole || doc?.accepted_semantic_doc_role || doc?.canonicalRole || doc?.role || "").trim().toLowerCase();
+  const acceptedSemanticDocRole = String(doc?.acceptedSemanticDocRole || doc?.accepted_semantic_doc_role || "").trim().toLowerCase();
   const acceptedDebtBasis = String(doc?.acceptedDebtBasis || doc?.accepted_debt_basis || "").trim().toLowerCase();
   const acceptedProvenance = isPlainObject(doc?.acceptedProvenance) ? doc.acceptedProvenance : isPlainObject(doc?.accepted_provenance) ? doc.accepted_provenance : null;
   const acceptedProvenanceRole = String(
     acceptedProvenance?.acceptedSemanticDocRole ||
       acceptedProvenance?.accepted_semantic_doc_role ||
-      acceptedProvenance?.canonicalRole ||
-      acceptedProvenance?.role ||
       ""
   ).trim().toLowerCase();
   const acceptedProvenanceDebtBasis = String(
     acceptedProvenance?.acceptedDebtBasis ||
       acceptedProvenance?.accepted_debt_basis ||
-      acceptedProvenance?.debtBasis ||
       acceptedProvenance?.debt_basis ||
       ""
   ).trim().toLowerCase();
