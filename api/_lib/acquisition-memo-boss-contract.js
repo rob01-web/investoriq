@@ -374,12 +374,42 @@ function supplementPurchaseFactsFromEvidence(baseFacts, supportDoc) {
   if (facts.noi_basis == null && noiBasis != null) facts.noi_basis = noiBasis;
   if (facts.going_in_cap_rate == null && goingInCapRate != null) facts.going_in_cap_rate = goingInCapRate;
   if (facts.proposed_loan_amount == null && proposedLoanAmount != null) facts.proposed_loan_amount = proposedLoanAmount;
-  if (facts.loan_amount == null && proposedLoanAmount != null) facts.loan_amount = proposedLoanAmount;
   if (facts.ltv == null && ltv != null) facts.ltv = ltv;
   if (facts.interest_rate == null && interestRate != null) facts.interest_rate = interestRate;
   if (facts.amortization_years == null && amortizationYears != null) facts.amortization_years = amortizationYears;
   if (facts.lender_fee_percent == null && lenderFeePercent != null) facts.lender_fee_percent = lenderFeePercent;
   if (facts.has_proposed_acquisition_financing == null) facts.has_proposed_acquisition_financing = true;
+  return facts;
+}
+
+function resolvePurchaseAssumptionLoanAmountCandidate(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const numeric = Number(trimmed);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizePurchaseAssumptionLoanAmountFacts(baseFacts) {
+  const facts = normalizeBossContractFact(baseFacts || {});
+  const candidateValues = [
+    facts?.proposed_loan_amount,
+    facts?.stated_acquisition_loan_amount,
+    facts?.derived_acquisition_loan_amount,
+    facts?.loan_amount,
+  ];
+  let resolvedLoanAmount = null;
+  for (const candidate of candidateValues) {
+    const numeric = resolvePurchaseAssumptionLoanAmountCandidate(candidate);
+    if (Number.isFinite(numeric)) {
+      resolvedLoanAmount = numeric;
+      break;
+    }
+  }
+  if (resolvePurchaseAssumptionLoanAmountCandidate(facts.proposed_loan_amount) == null && resolvedLoanAmount != null) {
+    facts.proposed_loan_amount = resolvedLoanAmount;
+  }
   return facts;
 }
 
@@ -950,9 +980,11 @@ function buildAcquisitionMemoBossContract({
     null;
   const supplementedCoreT12Facts = supplementT12FactsFromEvidence(normalizeBossContractFact(coreT12?.extractedFacts || {}), coreT12Source);
   const supplementedCoreT12FactsFromPayload = supplementT12FactsFromPayload(supplementedCoreT12Facts, t12Payload);
-  const supplementedPurchaseFacts = supplementPurchaseFactsFromEvidence(
-    normalizeBossContractFact(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts || {}),
-    purchaseAssumptionsDoc
+  const supplementedPurchaseFacts = normalizePurchaseAssumptionLoanAmountFacts(
+    supplementPurchaseFactsFromEvidence(
+      normalizeBossContractFact(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts || {}),
+      purchaseAssumptionsDoc
+    )
   );
   const supplementedCurrentDebtFacts = supplementCurrentDebtFactsFromEvidence(
     normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || promotedCurrentDebtDoc?.extractedFacts || {}),
@@ -1153,7 +1185,7 @@ function buildAcquisitionMemoBossContract({
           ...(Number.isFinite(Number(purchaseFacts?.purchase_price)) ? ["purchase_price"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.noi_basis)) ? ["noi_basis"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.going_in_cap_rate)) ? ["going_in_cap_rate"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.proposed_loan_amount)) ? ["proposed_loan_amount"] : []),
+          ...(resolvePurchaseAssumptionLoanAmountCandidate(purchaseFacts?.proposed_loan_amount) != null ? ["proposed_loan_amount"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.ltv)) ? ["ltv"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.interest_rate)) ? ["interest_rate"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),
@@ -1205,7 +1237,7 @@ function buildAcquisitionMemoBossContract({
       factAvailability: factAvailability(
         proposedFinancingRequiredFacts,
         [
-          ...(Number.isFinite(Number(purchaseFacts?.proposed_loan_amount)) ? ["proposed_loan_amount"] : []),
+          ...(resolvePurchaseAssumptionLoanAmountCandidate(purchaseFacts?.proposed_loan_amount) != null ? ["proposed_loan_amount"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.ltv)) ? ["ltv"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.interest_rate)) ? ["interest_rate"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),

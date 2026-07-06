@@ -26,12 +26,9 @@ function roleMatchesProjectionBucket(role, bucket) {
   if (!normalizedRole || !normalizedBucket) return false;
   if (normalizedRole === normalizedBucket) return true;
   const aliases = {
-    structured_renovation_capex_plan: ["renovation_capex_context", "structured_renovation", "structured_renovation_capex_plan", "renovation_budget"],
-    appraisal_context: ["appraisal_valuation_context", "appraisal"],
-    environmental_context: ["environmental_due_diligence_context", "environmental_due_diligence", "phase_i_esa", "environmental", "phase_i"],
-    purchase_assumptions: ["proposed_acquisition_financing"],
-    current_debt_context: ["current_debt", "current_mortgage_statement", "current_debt_terms", "mortgage_statement"],
-    market_survey_context: ["market_survey"],
+    structured_renovation_capex_plan: ["renovation_capex_context"],
+    appraisal_context: ["appraisal_valuation_context"],
+    environmental_context: ["environmental_due_diligence_context"],
   };
   const bucketAliases = aliases[normalizedBucket] || [];
   if (bucketAliases.includes(normalizedRole)) return true;
@@ -47,6 +44,31 @@ function isSupportRole(entry, role) {
 
 function cloneEntry(entry) {
   return entry && typeof entry === "object" ? { ...entry } : null;
+}
+
+function resolvePurchaseAssumptionLoanAmountCandidate(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const numeric = Number(trimmed);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizeProjectedPurchaseAssumptionEntry(entry) {
+  const cloned = cloneEntry(entry);
+  if (!cloned) return null;
+  const facts = cloneEntry(cloned.extractedFacts) || {};
+  const resolvedLoanAmount =
+    resolvePurchaseAssumptionLoanAmountCandidate(facts.proposed_loan_amount) ??
+    resolvePurchaseAssumptionLoanAmountCandidate(facts.stated_acquisition_loan_amount) ??
+    resolvePurchaseAssumptionLoanAmountCandidate(facts.derived_acquisition_loan_amount) ??
+    resolvePurchaseAssumptionLoanAmountCandidate(facts.loan_amount);
+  if (resolvePurchaseAssumptionLoanAmountCandidate(facts.proposed_loan_amount) == null && resolvedLoanAmount != null) {
+    facts.proposed_loan_amount = resolvedLoanAmount;
+  }
+  cloned.extractedFacts = facts;
+  return cloned;
 }
 
 function buildChecklist(projection) {
@@ -114,7 +136,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
       bothCoreSourcesPresent: Boolean(coreT12) && Boolean(coreRentRoll),
     },
     supportDocProjection: {
-      purchaseAssumptions: cloneEntry(purchaseAssumptions),
+      purchaseAssumptions: normalizeProjectedPurchaseAssumptionEntry(purchaseAssumptions),
       currentDebtContext: cloneEntry(currentDebtContext),
       structuredRenovation: cloneEntry(structuredRenovation),
       appraisalContext: cloneEntry(appraisalContext),
@@ -140,8 +162,8 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
     },
   };
 
-  projection.acquisitionContext = cloneEntry(purchaseAssumptions);
-  projection.proposedFinancingContext = cloneEntry(purchaseAssumptions);
+  projection.acquisitionContext = normalizeProjectedPurchaseAssumptionEntry(purchaseAssumptions);
+  projection.proposedFinancingContext = normalizeProjectedPurchaseAssumptionEntry(purchaseAssumptions);
   projection.currentDebtContext = cloneEntry(currentDebtContext);
   projection.renovationContext = cloneEntry(structuredRenovation);
   projection.appraisalContext = cloneEntry(appraisalContext);
