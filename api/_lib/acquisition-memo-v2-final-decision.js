@@ -96,6 +96,7 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
 
   const publishable = Boolean(
     coreGate?.publishAllowed !== false &&
+    complianceOk &&
     modelOk &&
     !coreFatal &&
     !unsafeFinalHtml

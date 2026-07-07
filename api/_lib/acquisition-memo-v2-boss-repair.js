@@ -235,13 +235,16 @@ export function applyAcquisitionMemoV2BossRepairPlan(customerSurfaceModel, repai
   for (const sectionKey of sectionKeys) {
     const section = repaired?.sections?.[sectionKey];
     if (!isPlainObject(section)) continue;
+    const existingFactAvailability = isPlainObject(section.factAvailability) ? section.factAvailability : null;
     section.status = "collapsed";
-    section.factAvailability = {
-      required: Array.isArray(section.factAvailability?.required) ? clone(section.factAvailability.required) : [],
-      available: [],
-      missing: [],
-      sourceBacked: false,
-    };
+    if (existingFactAvailability) {
+      section.factAvailability = {
+        required: Array.isArray(existingFactAvailability.required) ? clone(existingFactAvailability.required) : [],
+        available: Array.isArray(existingFactAvailability.available) ? clone(existingFactAvailability.available) : [],
+        missing: Array.isArray(existingFactAvailability.missing) ? clone(existingFactAvailability.missing) : [],
+        sourceBacked: Boolean(existingFactAvailability.sourceBacked),
+      };
+    }
   }
 
   return repaired;

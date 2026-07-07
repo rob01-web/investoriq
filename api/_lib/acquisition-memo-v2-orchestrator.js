@@ -84,6 +84,54 @@ function buildFinalComplianceDiagnostics({
   };
 }
 
+function buildRepairProvenanceRegressionViolations({
+  baselineCustomerSurfaceModel = null,
+  repairedCustomerSurfaceModel = null,
+  baselineBossContract = null,
+  repairedBossContract = null,
+} = {}) {
+  const issues = [];
+  const compareSections = (label, baselineSections = null, repairedSections = null) => {
+    const baseSectionMap = baselineSections && typeof baselineSections === "object" ? baselineSections : {};
+    const repairedSectionMap = repairedSections && typeof repairedSections === "object" ? repairedSections : {};
+    for (const sectionKey of Object.keys(baseSectionMap)) {
+      const baselineSection = baseSectionMap[sectionKey];
+      const repairedSection = repairedSectionMap[sectionKey];
+      if (!baselineSection || !repairedSection) continue;
+      const baselineFactAvailability = baselineSection.factAvailability && typeof baselineSection.factAvailability === "object"
+        ? baselineSection.factAvailability
+        : null;
+      const repairedFactAvailability = repairedSection.factAvailability && typeof repairedSection.factAvailability === "object"
+        ? repairedSection.factAvailability
+        : null;
+      if (!baselineFactAvailability || !repairedFactAvailability) continue;
+
+      const regressionNotes = [];
+      if (baselineFactAvailability.sourceBacked === true && repairedFactAvailability.sourceBacked !== true) {
+        regressionNotes.push("sourceBacked");
+      }
+      for (const field of ["required", "available", "missing"]) {
+        const baselineValues = Array.isArray(baselineFactAvailability[field]) ? baselineFactAvailability[field].map((value) => String(value)) : [];
+        const repairedValues = Array.isArray(repairedFactAvailability[field]) ? repairedFactAvailability[field].map((value) => String(value)) : [];
+        if (baselineValues.some((value) => !repairedValues.includes(value))) regressionNotes.push(field);
+      }
+
+      if (regressionNotes.length > 0) {
+        issues.push({
+          code: "REPAIR_PROVENANCE_REGRESSION",
+          severity: "critical",
+          section: `${label}.${sectionKey}`,
+          message: `${label} section ${sectionKey} lost provenance facts during repair: ${regressionNotes.join(", ")}`,
+        });
+      }
+    }
+  };
+
+  compareSections("customerSurfaceModel", baselineCustomerSurfaceModel?.sections || null, repairedCustomerSurfaceModel?.sections || null);
+  compareSections("bossContract", baselineBossContract?.sections || null, repairedBossContract?.sections || null);
+  return issues;
+}
+
 export function runAcquisitionMemoV2Orchestrator({
   acquisitionMemoV2DocumentArgs,
   acquisitionMemoBossContract,
@@ -195,6 +243,48 @@ export function runAcquisitionMemoV2Orchestrator({
     customerSurfaceModelValidation = validateAcquisitionMemoV2CustomerSurfaceModel(customerSurfaceModel);
     repairAttempted = true;
     lastRepairPlan = initialRepairPlan;
+    const initialRepairProvenanceRegressionViolations = buildRepairProvenanceRegressionViolations({
+      baselineCustomerSurfaceModel: initialCustomerSurfaceModel,
+      repairedCustomerSurfaceModel: customerSurfaceModel,
+      baselineBossContract: acquisitionMemoBossContract,
+      repairedBossContract: bossContract,
+    });
+    if (initialRepairProvenanceRegressionViolations.length > 0) {
+      const failedFinalization = {
+        html: "",
+        compliance: {
+          ok: false,
+          violations: initialRepairProvenanceRegressionViolations,
+        },
+        customerSurfaceModel,
+        customerSurfaceModelValidation,
+        customerSurfaceHtmlValidation: { ok: false, issues: initialRepairProvenanceRegressionViolations },
+        bossCompliance: {
+          ok: false,
+          violations: initialRepairProvenanceRegressionViolations,
+          fatal_core: initialRepairProvenanceRegressionViolations,
+          collapseable_surface: [],
+          advisory_only: [],
+        },
+      };
+      const finalComplianceDiagnostics = buildFinalComplianceDiagnostics({
+        finalization: failedFinalization,
+        bossContractValidation: validateAcquisitionMemoBossContract(acquisitionMemoBossContract),
+        customerSurfaceModelValidation,
+        repairPlan: initialRepairPlan,
+        repairAttempted: true,
+      });
+      return {
+        ...failedFinalization,
+        finalComplianceDiagnostics,
+        finalDeliveryDecision: buildAcquisitionMemoV2FinalDeliveryDecision({
+          finalization: failedFinalization,
+          coreGate: acquisitionMemoBossContract?.coreGate || null,
+          repairPlan: initialRepairPlan,
+          diagnostics: finalComplianceDiagnostics,
+        }),
+      };
+    }
   }
 
   let finalization = renderAndValidate(customerSurfaceModel, bossContract);
@@ -213,7 +303,13 @@ export function runAcquisitionMemoV2Orchestrator({
       if (repairedCustomerSurfaceModelValidation.ok || repairPlan.repairableSectionKeys.length > 0) {
         const retryFinalization = renderAndValidate(repairedCustomerSurfaceModel, repairedBossContract, repairPlan);
         repairedHtmlRevalidated = true;
-        if (retryFinalization.compliance.ok) {
+        const provenanceRegressionViolations = buildRepairProvenanceRegressionViolations({
+          baselineCustomerSurfaceModel: initialCustomerSurfaceModel,
+          repairedCustomerSurfaceModel: repairedCustomerSurfaceModel,
+          baselineBossContract: acquisitionMemoBossContract,
+          repairedBossContract: repairedBossContract,
+        });
+        if (retryFinalization.compliance.ok && provenanceRegressionViolations.length === 0) {
           const finalComplianceDiagnostics = buildFinalComplianceDiagnostics({
             finalization: retryFinalization,
             bossContractValidation: validateAcquisitionMemoBossContract(repairedBossContract),
@@ -239,6 +335,15 @@ export function runAcquisitionMemoV2Orchestrator({
         }
         finalization = {
           ...retryFinalization,
+          compliance: provenanceRegressionViolations.length > 0
+            ? {
+                ok: false,
+                violations: [
+                  ...(Array.isArray(retryFinalization?.compliance?.violations) ? retryFinalization.compliance.violations : []),
+                  ...provenanceRegressionViolations,
+                ],
+              }
+            : retryFinalization.compliance,
           customerSurfaceModelValidation: repairedCustomerSurfaceModelValidation,
         };
       }
