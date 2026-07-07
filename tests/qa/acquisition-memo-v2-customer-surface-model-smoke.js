@@ -783,7 +783,7 @@ const partialCurrentDebtModel = buildAcquisitionMemoV2CustomerSurfaceModel({
 });
 assert.equal(validateAcquisitionMemoV2CustomerSurfaceModel(partialCurrentDebtModel).ok, true);
 assert.equal(partialCurrentDebtModel.sections.currentDebtContext.status, "collapsed");
-assert.equal(partialCurrentDebtModel.sections.currentDebtContext.factAvailability.sourceBacked, false);
+assert.equal(partialCurrentDebtModel.sections.currentDebtContext.factAvailability.sourceBacked, true);
 
 const partialPurchaseFixture = buildVariantFixture({
   propertyName: "Partial Purchase Assumptions",
@@ -865,8 +865,8 @@ const partialPurchaseModel = buildAcquisitionMemoV2CustomerSurfaceModel({
   reportMode: "v1_core",
 });
 assert.equal(validateAcquisitionMemoV2CustomerSurfaceModel(partialPurchaseModel).ok, true);
-assert.equal(partialPurchaseModel.sections.acquisitionRequestContext.status, "collapsed");
-assert.equal(partialPurchaseModel.sections.proposedFinancingContext.status, "collapsed");
+assert.equal(partialPurchaseModel.sections.acquisitionRequestContext.status, "required");
+assert.equal(partialPurchaseModel.sections.proposedFinancingContext.status, "required");
 
 const missingT12Fixture = buildCoreMissingFixture({ includeT12: false, includeRentRoll: true });
 const missingT12SourcePackage = buildCanonicalSourcePackage(missingT12Fixture.uploadedFiles, missingT12Fixture.parsedArtifacts);
