@@ -84,6 +84,14 @@ const REQUIRED_SECTION_ASSERTION_CODES = {
   documentTreatment: ["DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED"],
 };
 
+const SOURCE_BACKED_INTEGRITY_VIOLATION_SECTIONS = Object.freeze({
+  UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT: "unitMix",
+  UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS: "unitMix",
+  CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED: "currentDebtContext",
+  PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED: "proposedFinancingContext",
+  ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED: "acquisitionRequestContext",
+});
+
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -164,6 +172,23 @@ function normalizeSupportDocRecord(doc, sourceLabel = null) {
     source.acceptedSourceIdentityKey || source.accepted_source_identity_key || null;
   const acceptedProvenance =
     source.acceptedProvenance || source.accepted_provenance || source.provenance || null;
+  const acceptedSourceTruth = normalizeBossContractFact(source.acceptedSourceTruth || source.accepted_source_truth || {});
+  const acceptedPurchaseAssumptionsTruth = Boolean(
+    source.acceptedPurchaseAssumptionsTruth === true ||
+      source.accepted_purchase_assumptions_truth === true ||
+      acceptedProvenance?.acceptedPurchaseAssumptionsTruth === true ||
+      acceptedProvenance?.accepted_purchase_assumptions_truth === true ||
+      acceptedSourceTruth?.purchaseAssumptionsPresent === true ||
+      acceptedSourceTruth?.hasPurchaseAssumptions === true
+  );
+  const acceptedCurrentDebtTruth = Boolean(
+    source.acceptedCurrentDebtTruth === true ||
+      source.accepted_current_debt_truth === true ||
+      acceptedProvenance?.acceptedCurrentDebtTruth === true ||
+      acceptedProvenance?.accepted_current_debt_truth === true ||
+      acceptedSourceTruth?.currentDebtPresent === true ||
+      acceptedSourceTruth?.hasCurrentDebtContext === true
+  );
   return normalizeBossContractFact({
     fileId: source.fileId || source.file_id || source.id || null,
     originalFilename: source.originalFilename || source.original_filename || source.filename || null,
@@ -182,8 +207,10 @@ function normalizeSupportDocRecord(doc, sourceLabel = null) {
     acceptedDebtBasis,
     acceptedSemanticDocDisplayLabel,
     acceptedSourceIdentityKey,
-    acceptedSourceTruth: normalizeBossContractFact(source.acceptedSourceTruth || source.accepted_source_truth || {}),
+    acceptedSourceTruth,
     acceptedProvenance: normalizeBossContractFact(acceptedProvenance || {}),
+    acceptedPurchaseAssumptionsTruth,
+    acceptedCurrentDebtTruth,
   });
 }
 
@@ -804,6 +831,18 @@ function routeAcquisitionMemoBossViolations(bossContract, validationOrViolations
     }
 
     const code = String(violation?.code || "");
+    const sourceBackedIntegritySectionKey = SOURCE_BACKED_INTEGRITY_VIOLATION_SECTIONS[code] || null;
+    if (sourceBackedIntegritySectionKey) {
+      const sectionSourceBacked = Boolean(getFactAvailability(bossContract?.sections?.[sourceBackedIntegritySectionKey])?.sourceBacked);
+      if (sectionSourceBacked) {
+        push("fatal_core", violation, {
+          routingReason: "source_backed_integrity_failure",
+          section: sourceBackedIntegritySectionKey,
+        });
+        continue;
+      }
+    }
+
     if (isHardFatalViolationCode(code)) {
       push("fatal_core", violation);
       continue;
@@ -1025,12 +1064,17 @@ function buildAcquisitionMemoBossContract({
   const unitMixAvailable = hasStructuredValues(rentRollFacts?.unit_mix) || hasStructuredValues(rentRollFacts?.units);
   const totalUnitsAvailable = Number.isFinite(Number(rentRollFacts?.total_units)) || Number.isFinite(Number(coreMetrics?.units));
   const t12ExpenseLinesAvailable = hasStructuredValues(t12Facts?.expense_lines);
+  const unitMixSourceBacked = Boolean(coreRentRoll);
+  const capRateSourceBacked = Boolean(coreRentRoll);
+  const t12SourceBacked = Boolean(coreT12);
   const currentDebtAvailable =
     Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ||
     hasStructuredValues(currentDebtFacts);
+  const currentDebtSourceBacked = Boolean(promotedCurrentDebtDoc?.acceptedCurrentDebtTruth);
   const purchaseAssumptionsAvailable =
     Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ||
     hasStructuredValues(purchaseFacts);
+  const purchaseAssumptionsSourceBacked = Boolean(purchaseAssumptionsDoc?.acceptedPurchaseAssumptionsTruth);
   const supportDocsAvailable = supportDocs.length > 0;
   const currentDebtRequiredFacts = [
     "current_outstanding_balance",
@@ -1127,7 +1171,7 @@ function buildAcquisitionMemoBossContract({
           ...(Number.isFinite(Number(rentRollFacts?.total_units)) ? ["total_units"] : []),
           ...(Number.isFinite(Number(rentRollFacts?.occupancy)) ? ["occupancy"] : []),
         ],
-        unitMixAvailable
+        unitMixSourceBacked
       ),
       postRenderAssertions: [
         buildBossContractAssertion("UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS", "Unit mix is required when structured rent roll evidence exists.", "critical", "unitMix"),
@@ -1159,7 +1203,7 @@ function buildAcquisitionMemoBossContract({
           ...(Number.isFinite(Number(coreMetrics?.units)) || Number.isFinite(Number(rentRollFacts?.total_units)) ? ["units"] : []),
           ...(Number.isFinite(Number(coreMetrics?.noi)) || Number.isFinite(Number(t12Facts?.net_operating_income)) ? ["noi"] : []),
         ],
-        totalUnitsAvailable
+        capRateSourceBacked
       ),
       postRenderAssertions: [
         buildBossContractAssertion("CAP_RATE_PER_UNIT_REQUIRED_WHEN_UNITS_EXIST", "Per-unit cap-rate values are required when units exist.", "critical", "capRateValueIndication"),
@@ -1175,7 +1219,7 @@ function buildAcquisitionMemoBossContract({
       ],
     }),
     acquisitionRequestContext: buildSectionContract({
-      status: purchaseAssumptionsAvailable ? "required" : "collapsed",
+      status: purchaseAssumptionsSourceBacked ? "required" : "collapsed",
       requiredFacts: acquisitionRequestRequiredFacts,
       sourceBindings: buildSectionBindings("purchase_assumptions", ["purchase_price", "noi_basis", "going_in_cap_rate", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"]),
       collapseInstructions: ["If purchase assumptions are absent, collapse the acquisition request context instead of inventing terms."],
@@ -1191,7 +1235,7 @@ function buildAcquisitionMemoBossContract({
           ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.lender_fee_percent)) ? ["lender_fee_percent"] : []),
         ],
-        purchaseAssumptionsAvailable
+        purchaseAssumptionsSourceBacked
       ),
       postRenderAssertions: [
         buildBossContractAssertion("ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Acquisition request facts are required when purchase assumptions are source-backed.", "critical", "acquisitionRequestContext"),
@@ -1209,7 +1253,7 @@ function buildAcquisitionMemoBossContract({
       sourceBindings: buildSectionBindings("core_rent_roll", ["annual_in_place_rent", "annual_market_rent", "unit_mix"]),
     }),
     currentDebtContext: buildSectionContract({
-      status: currentDebtAvailable ? "required" : "collapsed",
+      status: currentDebtSourceBacked ? "required" : "collapsed",
       requiredFacts: currentDebtRequiredFacts,
       sourceBindings: buildSectionBindings("current_debt_context", ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"]),
       collapseInstructions: ["If current debt facts are unavailable or unusable, collapse the debt context section with a customer-safe note."],
@@ -1223,14 +1267,14 @@ function buildAcquisitionMemoBossContract({
           ...(Number.isFinite(Number(currentDebtFacts?.monthly_payment)) ? ["monthly_payment"] : []),
           ...(currentDebtFacts?.maturity_date ? ["maturity_date"] : []),
         ],
-        currentDebtAvailable
+        currentDebtSourceBacked
       ),
       postRenderAssertions: [
         buildBossContractAssertion("CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Current debt facts are required when current debt is source-backed.", "critical", "currentDebtContext"),
       ],
     }),
     proposedFinancingContext: buildSectionContract({
-      status: purchaseAssumptionsAvailable ? "required" : "collapsed",
+      status: purchaseAssumptionsSourceBacked ? "required" : "collapsed",
       requiredFacts: proposedFinancingRequiredFacts,
       sourceBindings: buildSectionBindings("purchase_assumptions", ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"]),
       collapseInstructions: ["If proposed financing facts are unavailable, collapse the proposed financing context section rather than borrowing current debt facts."],
@@ -1243,7 +1287,7 @@ function buildAcquisitionMemoBossContract({
           ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),
           ...(Number.isFinite(Number(purchaseFacts?.lender_fee_percent)) ? ["lender_fee_percent"] : []),
         ],
-        purchaseAssumptionsAvailable
+        purchaseAssumptionsSourceBacked
       ),
       postRenderAssertions: [
         buildBossContractAssertion("PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Proposed financing facts are required when purchase assumptions are source-backed.", "critical", "proposedFinancingContext"),
@@ -1277,7 +1321,7 @@ function buildAcquisitionMemoBossContract({
           ...(Number.isFinite(Number(t12Facts?.net_operating_income)) ? ["net_operating_income"] : []),
           ...(Number.isFinite(Number(t12Facts?.gross_potential_rent)) ? ["gross_potential_rent"] : []),
         ],
-        t12ExpenseLinesAvailable
+        t12SourceBacked
       ),
       postRenderAssertions: [
         buildBossContractAssertion("T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT", "T12 expense lines are required when structured expense detail exists.", "critical", "operatingStatementTTMSummary"),

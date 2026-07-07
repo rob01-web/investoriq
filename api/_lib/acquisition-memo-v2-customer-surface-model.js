@@ -172,19 +172,15 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
   const acceptedSemanticDocRole = String(
     source.acceptedSemanticDocRole ||
       source.accepted_semantic_doc_role ||
-      source.semantic_doc_role ||
       source.payload?.acceptedSemanticDocRole ||
       source.payload?.accepted_semantic_doc_role ||
-      source.payload?.semantic_doc_role ||
       ""
   ).trim().toLowerCase();
   const acceptedDebtBasis = String(
     source.acceptedDebtBasis ||
       source.accepted_debt_basis ||
-      source.debt_basis ||
       source.payload?.acceptedDebtBasis ||
       source.payload?.accepted_debt_basis ||
-      source.payload?.debt_basis ||
       ""
   ).trim().toLowerCase();
   const acceptedSemanticDocDisplayLabel = String(
@@ -246,8 +242,7 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
       source.acceptedPurchaseAssumptionsTruth === true ||
         source.accepted_purchase_assumptions_truth === true ||
         acceptedSemanticDocRole === "purchase_assumptions" ||
-        acceptedDebtBasis === "acquisition_financing_assumption" ||
-        /purchase assumptions|proposed acquisition financing/i.test(acceptedSemanticDocDisplayLabel)
+        acceptedDebtBasis === "acquisition_financing_assumption"
     ),
     acceptedCurrentDebtTruth: Boolean(
       source.acceptedCurrentDebtTruth === true ||
@@ -258,8 +253,7 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
         acceptedSemanticDocRole === "current_debt_terms" ||
         acceptedSemanticDocRole === "mortgage_statement" ||
         acceptedDebtBasis === "current_debt" ||
-        acceptedDebtBasis === "current_debt_context" ||
-        /current debt|current mortgage|debt statement/i.test(acceptedSemanticDocDisplayLabel)
+        acceptedDebtBasis === "current_debt_context"
     ),
   };
 }
@@ -384,10 +378,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "acquisitionRequestContext") {
     const purchaseAssumptions = supportDocsByRole.purchase_assumptions || null;
     const proposed = purchaseAssumptions?.extractedFacts || {};
-    const hasSourceBackedFacts =
-      Number.isFinite(normalizeMoney(proposed.purchase_price)) &&
-      Number.isFinite(normalizeMoney(proposed.proposed_loan_amount));
-    if (!purchaseAssumptions || !hasSourceBackedFacts) {
+    const purchaseAssumptionsSourceBacked = Boolean(purchaseAssumptions?.acceptedPurchaseAssumptionsTruth);
+    if (!purchaseAssumptions || !purchaseAssumptionsSourceBacked) {
       return {
         ...section,
         status: "collapsed",
@@ -448,19 +440,23 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         })
           .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)))
           .map(([keyName]) => keyName),
-        missing: Object.entries({
-          purchase_price: proposed.purchase_price,
-          noi_basis: proposed.noi_basis,
-          going_in_cap_rate: proposed.going_in_cap_rate,
-          proposed_loan_amount: proposed.proposed_loan_amount,
-          ltv: proposed.ltv,
-          interest_rate: proposed.interest_rate,
-          amortization_years: proposed.amortization_years,
-          lender_fee_percent: proposed.lender_fee_percent,
-        })
-          .filter(([, value]) => !(Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value))))
-          .map(([keyName]) => keyName),
-        sourceBacked: true,
+        missing: ["purchase_price", "proposed_loan_amount"].filter(
+          (factName) =>
+            !Object.entries({
+              purchase_price: proposed.purchase_price,
+              noi_basis: proposed.noi_basis,
+              going_in_cap_rate: proposed.going_in_cap_rate,
+              proposed_loan_amount: proposed.proposed_loan_amount,
+              ltv: proposed.ltv,
+              interest_rate: proposed.interest_rate,
+              amortization_years: proposed.amortization_years,
+              lender_fee_percent: proposed.lender_fee_percent,
+            })
+              .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)))
+              .map(([keyName]) => keyName)
+              .includes(factName)
+        ),
+        sourceBacked: purchaseAssumptionsSourceBacked,
       },
       sourceDoc: purchaseAssumptions,
     };
@@ -469,13 +465,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "currentDebtContext") {
     const currentDebt = supportDocsByRole.current_debt_context || null;
     const currentDebtFacts = currentDebt?.extractedFacts || {};
-    const hasPositiveEvidence =
-      Number.isFinite(normalizeMoney(currentDebtFacts.current_outstanding_balance)) &&
-      Number.isFinite(normalizeCapRatio(currentDebtFacts.interest_rate)) &&
-      Number.isFinite(normalizeMoney(currentDebtFacts.amortization_remaining_years)) &&
-      Number.isFinite(normalizeMoney(currentDebtFacts.monthly_payment)) &&
-      String(currentDebtFacts.maturity_date || "").trim().length > 0;
-    if (!currentDebt || !hasPositiveEvidence) {
+    const currentDebtSourceBacked = Boolean(currentDebt?.acceptedCurrentDebtTruth);
+    if (!currentDebt || !currentDebtSourceBacked) {
       return {
         ...section,
         status: "collapsed",
@@ -527,16 +518,20 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         })
           .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)) || String(value || "").trim().length > 0)
           .map(([keyName]) => keyName),
-        missing: Object.entries({
-          current_outstanding_balance: currentDebtFacts.current_outstanding_balance,
-          interest_rate: currentDebtFacts.interest_rate,
-          amortization_remaining_years: currentDebtFacts.amortization_remaining_years,
-          monthly_payment: currentDebtFacts.monthly_payment,
-          maturity_date: currentDebtFacts.maturity_date,
-        })
-          .filter(([, value]) => !(Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)) || String(value || "").trim().length > 0))
-          .map(([keyName]) => keyName),
-        sourceBacked: true,
+        missing: ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"].filter(
+          (factName) =>
+            !Object.entries({
+              current_outstanding_balance: currentDebtFacts.current_outstanding_balance,
+              interest_rate: currentDebtFacts.interest_rate,
+              amortization_remaining_years: currentDebtFacts.amortization_remaining_years,
+              monthly_payment: currentDebtFacts.monthly_payment,
+              maturity_date: currentDebtFacts.maturity_date,
+            })
+              .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)) || String(value || "").trim().length > 0)
+              .map(([keyName]) => keyName)
+              .includes(factName)
+        ),
+        sourceBacked: currentDebtSourceBacked,
       },
       sourceDoc: currentDebt,
     };
@@ -545,13 +540,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "proposedFinancingContext") {
     const purchaseAssumptions = supportDocsByRole.purchase_assumptions || null;
     const proposed = purchaseAssumptions?.extractedFacts || {};
-    const hasSourceBackedFacts =
-      Number.isFinite(normalizeMoney(proposed.proposed_loan_amount)) &&
-      Number.isFinite(normalizeCapRatio(proposed.ltv)) &&
-      Number.isFinite(normalizeCapRatio(proposed.interest_rate)) &&
-      Number.isFinite(normalizeMoney(proposed.amortization_years)) &&
-      Number.isFinite(normalizeCapRatio(proposed.lender_fee_percent));
-    if (!purchaseAssumptions || !hasSourceBackedFacts) {
+    const purchaseAssumptionsSourceBacked = Boolean(purchaseAssumptions?.acceptedPurchaseAssumptionsTruth);
+    if (!purchaseAssumptions || !purchaseAssumptionsSourceBacked) {
       return {
         ...section,
         status: "collapsed",
@@ -601,16 +591,20 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         })
           .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)))
           .map(([keyName]) => keyName),
-        missing: Object.entries({
-          proposed_loan_amount: proposed.proposed_loan_amount,
-          ltv: proposed.ltv,
-          interest_rate: proposed.interest_rate,
-          amortization_years: proposed.amortization_years,
-          lender_fee_percent: proposed.lender_fee_percent,
-        })
-          .filter(([, value]) => !(Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value))))
-          .map(([keyName]) => keyName),
-        sourceBacked: true,
+        missing: ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"].filter(
+          (factName) =>
+            !Object.entries({
+              proposed_loan_amount: proposed.proposed_loan_amount,
+              ltv: proposed.ltv,
+              interest_rate: proposed.interest_rate,
+              amortization_years: proposed.amortization_years,
+              lender_fee_percent: proposed.lender_fee_percent,
+            })
+              .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)))
+              .map(([keyName]) => keyName)
+              .includes(factName)
+        ),
+        sourceBacked: purchaseAssumptionsSourceBacked,
       },
       sourceDoc: purchaseAssumptions,
     };
@@ -853,9 +847,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "unitMix") {
     const rentRoll = coreSources.coreRentRoll;
     const facts = rentRoll?.extractedFacts || {};
-    const hasSourceBackedFacts =
-      Number.isFinite(normalizeMoney(facts.total_units)) &&
-      (Array.isArray(facts.unit_mix) || Array.isArray(facts.units) || Number.isFinite(normalizeMoney(facts.total_units)));
+    const sourceBacked = Boolean(rentRoll);
     const availableFacts = Object.entries({
       total_units: facts.total_units,
       occupancy: facts.occupancy,
@@ -884,8 +876,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       factAvailability: {
         required: ["unit_mix", "total_units"],
         available: availableFacts,
-        missing: hasSourceBackedFacts ? [] : ["unit_mix", "total_units"],
-        sourceBacked: Boolean(hasSourceBackedFacts),
+        missing: ["unit_mix", "total_units"].filter((factName) => !availableFacts.includes(factName)),
+        sourceBacked,
       },
       sourceDoc: rentRoll,
     };
@@ -894,7 +886,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "capRateValueIndication") {
     const rentRoll = coreSources.coreRentRoll;
     const facts = rentRoll?.extractedFacts || {};
-    const hasSourceBackedFacts = Number.isFinite(normalizeMoney(facts.total_units)) && Number.isFinite(normalizeCapRatio(valueSemantics?.wholePropertyValue?.goingInCapRate));
+    const sourceBacked = Boolean(rentRoll);
     const availableFacts = Object.entries({
       total_units: facts.total_units,
       going_in_cap_rate: valueSemantics?.wholePropertyValue?.goingInCapRate,
@@ -917,8 +909,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       factAvailability: {
         required: ["total_units", "going_in_cap_rate"],
         available: availableFacts,
-        missing: hasSourceBackedFacts ? [] : ["total_units", "going_in_cap_rate"],
-        sourceBacked: Boolean(hasSourceBackedFacts),
+        missing: ["total_units", "going_in_cap_rate"].filter((factName) => !availableFacts.includes(factName)),
+        sourceBacked,
       },
       sourceDoc: rentRoll,
     };
@@ -927,7 +919,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "operatingStatementTTMSummary") {
     const t12 = coreSources.coreT12;
     const facts = t12?.extractedFacts || {};
-    const hasSourceBackedFacts = Number.isFinite(normalizeMoney(facts.effective_gross_income)) && Number.isFinite(normalizeMoney(facts.total_operating_expenses)) && Number.isFinite(normalizeMoney(facts.net_operating_income));
+    const sourceBacked = Boolean(t12);
     const availableFacts = Object.entries({
       income_lines: facts.income_lines,
       expense_lines: facts.expense_lines,
@@ -956,8 +948,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       factAvailability: {
         required: ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
         available: availableFacts,
-        missing: hasSourceBackedFacts ? [] : ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
-        sourceBacked: Boolean(hasSourceBackedFacts),
+        missing: ["effective_gross_income", "total_operating_expenses", "net_operating_income"].filter((factName) => !availableFacts.includes(factName)),
+        sourceBacked,
       },
       sourceDoc: t12,
     };
@@ -1241,9 +1233,6 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
       }
       if (shouldRender && isCoreSection && !section.factAvailability?.sourceBacked) {
         pushIssue("SECTION_NOT_SOURCE_BACKED", `${sectionKey} must be source-backed.`, "critical", `model.sections.${sectionKey}.factAvailability.sourceBacked`);
-      }
-      if (shouldRender && isCoreSection && Array.isArray(section.factAvailability?.missing) && section.factAvailability.missing.length > 0) {
-        pushIssue("SECTION_MISSING_FACTS_WITHOUT_COLLAPSE", `${sectionKey} cannot be source-backed with missing facts.`, "fatal_core", `model.sections.${sectionKey}.factAvailability.missing`);
       }
     }
   }
