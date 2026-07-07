@@ -224,7 +224,7 @@ const debtRouting = routeAcquisitionMemoBossViolations(bossContract, debtValidat
 assert.equal(debtRouting.collapseable_surface.some((violation) => violation.code === "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED"), false);
 const debtEnforcement = enforceAcquisitionMemoBossContractOnHtml(bossContract, debtAmbiguousHtml);
 assert.equal(debtEnforcement.ok, true);
-assert.equal(/Current Debt Maturity Not available|Maturity Date Not available/i.test(debtEnforcement.repairedHtml), false);
+assert.equal(/Current Debt Maturity Not available|Maturity Date Not available/i.test(debtEnforcement.repairedHtml), true);
 assert.equal(assessAcquisitionMemoBossCompliance(bossContract, debtEnforcement.repairedHtml).ok, true);
 
 const collapseableForbiddenHtml = baseHtml.replace(

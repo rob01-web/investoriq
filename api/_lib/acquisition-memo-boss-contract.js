@@ -697,15 +697,36 @@ function collapseSectionByTitle(html, sectionTitle, collapseText = GENERIC_COLLA
   const source = String(html || "");
   const title = String(sectionTitle || "").trim();
   if (!source || !title) return source;
-  const pattern = new RegExp(
-    `<section\\b[^>]*>[\\s\\S]*?<span[^>]*class="section-header-title"[^>]*>\\s*${escapeRegExp(title)}\\s*<\\/span>[\\s\\S]*?<\\/section>`,
+  const titlePattern = new RegExp(
+    `<span[^>]*class="section-header-title"[^>]*>\\s*${escapeRegExp(title)}\\s*<\\/span>`,
     "i"
   );
-  if (!pattern.test(source)) return source;
-  return source.replace(
-    pattern,
-    `<section class="section section-break"><div class="section-header"><span class="section-header-title">${escapeHtml(title)}</span></div><div class="card no-break"><p class="body-copy">${escapeHtml(collapseText)}</p></div></section>`
-  );
+  const titleMatch = titlePattern.exec(source);
+  if (!titleMatch || !Number.isFinite(titleMatch.index)) return source;
+
+  const sectionStart = source.lastIndexOf("<section", titleMatch.index);
+  if (sectionStart < 0) return source;
+
+  const tagPattern = /<\/?section\b[^>]*>/gi;
+  tagPattern.lastIndex = sectionStart;
+  let depth = 0;
+  let sectionEnd = -1;
+  let tagMatch = null;
+
+  while ((tagMatch = tagPattern.exec(source))) {
+    if (tagMatch.index < sectionStart) continue;
+    const isClosing = /^<\/section\b/i.test(tagMatch[0]);
+    depth += isClosing ? -1 : 1;
+    if (depth === 0) {
+      sectionEnd = tagPattern.lastIndex;
+      break;
+    }
+  }
+
+  if (sectionEnd < 0 || !(sectionStart < titleMatch.index && titleMatch.index < sectionEnd)) return source;
+
+  const replacement = `<section class="section section-break"><div class="section-header"><span class="section-header-title">${escapeHtml(title)}</span></div><div class="card no-break"><p class="body-copy">${escapeHtml(collapseText)}</p></div></section>`;
+  return `${source.slice(0, sectionStart)}${replacement}${source.slice(sectionEnd)}`;
 }
 
 function isAdvisoryViolation(violation) {
