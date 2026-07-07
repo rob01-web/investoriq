@@ -64,6 +64,10 @@ function hasRepairableOptionalSignal(repairPlan = null) {
   );
 }
 
+function hasProvenanceRegressionSignal(finalization = {}) {
+  return asArray(finalization?.compliance?.violations).some((violation) => normalizeCode(violation?.code) === "REPAIR_PROVENANCE_REGRESSION");
+}
+
 export function buildAcquisitionMemoV2FinalDeliveryDecision({
   finalization = null,
   qaActionPlan = null,
@@ -85,6 +89,7 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const coreFatal = hasCoreFatalSignal(final, coreGate, repairPlan);
   const repairableOptional = hasRepairableOptionalSignal(repairPlan);
   const unsafeFinalHtml = hasUnsafeFinalHtmlSignal(final);
+  const provenanceRegression = hasProvenanceRegressionSignal(final);
   const advisoryOnly =
     !coreFatal &&
     !unsafeFinalHtml &&
@@ -107,6 +112,8 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
       ? "true_core_fatal"
       : unsafeFinalHtml
         ? "true_unrepaired_unsafe_final_html"
+        : provenanceRegression
+          ? "unresolved_provenance_regression"
         : repairableOptional
           ? "repairable_optional_support_unresolved"
           : "final_compliance_unresolved";
@@ -114,6 +121,7 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const blockingReasons = [];
   if (coreFatal) blockingReasons.push("true_core_fatal");
   if (unsafeFinalHtml) blockingReasons.push("true_unrepaired_unsafe_final_html");
+  if (!publishable && provenanceRegression) blockingReasons.push("unresolved_provenance_regression");
   if (!publishable && repairableOptional) blockingReasons.push("repairable_optional_support_unresolved_after_repair");
   if (!publishable && blockingReasons.length === 0) blockingReasons.push("final_compliance_unresolved");
 
