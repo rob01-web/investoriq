@@ -32,8 +32,6 @@ const REPAIRABLE_BOSS_CODES = new Map([
   ["UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE", "appraisalContext"],
   ["PURCHASE_ASSUMPTIONS_FALSE_MISSING", "acquisitionRequestContext"],
   ["CURRENT_DEBT_FALSE_MISSING", "currentDebtContext"],
-  ["ACCEPTED_PURCHASE_ASSUMPTIONS_LOST", "acquisitionRequestContext"],
-  ["ACCEPTED_CURRENT_DEBT_LOST", "currentDebtContext"],
   ["HTML_PURCHASE_ASSUMPTIONS_FALSE_MISSING", "acquisitionRequestContext"],
   ["HTML_CURRENT_DEBT_FALSE_MISSING", "currentDebtContext"],
   ["HTML_UNIT_MIX_LABEL_MISSING", "unitMix"],
@@ -159,6 +157,12 @@ function isForbiddenSurfaceViolation(violation = {}) {
 function isCoreFatalPath(path = "", code = "") {
   const normalizedPath = normalizeText(path);
   const normalizedCode = normalizeText(code);
+  if (
+    normalizedCode === "accepted_purchase_assumptions_lost" ||
+    normalizedCode === "accepted_current_debt_lost"
+  ) {
+    return true;
+  }
   return Boolean(
     normalizedPath.includes("model.coresources.coret12") ||
       normalizedPath.includes("model.coresources.corerentroll") ||
@@ -192,6 +196,11 @@ export function buildAcquisitionMemoV2BossRepairPlan({
     const path = String(violation?.path || violation?.section || "").trim();
     const severity = String(violation?.severity || "").trim().toLowerCase();
 
+    if (isCoreFatalPath(path, code)) {
+      coreFatal.push(violation);
+      continue;
+    }
+
     if (severity === "advisory" || severity === "warning") {
       advisoryOnly.push(violation);
       continue;
@@ -199,11 +208,6 @@ export function buildAcquisitionMemoV2BossRepairPlan({
 
     if (isForbiddenSurfaceViolation(violation)) {
       forbiddenSurface.push(violation);
-      continue;
-    }
-
-    if (isCoreFatalPath(path, code)) {
-      coreFatal.push(violation);
       continue;
     }
 

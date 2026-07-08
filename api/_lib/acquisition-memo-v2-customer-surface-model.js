@@ -151,9 +151,24 @@ function uniqueSupportDocKey(doc) {
   return `role:${normalizeText(doc?.canonicalRole || doc?.role || doc?.visibleLabel || "")}`;
 }
 
+function supportDocIdentityKeys(doc) {
+  const keys = [];
+  const fileId = String(doc?.fileId || "").trim();
+  const originalFilename = String(doc?.originalFilename || "").trim();
+  if (fileId) keys.push(`fileId:${normalizeText(fileId)}`);
+  if (originalFilename) keys.push(`filename:${normalizeText(originalFilename)}`);
+  if (keys.length === 0) keys.push(uniqueSupportDocKey(doc));
+  return keys;
+}
+
 function normalizeSupportDoc(doc, sourceKind = "support_doc") {
   const source = isPlainObject(doc) ? doc : null;
   if (!source) return null;
+  const acceptedProvenance = isPlainObject(source.acceptedProvenance)
+    ? source.acceptedProvenance
+    : isPlainObject(source.accepted_provenance)
+      ? source.accepted_provenance
+      : null;
 
   const extractedFacts = clone(
     source.extractedFacts ||
@@ -172,6 +187,8 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
   const acceptedSemanticDocRole = String(
     source.acceptedSemanticDocRole ||
       source.accepted_semantic_doc_role ||
+      acceptedProvenance?.acceptedSemanticDocRole ||
+      acceptedProvenance?.accepted_semantic_doc_role ||
       source.payload?.acceptedSemanticDocRole ||
       source.payload?.accepted_semantic_doc_role ||
       ""
@@ -179,6 +196,8 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
   const acceptedDebtBasis = String(
     source.acceptedDebtBasis ||
       source.accepted_debt_basis ||
+      acceptedProvenance?.acceptedDebtBasis ||
+      acceptedProvenance?.accepted_debt_basis ||
       source.payload?.acceptedDebtBasis ||
       source.payload?.accepted_debt_basis ||
       ""
@@ -192,8 +211,49 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
       source.payload?.semantic_doc_display_label ||
       ""
   ).trim();
+  const acceptedRoleIsPurchaseAssumptions = acceptedSemanticDocRole === "purchase_assumptions";
+  const acceptedRoleIsCurrentDebt =
+    acceptedSemanticDocRole === "current_debt" ||
+    acceptedSemanticDocRole === "current_debt_context" ||
+    acceptedSemanticDocRole === "current_mortgage_statement" ||
+    acceptedSemanticDocRole === "current_debt_terms" ||
+    acceptedSemanticDocRole === "mortgage_statement";
+  const normalizedAcceptedSemanticDocRole = acceptedRoleIsCurrentDebt
+    ? "current_debt_context"
+    : acceptedSemanticDocRole;
+  const acceptedBasisIsPurchaseAssumptions = acceptedDebtBasis === "acquisition_financing_assumption";
+  const acceptedBasisIsCurrentDebt =
+    acceptedDebtBasis === "current_debt" ||
+    acceptedDebtBasis === "current_debt_context";
+  const explicitAcceptedPurchaseTruth =
+    source.acceptedPurchaseAssumptionsTruth === true ||
+    source.accepted_purchase_assumptions_truth === true;
+  const explicitAcceptedCurrentDebtTruth =
+    source.acceptedCurrentDebtTruth === true ||
+    source.accepted_current_debt_truth === true;
+  const purchaseBasisCompatible = !acceptedDebtBasis || acceptedBasisIsPurchaseAssumptions;
+  const currentDebtBasisCompatible = !acceptedDebtBasis || acceptedBasisIsCurrentDebt;
+  let acceptedPurchaseAssumptionsTruth = false;
+  let acceptedCurrentDebtTruth = false;
+  if (acceptedRoleIsPurchaseAssumptions) {
+    acceptedPurchaseAssumptionsTruth = purchaseBasisCompatible;
+  } else if (acceptedRoleIsCurrentDebt) {
+    acceptedCurrentDebtTruth = currentDebtBasisCompatible;
+  } else if (acceptedSemanticDocRole) {
+    acceptedPurchaseAssumptionsTruth = false;
+    acceptedCurrentDebtTruth = false;
+  } else if (acceptedBasisIsPurchaseAssumptions) {
+    acceptedPurchaseAssumptionsTruth = true;
+  } else if (acceptedBasisIsCurrentDebt) {
+    acceptedCurrentDebtTruth = true;
+  } else if (explicitAcceptedPurchaseTruth && !explicitAcceptedCurrentDebtTruth) {
+    acceptedPurchaseAssumptionsTruth = true;
+  } else if (explicitAcceptedCurrentDebtTruth && !explicitAcceptedPurchaseTruth) {
+    acceptedCurrentDebtTruth = true;
+  }
   const canonicalRole = String(
-    source.canonicalRole ||
+    normalizedAcceptedSemanticDocRole ||
+      source.canonicalRole ||
       source.role ||
       source.semantic_doc_role ||
       source.doc_type ||
@@ -238,24 +298,250 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
     acceptedSemanticDocRole: acceptedSemanticDocRole || null,
     acceptedDebtBasis: acceptedDebtBasis || null,
     acceptedSemanticDocDisplayLabel: acceptedSemanticDocDisplayLabel || null,
-    acceptedPurchaseAssumptionsTruth: Boolean(
-      source.acceptedPurchaseAssumptionsTruth === true ||
-        source.accepted_purchase_assumptions_truth === true ||
-        acceptedSemanticDocRole === "purchase_assumptions" ||
-        acceptedDebtBasis === "acquisition_financing_assumption"
-    ),
-    acceptedCurrentDebtTruth: Boolean(
-      source.acceptedCurrentDebtTruth === true ||
-        source.accepted_current_debt_truth === true ||
-        acceptedSemanticDocRole === "current_debt" ||
-        acceptedSemanticDocRole === "current_debt_context" ||
-        acceptedSemanticDocRole === "current_mortgage_statement" ||
-        acceptedSemanticDocRole === "current_debt_terms" ||
-        acceptedSemanticDocRole === "mortgage_statement" ||
-        acceptedDebtBasis === "current_debt" ||
-        acceptedDebtBasis === "current_debt_context"
-    ),
+    acceptedPurchaseAssumptionsTruth,
+    acceptedCurrentDebtTruth,
   };
+}
+
+function acceptedAuthorityStrength(doc) {
+  return (
+    (doc?.acceptedSemanticDocRole ? 4 : 0) +
+    (doc?.acceptedDebtBasis ? 2 : 0) +
+    (doc?.acceptedPurchaseAssumptionsTruth === true ? 1 : 0) +
+    (doc?.acceptedCurrentDebtTruth === true ? 1 : 0)
+  );
+}
+
+function normalizedAcceptedAuthorityFamily(doc) {
+  if (doc?.acceptedPurchaseAssumptionsTruth === true) return "purchase_assumptions";
+  if (doc?.acceptedCurrentDebtTruth === true) return "current_debt_context";
+  if (doc?.acceptedSemanticDocRole === "purchase_assumptions") return "purchase_assumptions";
+  if (doc?.acceptedSemanticDocRole === "current_debt_context") return "current_debt_context";
+  if (doc?.acceptedDebtBasis === "acquisition_financing_assumption") return "purchase_assumptions";
+  if (doc?.acceptedDebtBasis === "current_debt" || doc?.acceptedDebtBasis === "current_debt_context") {
+    return "current_debt_context";
+  }
+  if (doc?.acceptedSemanticDocRole) return `accepted_role:${doc.acceptedSemanticDocRole}`;
+  return "";
+}
+
+function acceptedAuthoritySignature(doc) {
+  return [
+    normalizedAcceptedAuthorityFamily(doc),
+    String(doc?.acceptedSemanticDocRole || ""),
+    String(doc?.acceptedDebtBasis || ""),
+    doc?.acceptedPurchaseAssumptionsTruth === true ? "1" : "0",
+    doc?.acceptedCurrentDebtTruth === true ? "1" : "0",
+  ].join("|");
+}
+
+function compareAcceptedAuthorityPriority(leftDoc, rightDoc) {
+  const strengthDelta = acceptedAuthorityStrength(rightDoc) - acceptedAuthorityStrength(leftDoc);
+  if (strengthDelta !== 0) return strengthDelta;
+  const leftSignature = acceptedAuthoritySignature(leftDoc);
+  const rightSignature = acceptedAuthoritySignature(rightDoc);
+  if (leftSignature < rightSignature) return -1;
+  if (leftSignature > rightSignature) return 1;
+  return 0;
+}
+
+function resolveMergedExtractedFacts(existingDoc, incomingDoc) {
+  const stableExtractedFactsSignature = (facts) => {
+    const normalizeForSignature = (value) => {
+      if (value === undefined) return { type: "undefined" };
+      if (value === null) return { type: "null" };
+      if (Array.isArray(value)) return { type: "array", value: value.map((item) => normalizeForSignature(item)) };
+      if (isPlainObject(value)) {
+        return {
+          type: "object",
+          value: Object.keys(value)
+            .sort()
+            .map((key) => [key, normalizeForSignature(value[key])]),
+        };
+      }
+      if (typeof value === "string") return { type: "string", value };
+      if (typeof value === "number") return { type: "number", value };
+      if (typeof value === "boolean") return { type: "boolean", value };
+      return { type: typeof value, value: String(value) };
+    };
+    return JSON.stringify(normalizeForSignature(isPlainObject(facts) ? facts : {}));
+  };
+  const stableIdentitySignature = (doc) =>
+    JSON.stringify({
+      fileId: String(doc?.fileId || "").trim(),
+      originalFilename: String(doc?.originalFilename || "").trim(),
+      canonicalRole: String(doc?.canonicalRole || "").trim(),
+    });
+  const docsByPriority = [existingDoc, incomingDoc].sort((leftDoc, rightDoc) => {
+    const priority = compareAcceptedAuthorityPriority(leftDoc, rightDoc);
+    if (priority !== 0) return priority;
+    const leftSignature = stableExtractedFactsSignature(leftDoc?.extractedFacts);
+    const rightSignature = stableExtractedFactsSignature(rightDoc?.extractedFacts);
+    if (leftSignature < rightSignature) return -1;
+    if (leftSignature > rightSignature) return 1;
+    const leftIdentitySignature = stableIdentitySignature(leftDoc);
+    const rightIdentitySignature = stableIdentitySignature(rightDoc);
+    if (leftIdentitySignature < rightIdentitySignature) return -1;
+    if (leftIdentitySignature > rightIdentitySignature) return 1;
+    return 0;
+  });
+  const primaryFacts = isPlainObject(docsByPriority[0]?.extractedFacts) ? docsByPriority[0].extractedFacts : {};
+  const secondaryFacts = isPlainObject(docsByPriority[1]?.extractedFacts) ? docsByPriority[1].extractedFacts : {};
+  const primaryFamily = normalizedAcceptedAuthorityFamily(docsByPriority[0]);
+  const secondaryFamily = normalizedAcceptedAuthorityFamily(docsByPriority[1]);
+  const mergedFacts = clone(primaryFacts);
+
+  if ((primaryFamily || secondaryFamily) && primaryFamily !== secondaryFamily) return mergedFacts;
+
+  const isMissingFactValue = (value) => {
+    if (value == null) return true;
+    if (typeof value === "string") return value.trim().length === 0;
+    if (Array.isArray(value)) return value.length === 0;
+    if (isPlainObject(value)) return Object.keys(value).length === 0;
+    return false;
+  };
+
+  for (const [key, secondaryValue] of Object.entries(secondaryFacts)) {
+    if (!isMissingFactValue(mergedFacts[key])) continue;
+    if (isMissingFactValue(secondaryValue)) continue;
+    mergedFacts[key] = clone(secondaryValue);
+  }
+
+  return mergedFacts;
+}
+
+function resolveMergedExtractedFactsFromGroup(docs) {
+  const stableExtractedFactsSignature = (facts) => {
+    const normalizeForSignature = (value) => {
+      if (value === undefined) return { type: "undefined" };
+      if (value === null) return { type: "null" };
+      if (Array.isArray(value)) return { type: "array", value: value.map((item) => normalizeForSignature(item)) };
+      if (isPlainObject(value)) {
+        return {
+          type: "object",
+          value: Object.keys(value)
+            .sort()
+            .map((key) => [key, normalizeForSignature(value[key])]),
+        };
+      }
+      if (typeof value === "string") return { type: "string", value };
+      if (typeof value === "number") return { type: "number", value };
+      if (typeof value === "boolean") return { type: "boolean", value };
+      return { type: typeof value, value: String(value) };
+    };
+    return JSON.stringify(normalizeForSignature(isPlainObject(facts) ? facts : {}));
+  };
+  const stableIdentitySignature = (doc) =>
+    JSON.stringify({
+      fileId: String(doc?.fileId || "").trim(),
+      originalFilename: String(doc?.originalFilename || "").trim(),
+      canonicalRole: String(doc?.canonicalRole || "").trim(),
+    });
+  const isMissingFactValue = (value) => {
+    if (value == null) return true;
+    if (typeof value === "string") return value.trim().length === 0;
+    if (Array.isArray(value)) return value.length === 0;
+    if (isPlainObject(value)) return Object.keys(value).length === 0;
+    return false;
+  };
+  const validDocs = (Array.isArray(docs) ? docs : []).filter((doc) => isPlainObject(doc));
+  if (validDocs.length === 0) return {};
+  const docsByPriority = validDocs.slice().sort((leftDoc, rightDoc) => {
+    const priority = compareAcceptedAuthorityPriority(leftDoc, rightDoc);
+    if (priority !== 0) return priority;
+    const leftSignature = stableExtractedFactsSignature(leftDoc?.extractedFacts);
+    const rightSignature = stableExtractedFactsSignature(rightDoc?.extractedFacts);
+    if (leftSignature < rightSignature) return -1;
+    if (leftSignature > rightSignature) return 1;
+    const leftIdentitySignature = stableIdentitySignature(leftDoc);
+    const rightIdentitySignature = stableIdentitySignature(rightDoc);
+    if (leftIdentitySignature < rightIdentitySignature) return -1;
+    if (leftIdentitySignature > rightIdentitySignature) return 1;
+    return 0;
+  });
+  const primaryDoc = docsByPriority[0];
+  const primaryFacts = isPlainObject(primaryDoc?.extractedFacts) ? primaryDoc.extractedFacts : {};
+  const primaryFamily = normalizedAcceptedAuthorityFamily(primaryDoc);
+  const mergedFacts = clone(primaryFacts);
+
+  for (const secondaryDoc of docsByPriority.slice(1)) {
+    const secondaryFamily = normalizedAcceptedAuthorityFamily(secondaryDoc);
+    const familyCompatible = primaryFamily
+      ? secondaryFamily === primaryFamily
+      : secondaryFamily === "";
+    if (!familyCompatible) continue;
+    const secondaryFacts = isPlainObject(secondaryDoc?.extractedFacts) ? secondaryDoc.extractedFacts : {};
+    for (const [key, secondaryValue] of Object.entries(secondaryFacts)) {
+      if (!isMissingFactValue(mergedFacts[key])) continue;
+      if (isMissingFactValue(secondaryValue)) continue;
+      mergedFacts[key] = clone(secondaryValue);
+    }
+  }
+
+  return mergedFacts;
+}
+
+function resolveMergedAcceptedAuthority(existingDoc, incomingDoc) {
+  const docsByPriority = [existingDoc, incomingDoc].sort(compareAcceptedAuthorityPriority);
+  const primaryDoc = docsByPriority[0];
+  const secondaryDoc = docsByPriority[1];
+  const primaryFamily = normalizedAcceptedAuthorityFamily(primaryDoc);
+  const secondaryFamily = normalizedAcceptedAuthorityFamily(secondaryDoc);
+  const familiesAreCompatible =
+    (primaryFamily === "" && secondaryFamily === "") ||
+    (primaryFamily === "" && secondaryFamily !== "") ||
+    (primaryFamily !== "" && secondaryFamily === "") ||
+    primaryFamily === secondaryFamily;
+
+  if (!familiesAreCompatible) {
+    const primaryRoleFamily = normalizedAcceptedAuthorityFamily({
+      acceptedSemanticDocRole: primaryDoc?.acceptedSemanticDocRole || null,
+    });
+    const primaryBasisFamily = normalizedAcceptedAuthorityFamily({
+      acceptedDebtBasis: primaryDoc?.acceptedDebtBasis || null,
+    });
+    return {
+      acceptedSemanticDocRole: primaryDoc?.acceptedSemanticDocRole || null,
+      acceptedDebtBasis:
+        !primaryDoc?.acceptedDebtBasis || !primaryRoleFamily || primaryRoleFamily === primaryBasisFamily
+          ? primaryDoc.acceptedDebtBasis
+          : null,
+      acceptedSemanticDocDisplayLabel: primaryDoc?.acceptedSemanticDocDisplayLabel || null,
+      acceptedPurchaseAssumptionsTruth:
+        primaryRoleFamily === "purchase_assumptions" && primaryDoc?.acceptedPurchaseAssumptionsTruth === true,
+      acceptedCurrentDebtTruth:
+        primaryRoleFamily === "current_debt_context" && primaryDoc?.acceptedCurrentDebtTruth === true,
+    };
+  }
+
+  return {
+    acceptedSemanticDocRole: primaryDoc?.acceptedSemanticDocRole || secondaryDoc?.acceptedSemanticDocRole || null,
+    acceptedDebtBasis: primaryDoc?.acceptedDebtBasis || secondaryDoc?.acceptedDebtBasis || null,
+    acceptedSemanticDocDisplayLabel:
+      primaryDoc?.acceptedSemanticDocDisplayLabel || secondaryDoc?.acceptedSemanticDocDisplayLabel || null,
+    acceptedPurchaseAssumptionsTruth:
+      primaryDoc?.acceptedPurchaseAssumptionsTruth === true || secondaryDoc?.acceptedPurchaseAssumptionsTruth === true,
+    acceptedCurrentDebtTruth:
+      primaryDoc?.acceptedCurrentDebtTruth === true || secondaryDoc?.acceptedCurrentDebtTruth === true,
+  };
+}
+
+function mergeDuplicateNormalizedSupportDoc(existingDoc, incomingDoc) {
+  const resolvedExtractedFacts = resolveMergedExtractedFacts(existingDoc, incomingDoc);
+  const resolvedAcceptedAuthority = resolveMergedAcceptedAuthority(existingDoc, incomingDoc);
+  return (
+    normalizeSupportDoc({
+      ...existingDoc,
+      fileId: existingDoc?.fileId || incomingDoc?.fileId || "",
+      originalFilename: existingDoc?.originalFilename || incomingDoc?.originalFilename || "",
+      extractedFacts: resolvedExtractedFacts,
+      acceptedSemanticDocRole: resolvedAcceptedAuthority.acceptedSemanticDocRole,
+      acceptedDebtBasis: resolvedAcceptedAuthority.acceptedDebtBasis,
+      acceptedSemanticDocDisplayLabel: resolvedAcceptedAuthority.acceptedSemanticDocDisplayLabel,
+      acceptedPurchaseAssumptionsTruth: resolvedAcceptedAuthority.acceptedPurchaseAssumptionsTruth,
+      acceptedCurrentDebtTruth: resolvedAcceptedAuthority.acceptedCurrentDebtTruth,
+    }) || existingDoc
+  );
 }
 
 function collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection, bossContract) {
@@ -272,26 +558,46 @@ function collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection, b
     toArrayLike(bossContract?.sourceTruth?.supportDocs),
   ];
 
-  const seen = new Set();
-  const normalized = [];
+  const seen = new Map();
+  const grouped = [];
 
   for (const bucket of candidates) {
     for (const doc of bucket) {
       const normalizedDoc = normalizeSupportDoc(doc);
       if (!normalizedDoc) continue;
-      const keys = [];
-      const fileId = String(normalizedDoc.fileId || "").trim();
-      const originalFilename = String(normalizedDoc.originalFilename || "").trim();
-      if (fileId) keys.push(`fileId:${normalizeText(fileId)}`);
-      if (originalFilename) keys.push(`filename:${normalizeText(originalFilename)}`);
-      if (keys.length === 0) keys.push(uniqueSupportDocKey(normalizedDoc));
-      if (keys.some((key) => seen.has(key))) continue;
-      for (const key of keys) seen.add(key);
-      normalized.push(normalizedDoc);
+      const keys = supportDocIdentityKeys(normalizedDoc);
+      const matchedIndexes = Array.from(new Set(keys.filter((key) => seen.has(key)).map((key) => seen.get(key)))).sort((a, b) => a - b);
+      if (matchedIndexes.length > 0) {
+        const index = matchedIndexes[0];
+        for (const absorbedIndex of matchedIndexes.slice(1)) {
+          if (!grouped[absorbedIndex]) continue;
+          grouped[index].docs.push(...grouped[absorbedIndex].docs);
+          grouped[index].mergedDoc = mergeDuplicateNormalizedSupportDoc(grouped[index].mergedDoc, grouped[absorbedIndex].mergedDoc);
+          for (const [aliasKey, aliasIndex] of seen.entries()) {
+            if (aliasIndex === absorbedIndex) seen.set(aliasKey, index);
+          }
+          grouped[absorbedIndex] = null;
+        }
+        const existingKeys = supportDocIdentityKeys(grouped[index].mergedDoc);
+        const mergedDoc = mergeDuplicateNormalizedSupportDoc(grouped[index].mergedDoc, normalizedDoc);
+        grouped[index].mergedDoc = mergedDoc;
+        grouped[index].docs.push(normalizedDoc);
+        for (const key of new Set([...existingKeys, ...keys, ...supportDocIdentityKeys(mergedDoc)])) seen.set(key, index);
+        continue;
+      }
+      const index = grouped.push({ mergedDoc: normalizedDoc, docs: [normalizedDoc] }) - 1;
+      for (const key of keys) seen.set(key, index);
     }
   }
 
-  return normalized;
+  return grouped
+    .filter(Boolean)
+    .map(({ mergedDoc, docs }) =>
+      normalizeSupportDoc({
+        ...mergedDoc,
+        extractedFacts: resolveMergedExtractedFactsFromGroup(docs),
+      }) || mergedDoc
+    );
 }
 
 function findSupportDocByRole(supportDocs, role) {
@@ -632,7 +938,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
           available: [],
           missing: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
-          sourceBacked: false,
+          sourceBacked: Boolean(appraisal),
         },
         boundaries: {
           appraisalIsContextOnly: true,
@@ -698,7 +1004,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: ["total_renovation_budget"],
           available: [],
           missing: ["total_renovation_budget"],
-          sourceBacked: false,
+          sourceBacked: Boolean(renovation),
         },
         boundaries: {
           renovationIsContextOnly: true,
@@ -759,7 +1065,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: [],
           available: [],
           missing: [],
-          sourceBacked: false,
+          sourceBacked: Boolean(marketSurvey),
         },
         boundaries: {
           marketSurveyIsContextOnly: true,
@@ -812,7 +1118,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: [],
           available: [],
           missing: [],
-          sourceBacked: false,
+          sourceBacked: Boolean(environmental),
         },
         boundaries: {
           environmentalIsContextOnly: true,
