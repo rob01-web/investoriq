@@ -193,6 +193,45 @@ export function runAcquisitionMemoV2Orchestrator({
 
   const initialCustomerSurfaceModelValidation = validateAcquisitionMemoV2CustomerSurfaceModel(initialCustomerSurfaceModel);
   const initialBossContractValidation = validateAcquisitionMemoBossContract(acquisitionMemoBossContract);
+  if (!initialBossContractValidation.ok) {
+    const bossContractViolations = Array.isArray(initialBossContractValidation?.violations)
+      ? initialBossContractValidation.violations
+      : [];
+    const failedFinalization = {
+      html: "",
+      compliance: {
+        ok: false,
+        violations: bossContractViolations,
+      },
+      bossCompliance: {
+        ok: false,
+        violations: bossContractViolations,
+        fatal_core: bossContractViolations,
+        collapseable_surface: [],
+        advisory_only: [],
+      },
+      customerSurfaceModel: initialCustomerSurfaceModel,
+      customerSurfaceModelValidation: initialCustomerSurfaceModelValidation,
+      customerSurfaceHtmlValidation: { ok: false, issues: [] },
+    };
+    const finalComplianceDiagnostics = buildFinalComplianceDiagnostics({
+      finalization: failedFinalization,
+      bossContractValidation: initialBossContractValidation,
+      customerSurfaceModelValidation: initialCustomerSurfaceModelValidation,
+      repairPlan: null,
+    });
+    const finalDeliveryDecision = buildAcquisitionMemoV2FinalDeliveryDecision({
+      finalization: failedFinalization,
+      coreGate: acquisitionMemoBossContract?.coreGate || null,
+      repairPlan: null,
+      diagnostics: finalComplianceDiagnostics,
+    });
+    return {
+      ...failedFinalization,
+      finalComplianceDiagnostics,
+      finalDeliveryDecision,
+    };
+  }
   const initialRepairPlan = buildAcquisitionMemoV2BossRepairPlan({
     customerSurfaceModelValidation: initialCustomerSurfaceModelValidation,
   });
@@ -240,9 +279,84 @@ export function runAcquisitionMemoV2Orchestrator({
   if (initialRepairPlan.shouldRetry) {
     customerSurfaceModel = applyAcquisitionMemoV2BossRepairPlan(customerSurfaceModel, initialRepairPlan);
     bossContract = applyAcquisitionMemoV2BossRepairPlan(bossContract, initialRepairPlan);
+    const repairedBossContractValidation = validateAcquisitionMemoBossContract(bossContract);
     customerSurfaceModelValidation = validateAcquisitionMemoV2CustomerSurfaceModel(customerSurfaceModel);
     repairAttempted = true;
     lastRepairPlan = initialRepairPlan;
+    if (!repairedBossContractValidation.ok) {
+      const validationViolations = Array.isArray(repairedBossContractValidation?.violations) ? repairedBossContractValidation.violations : [];
+      const failedFinalization = {
+        html: "",
+        compliance: {
+          ok: false,
+          violations: validationViolations,
+        },
+        bossCompliance: {
+          ok: false,
+          violations: validationViolations,
+          fatal_core: validationViolations,
+          collapseable_surface: [],
+          advisory_only: [],
+        },
+        customerSurfaceModel,
+        customerSurfaceModelValidation,
+        customerSurfaceHtmlValidation: { ok: false, issues: [] },
+      };
+      const finalComplianceDiagnostics = buildFinalComplianceDiagnostics({
+        finalization: failedFinalization,
+        bossContractValidation: repairedBossContractValidation,
+        customerSurfaceModelValidation,
+        repairPlan: initialRepairPlan,
+        repairAttempted: true,
+      });
+      return {
+        ...failedFinalization,
+        finalComplianceDiagnostics,
+        finalDeliveryDecision: buildAcquisitionMemoV2FinalDeliveryDecision({
+          finalization: failedFinalization,
+          coreGate: bossContract?.coreGate || null,
+          repairPlan: initialRepairPlan,
+          diagnostics: finalComplianceDiagnostics,
+        }),
+      };
+    }
+    if (!customerSurfaceModelValidation.ok) {
+      const validationIssues = Array.isArray(customerSurfaceModelValidation?.issues) ? customerSurfaceModelValidation.issues : [];
+      const failedFinalization = {
+        html: "",
+        compliance: {
+          ok: false,
+          violations: validationIssues,
+        },
+        customerSurfaceModel,
+        customerSurfaceModelValidation,
+        customerSurfaceHtmlValidation: { ok: false, issues: validationIssues },
+        bossCompliance: {
+          ok: false,
+          violations: validationIssues,
+          fatal_core: validationIssues,
+          collapseable_surface: [],
+          advisory_only: [],
+        },
+      };
+      const finalComplianceDiagnostics = buildFinalComplianceDiagnostics({
+        finalization: failedFinalization,
+        bossContractValidation: validateAcquisitionMemoBossContract(bossContract),
+        customerSurfaceModelValidation,
+        repairPlan: initialRepairPlan,
+        repairAttempted: true,
+      });
+      return {
+        ...failedFinalization,
+        finalComplianceDiagnostics,
+        finalDeliveryDecision: buildAcquisitionMemoV2FinalDeliveryDecision({
+          finalization: failedFinalization,
+          coreGate: bossContract?.coreGate || null,
+          repairPlan: initialRepairPlan,
+          diagnostics: finalComplianceDiagnostics,
+        }),
+      };
+    }
     const initialRepairProvenanceRegressionViolations = buildRepairProvenanceRegressionViolations({
       baselineCustomerSurfaceModel: initialCustomerSurfaceModel,
       repairedCustomerSurfaceModel: customerSurfaceModel,
@@ -269,7 +383,7 @@ export function runAcquisitionMemoV2Orchestrator({
       };
       const finalComplianceDiagnostics = buildFinalComplianceDiagnostics({
         finalization: failedFinalization,
-        bossContractValidation: validateAcquisitionMemoBossContract(acquisitionMemoBossContract),
+        bossContractValidation: validateAcquisitionMemoBossContract(bossContract),
         customerSurfaceModelValidation,
         repairPlan: initialRepairPlan,
         repairAttempted: true,
@@ -279,7 +393,7 @@ export function runAcquisitionMemoV2Orchestrator({
         finalComplianceDiagnostics,
         finalDeliveryDecision: buildAcquisitionMemoV2FinalDeliveryDecision({
           finalization: failedFinalization,
-          coreGate: acquisitionMemoBossContract?.coreGate || null,
+          coreGate: bossContract?.coreGate || null,
           repairPlan: initialRepairPlan,
           diagnostics: finalComplianceDiagnostics,
         }),
@@ -299,8 +413,46 @@ export function runAcquisitionMemoV2Orchestrator({
       lastRepairPlan = repairPlan;
       const repairedCustomerSurfaceModel = applyAcquisitionMemoV2BossRepairPlan(customerSurfaceModel, repairPlan);
       const repairedBossContract = applyAcquisitionMemoV2BossRepairPlan(bossContract, repairPlan);
+      const repairedBossContractValidation = validateAcquisitionMemoBossContract(repairedBossContract);
       const repairedCustomerSurfaceModelValidation = validateAcquisitionMemoV2CustomerSurfaceModel(repairedCustomerSurfaceModel);
-      if (repairedCustomerSurfaceModelValidation.ok || repairPlan.repairableSectionKeys.length > 0) {
+      if (!repairedBossContractValidation.ok) {
+        const validationViolations = Array.isArray(repairedBossContractValidation?.violations) ? repairedBossContractValidation.violations : [];
+        const failedFinalization = {
+          html: "",
+          compliance: {
+            ok: false,
+            violations: validationViolations,
+          },
+          bossCompliance: {
+            ok: false,
+            violations: validationViolations,
+            fatal_core: validationViolations,
+            collapseable_surface: [],
+            advisory_only: [],
+          },
+          customerSurfaceModel: repairedCustomerSurfaceModel,
+          customerSurfaceModelValidation: repairedCustomerSurfaceModelValidation,
+          customerSurfaceHtmlValidation: { ok: false, issues: [] },
+        };
+        const finalComplianceDiagnostics = buildFinalComplianceDiagnostics({
+          finalization: failedFinalization,
+          bossContractValidation: repairedBossContractValidation,
+          customerSurfaceModelValidation: repairedCustomerSurfaceModelValidation,
+          repairPlan,
+          repairAttempted: true,
+        });
+        return {
+          ...failedFinalization,
+          finalComplianceDiagnostics,
+          finalDeliveryDecision: buildAcquisitionMemoV2FinalDeliveryDecision({
+            finalization: failedFinalization,
+            coreGate: repairedBossContract?.coreGate || null,
+            repairPlan,
+            diagnostics: finalComplianceDiagnostics,
+          }),
+        };
+      }
+      if (repairedCustomerSurfaceModelValidation.ok) {
         const retryFinalization = renderAndValidate(repairedCustomerSurfaceModel, repairedBossContract, repairPlan);
         repairedHtmlRevalidated = true;
         const provenanceRegressionViolations = buildRepairProvenanceRegressionViolations({
@@ -333,6 +485,8 @@ export function runAcquisitionMemoV2Orchestrator({
             }),
           };
         }
+        bossContract = repairedBossContract;
+        customerSurfaceModelValidation = repairedCustomerSurfaceModelValidation;
         finalization = {
           ...retryFinalization,
           compliance: provenanceRegressionViolations.length > 0
