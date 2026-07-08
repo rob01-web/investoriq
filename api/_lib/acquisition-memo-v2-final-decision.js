@@ -81,10 +81,10 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const bossOk = Boolean(final?.bossCompliance?.ok);
   const modelOk = final?.customerSurfaceModelValidation
     ? Boolean(final.customerSurfaceModelValidation.ok)
-    : true;
+    : false;
   const htmlOk = final?.customerSurfaceHtmlValidation
     ? Boolean(final.customerSurfaceHtmlValidation.ok)
-    : true;
+    : false;
   const complianceOk = Boolean(final?.compliance?.ok && bossOk && modelOk && htmlOk);
   const coreFatal = hasCoreFatalSignal(final, coreGate, repairPlan);
   const repairableOptional = hasRepairableOptionalSignal(repairPlan);
@@ -100,7 +100,8 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
     });
 
   const publishable = Boolean(
-    coreGate?.publishAllowed !== false &&
+    isPlainObject(coreGate) &&
+    coreGate.publishAllowed === true &&
     complianceOk &&
     modelOk &&
     !coreFatal &&
