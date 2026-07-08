@@ -236,6 +236,16 @@ function normalizeAcquisitionMemoV2CanonicalRole(role = "") {
   return normalized || "other_support_context";
 }
 
+function isAcceptedDebtBasisCompatibleWithRole(debtBasis = "", role = "") {
+  const normalizedDebtBasis = normalizeAcquisitionMemoV2CanonicalRole(debtBasis);
+  const normalizedRole = normalizeAcquisitionMemoV2CanonicalRole(role);
+  if (!normalizedDebtBasis || !normalizedRole) return false;
+  if (normalizedRole === "purchase_assumptions") {
+    return normalizedDebtBasis === "acquisition_financing_assumption" || normalizedDebtBasis === "purchase_assumptions";
+  }
+  return normalizedDebtBasis === normalizedRole;
+}
+
 function hasHistoricalOnlyRenovationSignalsLocal(text = "", source = {}) {
   const normalizedText = String(text || "").toLowerCase();
   const sourceText = String([
@@ -560,37 +570,71 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
 
   roleCandidates.sort((left, right) => (right.hasPositiveEvidence === true ? 1 : 0) - (left.hasPositiveEvidence === true ? 1 : 0) || (right.score - left.score));
   const bestCandidate = roleCandidates.find((candidate) => candidate.hasPositiveEvidence === true) || null;
+  const acceptedTruthSemanticDocRole = normalizeIdentityToken(acceptedTruth?.semanticDocRole);
+  const acceptedTruthDebtBasis = normalizeIdentityToken(acceptedTruth?.debtBasis);
+  const hasAcceptedTruthRole = acceptedTruthSemanticDocRole.length > 0;
+  const sovereignAcceptedSemanticDocRole = hasAcceptedTruthRole
+    ? normalizeAcquisitionMemoV2CanonicalRole(acceptedTruthSemanticDocRole)
+    : null;
+  const selectedCandidate = hasAcceptedTruthRole
+    ? roleCandidates.find((candidate) => candidate.role === sovereignAcceptedSemanticDocRole) || null
+    : bestCandidate;
+  const selectedRole = hasAcceptedTruthRole
+    ? sovereignAcceptedSemanticDocRole
+    : (bestCandidate?.role || "other_support_context");
+  const selectedCanonicalLabel =
+    selectedCandidate?.canonicalLabel ||
+    (selectedRole === "other_support_context"
+      ? "Other Support Document"
+      : bestCandidate?.canonicalLabel || parserDisplayLabel || "Other Support Document");
+  const selectedTreatment = selectedCandidate?.treatment || "Context only";
+  const selectedUse = selectedCandidate?.use || "Listed for auditability only; not used quantitatively.";
+  const selectedCategory = selectedCandidate?.category || "Listed but Not Quantitatively Modeled";
+  const selectedAuthorityBasis = hasAcceptedTruthRole ? "accepted_truth" : (bestCandidate?.authorityBasis || "no_same_source_positive_evidence");
+  const selectedAcceptedDebtBasis = isAcceptedDebtBasisCompatibleWithRole(acceptedTruthDebtBasis, selectedRole)
+    ? acceptedTruthDebtBasis
+    : (isAcceptedDebtBasisCompatibleWithRole(selectedCandidate?.acceptedDebtBasis, selectedRole)
+      ? selectedCandidate?.acceptedDebtBasis
+      : null);
 
   if (!bestCandidate) {
     const acceptedProvenance = {
       acceptedSourceIdentityKey,
-      acceptedSemanticDocRole: "other_support_context",
-      acceptedDebtBasis: null,
-      acceptedSemanticDocDisplayLabel: "Other Support Document",
-      authorityBasis: "no_same_source_positive_evidence",
+      acceptedSemanticDocRole: selectedRole,
+      acceptedDebtBasis: selectedAcceptedDebtBasis,
+      acceptedSemanticDocDisplayLabel: selectedCanonicalLabel,
+      authorityBasis: selectedAuthorityBasis,
       parserSemanticDocRole: parserSemanticDocRole || null,
       parserDebtBasis: parserDebtBasis || null,
       parserDisplayLabel: parserDisplayLabel || null,
     };
     return {
-      canonicalRole: "other_support_context",
-      canonicalLabel: "Other Support Document",
-      roleLabel: "Other Support Document",
-      treatment: "Context only",
-      use: "Listed for auditability only; not used quantitatively.",
-      category: "Listed but Not Quantitatively Modeled",
-      authorityBasis: "no_same_source_positive_evidence",
+      canonicalRole: selectedRole,
+      canonicalLabel: selectedCanonicalLabel,
+      roleLabel: selectedCanonicalLabel,
+      treatment: selectedTreatment,
+      use: selectedUse,
+      category: selectedCategory,
+      authorityBasis: selectedAuthorityBasis,
       parserSemanticDocRole: parserSemanticDocRole || null,
       parserDebtBasis: parserDebtBasis || null,
       parserDisplayLabel: parserDisplayLabel || null,
-      acceptedSemanticDocRole: "other_support_context",
-      acceptedDebtBasis: null,
-      acceptedSemanticDocDisplayLabel: "Other Support Document",
+      acceptedSemanticDocRole: selectedRole,
+      acceptedDebtBasis: selectedAcceptedDebtBasis,
+      acceptedSemanticDocDisplayLabel: selectedCanonicalLabel,
       acceptedSourceIdentityKey,
       acceptedProvenance,
       acceptedSourceTruth: {
-        hasPurchaseAssumptions: false,
-        hasCurrentDebt: false,
+        hasPurchaseAssumptions: selectedRole === "purchase_assumptions",
+        hasCurrentDebt: selectedRole === "current_debt_context",
+        hasHistoricalCapex: selectedRole === "historical_capex_only",
+        hasRenovationCapex: selectedRole === "renovation_capex_context",
+        hasEnvironmentalDueDiligence: selectedRole === "environmental_due_diligence_context",
+        hasAppraisal: selectedRole === "appraisal_valuation_context",
+        hasPropertyTax: selectedRole === "property_tax_support",
+        hasMarketSurvey: selectedRole === "market_survey_context",
+        hasCoreT12: selectedRole === "core_t12",
+        hasCoreRentRoll: selectedRole === "core_rent_roll",
       },
       evidence: {
         roleCandidates,
@@ -610,42 +654,42 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
 
   const acceptedProvenance = {
     acceptedSourceIdentityKey,
-    acceptedSemanticDocRole: bestCandidate.role,
-    acceptedDebtBasis: bestCandidate.acceptedDebtBasis || null,
-    acceptedSemanticDocDisplayLabel: bestCandidate.canonicalLabel,
-    authorityBasis: bestCandidate.authorityBasis,
+    acceptedSemanticDocRole: selectedRole,
+    acceptedDebtBasis: selectedAcceptedDebtBasis,
+    acceptedSemanticDocDisplayLabel: selectedCanonicalLabel,
+    authorityBasis: selectedAuthorityBasis,
     parserSemanticDocRole: parserSemanticDocRole || null,
     parserDebtBasis: parserDebtBasis || null,
     parserDisplayLabel: parserDisplayLabel || null,
   };
 
   return {
-    canonicalRole: bestCandidate.role,
-    canonicalLabel: bestCandidate.canonicalLabel,
-    roleLabel: bestCandidate.canonicalLabel,
-    treatment: bestCandidate.treatment,
-    use: bestCandidate.use,
-    category: bestCandidate.category,
-    authorityBasis: bestCandidate.authorityBasis,
+    canonicalRole: selectedRole,
+    canonicalLabel: selectedCanonicalLabel,
+    roleLabel: selectedCanonicalLabel,
+    treatment: selectedTreatment,
+    use: selectedUse,
+    category: selectedCategory,
+    authorityBasis: selectedAuthorityBasis,
     parserSemanticDocRole: parserSemanticDocRole || null,
     parserDebtBasis: parserDebtBasis || null,
     parserDisplayLabel: parserDisplayLabel || null,
-    acceptedSemanticDocRole: bestCandidate.role,
-    acceptedDebtBasis: bestCandidate.acceptedDebtBasis || null,
-    acceptedSemanticDocDisplayLabel: bestCandidate.canonicalLabel,
+    acceptedSemanticDocRole: selectedRole,
+    acceptedDebtBasis: selectedAcceptedDebtBasis,
+    acceptedSemanticDocDisplayLabel: selectedCanonicalLabel,
     acceptedSourceIdentityKey,
     acceptedProvenance,
     acceptedSourceTruth: {
-      hasPurchaseAssumptions: bestCandidate.role === "purchase_assumptions",
-      hasCurrentDebt: bestCandidate.role === "current_debt_context",
-      hasHistoricalCapex: bestCandidate.role === "historical_capex_only",
-      hasRenovationCapex: bestCandidate.role === "renovation_capex_context",
-      hasEnvironmentalDueDiligence: bestCandidate.role === "environmental_due_diligence_context",
-      hasAppraisal: bestCandidate.role === "appraisal_valuation_context",
-      hasPropertyTax: bestCandidate.role === "property_tax_support",
-      hasMarketSurvey: bestCandidate.role === "market_survey_context",
-      hasCoreT12: bestCandidate.role === "core_t12",
-      hasCoreRentRoll: bestCandidate.role === "core_rent_roll",
+      hasPurchaseAssumptions: selectedRole === "purchase_assumptions",
+      hasCurrentDebt: selectedRole === "current_debt_context",
+      hasHistoricalCapex: selectedRole === "historical_capex_only",
+      hasRenovationCapex: selectedRole === "renovation_capex_context",
+      hasEnvironmentalDueDiligence: selectedRole === "environmental_due_diligence_context",
+      hasAppraisal: selectedRole === "appraisal_valuation_context",
+      hasPropertyTax: selectedRole === "property_tax_support",
+      hasMarketSurvey: selectedRole === "market_survey_context",
+      hasCoreT12: selectedRole === "core_t12",
+      hasCoreRentRoll: selectedRole === "core_rent_roll",
     },
     evidence: {
       roleCandidates,

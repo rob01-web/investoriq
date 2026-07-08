@@ -111,6 +111,10 @@ function normalizeBossContractFact(value) {
   return value === undefined ? null : value;
 }
 
+function normalizeAcceptedTruthToken(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 function escapeRegExp(value) {
   return String(value ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -173,26 +177,59 @@ function normalizeSupportDocRecord(doc, sourceLabel = null) {
   const acceptedProvenance =
     source.acceptedProvenance || source.accepted_provenance || source.provenance || null;
   const acceptedSourceTruth = normalizeBossContractFact(source.acceptedSourceTruth || source.accepted_source_truth || {});
+  const acceptedSemanticDocRoleKey = normalizeAcceptedTruthToken(acceptedSemanticDocRole);
+  const acceptedDebtBasisKey = normalizeAcceptedTruthToken(acceptedDebtBasis);
+  const acceptedProvenanceRoleKey = normalizeAcceptedTruthToken(
+    acceptedProvenance?.acceptedSemanticDocRole || acceptedProvenance?.accepted_semantic_doc_role
+  );
+  const acceptedProvenanceDebtBasisKey = normalizeAcceptedTruthToken(
+    acceptedProvenance?.acceptedDebtBasis || acceptedProvenance?.accepted_debt_basis
+  );
+  const selectedAcceptedRole =
+    acceptedSemanticDocRole ||
+    acceptedProvenance?.acceptedSemanticDocRole ||
+    acceptedProvenance?.accepted_semantic_doc_role ||
+    null;
+  const selectedAcceptedRoleKey = acceptedSemanticDocRoleKey || acceptedProvenanceRoleKey;
+  const selectedAcceptedDebtBasisKey = acceptedDebtBasisKey || acceptedProvenanceDebtBasisKey;
+  const purchaseDebtBasisCompatible =
+    !selectedAcceptedDebtBasisKey || selectedAcceptedDebtBasisKey === "acquisition_financing_assumption";
+  const currentDebtBasisCompatible =
+    !selectedAcceptedDebtBasisKey || selectedAcceptedDebtBasisKey === "current_debt_context";
   const acceptedPurchaseAssumptionsTruth = Boolean(
-    source.acceptedPurchaseAssumptionsTruth === true ||
+    (
+      source.acceptedPurchaseAssumptionsTruth === true ||
       source.accepted_purchase_assumptions_truth === true ||
       acceptedProvenance?.acceptedPurchaseAssumptionsTruth === true ||
       acceptedProvenance?.accepted_purchase_assumptions_truth === true ||
+      acceptedSemanticDocRoleKey === "purchase_assumptions" ||
+      acceptedProvenanceRoleKey === "purchase_assumptions" ||
+      selectedAcceptedDebtBasisKey === "acquisition_financing_assumption" ||
       acceptedSourceTruth?.purchaseAssumptionsPresent === true ||
       acceptedSourceTruth?.hasPurchaseAssumptions === true
+    ) &&
+    (!selectedAcceptedRoleKey || selectedAcceptedRoleKey === "purchase_assumptions") &&
+    purchaseDebtBasisCompatible
   );
   const acceptedCurrentDebtTruth = Boolean(
-    source.acceptedCurrentDebtTruth === true ||
+    (
+      source.acceptedCurrentDebtTruth === true ||
       source.accepted_current_debt_truth === true ||
       acceptedProvenance?.acceptedCurrentDebtTruth === true ||
       acceptedProvenance?.accepted_current_debt_truth === true ||
+      acceptedSemanticDocRoleKey === "current_debt_context" ||
+      acceptedProvenanceRoleKey === "current_debt_context" ||
+      selectedAcceptedDebtBasisKey === "current_debt_context" ||
       acceptedSourceTruth?.currentDebtPresent === true ||
       acceptedSourceTruth?.hasCurrentDebtContext === true
+    ) &&
+    (!selectedAcceptedRoleKey || selectedAcceptedRoleKey === "current_debt_context") &&
+    currentDebtBasisCompatible
   );
   return normalizeBossContractFact({
     fileId: source.fileId || source.file_id || source.id || null,
     originalFilename: source.originalFilename || source.original_filename || source.filename || null,
-    canonicalRole: acceptedSemanticDocRole || source.canonicalRole || source.canonical_support_doc_role || source.role || null,
+    canonicalRole: selectedAcceptedRole || source.canonicalRole || source.canonical_support_doc_role || source.role || null,
     roleLabel: source.roleLabel || source.role_label || null,
     canonicalLabel: source.canonicalLabel || source.canonical_label || null,
     treatment: source.treatment || null,
@@ -1034,10 +1071,7 @@ function buildAcquisitionMemoBossContract({
   const supportDocs = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection);
   const coreT12Source = findSupportDocByRole(supportDocs, "core_t12") || coreT12;
   const purchaseAssumptionsDoc = findSupportDocByRole(supportDocs, "purchase_assumptions") || acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions || null;
-  const promotedCurrentDebtDoc =
-    findSupportDocByRole(supportDocs, "current_debt_context") ||
-    promoteCurrentDebtSupportDoc(acquisitionMemoProjection?.supportDocProjection?.currentDebtContext) ||
-    null;
+  const promotedCurrentDebtDoc = findSupportDocByRole(supportDocs, "current_debt_context") || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || null;
   const supplementedCoreT12Facts = supplementT12FactsFromEvidence(normalizeBossContractFact(coreT12?.extractedFacts || {}), coreT12Source);
   const supplementedCoreT12FactsFromPayload = supplementT12FactsFromPayload(supplementedCoreT12Facts, t12Payload);
   const supplementedPurchaseFacts = normalizePurchaseAssumptionLoanAmountFacts(
