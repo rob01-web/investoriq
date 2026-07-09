@@ -7,10 +7,10 @@ export function sanitizeTypography(html) {
 
 export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
-  const rawDeliveryGateStatus = String(state.delivery_gate_status || "deliverable");
+  const rawDeliveryGateStatus = String(state.delivery_gate_status || "blocked");
   const customerDeliveryAllowed =
     state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null
-      ? Boolean(state.customer_delivery_allowed)
+      ? Boolean(state.customer_delivery_allowed) && rawDeliveryGateStatus === "deliverable" && !Boolean(state.hold_delivery)
       : rawDeliveryGateStatus === "deliverable" && !Boolean(state.hold_delivery);
   const holdDelivery = Boolean(state.hold_delivery);
   const publicSampleReady = Boolean(state.public_sample_ready);
@@ -455,15 +455,12 @@ export function assertValidReportPublicationInsert({
   context = {},
 } = {}) {
   const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
-  const normalizedDeliveryGateStatus =
-    String(deliveryGateStatus || "deliverable") === "admin_review_required"
-      ? "deliverable"
-      : deliveryGateStatus;
+  const normalizedDeliveryGateStatus = deliveryGateStatus;
   if (
     !coreValidRequiredCoverage &&
     (
       holdDelivery ||
-      (typeof normalizedDeliveryGateStatus === "string" && normalizedDeliveryGateStatus !== "deliverable")
+      normalizedDeliveryGateStatus !== "deliverable"
     )
   ) {
     const err = new Error("Report publication blocked before storage insert");
