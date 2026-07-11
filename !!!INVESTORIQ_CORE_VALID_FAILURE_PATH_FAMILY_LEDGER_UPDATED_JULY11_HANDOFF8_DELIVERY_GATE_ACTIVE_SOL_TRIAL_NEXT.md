@@ -1,86 +1,57 @@
-# July 11, 2026 Active Checkpoint - Final Anti-Whack-a-Mole Gate Advanced / Handoffs 5-7 PASS / Handoff 8 Delivery Gate ACTIVE / GPT-5.6 Sol Trial Next
+# July 11, 2026 Active Checkpoint - Final Anti-Whack-a-Mole Gate Advanced / Handoffs 1-8 PASS / Handoff 8 Delivery Gate PASS and Protected
 
 ### This addendum supersedes the prior July 8 Handoff 4 / DUPFACT-4 checkpoint as the active continuation point.
 
 ## Current verified state
 
 ```text
-STEPS 1-4:
+STEPS 1-6:
 PASS / protect.
 
-STEP 5:
-PASS checkpoint.
-
-LAST ACCEPTED COMMIT CHECKPOINT:
-main / fd80bb7.
-
-IMPORTANT:
-Later manually reviewed working-state production changes exist after fd80bb7.
-Do not falsely describe them as committed in fd80bb7 unless Rob explicitly confirms a later commit.
-
-STEP 6 FINAL DELIVERY GATE INTEGRITY:
-PASS checkpoint.
-
-FINAL ANTI-WHACK-A-MOLE COMPLETION GATE:
-ACTIVE.
-
-HANDOFF 1 - ACCEPTED TRUTH:
-PASS / protect.
-
-HANDOFF 2 - PROJECTION:
-PASS / protect.
-
-HANDOFF 3 - BOSS CONTRACT:
-PASS / protect.
-
-HANDOFF 4 - CUSTOMERSURFACEMODEL:
-PASS / protect.
-
-HANDOFF 5 - REPAIR:
-PASS / protect.
-
-HANDOFF 6 - ORCHESTRATOR:
-PASS / protect.
-
-HANDOFF 7 - FINAL DECISION:
+HANDOFFS 1-8:
 PASS / protect.
 
 HANDOFF 8 - DELIVERY GATE:
-ACTIVE.
-Latest completed micro: DELIVERY-5 PASS / protect.
+PASS / protect.
+
+FINAL SOL AUDIT:
+PASS.
+No files changed.
+
+MANUAL CHATGPT VERIFICATION:
+PASS.
+
+SYNTAX CHECKS:
+node --check api/admin-run-worker.js: PASS.
+node --check api/_lib/report-delivery-output.js: PASS.
+
+COMMIT:
+bd24b94.
+
+FINAL ANTI-WHACK-A-MOLE COMPLETION GATE:
+ACTIVE pending final full completion-gate closeout decision.
 
 LIVE ACQUISITION MEMO RETEST:
-LOCKED.
+LOCKED pending final full completion-gate closeout decision.
 DO NOT RUN.
 ```
 
-## Active next point
-
-Continue from the current real production file state after DELIVERY-5:
+## Handoff 8 closeout
 
 ```text
-api/_lib/report-delivery-output.js
-```
-
-Last verified Delivery Gate result:
-
-```text
-DELIVERY-5:
+HANDOFF 8:
 PASS / protect.
 
-Exact closed fail-open path:
-customer_delivery_allowed: true can no longer override:
-- missing / blocked delivery_gate_status
-- hold_delivery: true
+Delivery Gate publication, artifact, and worker transition boundaries are fail closed.
+The final bounded Sol audit found no remaining production delivery-authority bypass within scope.
+Manual ChatGPT verification passed.
 ```
 
 Next action:
 
 ```text
-Resume manual Handoff 8 Delivery Gate / publication boundary audit.
-Do not run live RETEST.
-Do not restart at DUPFACT-4.
-Do not reopen Handoffs 1-7 without concrete contrary evidence in current production code.
+Keep Steps 1-6 and Handoffs 1-8 protected.
+Do not run live RETEST pending the final full completion-gate closeout decision.
 ```
 
 ## Current product doctrine
@@ -100,24 +71,22 @@ There is no admin_review_required doctrine.
 ## Delivery Gate invariants now protected
 
 ```text
-DELIVERY-1:
+HANDOFF 8:
 PASS / protect.
-Missing delivery_gate_status no longer defaults to deliverable in compatibility aliases.
-Fallback is blocked.
 
-DELIVERY-2 / DELIVERY-3:
-PASS / protect.
-Stale admin_review_required normalization removed.
-admin_review_required is not translated to deliverable.
+Missing delivery status defaults to blocked.
 
-DELIVERY-4:
-PASS / protect.
-assertValidReportPublicationInsert(...) now rejects any deliveryGateStatus other than explicit "deliverable" unless existing coreValidRequiredCoverage behavior independently permits the path.
-null / undefined no longer pass publication insert.
+Blocked or held outcomes skip publication-record resolution and download-artifact work.
 
-DELIVERY-5:
-PASS / protect.
-Explicit customer_delivery_allowed true can no longer bypass blocked / missing delivery status or hold_delivery true.
+Publication helpers require explicit deliveryGateStatus === "deliverable" and holdDelivery !== true.
+
+The download-artifact helper requires explicit deliveryGateStatus === "deliverable" and holdDelivery !== true before existing-artifact reuse, rendering, upload, verification, or return.
+
+The worker passes the same resolved canonical deliveryGateStatus and holdDelivery authority into both publication and artifact helpers.
+
+Worker transitions to pdf_generating, publishing, and published require explicit deliverable authority.
+
+Legacy aliases, customer flags, and coreValidRequiredCoverage cannot manufacture deliverability.
 ```
 
 ## Handoff 7 Final Decision now protected
