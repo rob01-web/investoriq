@@ -4438,35 +4438,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         screeningExplanation,
         buildT12PerUnitRows: screeningReportRenderer.buildT12PerUnitRows,
       });
-      const sealedScreeningOutput = runScreeningReportPipeline({
-        finalHtml: screeningFinalization.html,
-        qaHtml: screeningFinalization.qaHtml || screeningFinalization.html,
-        reportMode: effectiveReportMode,
-        sourceCoverageQa: sourceCoverageQaResult,
-        deliveryGateDecisionResult,
-      });
-      const immutableScreeningOutput = assertSealedOutputImmutable({
-        ...sealedScreeningOutput,
-        sealedCustomerOutput: true,
-        lane: "screening",
-        qaHtml: sealedScreeningOutput.qaHtml || sealedScreeningOutput.html,
-        metadata: {
-          reportMode: effectiveReportMode,
-          sourceCoverageQa: sourceCoverageQaResult,
-        },
-        deliveryState: deliveryGateDecisionResult || null,
-      }, "screening");
-      return res.status(200).json({
-        success: true,
-        report_type: reportType,
-        report_mode: effectiveReportMode,
-        final_html: immutableScreeningOutput.html,
-        qa_html: immutableScreeningOutput.qaHtml || immutableScreeningOutput.html,
-        delivery_state: immutableScreeningOutput.deliveryState || null,
-        sealed_lane: immutableScreeningOutput.sealedLane || "screening_lane",
-        sealed_customer_output: true,
-        source_coverage_qa: sourceCoverageQaResult || null,
-      });
+      finalHtml = screeningFinalization.html;
     }
     if (effectiveReportMode === "v1_core") {
       dealScoreState.dealScoreTableHtml = alignDealScorecardVisibleClassificationHtml(
@@ -6787,37 +6759,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         coreSupportInsufficient,
         debtCoverageConstraintActive,
       });
-      const sealedScreeningOutput = runScreeningReportPipeline({
-        finalHtml: screeningFinalization.html,
-        qaHtml: screeningFinalization.qaHtml || screeningFinalization.html,
-        reportMode: effectiveReportMode,
-        sourceCoverageQa: sourceCoverageQaResult,
-        deliveryGateDecisionResult,
-      });
-      finalHtml = sealedScreeningOutput.html;
-      qaHtml = sealedScreeningOutput.qaHtml || sealedScreeningOutput.html;
-      const immutableScreeningOutput = assertSealedOutputImmutable({
-        ...sealedScreeningOutput,
-        sealedCustomerOutput: true,
-        lane: "screening",
-        qaHtml: sealedScreeningOutput.qaHtml || sealedScreeningOutput.html,
-        metadata: {
-          reportMode: effectiveReportMode,
-          sourceCoverageQa: sourceCoverageQaResult,
-        },
-        deliveryState: deliveryGateDecisionResult || null,
-      }, "screening");
-      return res.status(200).json({
-        success: true,
-        report_type: reportType,
-        report_mode: effectiveReportMode,
-        final_html: immutableScreeningOutput.html,
-        qa_html: immutableScreeningOutput.qaHtml || immutableScreeningOutput.html,
-        delivery_state: immutableScreeningOutput.deliveryState || null,
-        sealed_lane: immutableScreeningOutput.sealedLane || "screening_lane",
-        sealed_customer_output: true,
-        source_coverage_qa: sourceCoverageQaResult || null,
-      });
+      finalHtml = screeningFinalization.html;
     }
     // Underwriting token replacements (before leftover cleanup)
     if (effectiveReportMode === "v1_core") {
@@ -7890,31 +7832,6 @@ try {
     sourceCoverageQa.rendered_text_signals = renderedSignals;
   }
   sourceCoverageQaResult = sourceCoverageQa;
-    let screeningLaneOutput =
-      effectiveReportMode === "screening_v1"
-        ? runScreeningReportPipeline({
-          finalHtml,
-          qaHtml,
-          reportMode: effectiveReportMode,
-          sourceCoverageQa: sourceCoverageQaResult,
-          deliveryGateDecisionResult,
-        })
-        : null;
-    if (screeningLaneOutput?.html) {
-      screeningLaneOutput = assertSealedOutputImmutable({
-        ...screeningLaneOutput,
-        sealedCustomerOutput: true,
-        lane: "screening",
-        qaHtml: screeningLaneOutput.qaHtml || screeningLaneOutput.html,
-        metadata: {
-          reportMode: effectiveReportMode,
-          sourceCoverageQa: sourceCoverageQaResult,
-        },
-        deliveryState: deliveryGateDecisionResult || null,
-      }, "screening");
-      finalHtml = screeningLaneOutput.html;
-      qaHtml = screeningLaneOutput.qaHtml || screeningLaneOutput.html;
-    }
     if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection) {
     acquisitionMemoV2Finalization = acquisitionMemoV2Finalization
       ? assertSealedOutputImmutable({
@@ -8479,6 +8396,45 @@ try {
         deliveryDecisionState: deliveryDecisionStateResult,
       }
     : null;
+  if (effectiveReportMode === "screening_v1") {
+    const sealedScreeningOutput = runScreeningReportPipeline({
+      finalHtml,
+      qaHtml,
+      reportMode: effectiveReportMode,
+      sourceCoverageQa: sourceCoverageQaResult,
+      deliveryGateDecisionResult,
+    });
+    const immutableScreeningOutput = assertSealedOutputImmutable({
+      ...sealedScreeningOutput,
+      sealedCustomerOutput: true,
+      lane: "screening",
+      qaHtml: sealedScreeningOutput.qaHtml || sealedScreeningOutput.html,
+      metadata: {
+        reportMode: effectiveReportMode,
+        sourceCoverageQa: sourceCoverageQaResult,
+      },
+      deliveryState: deliveryDecisionStateResult || null,
+    }, "screening");
+    return res.status(200).json({
+      success: true,
+      report_type: reportType,
+      report_mode: effectiveReportMode,
+      final_html: immutableScreeningOutput.html,
+      qa_html: immutableScreeningOutput.qaHtml || immutableScreeningOutput.html,
+      delivery_state: immutableScreeningOutput.deliveryState || null,
+      deliveryDecisionState: deliveryDecisionStateResult,
+      delivery_gate_status: normalizedDeliveryAliases.delivery_gate_status,
+      hold_delivery: normalizedDeliveryAliases.hold_delivery,
+      customer_delivery_allowed: normalizedDeliveryAliases.customer_delivery_allowed,
+      report_publishable: normalizedDeliveryAliases.report_publishable,
+      report_blocked: normalizedDeliveryAliases.report_blocked,
+      customer_delivery_ready: normalizedDeliveryAliases.customer_delivery_ready,
+      customer_publish_eligible: normalizedDeliveryAliases.customer_publish_eligible,
+      sealed_lane: immutableScreeningOutput.sealedLane || "screening_lane",
+      sealed_customer_output: true,
+      source_coverage_qa: sourceCoverageQaResult || null,
+    });
+  }
   if (
     deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents" &&
     deliveryDecisionStateResult?.core_valid_required_coverage !== true
