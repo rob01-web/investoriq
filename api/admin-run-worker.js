@@ -206,31 +206,22 @@ export default async function handler(req, res) {
         ? Boolean(deliveryDecisionState?.core_valid_required_coverage)
         : Boolean(reportData?.core_valid_required_coverage);
       const rawDeliveryGateStatus = hasCanonical
-        ? String(deliveryDecisionState?.delivery_gate_status || 'deliverable')
-        : String(reportData?.delivery_gate_status || 'deliverable');
-      const deliveryGateStatus = hasCanonical
-        ? (coreValidRequiredCoverage ? 'deliverable' : rawDeliveryGateStatus)
-        : (coreValidRequiredCoverage
-            ? 'deliverable'
-            : rawDeliveryGateStatus === 'admin_review_required' ? 'deliverable' : rawDeliveryGateStatus);
-      const customerDeliveryAllowed = coreValidRequiredCoverage
-        ? true
-        : hasCanonical
-          ? Boolean(deliveryDecisionState?.customer_delivery_allowed)
-          : Boolean(
-              reportData?.customer_publish_eligible ??
-              reportData?.customer_delivery_ready ??
-              (deliveryGateStatus === 'deliverable')
-            );
-      const holdDelivery = coreValidRequiredCoverage
-        ? false
-        : hasCanonical
+        ? String(deliveryDecisionState?.delivery_gate_status || 'blocked')
+        : String(reportData?.delivery_gate_status || 'blocked');
+      const deliveryGateStatus = rawDeliveryGateStatus;
+      const holdDelivery = hasCanonical
         ? Boolean(deliveryDecisionState?.hold_delivery)
         : Boolean(
             reportData?.hold_delivery ??
             reportData?.holdDelivery ??
             (deliveryGateStatus !== 'deliverable')
           );
+      const customerDeliveryAllowed =
+        deliveryGateStatus === 'deliverable' &&
+        !holdDelivery &&
+        (hasCanonical
+          ? deliveryDecisionState?.customer_delivery_allowed !== false
+          : reportData?.customer_delivery_allowed !== false);
       const customerStatusReasonCode = hasCanonical
         ? (Boolean(deliveryDecisionState?.customer_delivery_allowed)
             ? null
@@ -2347,29 +2338,33 @@ export default async function handler(req, res) {
                   resolvedDeliveryDecision.holdDelivery === true ||
                   resolvedDeliveryDecision.customerDeliveryAllowed === false;
                 let publicationResolution = null;
-                try {
-                  publicationResolution = await resolveOrCreateReportPublicationRecord({
-                    supabaseAdmin,
-                    job,
-                    reportData,
-                    existingReportId: reportId,
-                    existingStoragePath: storagePath,
-                    allowCreate: !shouldHoldDeliveryOutcome,
-                  });
-                } catch (publicationErr) {
-                  generatorError = publicationErr?.message || 'Report generation failed (report publication resolution failed)';
-                  generatorFailurePayload = {
-                    error: generatorError,
-                    has_report_data: Boolean(reportData),
-                    has_final_html: Boolean(reportData?.final_html),
-                    target_url: fetchUrl,
-                  };
+                if (!shouldHoldDeliveryOutcome) {
+                  try {
+                    publicationResolution = await resolveOrCreateReportPublicationRecord({
+                      supabaseAdmin,
+                      job,
+                      reportData,
+                      existingReportId: reportId,
+                      existingStoragePath: storagePath,
+                      allowCreate: !shouldHoldDeliveryOutcome,
+                      deliveryGateStatus: resolvedDeliveryDecision.deliveryGateStatus,
+                      holdDelivery: resolvedDeliveryDecision.holdDelivery,
+                    });
+                  } catch (publicationErr) {
+                    generatorError = publicationErr?.message || 'Report generation failed (report publication resolution failed)';
+                    generatorFailurePayload = {
+                      error: generatorError,
+                      has_report_data: Boolean(reportData),
+                      has_final_html: Boolean(reportData?.final_html),
+                      target_url: fetchUrl,
+                    };
+                  }
                 }
                 const resolvedReportId = publicationResolution?.reportId || reportId || null;
                 const resolvedStoragePath =
                   publicationResolution?.storagePath ||
                   storagePath ||
-                  (resolvedReportId
+                  (!shouldHoldDeliveryOutcome && resolvedReportId
                     ? buildReportStoragePath({ effectiveUserId: job.user_id, reportSeed: resolvedReportId })
                     : null);
                 if (shouldHoldDeliveryOutcome) {
@@ -2393,6 +2388,8 @@ export default async function handler(req, res) {
                       reportSeed: resolvedReportId,
                       propertyName: job.property_name || "",
                       createdReportRecord: Boolean(publicationResolution?.createdReportRecord),
+                      deliveryGateStatus: resolvedDeliveryDecision.deliveryGateStatus,
+                      holdDelivery: resolvedDeliveryDecision.holdDelivery,
                     });
                   } catch (artifactErr) {
                     generatorError = artifactErr?.message || `Report generation failed (${reportRes.status})`;
@@ -2462,11 +2459,11 @@ export default async function handler(req, res) {
 
           const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
           const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
-          const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision.coreValidRequiredCoverage;
+          const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents';
           const isResolvedHoldBlockedOutcome =
-            !resolvedDeliveryDecision.coreValidRequiredCoverage &&
-            (resolvedDeliveryDecision.holdDelivery === true ||
-              resolvedDeliveryDecision.customerDeliveryAllowed === false);
+            deliveryGateStatus !== 'deliverable' ||
+            resolvedDeliveryDecision.holdDelivery === true ||
+            resolvedDeliveryDecision.customerDeliveryAllowed === false;
           const shouldHoldDeliveryOutcome = isTypedGateOutcome || isResolvedHoldBlockedOutcome;
           const holdOutcomeStatus = 'user_needs_documents';
           if (shouldHoldDeliveryOutcome) {
@@ -2559,6 +2556,11 @@ export default async function handler(req, res) {
             continue;
           }
 
+          const hasExplicitDeliverableAuthority = () =>
+            resolvedDeliveryDecision.deliveryGateStatus === 'deliverable' &&
+            resolvedDeliveryDecision.holdDelivery !== true &&
+            resolvedDeliveryDecision.customerDeliveryAllowed === true;
+
           const reportEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation', {
             source: generatorSource,
             report_id: reportId,
@@ -2570,6 +2572,10 @@ export default async function handler(req, res) {
 
           if (reportEventErr) {
             throw new Error(`Failed to write report generation artifact: ${reportEventErr.message}`);
+          }
+
+          if (!hasExplicitDeliverableAuthority()) {
+            throw new Error('Delivery gate blocked before pdf_generating');
           }
 
           const { error: pdfGenErr } = await supabaseAdmin
@@ -2598,6 +2604,10 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${pdfTransitionErr.message}`);
           }
 
+          if (!hasExplicitDeliverableAuthority()) {
+            throw new Error('Delivery gate blocked before publishing');
+          }
+
           const { error: publishingErr } = await supabaseAdmin
             .from('analysis_jobs')
             .update({ status: 'publishing' })
@@ -2622,6 +2632,10 @@ export default async function handler(req, res) {
 
           if (publishingTransitionErr) {
             throw new Error(`Failed to write status transition artifact: ${publishingTransitionErr.message}`);
+          }
+
+          if (!hasExplicitDeliverableAuthority()) {
+            throw new Error('Delivery gate blocked before published');
           }
 
           const completeUpdate = { status: 'published' };

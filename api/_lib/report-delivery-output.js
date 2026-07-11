@@ -234,7 +234,18 @@ export async function ensureReportDownloadArtifact({
   renderPdfBuffer = renderReportPdfBuffer,
   createdReportRecord = false,
   bucketName = "generated_reports",
+  deliveryGateStatus = null,
+  holdDelivery = false,
 } = {}) {
+  if (deliveryGateStatus !== "deliverable" || holdDelivery === true) {
+    const err = new Error("Report download artifact blocked before resolution");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      deliveryGateStatus: deliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+    };
+    throw err;
+  }
   const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
   if (!normalizedStoragePath) {
     const err = new Error("Missing valid report storage path before download artifact");
@@ -355,7 +366,18 @@ export async function resolveOrCreateReportPublicationRecord({
   existingReportId = null,
   existingStoragePath = null,
   allowCreate = true,
+  deliveryGateStatus = null,
+  holdDelivery = false,
 } = {}) {
+  if (deliveryGateStatus !== "deliverable" || holdDelivery === true) {
+    const err = new Error("Report publication record blocked before resolution");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      deliveryGateStatus: deliveryGateStatus || null,
+      holdDelivery: Boolean(holdDelivery),
+    };
+    throw err;
+  }
   const effectiveUserId = String(job?.user_id ?? "").trim();
   const reportType = String(reportData?.report_type ?? job?.report_type ?? "").trim();
   const reportSeed = String(job?.id ?? reportData?.jobId ?? "").trim();
@@ -457,11 +479,8 @@ export function assertValidReportPublicationInsert({
   const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
   const normalizedDeliveryGateStatus = deliveryGateStatus;
   if (
-    !coreValidRequiredCoverage &&
-    (
-      holdDelivery ||
-      normalizedDeliveryGateStatus !== "deliverable"
-    )
+    holdDelivery ||
+    normalizedDeliveryGateStatus !== "deliverable"
   ) {
     const err = new Error("Report publication blocked before storage insert");
     err.code = "REPORT_GENERATION_FAILED";
