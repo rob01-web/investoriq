@@ -9,9 +9,9 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
   const rawDeliveryGateStatus = String(state.delivery_gate_status || "blocked");
   const customerDeliveryAllowed =
-    state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null
-      ? Boolean(state.customer_delivery_allowed) && rawDeliveryGateStatus === "deliverable" && !Boolean(state.hold_delivery)
-      : rawDeliveryGateStatus === "deliverable" && !Boolean(state.hold_delivery);
+    state.customer_delivery_allowed === true &&
+    rawDeliveryGateStatus === "deliverable" &&
+    !Boolean(state.hold_delivery);
   const holdDelivery = Boolean(state.hold_delivery);
   const publicSampleReady = Boolean(state.public_sample_ready);
   const highValueOutreachReady = Boolean(state.high_value_outreach_ready);

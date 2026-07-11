@@ -220,8 +220,8 @@ export default async function handler(req, res) {
         deliveryGateStatus === 'deliverable' &&
         !holdDelivery &&
         (hasCanonical
-          ? deliveryDecisionState?.customer_delivery_allowed !== false
-          : reportData?.customer_delivery_allowed !== false);
+          ? deliveryDecisionState?.customer_delivery_allowed === true
+          : reportData?.customer_delivery_allowed === true);
       const customerStatusReasonCode = hasCanonical
         ? (Boolean(deliveryDecisionState?.customer_delivery_allowed)
             ? null
