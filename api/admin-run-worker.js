@@ -201,27 +201,31 @@ export default async function handler(req, res) {
         reportData?.deliveryDecisionState && typeof reportData.deliveryDecisionState === 'object'
           ? reportData.deliveryDecisionState
           : null;
-      const hasCanonical = Boolean(deliveryDecisionState);
+      const hasCanonical = deliveryDecisionState?.source === 'canonical_delivery_decision';
       const coreValidRequiredCoverage = hasCanonical
-        ? Boolean(deliveryDecisionState?.core_valid_required_coverage)
-        : Boolean(reportData?.core_valid_required_coverage);
+        ? deliveryDecisionState?.core_valid_required_coverage === true
+        : false;
       const rawDeliveryGateStatus = hasCanonical
         ? String(deliveryDecisionState?.delivery_gate_status || 'blocked')
-        : String(reportData?.delivery_gate_status || 'blocked');
+        : 'blocked';
       const deliveryGateStatus = rawDeliveryGateStatus;
       const holdDelivery = hasCanonical
         ? Boolean(deliveryDecisionState?.hold_delivery)
-        : Boolean(
-            reportData?.hold_delivery ??
-            reportData?.holdDelivery ??
-            (deliveryGateStatus !== 'deliverable')
-          );
+        : true;
+      const customerBlockers = hasCanonical
+        ? (Array.isArray(deliveryDecisionState?.customer_blockers)
+            ? deliveryDecisionState.customer_blockers
+            : Array.isArray(deliveryDecisionState?.customer_publish_blockers)
+              ? deliveryDecisionState.customer_publish_blockers
+              : [])
+        : [];
       const customerDeliveryAllowed =
+        hasCanonical &&
+        coreValidRequiredCoverage &&
         deliveryGateStatus === 'deliverable' &&
         !holdDelivery &&
-        (hasCanonical
-          ? deliveryDecisionState?.customer_delivery_allowed === true
-          : reportData?.customer_delivery_allowed === true);
+        deliveryDecisionState?.customer_delivery_allowed === true &&
+        customerBlockers.length === 0;
       const customerStatusReasonCode = hasCanonical
         ? (Boolean(deliveryDecisionState?.customer_delivery_allowed)
             ? null

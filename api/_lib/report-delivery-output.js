@@ -8,11 +8,22 @@ export function sanitizeTypography(html) {
 export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
   const rawDeliveryGateStatus = String(state.delivery_gate_status || "blocked");
+  const hasCanonicalCoreValidState =
+    state.source === "canonical_delivery_decision" &&
+    state.core_valid_required_coverage === true;
+  const deliveryGateStatus = hasCanonicalCoreValidState ? rawDeliveryGateStatus : "blocked";
+  const customerBlockers = Array.isArray(state.customer_blockers)
+    ? state.customer_blockers
+    : Array.isArray(state.customer_publish_blockers)
+      ? state.customer_publish_blockers
+      : [];
   const customerDeliveryAllowed =
+    hasCanonicalCoreValidState &&
     state.customer_delivery_allowed === true &&
-    rawDeliveryGateStatus === "deliverable" &&
-    !Boolean(state.hold_delivery);
-  const holdDelivery = Boolean(state.hold_delivery);
+    deliveryGateStatus === "deliverable" &&
+    !Boolean(state.hold_delivery) &&
+    customerBlockers.length === 0;
+  const holdDelivery = Boolean(state.hold_delivery) || !customerDeliveryAllowed;
   const publicSampleReady = Boolean(state.public_sample_ready);
   const highValueOutreachReady = Boolean(state.high_value_outreach_ready);
   const launchPathRecommendation =
@@ -20,10 +31,10 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
       ? (publicSampleReady && highValueOutreachReady
         ? "customer_deliverable"
         : "customer_deliverable_with_internal_advisory")
-      : (rawDeliveryGateStatus === "user_needs_documents" ? "user_needs_documents" : "customer_deliverable");
+      : (deliveryGateStatus === "user_needs_documents" ? "user_needs_documents" : "customer_deliverable");
   const readinessHierarchy = {
     final_delivery_authority: "delivery_gate",
-    final_delivery_status: rawDeliveryGateStatus,
+    final_delivery_status: deliveryGateStatus,
     customer_delivery_ready: customerDeliveryAllowed,
     customer_publish_eligible: customerDeliveryAllowed,
     report_publishable: customerDeliveryAllowed,
@@ -33,7 +44,7 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
     advisory_only_findings: Array.isArray(state.advisory_only_findings) ? state.advisory_only_findings.length : 0,
   };
   return {
-    delivery_gate_status: rawDeliveryGateStatus,
+    delivery_gate_status: deliveryGateStatus,
     customer_delivery_allowed: customerDeliveryAllowed,
     hold_delivery: holdDelivery,
     holdDelivery,
@@ -44,7 +55,7 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
     launch_path_recommendation: launchPathRecommendation,
     readiness_hierarchy: readinessHierarchy,
     legacy_compatibility: {
-      delivery_gate_status: rawDeliveryGateStatus,
+      delivery_gate_status: deliveryGateStatus,
       customer_delivery_ready: customerDeliveryAllowed,
       customer_publish_eligible: customerDeliveryAllowed,
       report_publishable: customerDeliveryAllowed,
