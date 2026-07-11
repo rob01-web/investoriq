@@ -5106,17 +5106,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         };
         throw finalBossError;
       }
-      return res.status(200).json({
-        success: true,
-        report_type: reportType,
-        report_mode: effectiveReportMode,
-        final_html: finalBossCompliance.html || "",
-        boss_compliance: acquisitionMemoV2Finalization?.bossCompliance || acquisitionMemoV2Finalization?.compliance || null,
-        final_v2_delivery_decision: acquisitionMemoV2Finalization?.finalDeliveryDecision || null,
-        final_v2_compliance_diagnostics: acquisitionMemoV2Finalization?.finalComplianceDiagnostics || null,
-        customer_surface_model_validation: acquisitionMemoV2Finalization?.customerSurfaceModelValidation || null,
-        customer_surface_html_validation: acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation || null,
-      });
     }
     if (!String(upsideHtml || "").trim()) {
       finalHtml = stripMarkedSection(finalHtml, "EXEC_UPSIDE_BULLETS");
