@@ -860,16 +860,6 @@ function uniqueActionCodes(actions, predicate) {
   );
 }
 
-const legacyCustomerBlockerFallbackCodes = new Set([
-  "RENDERED_TEMPLATE_TOKEN_LEAK",
-  "RENDERED_MOJIBAKE_LEAK",
-  "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
-  "HARD_PUBLIC_LANGUAGE_CONTRACT",
-  "INTERNAL_DEBUG_LANGUAGE_LEAK",
-  "UNSUPPORTED_RENOVATION_ANALYSIS_RENDERED",
-  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
-]);
-
 const deterministicCustomerHardDefectCodes = new Set([
   "RENDERED_TEMPLATE_TOKEN_LEAK",
   "RENDERED_MOJIBAKE_LEAK",
@@ -1061,7 +1051,7 @@ function isCustomerPublishBlockingViolationWithContext(violation, {
     return isNonNegotiableCustomerHardDefect(code);
   }
   if (explicitlyNonBlockingImpact) return false;
-  return isNonNegotiableCustomerHardDefect(code) || legacyCustomerBlockerFallbackCodes.has(code);
+  return isNonNegotiableCustomerHardDefect(code);
 }
 
 function isOptionalSupportingContractOverblockViolation(violation, {
@@ -1467,7 +1457,6 @@ function buildPublishEligibilitySummary({
     delivery_gate_decision,
   });
   const liveCoverageContext = Boolean(sourceReportCoverageQa);
-  const allowLegacyReadinessFallback = !liveCoverageContext && !readinessOverride.present;
   const canonicalReasonCodeRaw =
     readinessOverride.normalized?.customer_status_reason_code ||
     readinessOverride.normalized?.reason_code ||
@@ -1507,42 +1496,36 @@ function buildPublishEligibilitySummary({
     highValueOutreachImpact !== "block_until_review"
   );
   const canonicalDeliveryGateStatusRaw = readinessOverride.normalized?.delivery_gate_status || null;
-  const canonicalDeliveryGateStatus = normalizeCustomerDeliveryGateStatus(
-    deprecatedAdminReviewResolution.gate_status || canonicalDeliveryGateStatusRaw
-  );
+  const canonicalDeliveryGateStatus = readinessOverride.present
+    ? normalizeCustomerDeliveryGateStatus(
+        deprecatedAdminReviewResolution.gate_status || canonicalDeliveryGateStatusRaw
+      )
+    : normalizedDeliveryGateStatus;
   const canonicalHasExplicitCustomerAllowed =
     readinessOverride.normalized?.customer_delivery_allowed !== undefined &&
     readinessOverride.normalized?.customer_delivery_allowed !== null;
-  const canonicalCustomerDeliveryAllowed =
-    readinessOverride.present
-      ? canonicalHasExplicitCustomerAllowed
-        ? Boolean(readinessOverride.normalized?.customer_delivery_allowed)
-        : canonicalDeliveryGateStatus === "deliverable"
-      : canonicalDeliveryGateStatus === "deliverable" &&
-        requiredCoreCoverageReady &&
-        (liveCoverageContext ? true : !sourceNeedsDocs && customerPublishBlockers.length === 0);
-  const customerPublishEligible = allowLegacyReadinessFallback
-    ? customerPublishEligibleLegacy
-    : canonicalCustomerDeliveryAllowed;
-  const reportPublishable = allowLegacyReadinessFallback
-    ? reportPublishableLegacy
-    : canonicalCustomerDeliveryAllowed;
-  const customerDeliveryReadyAlias = allowLegacyReadinessFallback
-    ? customerDeliveryReadyAliasLegacy
-    : canonicalCustomerDeliveryAllowed;
-  const publicSampleReady = allowLegacyReadinessFallback
-    ? publicSampleReadyLegacy
-    : Boolean(
+  const canonicalCustomerDeliveryAllowed = Boolean(
+    liveCoverageContext &&
+    coreValidRequiredCoverage &&
+    canonicalDeliveryGateStatus === "deliverable" &&
+    !sourceNeedsDocs &&
+    customerPublishBlockers.length === 0 &&
+    (!readinessOverride.present ||
+      (canonicalHasExplicitCustomerAllowed &&
+        readinessOverride.normalized?.customer_delivery_allowed === true))
+  );
+  const customerPublishEligible = canonicalCustomerDeliveryAllowed;
+  const reportPublishable = canonicalCustomerDeliveryAllowed;
+  const customerDeliveryReadyAlias = canonicalCustomerDeliveryAllowed;
+  const publicSampleReady = Boolean(
       canonicalDeliveryGateStatus === "deliverable" &&
-      requiredCoreCoverageReady &&
+      coreValidRequiredCoverage &&
       publicSampleBlockers.length === 0 &&
       publicSampleImpact !== "block_until_review"
     );
-  const highValueOutreachReady = allowLegacyReadinessFallback
-    ? highValueOutreachReadyLegacy
-    : Boolean(
+  const highValueOutreachReady = Boolean(
       canonicalDeliveryGateStatus === "deliverable" &&
-      requiredCoreCoverageReady &&
+      coreValidRequiredCoverage &&
       highValueOutreachBlockers.length === 0 &&
       highValueOutreachImpact !== "block_until_review"
     );
@@ -1556,10 +1539,8 @@ function buildPublishEligibilitySummary({
     ? "canonical_delivery_state"
     : "delivery_gate_state";
   const readinessFallbackUsed = false;
-  const legacyReadinessSource = allowLegacyReadinessFallback
-    ? "legacy_publish_eligibility_fallback"
-    : readinessSource;
-  const legacyReadinessFallbackUsed = allowLegacyReadinessFallback;
+  const legacyReadinessSource = readinessSource;
+  const legacyReadinessFallbackUsed = false;
   const publishDecisionReasonFinal =
     canonicalDeliveryGateStatus === "deliverable"
       ? "customer_publish_eligible"
@@ -1580,6 +1561,7 @@ function buildPublishEligibilitySummary({
     report_quality_advisories: reportQualityAdvisories,
     report_publishable: reportPublishable,
     report_blocked: !reportPublishable,
+    customer_delivery_allowed: canonicalCustomerDeliveryAllowed,
     report_quality_decision_reason: publishDecisionReasonFinal,
     readiness_source: readinessSource,
     readiness_fallback_used: readinessFallbackUsed,
@@ -1780,7 +1762,7 @@ function isCoreValidNonBlockingIssueCode(code = "") {
 }
 
 function normalizeCustomerDeliveryGateStatus(statusValue) {
-  const normalized = String(statusValue || "deliverable").toLowerCase();
+  const normalized = String(statusValue || "blocked").toLowerCase();
   return normalized;
 }
 
@@ -1996,6 +1978,37 @@ export function buildDeliveryGateDecision({
     customerDeliveryBlockerAction ||
     customerBlockingReconciliationViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null);
+  if (!sourceReportCoverageQa || !coreValidRequiredCoverage) {
+    const gateReason = resolveNeedsDocumentsReasonCode({
+      sourceDocumentAction,
+      coreInputSufficiencyState,
+      sourceLimitations,
+      sourceStatus,
+    });
+    return {
+      final_delivery_authority: "delivery_gate",
+      delivery_gate_status: "user_needs_documents",
+      reason_code: gateReason,
+      customer_delivery_allowed: false,
+      customer_delivery_ready: false,
+      customer_publish_eligible: false,
+      report_publishable: false,
+      report_blocked: true,
+      core_valid_required_coverage: false,
+      customer_publish_blockers: uniqueCodes([
+        ...sourceBlockingFlags.map((flag) => flag?.code),
+        gateReason,
+      ]),
+      public_sample_blockers: [],
+      high_value_outreach_blockers: [],
+      advisory_only_findings: [],
+      readiness_source: "canonical_source_coverage_fail_closed",
+      readiness_fallback_used: false,
+      user_needs_documents: true,
+      admin_review_required: false,
+      launch_path_recommendation: "user_needs_documents",
+    };
+  }
   if (readinessOverride.present) {
     const publishEligibility = buildPublishEligibilitySummary({
       deliveryGateStatus: canonicalDeliveryGateStatus || "deliverable",
@@ -2027,11 +2040,10 @@ export function buildDeliveryGateDecision({
       readinessOverride.normalized?.customer_delivery_allowed !== undefined &&
       readinessOverride.normalized?.customer_delivery_allowed !== null;
     const canonicalCustomerAllowed =
-      String(readinessOverride.normalized?.delivery_gate_status || "").toLowerCase() === "admin_review_required"
-        ? canonicalDeliveryGateStatus === "deliverable"
-        : canonicalHasExplicitCustomerAllowed
-          ? Boolean(readinessOverride.normalized?.customer_delivery_allowed)
-          : canonicalDeliveryGateStatus === "deliverable";
+      canonicalDeliveryGateStatus === "deliverable" &&
+      canonicalHasExplicitCustomerAllowed &&
+      readinessOverride.normalized?.customer_delivery_allowed === true &&
+      String(readinessOverride.normalized?.delivery_gate_status || "").toLowerCase() !== "admin_review_required";
     const publicReady = readinessOverride.has_public_sample_ready
       ? Boolean(readinessOverride.normalized?.public_sample_ready)
       : publishEligibility.public_sample_ready;
@@ -2040,7 +2052,8 @@ export function buildDeliveryGateDecision({
       : publishEligibility.high_value_outreach_ready;
     return {
       final_delivery_authority: "delivery_gate",
-      delivery_gate_status: canonicalDeliveryGateStatus || "deliverable",
+      delivery_gate_status: canonicalDeliveryGateStatus || "blocked",
+      customer_delivery_allowed: canonicalCustomerAllowed,
       reason_code: readinessOverride.normalized?.customer_status_reason_code || readinessOverride.normalized?.reason_code || null,
       top_action_code: prioritizedActions[0]?.code || null,
       owner_area: prioritizedActions[0]?.owner_area || null,
@@ -2250,6 +2263,7 @@ export function buildDeliveryGateDecision({
     return {
       final_delivery_authority: "delivery_gate",
       delivery_gate_status: "deliverable",
+      customer_delivery_allowed: true,
       reason_code: null,
       top_action_code: prioritizedActions[0]?.code || null,
       owner_area: prioritizedActions[0]?.owner_area || null,
@@ -2285,38 +2299,34 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
     : {};
   const coreValidRequiredCoverage = state.core_valid_required_coverage === true;
   const deprecatedAdminReviewResolution = resolveDeprecatedAdminReviewGateStatus({
-    statusValue: state.delivery_gate_status || "deliverable",
+    statusValue: state.delivery_gate_status || "blocked",
     reasonCode: state.reason_code || state.publish_decision_reason || null,
     explicitCoreFailure: false,
   });
-  const deliveryGateStatus = coreValidRequiredCoverage
-    ? "deliverable"
-    : normalizeCustomerDeliveryGateStatus(
-      deprecatedAdminReviewResolution.gate_status || state.delivery_gate_status || "deliverable"
-    );
+  const deliveryGateStatus = normalizeCustomerDeliveryGateStatus(
+    state.delivery_gate_status || "blocked"
+  );
   const wasDeprecatedAdminReviewStatus =
     String(state.delivery_gate_status || "").toLowerCase() === "admin_review_required";
   const hasExplicitCanonicalCustomerAllowed =
     state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null;
   const customerBlockers = Array.isArray(state.customer_publish_blockers) ? state.customer_publish_blockers : [];
-  const customerDeliveryAllowed = coreValidRequiredCoverage
-    ? true
-    : hasExplicitCanonicalCustomerAllowed
-    ? (
-      wasDeprecatedAdminReviewStatus && deprecatedAdminReviewResolution.classification === "core_fail"
-        ? false
-        : wasDeprecatedAdminReviewStatus && deliveryGateStatus === "deliverable"
-          ? true
-          : Boolean(state.customer_delivery_allowed)
-    )
-    : Boolean(deliveryGateStatus === "deliverable" && customerBlockers.length === 0);
-  const holdDelivery = !coreValidRequiredCoverage && deliveryGateStatus !== "deliverable";
+  const customerDeliveryAllowed = Boolean(
+    coreValidRequiredCoverage &&
+    deliveryGateStatus === "deliverable" &&
+    hasExplicitCanonicalCustomerAllowed &&
+    state.customer_delivery_allowed === true &&
+    state.hold_delivery !== true &&
+    customerBlockers.length === 0 &&
+    !wasDeprecatedAdminReviewStatus
+  );
+  const holdDelivery = Boolean(state.hold_delivery) || !customerDeliveryAllowed;
   const publicBlockers = Array.isArray(state.public_sample_blockers) ? state.public_sample_blockers : [];
   const highValueBlockers = Array.isArray(state.high_value_outreach_blockers) ? state.high_value_outreach_blockers : [];
   const reasonCode = String(state.reason_code || state.publish_decision_reason || deliveryGateStatus || "").trim() || null;
 
   const customerStatusLabel =
-    coreValidRequiredCoverage || (deliveryGateStatus === "deliverable" && customerDeliveryAllowed)
+    deliveryGateStatus === "deliverable" && customerDeliveryAllowed
       ? "ready"
       : deliveryGateStatus === "user_needs_documents"
           ? "needs_documents"
@@ -2450,16 +2460,18 @@ export function buildQaActionPlan({
     delivery_gate_decision,
   });
   const customerReady = readinessOverride.present
-    ? Boolean(readinessOverride.normalized?.customer_delivery_allowed)
-    : customerReadyLegacy;
-  const useLegacyFallback = !liveCoverageContext && !readinessOverride.present;
+    ? Boolean(
+        readinessOverride.normalized?.delivery_gate_status === "deliverable" &&
+        readinessOverride.normalized?.customer_delivery_allowed === true
+      )
+    : Boolean(
+        liveCoverageContext &&
+        isCoreValidRequiredCoverageState(sourceReportCoverageQa) &&
+        customerReadyLegacy
+      );
   const canonicalCustomerReady = Boolean(customerReady);
-  const publicSampleReady = useLegacyFallback && readinessOverride.has_public_sample_ready
-    ? Boolean(readinessOverride.normalized?.public_sample_ready)
-    : Boolean(canonicalCustomerReady && publicSampleReadyLegacy);
-  const highValueOutreachReady = useLegacyFallback && readinessOverride.has_high_value_outreach_ready
-    ? Boolean(readinessOverride.normalized?.high_value_outreach_ready)
-    : Boolean(canonicalCustomerReady && highValueOutreachReadyLegacy);
+  const publicSampleReady = Boolean(canonicalCustomerReady && publicSampleReadyLegacy);
+  const highValueOutreachReady = Boolean(canonicalCustomerReady && highValueOutreachReadyLegacy);
   const canonicalDeliveryGateStatus = readinessOverride.normalized?.delivery_gate_status || null;
   const canonicalLaunchPathRecommendation = customerReady
     ? (publicSampleReady && highValueOutreachReady ? "customer_deliverable" : "customer_deliverable_with_internal_advisory")
@@ -2474,22 +2486,18 @@ export function buildQaActionPlan({
     ? canonicalDeliveryGateStatus === "user_needs_documents"
       ? "user_needs_documents"
       : canonicalLaunchPathRecommendation
-    : liveCoverageContext
-      ? canonicalLaunchPathRecommendation
-      : legacyLaunchPathRecommendation;
+    : canonicalLaunchPathRecommendation;
   const resolvedDeliveryRecommendation = readinessOverride.present
     ? canonicalDeliveryGateStatus === "user_needs_documents"
       ? "source_package_insufficient"
       : canonicalDeliveryRecommendation
-    : liveCoverageContext
-      ? canonicalDeliveryRecommendation
-      : legacyDeliveryRecommendation;
+    : canonicalDeliveryRecommendation;
   const readinessSource = liveCoverageContext
     ? "canonical_delivery_state"
     : readinessOverride.present
       ? "canonical_delivery_state"
-      : "legacy_action_plan_fallback";
-  const readinessFallbackUsed = !liveCoverageContext && !readinessOverride.present;
+      : "fail_closed_missing_source_coverage";
+  const readinessFallbackUsed = false;
   const eliteReadinessBlockers = uniqueCodes(
     prioritizedActions
       .filter((action) => {

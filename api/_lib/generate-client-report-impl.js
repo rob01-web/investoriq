@@ -373,17 +373,6 @@ function resolveCanonicalCurrentDebtScoreInputs({
       usedCanonicalState: true,
     };
   }
-  // Legacy compatibility path for missing canonical state only.
-  const fallbackCoverage = resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback(
-    mortgagePayload,
-    coerceNumber(t12Payload?.net_operating_income)
-  );
-  if (Number.isFinite(fallbackCoverage?.dscr) && fallbackCoverage.dscr > 0) {
-    return {
-      currentDebtCoverage: fallbackCoverage,
-      usedCanonicalState: false,
-    };
-  }
   return {
     currentDebtCoverage: null,
     usedCanonicalState: false,
