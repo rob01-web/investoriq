@@ -1,3 +1,5 @@
+import { isCanonicalSourceTruthPackage } from "./source-truth-package.js";
+
 const CONTRACT_VERSION = "acq_memo_boss_contract_v1";
 
 const FORBIDDEN_SURFACES = Object.freeze([
@@ -710,6 +712,25 @@ function summarizeCoreSource(coreSource, defaultRole, defaultLabel) {
   });
 }
 
+function buildCoreSourceFromTruthPackage(entry, defaultRole, defaultLabel) {
+  if (!entry || !["accepted_complete", "accepted_constrained"].includes(entry.status)) return null;
+  return {
+    fileId: entry.file_id || null,
+    originalFilename: entry.original_filename || null,
+    role: defaultRole,
+    roleLabel: defaultLabel,
+    canonicalLabel: defaultLabel,
+    treatment: "Primary quantitative input",
+    use: "Validated core quantitative source.",
+    sourceKind: defaultRole,
+    authorityBasis: "canonical_source_truth_package",
+    allowedUses: ["core_quantitative_input"],
+    forbiddenUses: ["support_doc"],
+    extractedFacts: entry.accepted_facts || {},
+    sourceEvidence: entry.evidence || {},
+  };
+}
+
 function isValidCoreDoc(doc) {
   return Boolean(truthyObject(doc) && Boolean(doc.role || doc.canonicalLabel || doc.sourceKind));
 }
@@ -1051,6 +1072,7 @@ function assessAcquisitionMemoBossCompliance(bossContract, html, validationOrVio
 
 function buildAcquisitionMemoBossContract({
   canonicalSourcePackage = null,
+  sourceTruthPackage = null,
   acquisitionMemoProjection = null,
   coreMetrics = null,
   t12Payload = null,
@@ -1058,13 +1080,28 @@ function buildAcquisitionMemoBossContract({
   reportMeta = null,
   reportMode = null,
 } = {}) {
+  const hasCanonicalSourceTruth = isCanonicalSourceTruthPackage(sourceTruthPackage);
+  const sourceTruthT12 = hasCanonicalSourceTruth
+    ? buildCoreSourceFromTruthPackage(
+        sourceTruthPackage?.core?.t12,
+        "core_t12",
+        "Core Quantitative Source - Trailing 12-Month Income Statement"
+      )
+    : null;
+  const sourceTruthRentRoll = hasCanonicalSourceTruth
+    ? buildCoreSourceFromTruthPackage(
+        sourceTruthPackage?.core?.rent_roll,
+        "core_rent_roll",
+        "Core Quantitative Source - Rent Roll"
+      )
+    : null;
   const coreT12 = summarizeCoreSource(
-    canonicalSourcePackage?.coreT12,
+    hasCanonicalSourceTruth ? sourceTruthT12 : canonicalSourcePackage?.coreT12,
     "core_t12",
     "Core Quantitative Source - Trailing 12-Month Income Statement"
   );
   const coreRentRoll = summarizeCoreSource(
-    canonicalSourcePackage?.coreRentRoll,
+    hasCanonicalSourceTruth ? sourceTruthRentRoll : canonicalSourcePackage?.coreRentRoll,
     "core_rent_roll",
     "Core Quantitative Source - Rent Roll"
   );
@@ -1105,11 +1142,18 @@ function buildAcquisitionMemoBossContract({
     });
   }
 
+  const sourceTruthPublishable = !hasCanonicalSourceTruth || sourceTruthPackage.core_publishable === true;
   const t12Valid = isValidCoreDoc(coreT12);
   const rentRollValid = isValidCoreDoc(coreRentRoll);
   const fatalReasons = [];
   if (!t12Valid) fatalReasons.push("core_t12_unusable");
   if (!rentRollValid) fatalReasons.push("core_rent_roll_unusable");
+  if (hasCanonicalSourceTruth && !sourceTruthPublishable) {
+    for (const blocker of Array.isArray(sourceTruthPackage?.true_blockers) ? sourceTruthPackage.true_blockers : []) {
+      if (blocker && !fatalReasons.includes(blocker)) fatalReasons.push(blocker);
+    }
+    if (fatalReasons.length === 0) fatalReasons.push("canonical_source_truth_not_publishable");
+  }
 
   const rentRollFacts = normalizeBossContractFact(coreRentRoll?.extractedFacts || {});
   const t12Facts = normalizeBossContractFact(coreT12SourceTruth?.extractedFacts || supplementedCoreT12FactsFromPayload || {});
@@ -1423,13 +1467,21 @@ function buildAcquisitionMemoBossContract({
     coreGate: {
       t12Valid,
       rentRollValid,
-      publishAllowed: t12Valid && rentRollValid && fatalReasons.length === 0,
+      publishAllowed: sourceTruthPublishable && t12Valid && rentRollValid && fatalReasons.length === 0,
       fatalReasons,
+      sourceTruthPackageValid: hasCanonicalSourceTruth,
     },
     sourceTruth: {
     coreT12: coreT12SourceTruth,
     coreRentRoll,
     supportDocs: supportDocsWithSupplementedFacts,
+    authority: hasCanonicalSourceTruth ? {
+      source: sourceTruthPackage.source,
+      schema_version: sourceTruthPackage.schema_version,
+      core_publishable: sourceTruthPackage.core_publishable,
+      true_blockers: sourceTruthPackage.true_blockers,
+      section_policy: sourceTruthPackage.section_policy,
+    } : null,
   },
     reportContext: normalizeBossContractFact({
       propertyProfile,

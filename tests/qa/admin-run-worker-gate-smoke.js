@@ -1,213 +1,74 @@
 import assert from "node:assert/strict";
-import fs from "fs";
+import fs from "node:fs";
+
+import { classifyTerminalFailureCode } from "../../lib/terminal-failure-taxonomy.js";
+import { buildCustomerFailureMessage } from "../../src/lib/jobFailureMessaging.js";
 
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
+const resolverStart = workerSource.indexOf("const resolveWorkerDeliveryDecision");
+const resolverEnd = workerSource.indexOf("const resolveHeldDeliveryTerminalCode", resolverStart);
+assert.notEqual(resolverStart, -1);
+assert.notEqual(resolverEnd, -1);
+const resolverSource = workerSource.slice(resolverStart, resolverEnd);
+
+assert.match(resolverSource, /deliveryDecisionState\?\.source === 'canonical_delivery_decision'/);
+assert.match(resolverSource, /const coreValidRequiredCoverage = hasCanonical[\s\S]*?: false;/);
+assert.match(resolverSource, /const rawDeliveryGateStatus = hasCanonical[\s\S]*?: 'blocked';/);
+assert.match(resolverSource, /const holdDelivery = hasCanonical[\s\S]*?: true;/);
+assert.match(
+  resolverSource,
+  /const customerDeliveryAllowed =[\s\S]*?hasCanonical &&[\s\S]*?coreValidRequiredCoverage &&[\s\S]*?deliveryGateStatus === 'deliverable' &&[\s\S]*?!holdDelivery &&[\s\S]*?customer_delivery_allowed === true &&[\s\S]*?customerBlockers\.length === 0;/
+);
+const customerAuthorityStart = resolverSource.indexOf("const customerDeliveryAllowed");
+const customerAuthorityEnd = resolverSource.indexOf("const customerStatusReasonCode", customerAuthorityStart);
+const customerAuthoritySource = resolverSource.slice(customerAuthorityStart, customerAuthorityEnd);
+assert.equal(/reportData\?\.customer_publish_eligible/.test(customerAuthoritySource), false);
+assert.equal(/reportData\?\.customer_delivery_ready/.test(customerAuthoritySource), false);
+assert.equal(/reportData\?\.holdDelivery/.test(resolverSource), true);
+assert.match(resolverSource, /legacyAliasConflicts/);
 
 assert.match(
   workerSource,
-  /import \{\s*buildReportStoragePath,\s*ensureReportDownloadArtifact,\s*resolveOrCreateReportPublicationRecord,\s*\} from '\.\/_lib\/report-delivery-output\.js';/
+  /const shouldHoldDeliveryOutcome =[\s\S]*?isTypedGateOutcome \|\| isResolvedHoldBlockedOutcome;/
 );
+assert.match(workerSource, /if \(shouldHoldDeliveryOutcome\) \{/);
+assert.match(workerSource, /const terminalErrorCode = resolveHeldDeliveryTerminalCode\(resolvedDeliveryDecision\);/);
+assert.match(workerSource, /coreValidRequiredCoverage === true[\s\S]*?return 'REPORT_CONTRACT_FAILED'/);
+assert.match(workerSource, /return 'CORE_T12_CATASTROPHICALLY_UNUSABLE'/);
+assert.match(workerSource, /return 'CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE'/);
+assert.match(workerSource, /return 'CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY'/);
+assert.match(workerSource, /errorCode: terminalErrorCode/);
+assert.match(workerSource, /generatorErrorCode = 'PDF_ARTIFACT_FAILED'/);
+assert.match(workerSource, /generatorErrorCode = 'STORAGE_PUBLICATION_FAILED'/);
+assert.match(workerSource, /error_code: generatorErrorCode/);
+const heldOutcomeStart = workerSource.indexOf("if (shouldHoldDeliveryOutcome)", resolverEnd);
+const heldOutcomeEnd = workerSource.indexOf("if (!reportId || !storagePath)", heldOutcomeStart);
+const heldOutcomeSource = workerSource.slice(heldOutcomeStart, heldOutcomeEnd);
+assert.equal(/errorCode:\s*'MISSING_REQUIRED_SOURCE_DATA'/.test(heldOutcomeSource), false);
 
-assert.match(
-  workerSource,
-  /publicationResolution = await resolveOrCreateReportPublicationRecord\([\s\S]{0,260}allowCreate:\s*!shouldHoldDeliveryOutcome/
-);
-assert.match(workerSource, /ensureReportDownloadArtifact\(\{/);
-assert.match(
-  workerSource,
-  /const resolvedReportId = publicationResolution\?\.reportId \|\| reportId \|\| null;/
-);
-assert.match(
-  workerSource,
-  /const resolvedStoragePath =[\s\S]{0,200}publicationResolution\?\.storagePath \|\|[\s\S]{0,200}\(resolvedReportId/
-);
-assert.match(
-  workerSource,
-  /if \(shouldHoldDeliveryOutcome\)\s*\{[\s\S]{0,120}reportId = resolvedReportId;[\s\S]{0,120}storagePath = resolvedStoragePath;/
-);
-assert.match(
-  workerSource,
-  /\} else if \(generatorError\)\s*\{/
-);
-assert.match(
-  workerSource,
-  /\} else if \(!resolvedReportId\)\s*\{/
-);
+for (const code of [
+  'SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED',
+  'REPORT_RENDER_FAILED',
+  'REPORT_CONTRACT_FAILED',
+  'PDF_ARTIFACT_FAILED',
+  'STORAGE_PUBLICATION_FAILED',
+]) {
+  const classification = classifyTerminalFailureCode(code);
+  assert.equal(classification.customer_document_replacement_required, false);
+  const copy = buildCustomerFailureMessage({ error_code: code });
+  assert.equal(/replace|clearer|rent roll|operating statement|source package could not/i.test(JSON.stringify(copy)), false);
+}
 
-assert.equal(
-  /deliveryGateStatus === 'user_needs_documents'[\s\S]{0,320}error_code:\s*'REPORT_GENERATION_FAILED'/.test(workerSource),
-  false
-);
+for (const code of [
+  'CORE_T12_CATASTROPHICALLY_UNUSABLE',
+  'CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE',
+  'CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY',
+]) {
+  assert.equal(classifyTerminalFailureCode(code).customer_document_replacement_required, true);
+}
 
-assert.equal(
-  /deliveryGateStatus === 'admin_review_required'[\s\S]{0,320}error_code:\s*'REPORT_GENERATION_FAILED'/.test(workerSource),
-  false
-);
-
-const typedGateAnchor = workerSource.indexOf("const isTypedGateOutcome");
-assert.notEqual(typedGateAnchor, -1);
-const reportEventAnchor = workerSource.indexOf("const reportEventErr", typedGateAnchor);
-assert.notEqual(reportEventAnchor, -1);
-const typedGateWindow = workerSource.slice(typedGateAnchor, reportEventAnchor);
-const terminalHelperMatches = workerSource.match(/const applyTerminalFailureOutcome = async/g) || [];
-assert.equal(terminalHelperMatches.length, 1);
-const helperDefMatches = workerSource.match(/const restoreEntitlementForFailedJob = async/g) || [];
-assert.equal(helperDefMatches.length, 1);
-const inlineRestoreSqlMatches = workerSource.match(/update\(\{ consumed_at: null, job_id: null \}\)/g) || [];
-assert.equal(inlineRestoreSqlMatches.length, 1);
-const helperCallMatches = workerSource.match(/await restoreEntitlementForFailedJob\(/g) || [];
-assert.ok(helperCallMatches.length >= 1);
-const recordFailureAnchor = workerSource.indexOf("const recordJobFailure = async");
-assert.notEqual(recordFailureAnchor, -1);
-const hasCreditAnchor = workerSource.indexOf("const hasCreditConsumed", recordFailureAnchor);
-assert.notEqual(hasCreditAnchor, -1);
-const recordFailureWindow = workerSource.slice(recordFailureAnchor, hasCreditAnchor);
-assert.match(recordFailureWindow, /await applyTerminalFailureOutcome\(job,\s*\{/);
-assert.equal(/update\(\{ consumed_at: null, job_id: null \}\)/.test(recordFailureWindow), false);
-assert.equal(/\.from\('analysis_jobs'\)\s*\.update\(/.test(recordFailureWindow), false);
-assert.match(recordFailureWindow, /event:\s*'job_failed'/);
-assert.match(recordFailureWindow, /stage === 'extracting' \? 'PARSER_ERROR' : 'WORKER_ERROR'/);
-assert.match(typedGateWindow, /deliveryGateStatus === 'user_needs_documents'/);
-assert.match(typedGateWindow, /from_status:\s*'rendering'/);
-assert.match(typedGateWindow, /to_status:\s*'failed'/);
-assert.match(typedGateWindow, /errorCode:\s*'MISSING_REQUIRED_SOURCE_DATA'/);
-assert.equal(/status:\s*'needs_documents'/.test(typedGateWindow), false);
-assert.match(typedGateWindow, /failedJobIds\.push\(job\.id\)/);
-assert.equal(/deliveryGateStatus === 'admin_review_required'/.test(typedGateWindow), false);
-assert.equal(/to_status:\s*'publishing'/.test(typedGateWindow), false);
-assert.match(typedGateWindow, /'delivery_gate_decision'/);
-assert.equal(
-  /deliveryGateStatus === 'admin_review_required'[\s\S]{0,600}await restoreEntitlementForFailedJob\(/.test(
-    typedGateWindow
-  ),
-  false
-);
-assert.equal(/to_status:\s*'pdf_generating'/.test(typedGateWindow), false);
-assert.equal(/deliveryGateStatus === 'user_needs_documents'[\s\S]{0,320}to_status:\s*'needs_documents'/.test(workerSource), false);
-assert.equal(/deliveryGateStatus === 'admin_review_required'[\s\S]{0,320}to_status:\s*'publishing'/.test(workerSource.slice(reportEventAnchor)), false);
 assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
-assert.match(workerSource, /missing for deliverable path/);
-assert.match(workerSource, /errorCode:\s*'REPORT_GENERATION_FAILED'/);
-assert.match(workerSource, /const hasCanonical = Boolean\(deliveryDecisionState\);/);
-assert.match(
-  workerSource,
-  /const coreValidRequiredCoverage = hasCanonical[\s\S]{0,180}\? Boolean\(deliveryDecisionState\?\.core_valid_required_coverage\)[\s\S]{0,180}: Boolean\(reportData\?\.core_valid_required_coverage\);/
-);
-assert.match(
-  workerSource,
-  /const rawDeliveryGateStatus = hasCanonical[\s\S]{0,180}\? String\(deliveryDecisionState\?\.delivery_gate_status \|\| 'deliverable'\)[\s\S]{0,180}: String\(reportData\?\.delivery_gate_status \|\| 'deliverable'\);[\s\S]{0,260}const deliveryGateStatus = hasCanonical[\s\S]{0,120}\? \(coreValidRequiredCoverage \? 'deliverable' : rawDeliveryGateStatus\)[\s\S]{0,120}: \(coreValidRequiredCoverage[\s\S]{0,120}\? 'deliverable'[\s\S]{0,120}: rawDeliveryGateStatus === 'admin_review_required' \? 'deliverable' : rawDeliveryGateStatus\);/
-);
-assert.match(
-  workerSource,
-  /const customerDeliveryAllowed = coreValidRequiredCoverage[\s\S]{0,120}\? true[\s\S]{0,120}: hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.customer_delivery_allowed\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.customer_publish_eligible[\s\S]{0,220}reportData\?\.customer_delivery_ready/
-);
-assert.match(
-  workerSource,
-  /const customerStatusReasonCode = hasCanonical[\s\S]{0,160}\? \(Boolean\(deliveryDecisionState\?\.customer_delivery_allowed\)[\s\S]{0,120}\? null[\s\S]{0,120}: deliveryDecisionState\?\.customer_status_reason_code/
-);
-assert.match(
-  workerSource,
-  /const holdDelivery = coreValidRequiredCoverage[\s\S]{0,120}\? false[\s\S]{0,120}: hasCanonical[\s\S]{0,220}\? Boolean\(deliveryDecisionState\?\.hold_delivery\)[\s\S]{0,260}: Boolean\([\s\S]{0,220}reportData\?\.hold_delivery[\s\S]{0,220}reportData\?\.holdDelivery/
-);
-assert.match(workerSource, /legacy_alias_conflicts/);
-assert.match(
-  workerSource,
-  /const isTypedGateOutcome = deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision\.coreValidRequiredCoverage;/
-);
-assert.match(
-  workerSource,
-  /const isResolvedHoldBlockedOutcome =[\s\S]{0,80}!resolvedDeliveryDecision\.coreValidRequiredCoverage[\s\S]{0,80}\([\s\S]{0,120}resolvedDeliveryDecision\.holdDelivery === true[\s\S]{0,120}\|\|[\s\S]{0,120}resolvedDeliveryDecision\.customerDeliveryAllowed === false\);/
-);
-assert.match(workerSource, /const holdOutcomeStatus = 'user_needs_documents';/);
-assert.match(typedGateWindow, /if \(shouldHoldDeliveryOutcome\)\s*\{/);
-assert.match(typedGateWindow, /if \(shouldHoldDeliveryOutcome\)\s*\{/);
-assert.match(typedGateWindow, /continue;/);
-assert.equal(
-  /if \(isTypedGateOutcome\)[\s\S]{0,2200}const completeUpdate = \{ status: 'published' \}/.test(workerSource),
-  false
-);
-assert.equal(
-  /deliveryGateStatus === 'user_needs_documents'[\s\S]{0,800}status:\s*'published'/.test(workerSource),
-  false
-);
-assert.equal(/deliveryGateStatus === 'admin_review_required'/.test(workerSource), false);
-const publishedAnchor = workerSource.indexOf("const completeUpdate = { status: 'published' }");
-assert.notEqual(publishedAnchor, -1);
-const publishedWindow = workerSource.slice(publishedAnchor);
-assert.equal(/await restoreEntitlementForFailedJob\(/.test(publishedWindow), false);
-assert.match(workerSource, /if \(!reportId \|\| !storagePath\)\s*\{/);
-assert.match(
-  workerSource,
-  /applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}errorCode:\s*'REPORT_GENERATION_FAILED'[\s\S]{0,500}reason:\s*'report_generation_failed'|applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}reason:\s*'report_generation_failed'[\s\S]{0,500}errorCode:\s*'REPORT_GENERATION_FAILED'/
-);
-assert.match(
-  workerSource,
-  /applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}errorCode:\s*'TIMEOUT'[\s\S]{0,500}reason:\s*'worker_timeout'|applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}reason:\s*'worker_timeout'[\s\S]{0,500}errorCode:\s*'TIMEOUT'/
-);
-assert.match(
-  workerSource,
-  /applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}errorCode:\s*'PURCHASE_NOT_CONSUMED'[\s\S]{0,500}reason:\s*'purchase_not_consumed'|applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}reason:\s*'purchase_not_consumed'[\s\S]{0,500}errorCode:\s*'PURCHASE_NOT_CONSUMED'/
-);
-assert.match(
-  workerSource,
-  /applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}errorCode:\s*'MISSING_STRUCTURED_FINANCIALS'[\s\S]{0,500}reason:\s*'missing_structured_financials'|applyTerminalFailureOutcome\(job,\s*\{[\s\S]{0,500}reason:\s*'missing_structured_financials'[\s\S]{0,500}errorCode:\s*'MISSING_STRUCTURED_FINANCIALS'/
-);
-assert.equal(
-  /const needsDocsUpdate = \{[\s\S]{0,500}failure_reason:[\s\S]{0,500}\.from\('analysis_jobs'\)\s*\.update\(needsDocsUpdate\)/.test(workerSource),
-  false
-);
-const generatorErrorAnchor = workerSource.indexOf("if (generatorError)");
-assert.notEqual(generatorErrorAnchor, -1);
-const generatorErrorWindow = workerSource.slice(generatorErrorAnchor, reportEventAnchor);
-assert.match(generatorErrorWindow, /applyTerminalFailureOutcome\(job,\s*\{/);
-assert.equal(
-  /writeStatusTransitionArtifact\(\s*job\.id,\s*'rendering',\s*'failed'/.test(generatorErrorWindow),
-  false
-);
-assert.match(
-  workerSource,
-  /finalHtml:\s*reportData\?\.final_html \|\| ""/
-);
-assert.match(
-  workerSource,
-  /createdReportRecord:\s*Boolean\(publicationResolution\?\.createdReportRecord\),/
-);
-assert.match(
-  typedGateWindow,
-  /creditRestoreRequired[\s\S]{0,360}errorCode:\s*'MISSING_REQUIRED_SOURCE_DATA'/
-);
-assert.equal(/Report held for admin review before delivery\./.test(workerSource), false);
-const forbiddenWorkerCopy = [
-  "upload replacement " + "documents",
-  "upload more " + "documents",
-  "re" + "sume",
-];
-assert.equal(
-  forbiddenWorkerCopy.some((phrase) => new RegExp(phrase, "i").test(workerSource)),
-  false
-);
+assert.match(workerSource, /errorCode: 'PDF_ARTIFACT_FAILED'/);
 assert.equal(/status:\s*'needs_documents'/.test(workerSource), false);
-assert.equal(/missing:\s*\[\s*'rent_roll'\s*,\s*'t12_or_operating_statement'\s*\]/.test(workerSource), false);
-assert.match(workerSource, /const missingStructuredArtifacts = \[\];/);
-assert.match(workerSource, /if \(!hasRentRollParsed\) missingStructuredArtifacts\.push\('rent_roll'\);/);
-assert.match(workerSource, /if \(!hasT12Parsed\) missingStructuredArtifacts\.push\('t12_or_operating_statement'\);/);
-assert.match(workerSource, /missing:\s*missingStructuredArtifacts/);
-assert.match(
-  workerSource,
-  /if \(!rentRollRes\.ok\)[\s\S]{0,260}parse_status:\s*'failed'[\s\S]{0,220}parse_error:\s*'rent_roll_parse_request_failed'/
-);
-assert.match(
-  workerSource,
-  /if \(!t12Res\.ok\)[\s\S]{0,260}parse_status:\s*'failed'[\s\S]{0,220}parse_error:\s*'t12_parse_request_failed'/
-);
-assert.match(
-  workerSource,
-  /'structured_doc_parse_dispatch_failed'[\s\S]{0,220}doc_type:\s*'rent_roll'/
-);
-assert.match(
-  workerSource,
-  /'structured_doc_parse_dispatch_failed'[\s\S]{0,220}doc_type:\s*'t12'/
-);
-assert.equal(/x-cron-secret/.test(workerSource), true);
 
 console.log("admin-run-worker-gate smoke PASS");

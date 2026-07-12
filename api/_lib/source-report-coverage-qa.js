@@ -14,6 +14,7 @@ import {
   buildSupportDocTaxonomyState,
   resolveSupportDocDisplayLabel,
 } from "./support-doc-taxonomy.js";
+import { isCanonicalSourceTruthPackage } from "./source-truth-package.js";
 
 function asNumber(value) {
   const n = Number(value);
@@ -588,7 +589,11 @@ export function buildSourceReportCoverageQa({
   sectionEligibility: canonicalSectionEligibilityState = null,
   dataCoverageState: canonicalDataCoverageState = null,
   underwritingState = null,
+  sourceTruthPackage = null,
 } = {}) {
+  const canonicalSourceTruthPackage = isCanonicalSourceTruthPackage(sourceTruthPackage)
+    ? sourceTruthPackage
+    : null;
   const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
   const files = uploadedFiles.map((row) => normalizeFile(row, taxonomyLookup));
@@ -648,14 +653,15 @@ export function buildSourceReportCoverageQa({
   );
   const useLegacyDebtAcquisitionHeuristics = !canonicalDebtAcquisitionAuthorityPresent;
   const sourceReconciliationStateResolved =
-    sourceReconciliationState && typeof sourceReconciliationState === "object"
+    canonicalSourceTruthPackage?.source_reconciliation_state ||
+    (sourceReconciliationState && typeof sourceReconciliationState === "object"
       ? sourceReconciliationState
       : buildSourceReconciliationState({
           computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
           rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
           t12Payload,
           sourceReportCoverageQa: { artifact_inventory: artifactInventory, rendered_text_signals: renderedTextSignals, deterministic_flags: [] },
-        });
+        }));
   const sectionEligibilityComputed = buildFullUnderwritingSectionEligibility({
     sourceReportCoverageQa: {
       artifact_inventory: artifactInventory,
@@ -671,12 +677,21 @@ export function buildSourceReportCoverageQa({
   const sectionEligibility = hasCanonicalSectionEligibility(sectionEligibilityCanonicalCandidate)
     ? sectionEligibilityCanonicalCandidate
     : sectionEligibilityComputed;
-  const t12SufficiencyState = canonicalT12SufficiencyState || buildT12SufficiencyState({ t12Payload });
-  const rentRollSufficiencyState = canonicalRentRollSufficiencyState || buildRentRollSufficiencyState({
+  const t12SufficiencyState =
+    canonicalSourceTruthPackage?.core?.t12?.evidence?.sufficiency_state ||
+    canonicalT12SufficiencyState ||
+    buildT12SufficiencyState({ t12Payload });
+  const rentRollSufficiencyState =
+    canonicalSourceTruthPackage?.core?.rent_roll?.evidence?.sufficiency_state ||
+    canonicalRentRollSufficiencyState ||
+    buildRentRollSufficiencyState({
     computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
     rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
   });
-  const coreInputSufficiencyState = canonicalCoreInputSufficiencyState || buildCoreInputSufficiencyState({
+  const coreInputSufficiencyState =
+    canonicalSourceTruthPackage?.core_input_sufficiency_state ||
+    canonicalCoreInputSufficiencyState ||
+    buildCoreInputSufficiencyState({
     t12Payload,
     computedRentRoll: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
     rentRollPayload: artifacts.find((row) => row?.type === "rent_roll_parsed")?.payload || null,
@@ -685,9 +700,9 @@ export function buildSourceReportCoverageQa({
   const dataCoverageState = canonicalDataCoverageState || underwritingState?.core?.dataCoverage || null;
   const canonicalSectionAuthorityPresent = hasCanonicalSectionEligibility(sectionEligibilityCanonicalCandidate);
   const canonicalSufficiencyAuthorityPresent = hasCanonicalSufficiencyOrCoverageState({
-    coreInputSufficiencyState: canonicalCoreInputSufficiencyState,
-    t12SufficiencyState: canonicalT12SufficiencyState,
-    rentRollSufficiencyState: canonicalRentRollSufficiencyState,
+    coreInputSufficiencyState: canonicalSourceTruthPackage?.core_input_sufficiency_state || canonicalCoreInputSufficiencyState,
+    t12SufficiencyState: canonicalSourceTruthPackage?.core?.t12?.evidence?.sufficiency_state || canonicalT12SufficiencyState,
+    rentRollSufficiencyState: canonicalSourceTruthPackage?.core?.rent_roll?.evidence?.sufficiency_state || canonicalRentRollSufficiencyState,
     dataCoverageState: canonicalDataCoverageState || underwritingState?.core?.dataCoverage || null,
     sectionEligibilityState: sectionEligibilityCanonicalCandidate,
   });

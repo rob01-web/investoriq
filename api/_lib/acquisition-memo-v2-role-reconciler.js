@@ -427,11 +427,11 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
   );
   const hasMarketSurveyEvidence = Boolean(/(market survey|rent survey|rent comp|rent comparable)/i.test(normalizedText));
   const hasCoreT12Evidence = Boolean(
-    /(t12|trailing 12|trailing twelve)/i.test(normalizedText) ||
+    parserRole === "core_t12" ||
       firstFinite(source?.gross_potential_rent, source?.effective_gross_income, source?.total_operating_expenses, source?.net_operating_income, source?.gross_scheduled_rent) != null
   );
   const hasCoreRentRollEvidence = Boolean(
-    /(rent roll|rentroll)/i.test(normalizedText) ||
+    parserRole === "core_rent_roll" ||
       firstFinite(source?.total_units, source?.occupied_units, source?.in_place_rent_annual, source?.market_rent_annual) != null ||
       Array.isArray(source?.unit_mix) && source.unit_mix.length > 0 ||
       Array.isArray(source?.units) && source.units.length > 0

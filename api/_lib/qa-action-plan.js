@@ -867,6 +867,7 @@ const deterministicCustomerHardDefectCodes = new Set([
   "HARD_PUBLIC_LANGUAGE_CONTRACT",
   "INTERNAL_DEBUG_LANGUAGE_LEAK",
   "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
+  "REPORT_TYPE_SECTION_LEAK",
 ]);
 
 const deterministicRegenerationRequiredCodes = new Set([
@@ -911,9 +912,33 @@ const knownSelfHealRenderContractCodes = new Set([
 function classifyReportContractViolationCode(code = "") {
   const normalized = String(code || "").toUpperCase();
   if (!normalized) return "unknown";
-  if (knownSelfHealRenderContractCodes.has(normalized)) return "self_heal_render";
   if (isNonNegotiableCustomerHardDefect(normalized)) return "hard_customer_defect";
+  if (knownSelfHealRenderContractCodes.has(normalized)) return "self_heal_render";
   return "unknown";
+}
+
+function hasExplicitPostSelfHealCleanOutputProof(finding = null) {
+  if (!finding || typeof finding !== "object") return false;
+  const evidence = finding?.evidence && typeof finding.evidence === "object"
+    ? finding.evidence
+    : {};
+  const postSelfHealValidationPassed =
+    finding?.post_self_heal_validation_passed === true ||
+    evidence?.post_self_heal_validation_passed === true;
+  const finalRenderValidationClean =
+    finding?.final_render_validation_clean === true ||
+    evidence?.final_render_validation_clean === true;
+  const resolvedBySelfHeal =
+    finding?.resolved_by_self_heal === true ||
+    evidence?.resolved_by_self_heal === true;
+  const verifiedFinalOutputClean =
+    finding?.verified_final_output_clean === true ||
+    evidence?.verified_final_output_clean === true;
+  return Boolean(
+    postSelfHealValidationPassed ||
+    finalRenderValidationClean ||
+    (resolvedBySelfHeal && verifiedFinalOutputClean)
+  );
 }
 
 function hasRecognizedCustomerBlockRationaleMetadata(violation = null) {
@@ -1033,7 +1058,9 @@ function isCustomerPublishBlockingViolationWithContext(violation, {
       code === "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH" &&
       isDiscloseOnlySourceReconciliationState(violation?.evidence?.source_reconciliation_state)
     );
-  if (isDeterministicSelfHealRenderViolation) return false;
+  if (isDeterministicSelfHealRenderViolation) {
+    return !hasExplicitPostSelfHealCleanOutputProof(violation);
+  }
   if (isOptionalSupportingContractOverblockViolation(violation, { coreSufficiencyPublishable })) return false;
   const customerImpact = normalizeImpactValue(
     violation?.customer_delivery_impact ??
@@ -1235,6 +1262,14 @@ function buildPublishEligibilitySummary({
       .map((flag) => flag?.code)
   );
   const actionRows = Array.isArray(prioritizedActions) ? prioritizedActions : [];
+  const provenSelfHealCodes = new Set(
+    [...actionRows, ...(Array.isArray(contractViolations) ? contractViolations : [])]
+      .filter((finding) =>
+        classifyReportContractViolationCode(finding?.code) === "self_heal_render" &&
+        hasExplicitPostSelfHealCleanOutputProof(finding)
+      )
+      .map((finding) => String(finding?.code || "").toUpperCase())
+  );
   const customerActionBlockers = actionRows
     .filter((action) => {
       if (isOptionalSupportingOverblockAction(action, { coreSufficiencyPublishable })) return false;
@@ -1348,6 +1383,10 @@ function buildPublishEligibilitySummary({
   const customerPublishBlockers = customerPublishBlockerCandidates.filter((code) => {
     const normalized = String(code || "").toUpperCase();
     if (!normalized) return false;
+    if (isNonNegotiableCustomerHardDefect(normalized)) return true;
+    if (classifyReportContractViolationCode(normalized) === "self_heal_render") {
+      return !provenSelfHealCodes.has(normalized);
+    }
     if (coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(normalized)) return false;
     if (publicSampleBlockerSet.has(normalized)) return false;
     if (highValueOutreachBlockerSet.has(normalized)) return false;
@@ -1655,6 +1694,12 @@ function classifyActionDeliveryImpact(action) {
   const requiresPatch = Boolean(action?.requires_code_patch);
   const requiresRegeneration = Boolean(action?.requires_regeneration);
 
+  if (classifyReportContractViolationCode(code) === "self_heal_render") {
+    return hasExplicitPostSelfHealCleanOutputProof(action)
+      ? "advisory_only"
+      : "customer_delivery_blocker";
+  }
+
   const customerDeliveryBlockerCodes = new Set([
     "UNSUPPORTED_CURRENT_DEBT_RENDERED",
     "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
@@ -1935,7 +1980,14 @@ export function buildDeliveryGateDecision({
   const contractCustomerBlockingViolation =
     contractViolations.find((violation) =>
       isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable }) &&
-      !(coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(violation?.code))
+      !(
+        coreValidRequiredCoverage &&
+        isCoreValidNonBlockingIssueCode(violation?.code) &&
+        !(
+          classifyReportContractViolationCode(violation?.code) === "self_heal_render" &&
+          !hasExplicitPostSelfHealCleanOutputProof(violation)
+        )
+      )
     ) || null;
   const sourceDocumentAction = prioritizedActions.find((action) => action?.action_type === "source_document_limitation") || null;
   const sourceDocumentActionBlocksCustomer = Boolean(sourceDocumentAction?.blocks_customer_delivery);
@@ -1948,7 +2000,14 @@ export function buildDeliveryGateDecision({
       row.impact === "customer_delivery_blocker" &&
       !isManagerContradictionAction(row.action) &&
       !isOptionalSupportingOverblockAction(row.action, { coreSufficiencyPublishable }) &&
-      !(coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(row.action?.code))
+      !(
+        coreValidRequiredCoverage &&
+        isCoreValidNonBlockingIssueCode(row.action?.code) &&
+        !(
+          classifyReportContractViolationCode(row.action?.code) === "self_heal_render" &&
+          !hasExplicitPostSelfHealCleanOutputProof(row.action)
+        )
+      )
     )?.action ||
     contractCustomerBlockingViolation ||
     (managerContradictionBlocksCustomer ? managerContradictionAction : null) ||
@@ -2043,6 +2102,7 @@ export function buildDeliveryGateDecision({
       canonicalDeliveryGateStatus === "deliverable" &&
       canonicalHasExplicitCustomerAllowed &&
       readinessOverride.normalized?.customer_delivery_allowed === true &&
+      publishEligibility.report_publishable === true &&
       String(readinessOverride.normalized?.delivery_gate_status || "").toLowerCase() !== "admin_review_required";
     const publicReady = readinessOverride.has_public_sample_ready
       ? Boolean(readinessOverride.normalized?.public_sample_ready)
@@ -2181,14 +2241,45 @@ export function buildDeliveryGateDecision({
       ...publishEligibility,
     };
   }
+  const nonNegotiableCustomerSurfaceDefect =
+    prioritizedActions.find((action) =>
+      isNonNegotiableCustomerHardDefect(action?.code) &&
+      classifyActionDeliveryImpact(action) === "customer_delivery_blocker"
+    ) ||
+    contractViolations.find((violation) =>
+      isNonNegotiableCustomerHardDefect(violation?.code) &&
+      isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable })
+    ) ||
+    null;
+  const provenSelfHealCodes = new Set(
+    [...prioritizedActions, ...contractViolations]
+      .filter((finding) =>
+        classifyReportContractViolationCode(finding?.code) === "self_heal_render" &&
+        hasExplicitPostSelfHealCleanOutputProof(finding)
+      )
+      .map((finding) => String(finding?.code || "").toUpperCase())
+  );
+  const unprovenSelfHealCustomerSurfaceDefect =
+    [...prioritizedActions, ...contractViolations].find((finding) => {
+      const code = String(finding?.code || "").toUpperCase();
+      return (
+        classifyReportContractViolationCode(code) === "self_heal_render" &&
+        !provenSelfHealCodes.has(code)
+      );
+    }) ||
+    null;
   const customerDeliveryBlocked = Boolean(
-    !coreValidRequiredCoverage &&
-    (customerDeliveryBlockerAction || customerBlockingReconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null))
+    nonNegotiableCustomerSurfaceDefect ||
+    unprovenSelfHealCustomerSurfaceDefect ||
+    (!coreValidRequiredCoverage &&
+      (customerDeliveryBlockerAction || customerBlockingReconciliationViolation || directorMismatch || (managerContradictionBlocksCustomer ? managerContradictionAction : null)))
   );
 
   if (customerDeliveryBlocked) {
-    const topAction = customerDeliveryBlockerAction || customerBlockingReconciliationViolation || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || prioritizedActions[0] || null;
+    const topAction = nonNegotiableCustomerSurfaceDefect || unprovenSelfHealCustomerSurfaceDefect || customerDeliveryBlockerAction || customerBlockingReconciliationViolation || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || prioritizedActions[0] || null;
     const reasonCode =
+      reasonCodeForAction(nonNegotiableCustomerSurfaceDefect) ||
+      reasonCodeForAction(unprovenSelfHealCustomerSurfaceDefect) ||
       reasonCodeForAction(adminReviewAction) ||
       reasonCodeForAction(customerBlockingReconciliationViolation) ||
       reasonCodeForAction(customerDeliveryBlockerAction) ||

@@ -17,6 +17,8 @@ import { buildReportContractQa } from "./report-contract-qa.js";
 import { buildSourceReportCoverageQa } from "./source-report-coverage-qa.js";
 import { buildQaFixRouting } from "./qa-fix-routing.js";
 import { buildQaActionPlan, buildDeliveryGateDecision, buildCanonicalDeliveryDecisionState } from "./qa-action-plan.js";
+import { buildConstitutionalDeliveryGateDecision } from "./delivery-gate-constitution.js";
+import { TERMINAL_FAILURE_CODES, classifyTerminalFailureCode } from "../../lib/terminal-failure-taxonomy.js";
 import {
   buildAcquisitionAssumptionState,
   buildCurrentDebtAssessmentState,
@@ -35,6 +37,11 @@ import {
   formatCurrentDebtAssessmentCopy,
 } from "./acquisition-memo-v2-surface-copy.js";
 import { buildCanonicalSourcePackage } from "./canonical-source-package.js";
+import {
+  buildCanonicalSourceTruthPackage,
+  constrainCanonicalSourcePackageToSourceTruth,
+  isCanonicalSourceTruthPackage,
+} from "./source-truth-package.js";
 import { buildAcquisitionMemoProjection } from "./acquisition-memo-projection.js";
 import { renderAcquisitionMemo } from "./acquisition-memo-renderer.js";
 import {
@@ -4333,6 +4340,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     let deliveryGateDecisionResult = null;
     let deliveryDecisionStateResult = null;
     let sourcePackageQaResult = null;
+    let sourceTruthPackageResult = null;
 
     const computedVisibleLabelInputs = {
       baseClass: baseVisibleClass,
@@ -4568,11 +4576,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       }
       const { data: artifactRows, error: artifactRowsErr } = await supabase
         .from("analysis_artifacts")
-        .select("type, payload, created_at")
+        .select("id, type, payload, created_at")
         .eq("job_id", jobId)
         .in("type", [
           "rent_roll_parsed",
+          "rent_roll_parse_error",
           "t12_parsed",
+          "t12_parse_error",
           "loan_term_sheet_parsed",
           "mortgage_statement_parsed",
           "renovation_parsed",
@@ -4587,6 +4597,46 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     }
     sourcePackageQaFiles = coverageFiles;
     sourcePackageQaArtifacts = coverageArtifacts;
+    try {
+      sourceTruthPackageResult = buildCanonicalSourceTruthPackage({
+        jobId: jobId || null,
+        propertyName: property_name || jobPropertyName || "Unknown",
+        uploadedFiles: coverageFiles,
+        artifacts: coverageArtifacts,
+      });
+    } catch (sourceTruthErr) {
+      const sourceTruthFailure = new Error("SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED");
+      sourceTruthFailure.code = TERMINAL_FAILURE_CODES.SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED;
+      sourceTruthFailure.context = {
+        stage: "source_truth_package_construction",
+        reason: sourceTruthErr?.message || String(sourceTruthErr),
+        job_id: jobId || null,
+      };
+      throw sourceTruthFailure;
+    }
+    if (!isCanonicalSourceTruthPackage(sourceTruthPackageResult)) {
+      const sourceTruthFailure = new Error("SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED");
+      sourceTruthFailure.code = TERMINAL_FAILURE_CODES.SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED;
+      sourceTruthFailure.context = {
+        stage: "source_truth_package_validation",
+        job_id: jobId || null,
+      };
+      throw sourceTruthFailure;
+    }
+    if (jobId) {
+      const sourceTruthTimestamp = new Date().toISOString().replace(/:/g, "-");
+      const { error: sourceTruthArtifactErr } = await supabase.from("analysis_artifacts").insert([{
+        job_id: jobId,
+        user_id: effectiveUserId || null,
+        type: "source_truth_package",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId}/source_truth_package/${sourceTruthTimestamp}.json`,
+        payload: sourceTruthPackageResult,
+      }]);
+      if (sourceTruthArtifactErr) {
+        console.error("Failed to persist source_truth_package artifact:", sourceTruthArtifactErr);
+      }
+    }
     const acqMemoV2SourceAuthorityEnabled =
       process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY === "true" ||
       body?.__test_enable_acq_memo_v2_source_authority === true;
@@ -4600,13 +4650,18 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         !Array.isArray(body.__test_acq_memo_v2_source_package)
           ? body.__test_acq_memo_v2_source_package
           : null;
-      const canonicalSourcePackage =
+      const unconstrainedCanonicalSourcePackage =
         testAcqMemoV2SourcePackage ||
         buildCanonicalSourcePackage(coverageFiles, coverageArtifacts);
+      const canonicalSourcePackage = constrainCanonicalSourcePackageToSourceTruth(
+        unconstrainedCanonicalSourcePackage,
+        sourceTruthPackageResult
+      );
       const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage);
       const renderedAcquisitionMemo = renderAcquisitionMemo(acquisitionMemoProjection);
       acquisitionMemoV2Bridge = {
         canonicalSourcePackage,
+        sourceTruthPackage: sourceTruthPackageResult,
         acquisitionMemoProjection,
         renderedAcquisitionMemo,
       };
@@ -4759,8 +4814,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       effectiveReportMode === "v1_core" &&
       acqMemoV2SourceAuthorityEnabled &&
       acquisitionMemoV2Bridge?.acquisitionMemoProjection
-        ? buildAcquisitionMemoBossContract({
+          ? buildAcquisitionMemoBossContract({
             canonicalSourcePackage: acquisitionMemoV2Bridge.canonicalSourcePackage,
+            sourceTruthPackage: acquisitionMemoV2Bridge.sourceTruthPackage,
             acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
             coreMetrics: acquisitionMemoRenderContext,
             t12Payload,
@@ -5013,6 +5069,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       acquisitionMemoProjection: acquisitionMemoV2Bridge?.acquisitionMemoProjection || null,
       renderedAcquisitionMemo: acquisitionMemoV2Bridge?.renderedAcquisitionMemo || null,
       sourcePackage: acquisitionMemoV2Bridge?.canonicalSourcePackage || null,
+      sourceTruthPackage: sourceTruthPackageResult,
+      sourceTruthRequired: true,
       bossContract: acquisitionMemoBossContract,
       t12Payload,
       acquisitionTermsPayload,
@@ -7762,18 +7820,7 @@ try {
       underwritingState?.core?.acquisition?.assumptionState ||
       acquisitionAssumptionState ||
       null,
-    coreInputSufficiencyState:
-      underwritingState?.core?.sufficiency?.coreInputState ||
-      coreInputSufficiencyState ||
-      null,
-    t12SufficiencyState:
-      underwritingState?.core?.sufficiency?.t12State ||
-      t12SufficiencyState ||
-      null,
-    rentRollSufficiencyState:
-      underwritingState?.core?.sufficiency?.rentRollState ||
-      rentRollSufficiencyState ||
-      null,
+    sourceTruthPackage: sourceTruthPackageResult,
     sectionEligibility:
       underwritingState?.core?.sections?.eligibilityState ||
       sectionEligibility ||
@@ -8335,11 +8382,24 @@ try {
   console.error("Failed to build qa_director_review artifact:", err?.message || err);
 }
 try {
-  const deliveryGateDecision = buildDeliveryGateDecision({
+  const complianceDeliveryDecision = buildDeliveryGateDecision({
     sourceReportCoverageQa: sourceCoverageQaResult,
     reportContractQa: reportContractQaResult,
     qaActionPlan: qaActionPlanResult,
     qaDirectorReview: qaDirectorReviewResult,
+  });
+  const deliveryGateDecision = buildConstitutionalDeliveryGateDecision({
+    sourceTruthPackage: sourceTruthPackageResult,
+    pipelineCompliancePassed:
+      !(
+        effectiveReportMode === "v1_core" &&
+        acqMemoV2SourceAuthorityEnabled &&
+        acquisitionMemoV2Bridge?.acquisitionMemoProjection
+      ) || acquisitionMemoV2Finalization?.compliance?.ok === true,
+    htmlSafetyValidationPassed: complianceDeliveryDecision?.report_publishable === true,
+    rendererCompleted: typeof qaHtml === "string" && qaHtml.trim().length > 0,
+    customerBlockers: complianceDeliveryDecision?.customer_publish_blockers || [],
+    complianceDecision: complianceDeliveryDecision,
   });
   deliveryGateDecisionResult = deliveryGateDecision;
   deliveryDecisionStateResult = buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
@@ -8381,6 +8441,8 @@ try {
       reportMode: effectiveReportMode,
       sourceCoverageQa: sourceCoverageQaResult,
       deliveryGateDecisionResult,
+      sourceTruthPackage: sourceTruthPackageResult,
+      sourceTruthRequired: true,
     });
     const immutableScreeningOutput = assertSealedOutputImmutable({
       ...sealedScreeningOutput,
@@ -8613,6 +8675,7 @@ try {
   console.error("DOCRAPTOR ERROR STATUS:", err.response?.status);
   console.error("DOCRAPTOR ERROR BODY:");
   console.error(err.response?.data?.toString());
+  err.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
   throw err;
 }
         const canonicalDeliveryDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
@@ -8655,7 +8718,9 @@ try {
       });
     if (uploadError) {
       console.error("Storage Upload Error:", uploadError);
-      throw new Error("Failed to upload report to storage");
+      const storageError = new Error("Failed to upload report to storage");
+      storageError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+      throw storageError;
     }
     // 11. Create DB row only after a valid upload path exists
     const { data: reportRow, error: reportCreateError } = await supabase
@@ -8675,7 +8740,9 @@ try {
       } catch (cleanupErr) {
         console.error("Failed to cleanup uploaded report after DB insert failure:", cleanupErr);
       }
-      throw new Error("Failed to create report record");
+      const publicationError = new Error("Failed to create report record");
+      publicationError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+      throw publicationError;
     }
     const reportId = reportRow.id;
     // 12. Generate Signed URL for immediate viewing (valid for 1 hour)
@@ -8686,7 +8753,9 @@ try {
         .createSignedUrl(validatedStoragePath, 3600);
       if (signedError) {
         console.error("Signed URL Error:", signedError);
-        throw new Error("Failed to generate access link");
+        const publicationError = new Error("Failed to generate access link");
+        publicationError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        throw publicationError;
       }
       signedData = signedResult || signedData;
     }
@@ -8726,7 +8795,17 @@ try {
     });
   } catch (err) {
     console.error("Error generating report:", err);
-    res.status(500).json({ error: err?.message || "Failed to generate report" });
+    const requestedTerminalCode = String(err?.code || "").trim().toUpperCase();
+    const classifiedTerminalFailure = classifyTerminalFailureCode(requestedTerminalCode);
+    const errorCode = classifiedTerminalFailure.failure_class === "unclassified_internal_failure"
+      ? TERMINAL_FAILURE_CODES.REPORT_RENDER_FAILED
+      : classifiedTerminalFailure.code;
+    res.status(500).json({
+      error: err?.message || "Failed to generate report",
+      error_code: errorCode,
+      failure_class: classifyTerminalFailureCode(errorCode).failure_class,
+      diagnostics: err?.context || null,
+    });
   } finally {
   }
 }

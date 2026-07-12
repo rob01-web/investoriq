@@ -8,6 +8,14 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { buildCustomerFailureMessage, buildEntitlementRestoredMap } from '@/lib/jobFailureMessaging';
 import { formatReportUploadGateErrorMessage, resolveCoreUploadDocType, resolveReportUploadGate } from '@/lib/reportUploadGate';
+import {
+  DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE,
+  formatDashboardCustomerStatusLabel,
+  getCustomerFacingJobStatus,
+  normalizeDashboardCustomerStatusLabel,
+  normalizeDashboardDocType,
+  resolveDashboardCustomerStatus,
+} from '@/lib/dashboardCustomerCopy';
 
 // DESIGN TOKENS
 const T = {
@@ -105,76 +113,6 @@ const hairlineRule = {
   borderTop:  `1px solid ${T.hairline}`,
   margin:     '20px 0',
 };
-
-const CORE_VALID_NEUTRAL_FAILURE_MESSAGE =
-  'Generation paused before publication.\n\nNo completed report was published. The issue was logged for review. If a report credit was consumed, credit restoration will be handled according to the report status.\n\nDo not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.';
-
-const CORE_INVALID_DOCUMENT_FAILURE_MESSAGE =
-  'Generation paused before publication.\n\nNo completed report was published. The issue was logged for review. Your report credit has been restored, and you may start a new report with corrected source documents.\n\nDo not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.';
-
-const FAIL_CLOSED_REASON_OR_ERROR_PATTERN =
-  /(user_needs_documents|missing_required_source_data|missing_structured_financials|missing_structured_financial_artifacts|missing_required_t12|missing_required_rent_roll|t12_unusable|rent_roll_unusable|missing_required_documents)/i;
-
-function isCoreValidRequiredCoverageState(value) {
-  return value === true || String(value || '').toLowerCase() === 'true';
-}
-
-function isDocumentBlameMessage(message) {
-  return /source package could not be verified|rent roll could not be verified|additional required documents|needs documents|upload more documents|clearer or more complete documents|could not be verified as usable|uploaded T12|uploaded rent roll|could not be reconciled as a consistent source package/i.test(
-    String(message || '')
-  );
-}
-
-function normalizeDashboardDocType(value) {
-  const dt = String(value || '').toLowerCase().trim();
-  if (!dt) return '';
-  if (dt === 'supporting' || dt === 'supporting_documents_ui') return 'supporting_documents';
-  return dt;
-}
-
-export function normalizeDashboardCustomerStatusLabel(label) {
-  const normalized = String(label || '').toLowerCase();
-  if (
-    normalized === 'under_review' ||
-    normalized === 'needs_documents' ||
-    normalized === 'publication_held' ||
-    normalized === 'admin_review_required'
-  ) return 'failed';
-  return normalized;
-}
-
-export function resolveDoctrineCustomerMessage(job = {}, decision = null) {
-  const message = String(decision?.customer_message || '').trim();
-  const reason = String(decision?.customer_status_reason_code || '').trim();
-  const errorCode = String(job?.error_code || '').trim();
-  const statusLabel = normalizeDashboardCustomerStatusLabel(decision?.customer_status_label || null);
-  const coreValidRequiredCoverage =
-    isCoreValidRequiredCoverageState(decision?.core_valid_required_coverage) ||
-    isCoreValidRequiredCoverageState(job?.core_valid_required_coverage);
-  const isLegacyFailureState =
-    statusLabel === 'failed' ||
-    FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(reason) ||
-    FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(errorCode) ||
-    isDocumentBlameMessage(message);
-
-  if (coreValidRequiredCoverage && isLegacyFailureState) {
-    return CORE_VALID_NEUTRAL_FAILURE_MESSAGE;
-  }
-  if (!message) return '';
-  if (/under review|internal review|admin review|needs documents|additional required documents/i.test(message)) {
-    return CORE_VALID_NEUTRAL_FAILURE_MESSAGE;
-  }
-  if (FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(reason) || FAIL_CLOSED_REASON_OR_ERROR_PATTERN.test(errorCode)) {
-    return CORE_INVALID_DOCUMENT_FAILURE_MESSAGE;
-  }
-  if (message && !(coreValidRequiredCoverage && isDocumentBlameMessage(message))) {
-    return message;
-  }
-  if (coreValidRequiredCoverage && message && isDocumentBlameMessage(message)) {
-    return CORE_VALID_NEUTRAL_FAILURE_MESSAGE;
-  }
-  return message;
-}
 
 // Primary button - Forest Green / Gold hover
 function PrimaryBtn({ children, onClick, disabled, style = {}, loading = false }) {
@@ -299,127 +237,13 @@ function StatusBadge({ status, errorCode, deliveryDecision = null }) {
   );
 }
 
-export function getCustomerFacingJobStatus(job, deliveryGateDecisionPayload = null) {
-  const decision = resolveDashboardCustomerStatus(job, deliveryGateDecisionPayload);
-  if (decision.hasCanonicalDeliveryDecision && decision.customer_status_label) {
-    const normalized = normalizeDashboardCustomerStatusLabel(decision.customer_status_label);
-    if (normalized === 'ready') return 'ready';
-    if (normalized === 'failed') return 'failed';
-    return normalized.replace(/_/g, ' ');
-  }
-  return String(job?.status || '').toLowerCase();
-}
-
 function isAdminReviewHeldJob(job) {
   void job;
   return false;
 }
 
-export function resolveDashboardCustomerStatus(job = {}, deliveryGateDecisionPayload = null) {
-  const payload = deliveryGateDecisionPayload && typeof deliveryGateDecisionPayload === 'object'
-    ? deliveryGateDecisionPayload
-    : null;
-  const workerPayloadDecision = payload?.deliveryDecisionState || payload?.resolved_delivery_decision || null;
-  const directPayloadCanonical =
-    payload && typeof payload === 'object' && (
-      payload.delivery_gate_status ||
-      payload.customer_status_label ||
-      payload.customer_message ||
-      Object.prototype.hasOwnProperty.call(payload, 'hold_delivery') ||
-      Object.prototype.hasOwnProperty.call(payload, 'customer_delivery_allowed')
-    )
-      ? payload
-      : null;
-  const latestWorkerPayload = job?.latest_worker_event?.payload && typeof job?.latest_worker_event?.payload === 'object'
-    ? job.latest_worker_event.payload
-    : null;
-  const candidate =
-    job?.deliveryDecisionState ||
-    job?.delivery_gate_decision?.deliveryDecisionState ||
-    job?.delivery_gate_decision?.resolved_delivery_decision ||
-    job?.delivery_gate_decision ||
-    job?.latest_delivery_gate_decision?.deliveryDecisionState ||
-    job?.latest_delivery_gate_decision?.resolved_delivery_decision ||
-    latestWorkerPayload?.deliveryDecisionState ||
-    latestWorkerPayload?.resolved_delivery_decision ||
-    job?.latest_worker_event?.deliveryDecisionState ||
-    job?.latest_worker_event?.resolved_delivery_decision ||
-    workerPayloadDecision ||
-    directPayloadCanonical ||
-    null;
-  if (candidate && typeof candidate === 'object') {
-    return {
-      hasCanonicalDeliveryDecision: true,
-      delivery_gate_status: candidate.delivery_gate_status || null,
-      customer_status_label: normalizeDashboardCustomerStatusLabel(candidate.customer_status_label || null) || null,
-      customer_status_reason_code: candidate.customer_status_reason_code || candidate.reason_code || null,
-      customer_message: resolveDoctrineCustomerMessage(job, candidate) || null,
-      customer_delivery_allowed: candidate.customer_delivery_allowed ?? null,
-      hold_delivery: candidate.hold_delivery ?? null,
-      credit_restore_required: candidate.credit_restore_required ?? null,
-      core_valid_required_coverage: isCoreValidRequiredCoverageState(candidate.core_valid_required_coverage) || isCoreValidRequiredCoverageState(job?.core_valid_required_coverage),
-      source: candidate.source === 'canonical_delivery_decision' ? 'canonical_delivery_decision' : 'worker_resolved_delivery_decision',
-    };
-  }
-  return {
-    hasCanonicalDeliveryDecision: false,
-    delivery_gate_status: job?.delivery_gate_status || null,
-    customer_status_label: null,
-    customer_status_reason_code: null,
-    customer_message: null,
-    customer_delivery_allowed: null,
-    hold_delivery: null,
-    credit_restore_required: null,
-    core_valid_required_coverage: isCoreValidRequiredCoverageState(job?.core_valid_required_coverage),
-    source: 'legacy_dashboard_fallback',
-  };
-}
-
 function resolveDashboardDeliveryDecision(job = {}, deliveryGateDecisionPayload = null) {
   return resolveDashboardCustomerStatus(job, deliveryGateDecisionPayload);
-}
-
-function formatDashboardCustomerStatusLabel(label, reportType = null) {
-  const normalized = normalizeDashboardCustomerStatusLabel(label);
-  void reportType;
-  if (normalized === 'ready') return 'Ready';
-  if (normalized === 'failed') return 'Failed';
-  return null;
-}
-
-export function getFailedFileGuidance(files, selectedReportType = null, coreValidRequiredCoverage = false) {
-  if (coreValidRequiredCoverage) return '';
-  const rows = Array.isArray(files) ? files : [];
-  const normalized = rows.map((row) => ({
-    original_filename: String(row?.original_filename || '').trim(),
-    doc_type: normalizeDashboardDocType(row?.doc_type),
-    parse_status: String(row?.parse_status || '').toLowerCase(),
-    parse_error: String(row?.parse_error || '').toLowerCase(),
-  }));
-  const failedCoreFile = ['t12', 'rent_roll']
-    .map((docType) => normalized.find((row) => row.doc_type === docType && row.parse_status === 'failed'))
-    .find(Boolean);
-
-  if (failedCoreFile?.doc_type === 't12') {
-    return `Generation could not be completed because the uploaded T12 / operating statement${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as usable for this report.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report and upload a readable T12 / operating statement that includes income, expenses, and NOI. If you believe your document is complete, contact reports@investoriq.tech.`;
-  }
-  if (failedCoreFile?.doc_type === 'rent_roll') {
-    return `Generation could not be completed because the uploaded rent roll${failedCoreFile.original_filename ? ` (${failedCoreFile.original_filename})` : ''} could not be verified as usable for this report.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report and upload a readable rent roll that includes units, occupancy or status, and in-place rents. If you believe your document is complete, contact reports@investoriq.tech.`;
-  }
-
-  const hasT12 = normalized.some((row) => row.doc_type === 't12');
-  const hasRentRoll = normalized.some((row) => row.doc_type === 'rent_roll');
-  const nonCoreFiles = normalized.filter((row) => row.doc_type !== 't12' && row.doc_type !== 'rent_roll');
-
-  if (selectedReportType === 'underwriting' && hasT12 && hasRentRoll && nonCoreFiles.length === 0) {
-    return `Generation could not be completed because Full Underwriting requires at least one usable supporting document in addition to the T12 and rent roll.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new Full Underwriting report with a usable supporting document, such as debt, purchase assumptions, appraisal, renovation, property tax, insurance, or related deal support. If you believe your document is complete, contact reports@investoriq.tech.`;
-  }
-
-  if (hasT12 && hasRentRoll) {
-    return `Generation could not be completed because the uploaded T12 and rent roll could not be reconciled as a consistent source package.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report with documents for the same property and reporting period where possible. If you believe the documents are correct, contact reports@investoriq.tech.`;
-  }
-
-  return `Generation could not be completed because the required T12 / operating statement and rent roll documents could not be verified as usable for this report.\n\nNo report was published, and your report credit has been restored.\n\nPlease start a new report with clearer or more complete documents. If you believe the document is complete, contact reports@investoriq.tech.`;
 }
 
 // File row
@@ -560,7 +384,6 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [jobEvents, setJobEvents] = useState({});
   const [deliveryGateDecisionEventsByJobId, setDeliveryGateDecisionEventsByJobId] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
-  const [failedJobGuidance, setFailedJobGuidance] = useState(null);
   const [failedJobCreditRestoredById, setFailedJobCreditRestoredById] = useState({});
   const [recentJobs, setRecentJobs] = useState([]);
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
@@ -712,17 +535,6 @@ const DASHBOARD_DIAG_MINIMAL = false;
       if (!nextEvents[row.job_id]) nextEvents[row.job_id] = row;
     }
     setDeliveryGateDecisionEventsByJobId(nextEvents);
-  };
-
-  const getNeedsDocumentsWorkerEvent = (jobEventsByJobId, activeJobId) => {
-    if (!activeJobId || !jobEventsByJobId) return null;
-    const row = jobEventsByJobId[activeJobId];
-    const payload = row?.payload || {};
-    const eventName = String(payload.event || '');
-    const code = String(payload.code || '');
-    const isRelevant = row?.type === 'worker_event' || eventName === 'missing_structured_financials' || code === 'NO_STRUCTURED_FINANCIALS';
-    if (!isRelevant) return null;
-    return { missing: Array.isArray(payload.missing) ? payload.missing : [], detected: Array.isArray(payload.detected) ? payload.detected : [], code: code || null };
   };
 
   const fetchInProgressJobs = async () => {
@@ -1004,7 +816,6 @@ useEffect(() => {
     latestFailedJob,
     latestFailedJob?.id ? deliveryGateDecisionEventsByJobId[String(latestFailedJob.id)]?.payload : null
   );
-  const activeNeedsDocumentsEvent = getNeedsDocumentsWorkerEvent(jobEvents, activeJobForRuns?.id || null);
   const showNeedsDocsWarning = false;
   const activeFailureCopy = activeJobForRuns?.status === 'failed'
     ? buildCustomerFailureMessage(activeJobForRuns, {
@@ -1025,73 +836,6 @@ useEffect(() => {
     }
     return null;
   };
-  const formatDocLabel = (label) => {
-    const normalized = String(label || '').trim().toLowerCase();
-    if (normalized === 't12_or_operating_statement' || normalized === 't12') return 'T12 (Operating Statement)';
-    if (normalized === 'rent_roll') return 'Rent Roll';
-    if (normalized === 'supporting') return 'Supporting Document';
-    return String(label || '').trim() || String(label || '');
-  };
-  const joinLabels = (labels) => {
-    if (!labels || labels.length === 0) return '';
-    if (labels.length === 1) return labels[0];
-    if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
-    return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
-  };
-  const defaultNeedsDocumentsMessage = CORE_VALID_NEUTRAL_FAILURE_MESSAGE;
-
-  useEffect(() => {
-    let cancelled = false;
-    const targetJob = visibleLatestFailedJob;
-    const targetDecision = resolveDashboardCustomerStatus(
-      targetJob,
-      targetJob?.id ? deliveryGateDecisionEventsByJobId[String(targetJob.id)]?.payload : null
-    );
-    const targetCoreValidRequiredCoverage = Boolean(targetDecision?.core_valid_required_coverage);
-    const supportsFileGuidance = [
-      'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
-      'MISSING_STRUCTURED_FINANCIALS',
-      'MISSING_REQUIRED_SOURCE_DATA',
-      'MISSING_REQUIRED_DOCUMENTS',
-      'MISSING_REQUIRED_DOCUMENT',
-    ].includes(targetJob?.error_code);
-    if (!profile?.id || !targetJob?.id || targetJob.status !== 'failed' || !supportsFileGuidance || targetCoreValidRequiredCoverage) {
-      setFailedJobGuidance(null);
-      return () => { cancelled = true; };
-    }
-
-    const fetchFailedJobGuidance = async () => {
-      const { data, error } = await supabase
-        .from('analysis_job_files')
-        .select('original_filename, doc_type, parse_status, parse_error')
-        .eq('job_id', targetJob.id);
-      if (cancelled) return;
-      if (error || !data) {
-        setFailedJobGuidance(null);
-        return;
-      }
-      const guidance = getFailedFileGuidance(data, targetCoreValidRequiredCoverage);
-      setFailedJobGuidance(guidance ? { jobId: targetJob.id, message: guidance } : null);
-    };
-
-    fetchFailedJobGuidance();
-    return () => { cancelled = true; };
-  }, [profile?.id, visibleLatestFailedJob?.id, visibleLatestFailedJob?.status, visibleLatestFailedJob?.error_code]);
-
-  const visibleFailedJobGuidance =
-    latestFailedDeliveryDecision?.hasCanonicalDeliveryDecision && latestFailedDeliveryDecision?.customer_message
-      ? ''
-      :
-    failedJobGuidance?.jobId && failedJobGuidance.jobId === visibleLatestFailedJob?.id
-      ? failedJobGuidance.message
-      : '';
-  const activeFailedGuidance =
-    activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message
-      ? ''
-      :
-    failedJobGuidance?.jobId && failedJobGuidance.jobId === activeJobForRuns?.id
-      ? failedJobGuidance.message
-      : '';
   const failedMessageLeadStyle = {
     ...bodySmall,
     fontFamily: "'DM Sans', sans-serif",
@@ -1136,40 +880,8 @@ useEffect(() => {
     fontStyle: 'normal',
     opacity: 1,
   };
-  const needsDocumentsMessage = (() => {
-    if (activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) {
-      return activeDeliveryDecision.customer_message;
-    }
-    if (!(activeJobForRuns?.status === 'failed' && activeJobForRuns?.error_code === 'MISSING_REQUIRED_SOURCE_DATA')) {
-      return defaultNeedsDocumentsMessage;
-    }
-    if (!activeNeedsDocumentsEvent) return defaultNeedsDocumentsMessage;
-    const missingRaw = Array.isArray(activeNeedsDocumentsEvent.missing) ? activeNeedsDocumentsEvent.missing : [];
-    const detectedRaw = Array.isArray(activeNeedsDocumentsEvent.detected) ? activeNeedsDocumentsEvent.detected : [];
-    const missingCanonical = new Set(missingRaw.map((value) => {
-      const normalized = String(value || '').trim().toLowerCase();
-      if (normalized === 't12_or_operating_statement' || normalized === 't12') return 't12';
-      if (normalized === 'rent_roll') return 'rent_roll';
-      if (normalized === 'supporting') return 'supporting';
-      return normalized;
-    }));
-    const detectedCanonical = detectedRaw.map((value) => {
-      const normalized = String(value || '').trim().toLowerCase();
-      if (normalized === 't12_or_operating_statement' || normalized === 't12') return 't12';
-      if (normalized === 'rent_roll') return 'rent_roll';
-      if (normalized === 'supporting') return 'supporting';
-      return normalized;
-    });
-    const detectedLabels = detectedRaw.map((value) => formatDocLabel(value)).filter(Boolean);
-    const hasDetectedDuplicates = detectedCanonical.length > 1 && detectedCanonical.some((value, idx) => value && detectedCanonical.indexOf(value) !== idx);
-    if (hasDetectedDuplicates && detectedLabels.length > 0) return `Generation halted due to document integrity validation. Uploaded documents were detected as ${joinLabels(detectedLabels)}, and required financial values could not be validated.`;
-    const missingT12 = missingCanonical.has('t12');
-    const missingRentRoll = missingCanonical.has('rent_roll');
-    if (missingT12 && missingRentRoll) return 'Generation halted due to document integrity validation. Uploaded documents were not recognized as structured T12 and rent roll inputs.';
-    if (missingT12) { const s = detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : ''; return `Generation halted due to document integrity validation. T12 operating values could not be validated.${s}`; }
-    if (missingRentRoll) { const s = detectedLabels.length > 0 ? ` Detected: ${joinLabels(detectedLabels)}.` : ''; return `Generation halted due to document integrity validation. Rent roll values could not be validated.${s}`; }
-    return defaultNeedsDocumentsMessage;
-  })();
+  const needsDocumentsMessage =
+    activeDeliveryDecision?.customer_message || DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE;
   const availableReportsCount = entitlements.error ? 0 : Number(entitlements[selectedReportType] ?? 0);
   const hasAvailableReport = availableReportsCount >= 1;
   const step2Locked = !propertyName.trim();
@@ -1572,7 +1284,6 @@ useEffect(() => {
                     {(() => {
                       const canonicalDecision = latestFailedDeliveryDecision;
                       const hasCanonicalMessage =
-                        canonicalDecision?.hasCanonicalDeliveryDecision &&
                         Boolean(String(canonicalDecision?.customer_message || '').trim());
                       const copy = buildCustomerFailureMessage(latestFailedJob, {
                         creditRestored: failedJobCreditRestoredById[String(latestFailedJob.id)] === true,
@@ -1602,11 +1313,6 @@ useEffect(() => {
                         </>
                       );
                     })()}
-                    {visibleFailedJobGuidance && (
-                      <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
-                        {visibleFailedJobGuidance}
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div style={{ ...bodySmall, fontSize:13, color:T.ink4, padding:'6px 0' }}>
@@ -2052,7 +1758,7 @@ useEffect(() => {
                 >
                   {showNeedsDocsWarning
                     ? needsDocumentsMessage
-                    : activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message
+                    : activeDeliveryDecision?.customer_message
                     ? activeDeliveryDecision.customer_message
                     : activeJobForRuns?.status === 'queued' ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
@@ -2063,24 +1769,19 @@ useEffect(() => {
                     ? (reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
-                {activeJobForRuns?.status === 'failed' && !(activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) && activeFailureCopy?.nextStep && (
+                {activeJobForRuns?.status === 'failed' && !activeDeliveryDecision?.customer_message && activeFailureCopy?.nextStep && (
                   <span style={step03FailureSupportStyle}>
                     {activeFailureCopy.nextStep}
                   </span>
                 )}
-                {activeJobForRuns?.status === 'failed' && !(activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) && activeFailureCopy?.creditLine && (
+                {activeJobForRuns?.status === 'failed' && !activeDeliveryDecision?.customer_message && activeFailureCopy?.creditLine && (
                   <span style={step03FailureSupportStyle}>
                     {activeFailureCopy.creditLine}
                   </span>
                 )}
-                {activeJobForRuns?.status === 'failed' && !(activeDeliveryDecision?.hasCanonicalDeliveryDecision && activeDeliveryDecision?.customer_message) && activeFailureCopy?.referenceCode && (
+                {activeJobForRuns?.status === 'failed' && !activeDeliveryDecision?.customer_message && activeFailureCopy?.referenceCode && (
                   <span style={{ ...labelMono, display:'block', marginTop: 6, color: T.ink4 }}>
                     Reference code: {activeFailureCopy.referenceCode}
-                  </span>
-                )}
-                {activeJobForRuns?.status === 'failed' && activeFailedGuidance && (
-                  <span style={step03FailureSupportStyle}>
-                    {activeFailedGuidance}
                   </span>
                 )}
               </div>
@@ -2163,7 +1864,6 @@ useEffect(() => {
                   deliveryGateDecisionEventsByJobId[String(job.id)]?.payload
                 );
                 const hasCanonicalCustomerMessage =
-                  canonicalDecision?.hasCanonicalDeliveryDecision &&
                   Boolean(String(canonicalDecision?.customer_message || '').trim());
                 const fallbackCopy = buildCustomerFailureMessage(job, {
                   creditRestored: failedJobCreditRestoredById[String(job.id)] === true,
@@ -2193,11 +1893,6 @@ useEffect(() => {
                         {!hasCanonicalCustomerMessage && fallbackCopy.creditLine && (
                           <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
                             {fallbackCopy.creditLine}
-                          </div>
-                        )}
-                        {!hasCanonicalCustomerMessage && failedJobGuidance?.jobId === job.id && failedJobGuidance?.message && (
-                          <div style={{ ...failedMessageSupportStyle, marginTop:8 }}>
-                            {failedJobGuidance.message}
                           </div>
                         )}
                       </div>

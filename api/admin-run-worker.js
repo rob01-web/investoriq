@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmailResend } from '../lib/email-resend.js';
 import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
+import { classifyTerminalFailureCode } from '../lib/terminal-failure-taxonomy.js';
 import {
   buildReportStoragePath,
   ensureReportDownloadArtifact,
@@ -273,6 +274,21 @@ export default async function handler(req, res) {
         coreValidRequiredCoverage,
         legacyAliasConflicts,
       };
+    };
+
+    const resolveHeldDeliveryTerminalCode = (resolvedDeliveryDecision = null) => {
+      if (resolvedDeliveryDecision?.coreValidRequiredCoverage === true) {
+        return 'REPORT_CONTRACT_FAILED';
+      }
+      const reasonCode = String(
+        resolvedDeliveryDecision?.failClosedReasonCode ||
+        resolvedDeliveryDecision?.customerStatusReasonCode ||
+        ''
+      ).toUpperCase();
+      if (/T12|OPERATING_STATEMENT/.test(reasonCode)) return 'CORE_T12_CATASTROPHICALLY_UNUSABLE';
+      if (/RENT_ROLL/.test(reasonCode)) return 'CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE';
+      if (/CONTRADICT|IRRECONCIL|RECONCILIATION/.test(reasonCode)) return 'CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY';
+      return 'REPORT_CONTRACT_FAILED';
     };
 
     const hasWorkerEvent = async (jobId, eventName) => {
@@ -2239,6 +2255,7 @@ export default async function handler(req, res) {
           let reportData = null;
           let generatorSource = 'generate-client-report';
           let generatorError = null;
+          let generatorErrorCode = 'REPORT_RENDER_FAILED';
           let generatorFailurePayload = null;
 
           if (!job.user_id) {
@@ -2319,6 +2336,12 @@ export default async function handler(req, res) {
 
               if (!reportRes.ok) {
                 const rawText = await reportRes.text();
+                try {
+                  const failureBody = JSON.parse(rawText);
+                  generatorErrorCode = String(failureBody?.error_code || generatorErrorCode);
+                } catch {
+                  generatorErrorCode = 'REPORT_RENDER_FAILED';
+                }
                 generatorFailurePayload = {
                   status: reportRes.status,
                   response_text_preview: rawText.slice(0, 500),
@@ -2355,6 +2378,7 @@ export default async function handler(req, res) {
                       holdDelivery: resolvedDeliveryDecision.holdDelivery,
                     });
                   } catch (publicationErr) {
+                    generatorErrorCode = 'STORAGE_PUBLICATION_FAILED';
                     generatorError = publicationErr?.message || 'Report generation failed (report publication resolution failed)';
                     generatorFailurePayload = {
                       error: generatorError,
@@ -2396,6 +2420,7 @@ export default async function handler(req, res) {
                       holdDelivery: resolvedDeliveryDecision.holdDelivery,
                     });
                   } catch (artifactErr) {
+                    generatorErrorCode = 'PDF_ARTIFACT_FAILED';
                     generatorError = artifactErr?.message || `Report generation failed (${reportRes.status})`;
                     generatorFailurePayload = {
                       error: generatorError,
@@ -2422,13 +2447,13 @@ export default async function handler(req, res) {
           if (generatorError) {
             await applyTerminalFailureOutcome(job, {
               fromStatus: 'rendering',
-              errorCode: 'REPORT_GENERATION_FAILED',
+              errorCode: generatorErrorCode,
               errorMessage: generatorError,
               transitionMeta: { error: generatorError },
               restore: {
                 enabled: true,
                 reason: 'report_generation_failed',
-                errorCode: 'REPORT_GENERATION_FAILED',
+                errorCode: generatorErrorCode,
                 strict: false,
                 logContext: 'report_generation_failed',
               },
@@ -2446,7 +2471,7 @@ export default async function handler(req, res) {
 
             const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation_failed', {
               error: generatorError,
-              error_code: 'REPORT_GENERATION_FAILED',
+              error_code: generatorErrorCode,
               timestamp: nowIso,
               ...(generatorFailurePayload || {}),
             });
@@ -2471,11 +2496,15 @@ export default async function handler(req, res) {
           const shouldHoldDeliveryOutcome = isTypedGateOutcome || isResolvedHoldBlockedOutcome;
           const holdOutcomeStatus = 'user_needs_documents';
           if (shouldHoldDeliveryOutcome) {
+            const terminalErrorCode = resolveHeldDeliveryTerminalCode(resolvedDeliveryDecision);
+            const terminalClassification = classifyTerminalFailureCode(terminalErrorCode);
+            const customerDocumentFailure = terminalClassification.customer_document_replacement_required === true;
             await applyTerminalFailureOutcome(job, {
               fromStatus: 'rendering',
-              errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
-              errorMessage:
-                'Report could not be generated. InvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.',
+              errorCode: terminalErrorCode,
+              errorMessage: customerDocumentFailure
+                ? 'Report generation stopped because required core operating evidence was catastrophically unusable. No report was published.'
+                : 'Report generation failed before publication. No report was published. The issue was logged for internal review.',
               transitionMeta: {
                 report_id: reportId,
                 reason:
@@ -2491,7 +2520,7 @@ export default async function handler(req, res) {
                   resolvedDeliveryDecision.failClosedReasonCode ||
                   resolvedDeliveryDecision.customerStatusReasonCode ||
                   'user_needs_documents',
-                errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
+                errorCode: terminalErrorCode,
                 strict: false,
                 logContext: 'needs-documents',
               },
@@ -2526,13 +2555,13 @@ export default async function handler(req, res) {
             generatorError = `Report generation failed (${missingDeliverableArtifact} missing for deliverable path)`;
             await applyTerminalFailureOutcome(job, {
               fromStatus: 'rendering',
-              errorCode: 'REPORT_GENERATION_FAILED',
+              errorCode: 'PDF_ARTIFACT_FAILED',
               errorMessage: generatorError,
               transitionMeta: { error: generatorError },
               restore: {
                 enabled: true,
                 reason: 'report_generation_failed',
-                errorCode: 'REPORT_GENERATION_FAILED',
+                errorCode: 'PDF_ARTIFACT_FAILED',
                 strict: false,
                 logContext: 'deliverable-missing-artifact',
               },

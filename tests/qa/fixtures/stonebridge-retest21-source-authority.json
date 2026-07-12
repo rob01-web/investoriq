@@ -1,0 +1,96 @@
+{
+  "fixture": "stonebridge_retest21_source_authority",
+  "source_export": {
+    "filename": "analysis_artifacts_rows (24).json",
+    "sha256": "1d882ea38d01f463e7fbfc70376656c4dd16d1cd44e1b15ec1c426f0cd248fb0",
+    "job_id": "7a0e9e2c-f8be-4bf3-b736-300dc0fe7d93",
+    "property_name": "Stonebridge Lofts"
+  },
+  "artifacts": {
+    "t12": {
+      "artifact_id": "6cb3f647-c445-4491-9bce-a1ebf352fcb8",
+      "payload_sha256": "d80d515e9a9a4e60422cfc1f349a74e75205e651f06e8076e3295c72056e5130",
+      "type": "t12_parsed",
+      "payload": {
+        "method": "xlsx",
+        "file_id": "1dc9900d-8d7a-4391-8707-7c54ca98feed",
+        "confidence": 0.95,
+        "declared_doc_type": "t12",
+        "detected_doc_type": "unknown",
+        "original_filename": "T12_Stonebridge_Lofts_Attack_Test_8.xlsx",
+        "gross_potential_rent": 1612800,
+        "effective_gross_income": 1500000,
+        "total_operating_expenses": 555000,
+        "net_operating_income": 945000,
+        "income_lines": [
+          { "label": "Vacancy Allowance", "amount": -112800 }
+        ],
+        "expense_lines": [
+          { "label": "Property Taxes", "amount": 185000 },
+          { "label": "Insurance", "amount": 72000 },
+          { "label": "Repairs & Maintenance", "amount": 104000 },
+          { "label": "Utilities", "amount": 86000 },
+          { "label": "Property Management", "amount": 60000 },
+          { "label": "Payroll / Admin", "amount": 28000 }
+        ],
+        "parse_warnings": [],
+        "core_t12_validation": {
+          "ok": true,
+          "failures": [],
+          "parse_branch": "xlsx",
+          "accepted_core_values": {
+            "effective_gross_income": 1500000,
+            "total_operating_expenses": 555000,
+            "net_operating_income": 945000
+          }
+        }
+      }
+    },
+    "rent_roll": {
+      "artifact_id": "7f1a0b58-a110-4b77-84c0-606e2ec7af78",
+      "payload_sha256": "8898bc8708cb2814234c99bd8e238460525c2f3da660ba4c41f9a3ee8805dee1",
+      "type": "rent_roll_parsed",
+      "payload": {
+        "method": "xlsx",
+        "file_id": "d9937dc0-f706-471a-9642-38e0c2604d2e",
+        "confidence": 0.95,
+        "declared_doc_type": "rent_roll",
+        "detected_doc_type": "unknown",
+        "original_filename": "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx",
+        "total_units": 64,
+        "occupancy": 0.9375,
+        "unit_groups": [
+          { "count": 32, "unit_type": "1BR", "status": "Occupied", "sqft": 720, "in_place_rent": 1850, "market_rent": 2050 },
+          { "count": 28, "unit_type": "2BR", "status": "Occupied", "sqft": 940, "in_place_rent": 2150, "market_rent": 2425 },
+          { "count": 4, "unit_type": "2BR", "status": "Vacant", "sqft": 940, "in_place_rent": 0, "market_rent": 2425 }
+        ],
+        "unit_mix": [
+          { "count": 32, "unit_type": "1BR", "current_rent": 1850, "market_rent": 2050 },
+          { "count": 32, "unit_type": "2BR", "current_rent": 1881, "market_rent": 2425 }
+        ],
+        "parse_warnings": []
+      }
+    },
+    "misclassified_renovation": {
+      "text_artifact_id": "9ec8cf4a-10ab-4bc0-b3c3-6e4750a195ea",
+      "parse_error_artifact_id": "a11f3c25-0ed0-44f0-b0d9-cdbd9b7a2be8",
+      "parse_error_payload_sha256": "333e25a3ab455703721df06162bb8012255ed184e9946619a4195a027f3a68da",
+      "recovery_payload_sha256": "63010b72692abfb2a58f7fbdf87a880e4141b4e9322e106366689552d882132e",
+      "file_id": "5af7af26-9101-4463-b2eb-b659a467116c",
+      "original_filename": "Stonebridge_Reno_Plan.pdf",
+      "contaminated_doc_type": "rent_roll",
+      "text": "Stonebridge Lofts - Structured Renovation / CapEx Plan Document Role This is a structured forward-looking renovation / CapEx plan. It provides budget, unit scope, stated rent lift, and phasing as source facts. Budget Summary Field Source Value Total Renovation Budget $1,280,000 1BR Interiors 20 units X $18,500/unit; expected rent lift $225/month; Months 1-18 2BR Interiors 18 units X $24,000/unit; expected rent lift $325/month; Months 1-24 Common Area Refresh $210,000 Exterior / Security $115,000 Contingency $153,000 Limitations Budget, rent lift, and phasing may be displayed as source facts for transparency only. Do not model ROI, payback, stabilized NOI impact, value impact, refinance capacity, DCF, waterfall, or final recommendation. Do not use stated renovation rent lift to override current rent roll in-place rent or market rent.",
+      "parse_error": "missing_total_units|missing_occupied_units|missing_vacant_units|missing_occupancy_percentage|missing_in_place_rent_totals|missing_market_rent_totals|missing_required_rent_totals",
+      "recovery_outcome": "validation_rejected"
+    }
+  },
+  "expected": {
+    "t12_status": "validated",
+    "rent_roll_status": "validated",
+    "core_publishability_bucket": "disclose_only_publishable",
+    "reconciliation_variance_pct": -0.11160714285714286,
+    "screening_delivery_gate_status": "deliverable",
+    "acquisition_memo_delivery_gate_status": "deliverable",
+    "renovation_role": "renovation"
+  }
+}

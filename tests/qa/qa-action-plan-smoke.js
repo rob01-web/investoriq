@@ -4,6 +4,21 @@ import { buildQaFixRouting } from "../../api/_lib/qa-fix-routing.js";
 import { buildSourceReconciliationState } from "../../api/_lib/report-surface-contracts.js";
 const qaActionPlanTest = (await import("../../api/_lib/qa-action-plan.js")).__test__;
 
+const validatedCoreCoverageAuthority = {
+  artifact_inventory: {
+    t12_parsed: { present: true, has_core_totals: true },
+    rent_roll_parsed: { present: true },
+  },
+  t12_sufficiency_state: { status: "validated", publishability_bucket: "core_sufficient_publishable" },
+  rent_roll_sufficiency_state: { status: "validated", publishability_bucket: "core_sufficient_publishable" },
+  core_input_sufficiency_state: {
+    status: "validated",
+    publishability_bucket: "core_sufficient_publishable",
+    required_core_docs_missing: false,
+    blocks_customer_delivery: false,
+  },
+};
+
 const sourceReportCoverageQa = {
   deterministic_flags: [
     {
@@ -113,6 +128,7 @@ const canonicalMirrorPlan = buildQaActionPlan({
   renderedReportQa: { findings: [] },
   canonicalDeliveryDecisionState: {
     source: "canonical_delivery_decision",
+    core_valid_required_coverage: true,
     delivery_gate_status: "deliverable",
     customer_delivery_allowed: true,
     public_sample_ready: false,
@@ -140,9 +156,11 @@ const canonicalConflictPlan = buildQaActionPlan({
     ],
   },
   renderedReportQa: { findings: [] },
-  deliveryGateDecision: {
+  canonicalDeliveryDecisionState: {
+    source: "canonical_delivery_decision",
+    core_valid_required_coverage: true,
     delivery_gate_status: "deliverable",
-    customer_publish_eligible: true,
+    customer_delivery_allowed: true,
     public_sample_ready: true,
     high_value_outreach_ready: true,
   },
@@ -165,24 +183,24 @@ const liveCoveragePlanWithoutExplicitOverride = buildQaActionPlan({
 assert.equal(liveCoveragePlanWithoutExplicitOverride.readiness_source, "canonical_delivery_state");
 assert.equal(liveCoveragePlanWithoutExplicitOverride.readiness_fallback_used, false);
 
-const legacyFallbackPlan = buildQaActionPlan({
+const missingSourceCoveragePlan = buildQaActionPlan({
   reportQaFlags: [],
   sourceReportCoverageQa: null,
   renderedReportQa: null,
   qaFixRouting: null,
 });
-assert.equal(legacyFallbackPlan.readiness_source, "legacy_action_plan_fallback");
-assert.equal(legacyFallbackPlan.readiness_fallback_used, true);
-assert.equal(legacyFallbackPlan.customer_delivery_ready, true);
-assert.equal(legacyFallbackPlan.public_sample_ready, true);
-assert.equal(legacyFallbackPlan.high_value_outreach_ready, true);
-assert.equal(legacyFallbackPlan.historical_compatibility?.readiness_source, "legacy_action_plan_fallback");
-assert.equal(legacyFallbackPlan.historical_compatibility?.readiness_fallback_used, true);
-assert.equal(legacyFallbackPlan.historical_compatibility?.customer_delivery_ready, true);
-assert.equal(legacyFallbackPlan.historical_compatibility?.public_sample_ready, true);
-assert.equal(legacyFallbackPlan.historical_compatibility?.high_value_outreach_ready, true);
-assert.equal(Array.isArray(legacyFallbackPlan.prioritized_actions), true);
-assert.equal(typeof legacyFallbackPlan.action_counts?.total, "number");
+assert.equal(missingSourceCoveragePlan.readiness_source, "fail_closed_missing_source_coverage");
+assert.equal(missingSourceCoveragePlan.readiness_fallback_used, false);
+assert.equal(missingSourceCoveragePlan.customer_delivery_ready, false);
+assert.equal(missingSourceCoveragePlan.public_sample_ready, false);
+assert.equal(missingSourceCoveragePlan.high_value_outreach_ready, false);
+assert.equal(missingSourceCoveragePlan.historical_compatibility?.readiness_source, "fail_closed_missing_source_coverage");
+assert.equal(missingSourceCoveragePlan.historical_compatibility?.readiness_fallback_used, false);
+assert.equal(missingSourceCoveragePlan.historical_compatibility?.customer_delivery_ready, false);
+assert.equal(missingSourceCoveragePlan.historical_compatibility?.public_sample_ready, false);
+assert.equal(missingSourceCoveragePlan.historical_compatibility?.high_value_outreach_ready, false);
+assert.equal(Array.isArray(missingSourceCoveragePlan.prioritized_actions), true);
+assert.equal(typeof missingSourceCoveragePlan.action_counts?.total, "number");
 
 const actionsByCode = Object.fromEntries(plan.prioritized_actions.map((action) => [action.code, action]));
 const serialized = JSON.stringify(plan);
@@ -192,9 +210,9 @@ assert.equal(plan.advisory_only, true);
 assert.equal(plan.no_public_surface, true);
 assert.equal(plan.public_sample_ready, false);
 assert.equal(plan.high_value_outreach_ready, false);
-assert.equal(plan.customer_delivery_ready, true);
+assert.equal(plan.customer_delivery_ready, false);
 assert.notEqual(plan.delivery_recommendation, "customer_deliverable");
-assert.equal(plan.launch_path_recommendation, "customer_deliverable_with_internal_advisory");
+assert.equal(plan.launch_path_recommendation, "internal_review_recommended");
 assert.equal(
   /before sample use|before public sample|high-value outreach use|public sample or outreach|public sample or high-value|public sample or outreach report|underwriting_private_beta_recommended|screening_only_public_launch_recommended|do_not_use_for_public_or_high_value_outreach|Ken|high-value quality tier/i.test(serialized),
   false
@@ -233,20 +251,21 @@ const canonicalPublishEligibilityMirror = qaActionPlanTest.buildPublishEligibili
   ],
   canonicalDeliveryDecisionState: {
     source: "canonical_delivery_decision",
+    core_valid_required_coverage: true,
     delivery_gate_status: "deliverable",
     customer_delivery_allowed: true,
     public_sample_ready: false,
     high_value_outreach_ready: false,
   },
 });
-assert.equal(canonicalPublishEligibilityMirror.customer_publish_eligible, true);
-assert.equal(canonicalPublishEligibilityMirror.report_publishable, true);
-assert.equal(canonicalPublishEligibilityMirror.customer_delivery_ready, true);
-assert.equal(canonicalPublishEligibilityMirror.report_blocked, false);
+assert.equal(canonicalPublishEligibilityMirror.customer_publish_eligible, false);
+assert.equal(canonicalPublishEligibilityMirror.report_publishable, false);
+assert.equal(canonicalPublishEligibilityMirror.customer_delivery_ready, false);
+assert.equal(canonicalPublishEligibilityMirror.report_blocked, true);
 assert.equal(canonicalPublishEligibilityMirror.readiness_source, "canonical_delivery_state");
 assert.equal(canonicalPublishEligibilityMirror.readiness_fallback_used, false);
 assert.equal(canonicalPublishEligibilityMirror.legacy_compatibility?.readiness_source, "canonical_delivery_state");
-assert.equal(canonicalPublishEligibilityMirror.legacy_compatibility?.report_publishable, true);
+assert.equal(canonicalPublishEligibilityMirror.legacy_compatibility?.report_publishable, false);
 assert.equal(Array.isArray(canonicalPublishEligibilityMirror.report_quality_blockers), true);
 assert.equal(Array.isArray(canonicalPublishEligibilityMirror.report_quality_advisories), true);
 
@@ -290,8 +309,8 @@ assert.equal(legacyPublishEligibilityFallback.readiness_fallback_used, false);
 assert.equal(legacyPublishEligibilityFallback.customer_publish_eligible, false);
 assert.equal(legacyPublishEligibilityFallback.report_publishable, false);
 assert.equal(legacyPublishEligibilityFallback.customer_delivery_ready, false);
-assert.equal(legacyPublishEligibilityFallback.legacy_compatibility?.readiness_source, "legacy_publish_eligibility_fallback");
-assert.equal(legacyPublishEligibilityFallback.legacy_compatibility?.readiness_fallback_used, true);
+assert.equal(legacyPublishEligibilityFallback.legacy_compatibility?.readiness_source, "delivery_gate_state");
+assert.equal(legacyPublishEligibilityFallback.legacy_compatibility?.readiness_fallback_used, false);
 
 const livePublishEligibilityNoOverride = qaActionPlanTest.buildPublishEligibilitySummary({
   deliveryGateStatus: "deliverable",
@@ -305,9 +324,9 @@ const livePublishEligibilityNoOverride = qaActionPlanTest.buildPublishEligibilit
 });
 assert.equal(livePublishEligibilityNoOverride.readiness_source, "delivery_gate_state");
 assert.equal(livePublishEligibilityNoOverride.readiness_fallback_used, false);
-assert.equal(livePublishEligibilityNoOverride.customer_publish_eligible, true);
-assert.equal(livePublishEligibilityNoOverride.report_publishable, true);
-assert.equal(livePublishEligibilityNoOverride.customer_delivery_ready, true);
+assert.equal(livePublishEligibilityNoOverride.customer_publish_eligible, false);
+assert.equal(livePublishEligibilityNoOverride.report_publishable, false);
+assert.equal(livePublishEligibilityNoOverride.customer_delivery_ready, false);
 
 const sparsePlan = buildQaActionPlan({
   reportQaFlags: [],
@@ -378,7 +397,10 @@ const cleanPlanWithoutRouting = buildQaActionPlan({
   renderedReportQa: { findings: [] },
   qaFixRouting: null,
 });
-assert.equal(cleanPlanWithoutRouting.public_sample_ready, true);
+assert.equal(cleanPlanWithoutRouting.customer_delivery_ready, false);
+assert.equal(cleanPlanWithoutRouting.public_sample_ready, false);
+assert.equal(cleanPlanWithoutRouting.high_value_outreach_ready, false);
+assert.equal(cleanPlanWithoutRouting.readiness_source, "fail_closed_missing_source_coverage");
 
 const softRenderedCompliancePlan = buildQaActionPlan({
   reportQaFlags: [],
@@ -413,9 +435,9 @@ const softRenderedCompliancePlan = buildQaActionPlan({
   qaFixRouting: null,
 });
 const softComplianceActions = softRenderedCompliancePlan.prioritized_actions;
-assert.equal(softRenderedCompliancePlan.customer_delivery_ready, true);
-assert.equal(softRenderedCompliancePlan.public_sample_ready, true);
-assert.equal(softRenderedCompliancePlan.high_value_outreach_ready, true);
+assert.equal(softRenderedCompliancePlan.customer_delivery_ready, false);
+assert.equal(softRenderedCompliancePlan.public_sample_ready, false);
+assert.equal(softRenderedCompliancePlan.high_value_outreach_ready, false);
 assert.equal(softRenderedCompliancePlan.action_counts.requires_code_patch, 0);
 assert.equal(
   softComplianceActions.every((action) => action.action_type === "no_action_false_positive"),
@@ -482,7 +504,7 @@ const managerSuppressedMethodologyPlan = buildQaActionPlan({
     ],
   },
 });
-assert.equal(managerSuppressedMethodologyPlan.customer_delivery_ready, true);
+assert.equal(managerSuppressedMethodologyPlan.customer_delivery_ready, false);
 assert.equal(managerSuppressedMethodologyPlan.action_counts.requires_code_patch, 0);
 assert.equal(managerSuppressedMethodologyPlan.prioritized_actions.length, 0);
 
@@ -510,7 +532,7 @@ const managerUnsupportedFilenamePlan = buildQaActionPlan({
     ],
   },
 });
-assert.equal(managerUnsupportedFilenamePlan.customer_delivery_ready, true);
+assert.equal(managerUnsupportedFilenamePlan.customer_delivery_ready, false);
 assert.equal(managerUnsupportedFilenamePlan.prioritized_actions.length, 0);
 
 const managerSpeculativePublicLanguagePlan = buildQaActionPlan({
@@ -537,7 +559,7 @@ const managerSpeculativePublicLanguagePlan = buildQaActionPlan({
     ],
   },
 });
-assert.equal(managerSpeculativePublicLanguagePlan.customer_delivery_ready, true);
+assert.equal(managerSpeculativePublicLanguagePlan.customer_delivery_ready, false);
 assert.equal(managerSpeculativePublicLanguagePlan.action_counts.requires_code_patch, 0);
 
 const marketSurveyRouting = buildQaFixRouting({
@@ -732,6 +754,16 @@ const cleanGate = buildDeliveryGateDecision({
       t12_parsed: { present: true, has_core_totals: true },
       rent_roll_parsed: { present: true },
     },
+    core_input_sufficiency_state: {
+      status: "validated",
+      publishability_bucket: "core_sufficient_publishable",
+      required_core_docs_missing: false,
+      blocks_customer_delivery: false,
+      evidence: {
+        t12_state: { status: "validated", publishability_bucket: "core_sufficient_publishable" },
+        rent_roll_state: { status: "validated", publishability_bucket: "core_sufficient_publishable" },
+      },
+    },
   },
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: {
@@ -745,16 +777,13 @@ assert.equal(cleanGate.delivery_gate_status, "deliverable");
 assert.equal(cleanGate.customer_delivery_ready, cleanGate.customer_publish_eligible);
 assert.equal(cleanGate.report_publishable, cleanGate.customer_publish_eligible);
 assert.equal(cleanGate.report_blocked, !cleanGate.report_publishable);
-assert.equal(cleanGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
 assert.equal(cleanGate.final_delivery_authority, "delivery_gate");
-assert.equal(cleanGate.readiness_hierarchy.final_delivery_status, "deliverable");
+assert.equal(cleanGate.core_valid_required_coverage, true);
 assert.equal(cleanGate.launch_path_recommendation, "customer_deliverable");
-assert.equal(cleanGate.final_delivery_authority, "delivery_gate");
-assert.equal(cleanGate.readiness_hierarchy.final_delivery_status, "deliverable");
 assert.equal(cleanGate.report_publishable, true);
 assert.equal(cleanGate.report_blocked, false);
-assert.equal(Array.isArray(cleanGate.report_quality_blockers), true);
-assert.equal(cleanGate.report_quality_blockers.length, 0);
+assert.equal(Array.isArray(cleanGate.customer_publish_blockers), true);
+assert.equal(cleanGate.customer_publish_blockers.length, 0);
 
 const adminReviewGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -764,6 +793,16 @@ const adminReviewGate = buildDeliveryGateDecision({
       t12_parsed: { present: true, has_core_totals: true },
       rent_roll_parsed: { present: true },
     },
+    core_input_sufficiency_state: {
+      status: "validated",
+      publishability_bucket: "core_sufficient_publishable",
+      required_core_docs_missing: false,
+      blocks_customer_delivery: false,
+      evidence: {
+        t12_state: { status: "validated", publishability_bucket: "core_sufficient_publishable" },
+        rent_roll_state: { status: "validated", publishability_bucket: "core_sufficient_publishable" },
+      },
+    },
   },
   reportContractQa: {
     contract_status: "warn",
@@ -772,6 +811,7 @@ const adminReviewGate = buildDeliveryGateDecision({
         code: "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
         severity: "high",
         category: "source_report_reconciliation",
+        final_render_validation_clean: true,
       },
     ],
   },
@@ -807,6 +847,7 @@ assert.equal(adminReviewGate.readiness_hierarchy.final_delivery_status, "deliver
 
 const rentRollGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -821,6 +862,7 @@ const rentRollGate = buildDeliveryGateDecision({
         code: "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
         severity: "high",
         category: "report_contract",
+        post_self_heal_validation_passed: true,
       },
     ],
   },
@@ -851,6 +893,7 @@ assert.equal(Array.isArray(rentRollGate.report_quality_advisories), true);
 
 const rentRollPublicOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -858,6 +901,7 @@ const rentRollPublicOnlyGate = buildDeliveryGateDecision({
       rent_roll_parsed: { present: true },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "core_sufficient_publishable",
       reason_code: null,
     },
@@ -871,6 +915,7 @@ const rentRollPublicOnlyGate = buildDeliveryGateDecision({
         severity: "high",
         category: "report_contract",
         blocks_customer_delivery: false,
+        post_self_heal_validation_passed: true,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
       },
@@ -949,10 +994,10 @@ const renderedRentRollGate = buildDeliveryGateDecision({
   },
 });
 assert.equal(renderedRentRollGate.delivery_gate_status, "user_needs_documents");
-assert.equal(renderedRentRollGate.customer_delivery_ready, true);
-assert.equal(renderedRentRollGate.report_publishable, true);
-assert.equal(renderedRentRollGate.report_blocked, false);
-assert.equal(Array.isArray(renderedRentRollGate.report_quality_blockers), true);
+assert.equal(renderedRentRollGate.customer_delivery_ready, false);
+assert.equal(renderedRentRollGate.report_publishable, false);
+assert.equal(renderedRentRollGate.report_blocked, true);
+assert.equal(Array.isArray(renderedRentRollGate.customer_publish_blockers), true);
 
 const managerContradictionPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -1005,6 +1050,7 @@ assert.equal(genericContradictionAction.recommended_next_step, "Review the uploa
 
 const managerContradictionGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -1023,6 +1069,7 @@ assert.equal(managerContradictionGate.report_publishable, true);
 
 const advisoryOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -1080,6 +1127,7 @@ const retest8SourceReconciliationState = buildSourceReconciliationState({
   t12Payload: { gross_potential_rent: 1850000 },
 });
 const retest8SourceReportCoverageQa = {
+  ...validatedCoreCoverageAuthority,
   qa_status: "warn",
   deterministic_flags: [
     {
@@ -1109,6 +1157,7 @@ const retest8SourceReportCoverageQa = {
     },
   },
   core_input_sufficiency_state: {
+    status: "validated",
     publishability_bucket: "disclose_only_publishable",
     reason_code: "source_reconciliation_disclosed",
   },
@@ -1202,11 +1251,12 @@ const reconciliationExplicitBlockGate = buildDeliveryGateDecision({
     reportContractQa: { contract_status: "pass", violations: [] },
   }),
 });
-assert.notEqual(reconciliationExplicitBlockGate.delivery_gate_status, "deliverable");
+assert.equal(reconciliationExplicitBlockGate.delivery_gate_status, "deliverable");
 assert.equal(reconciliationExplicitBlockGate.customer_publish_eligible, true);
 
 const discloseOnlyKeywordFlagGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [
       {
@@ -1224,6 +1274,7 @@ const discloseOnlyKeywordFlagGate = buildDeliveryGateDecision({
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: buildQaActionPlan({
     sourceReportCoverageQa: {
+      ...validatedCoreCoverageAuthority,
       qa_status: "pass",
       deterministic_flags: [
         {
@@ -1246,6 +1297,7 @@ assert.equal(discloseOnlyKeywordFlagGate.public_sample_ready, false);
 
 const publicOnlyKeywordFlagGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [
       {
@@ -1447,6 +1499,7 @@ assert.equal(nestedImpactGate.delivery_gate_status, "user_needs_documents");
 
 const discloseOnlyImpactGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [
       {
@@ -1463,6 +1516,7 @@ const discloseOnlyImpactGate = buildDeliveryGateDecision({
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: buildQaActionPlan({
     sourceReportCoverageQa: {
+      ...validatedCoreCoverageAuthority,
       qa_status: "pass",
       deterministic_flags: [
         {
@@ -1483,6 +1537,7 @@ assert.equal(discloseOnlyImpactGate.delivery_gate_status, "deliverable");
 
 const reviewOnlyImpactGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [
       {
@@ -1500,6 +1555,7 @@ const reviewOnlyImpactGate = buildDeliveryGateDecision({
   reportContractQa: { contract_status: "pass", violations: [] },
   qaActionPlan: buildQaActionPlan({
     sourceReportCoverageQa: {
+      ...validatedCoreCoverageAuthority,
       qa_status: "pass",
       deterministic_flags: [
         {
@@ -1579,7 +1635,7 @@ const sectionConstrainedGate = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(sectionConstrainedGate.delivery_gate_status, "deliverable");
+assert.equal(sectionConstrainedGate.delivery_gate_status, "user_needs_documents");
 assert.equal(sectionConstrainedGate.customer_delivery_ready, false);
 
 const discloseOnlySufficiencyGateBare = buildDeliveryGateDecision({
@@ -1599,7 +1655,7 @@ const discloseOnlySufficiencyGateBare = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(discloseOnlySufficiencyGateBare.delivery_gate_status, "deliverable");
+assert.equal(discloseOnlySufficiencyGateBare.delivery_gate_status, "user_needs_documents");
 
 const adminReviewSufficiencyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
@@ -1680,11 +1736,12 @@ const renderedReconciliationMismatchGate = buildDeliveryGateDecision({
     },
   }),
 });
-assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "deliverable");
-assert.equal(renderedReconciliationMismatchGate.publish_decision_reason, "customer_publish_eligible");
+assert.equal(renderedReconciliationMismatchGate.delivery_gate_status, "user_needs_documents");
+assert.equal(renderedReconciliationMismatchGate.customer_publish_eligible, false);
 
 const sectionConstrainedSufficiencyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "warn",
     deterministic_flags: [],
     artifact_inventory: {
@@ -1697,6 +1754,7 @@ const sectionConstrainedSufficiencyGate = buildDeliveryGateDecision({
       },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "section_constrained_publishable",
       reason_code: "t12_line_item_detail_missing",
     },
@@ -1715,6 +1773,7 @@ assert.equal(sectionConstrainedSufficiencyGate.publish_decision_reason, "custome
 
 const discloseOnlySufficiencyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "warn",
     deterministic_flags: [],
     artifact_inventory: {
@@ -1727,6 +1786,7 @@ const discloseOnlySufficiencyGate = buildDeliveryGateDecision({
       },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "disclose_only_publishable",
       reason_code: "source_reconciliation_disclosed",
     },
@@ -1791,8 +1851,10 @@ assert.equal(
 assert.equal(
   buildDeliveryGateDecision({
     sourceReportCoverageQa: {
+      ...validatedCoreCoverageAuthority,
       qa_status: "pass",
       core_input_sufficiency_state: {
+        status: "validated",
         publishability_bucket: "disclose_only_publishable",
         customer_delivery_impact: "disclose_only",
         required_core_docs_missing: false,
@@ -1820,13 +1882,15 @@ assert.equal(
     },
     qaActionPlan: dealScorecardViolationPlan,
   }).delivery_gate_status,
-  "deliverable"
+  "user_needs_documents"
 );
 assert.equal(
   buildDeliveryGateDecision({
     sourceReportCoverageQa: {
+      ...validatedCoreCoverageAuthority,
       qa_status: "pass",
       core_input_sufficiency_state: {
+        status: "validated",
         publishability_bucket: "disclose_only_publishable",
         customer_delivery_impact: "disclose_only",
         required_core_docs_missing: false,
@@ -1845,6 +1909,7 @@ assert.equal(
           code: "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
           severity: "high",
           message: "Deal Scorecard renders a stale placeholder for current debt DSCR.",
+          final_render_validation_clean: true,
           customer_delivery_impact: "disclose_only",
           blocks_customer_delivery: false,
           blocks_public_sample: true,
@@ -1882,8 +1947,10 @@ assert.equal(placeholderContractViolationAction.action_type, "render_gating_fix_
 assert.equal(
   buildDeliveryGateDecision({
     sourceReportCoverageQa: {
+      ...validatedCoreCoverageAuthority,
       qa_status: "pass",
       core_input_sufficiency_state: {
+        status: "validated",
         publishability_bucket: "core_sufficient_publishable",
         customer_delivery_impact: "allow",
         required_core_docs_missing: false,
@@ -1910,13 +1977,15 @@ assert.equal(
     },
     qaActionPlan: placeholderContractViolationPlan,
   }).delivery_gate_status,
-  "deliverable"
+  "user_needs_documents"
 );
 assert.equal(
   buildDeliveryGateDecision({
     sourceReportCoverageQa: {
+      ...validatedCoreCoverageAuthority,
       qa_status: "pass",
       core_input_sufficiency_state: {
+        status: "validated",
         publishability_bucket: "core_sufficient_publishable",
         customer_delivery_impact: "allow",
         required_core_docs_missing: false,
@@ -1935,6 +2004,7 @@ assert.equal(
           code: "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
           severity: "high",
           message: "Rendered report contains stale DATA NOT AVAILABLE placeholder text.",
+          post_self_heal_validation_passed: true,
           blocks_customer_delivery: false,
           blocks_public_sample: true,
           blocks_high_value_outreach: true,
@@ -1948,6 +2018,7 @@ assert.equal(
 
 const unsupportedCurrentDebtRenderedGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -1955,6 +2026,7 @@ const unsupportedCurrentDebtRenderedGate = buildDeliveryGateDecision({
       rent_roll_parsed: { present: true },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "core_sufficient_publishable",
       required_core_docs_missing: false,
       customer_delivery_impact: "allow",
@@ -1969,6 +2041,7 @@ const unsupportedCurrentDebtRenderedGate = buildDeliveryGateDecision({
         code: "UNSUPPORTED_CURRENT_DEBT_RENDERED",
         category: "section_gating_contract",
         severity: "high",
+        final_render_validation_clean: true,
         blocks_customer_delivery: true,
         blocks_public_sample: true,
         blocks_high_value_outreach: true,
@@ -1985,6 +2058,7 @@ assert.equal(unsupportedCurrentDebtRenderedGate.customer_publish_eligible, true)
 
 const docRaptorOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -2024,6 +2098,7 @@ assert.equal((docRaptorOnlyGate.high_value_outreach_blockers || []).length > 0, 
 
 const publicSampleOnlyGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -2061,6 +2136,7 @@ assert.equal((publicSampleOnlyGate.report_quality_blockers || []).includes("PUBL
 
 const aiOnlyAdvisoryGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -2092,10 +2168,11 @@ assert.equal(needsDocumentsGate.customer_publish_eligible, false);
 assert.equal(needsDocumentsGate.customer_delivery_ready, needsDocumentsGate.customer_publish_eligible);
 assert.equal(needsDocumentsGate.report_publishable, needsDocumentsGate.customer_publish_eligible);
 assert.equal(needsDocumentsGate.report_blocked, !needsDocumentsGate.report_publishable);
-assert.equal(needsDocumentsGate.readiness_hierarchy?.final_delivery_authority, "delivery_gate");
+assert.equal(needsDocumentsGate.final_delivery_authority, "delivery_gate");
 
 const optionalSupportingGapGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -2103,6 +2180,7 @@ const optionalSupportingGapGate = buildDeliveryGateDecision({
       rent_roll_parsed: { present: true },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "core_sufficient_publishable",
       required_core_docs_missing: false,
       customer_delivery_impact: "allow",
@@ -2133,6 +2211,7 @@ assert.deepEqual(optionalSupportingGapGate.source_limitation_reason_codes, ["DEB
 
 const optionalSupportingContractViolationGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -2140,6 +2219,7 @@ const optionalSupportingContractViolationGate = buildDeliveryGateDecision({
       rent_roll_parsed: { present: true },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "core_sufficient_publishable",
       required_core_docs_missing: false,
       customer_delivery_impact: "allow",
@@ -2174,6 +2254,7 @@ assert.equal((optionalSupportingContractViolationGate.report_quality_advisories 
 
 const hardContractDefectGate = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -2181,6 +2262,7 @@ const hardContractDefectGate = buildDeliveryGateDecision({
       rent_roll_parsed: { present: true },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "core_sufficient_publishable",
       required_core_docs_missing: false,
       customer_delivery_impact: "allow",
@@ -2207,9 +2289,55 @@ const hardContractDefectGate = buildDeliveryGateDecision({
     prioritized_actions: [],
   },
 });
-assert.equal(hardContractDefectGate.delivery_gate_status, "user_needs_documents");
-assert.equal(hardContractDefectGate.customer_publish_eligible, true);
-assert.equal(hardContractDefectGate.publish_decision_reason, "customer_publish_eligible");
+assert.notEqual(hardContractDefectGate.delivery_gate_status, "deliverable");
+assert.equal(hardContractDefectGate.customer_publish_eligible, false);
+assert.equal(hardContractDefectGate.report_publishable, false);
+assert.equal(hardContractDefectGate.customer_delivery_ready, false);
+assert.equal(hardContractDefectGate.report_blocked, true);
+
+for (const hardDefectCode of [
+  "HARD_PUBLIC_LANGUAGE_CONTRACT",
+  "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
+  "RENDERED_TEMPLATE_TOKEN_LEAK",
+  "INTERNAL_DEBUG_LANGUAGE_LEAK",
+  "RENDERED_MOJIBAKE_LEAK",
+  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
+  "REPORT_TYPE_SECTION_LEAK",
+]) {
+  const hardDefectGate = buildDeliveryGateDecision({
+    sourceReportCoverageQa: validatedCoreCoverageAuthority,
+    reportContractQa: {
+      contract_status: "block",
+      customer_delivery_ready: false,
+      violations: [{
+        code: hardDefectCode,
+        category: "public_language",
+        severity: "critical",
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      }],
+    },
+    qaActionPlan: {
+      customer_delivery_ready: false,
+      prioritized_actions: [{
+        code: hardDefectCode,
+        action_type: "code_patch_required",
+        owner_area: "report_renderer",
+        requires_code_patch: true,
+        requires_regeneration: true,
+        blocks_customer_delivery: true,
+        blocks_public_sample: true,
+        blocks_high_value_outreach: true,
+      }],
+    },
+  });
+  assert.notEqual(hardDefectGate.delivery_gate_status, "deliverable", `${hardDefectCode} must block valid core delivery`);
+  assert.equal(hardDefectGate.customer_publish_eligible, false, `${hardDefectCode} must fail customer publish eligibility`);
+  assert.equal(hardDefectGate.report_publishable, false, `${hardDefectCode} must make the report non-publishable`);
+  assert.equal(hardDefectGate.customer_delivery_ready, false, `${hardDefectCode} must block customer delivery`);
+  assert.equal(hardDefectGate.report_blocked, true, `${hardDefectCode} must keep the report blocked`);
+}
 
 const tokenNamedPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -2221,6 +2349,7 @@ assert.equal(tokenNamedPlan.property_name, "123 Test Avenue - Final QA Sample");
 
 const canonicalPublishGateWithLegacyFalseFlags = buildDeliveryGateDecision({
   sourceReportCoverageQa: {
+    ...validatedCoreCoverageAuthority,
     qa_status: "pass",
     deterministic_flags: [],
     artifact_inventory: {
@@ -2228,6 +2357,7 @@ const canonicalPublishGateWithLegacyFalseFlags = buildDeliveryGateDecision({
       rent_roll_parsed: { present: true },
     },
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "section_constrained_publishable",
       required_core_docs_missing: false,
       blocks_customer_delivery: false,
@@ -2274,6 +2404,7 @@ assert.equal(canonicalPublishGateWithLegacyFalseFlags.user_needs_documents, fals
 
 // Regression lock: customer-delivery gate doctrine must remain stable.
 const gateLockBaseCoverage = {
+  ...validatedCoreCoverageAuthority,
   qa_status: "pass",
   deterministic_flags: [],
   artifact_inventory: {
@@ -2281,6 +2412,7 @@ const gateLockBaseCoverage = {
     rent_roll_parsed: { present: true },
   },
   core_input_sufficiency_state: {
+    status: "validated",
     publishability_bucket: "core_sufficient_publishable",
     required_core_docs_missing: false,
     customer_delivery_impact: "allow",
@@ -2340,6 +2472,7 @@ const gateLockDiscloseOnlyReconciliation = gateLockScenario({
   sourceReportCoverageQa: {
     ...gateLockBaseCoverage,
     core_input_sufficiency_state: {
+      status: "validated",
       publishability_bucket: "disclose_only_publishable",
       required_core_docs_missing: false,
       customer_delivery_impact: "disclose_only",
@@ -2406,10 +2539,66 @@ const gateLockSelfHealRender = gateLockScenario({
     },
   }),
 });
-assert.equal(gateLockSelfHealRender.delivery_gate_status, "deliverable");
-assert.equal(gateLockSelfHealRender.customer_publish_eligible, true);
-assert.equal(gateLockSelfHealRender.report_publishable, true);
-assert.deepEqual(gateLockSelfHealRender.customer_publish_blockers, []);
+assert.notEqual(gateLockSelfHealRender.delivery_gate_status, "deliverable");
+assert.equal(gateLockSelfHealRender.customer_publish_eligible, false);
+assert.equal(gateLockSelfHealRender.report_publishable, false);
+assert.equal(gateLockSelfHealRender.customer_delivery_ready, false);
+assert.equal(gateLockSelfHealRender.report_blocked, true);
+
+const deterministicSelfHealRenderCodes = [
+  "DEAL_SCORECARD_STALE_DSCR_PLACEHOLDER",
+  "CURRENT_DEBT_COMPUTED_STALE_LIMITATION_COPY",
+  "RENDERED_DATA_NOT_AVAILABLE_PLACEHOLDER",
+  "RENDERED_PLACEHOLDER_METRIC_VALUE",
+  "RENDERED_PLACEHOLDER_VALUE_LEAK",
+  "INTERNAL_RENT_ROLL_TOTAL_CONTRADICTION",
+  "CURRENT_DEBT_REFI_CANONICAL_CONFORMANCE_DRIFT",
+  "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT",
+  "CURRENT_DEBT_DSCR_RECONCILIATION_MISMATCH",
+  "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT",
+  "SECTION_ELIGIBILITY_CURRENT_DEBT_RENDER_DRIFT",
+  "SECTION_ELIGIBILITY_REFI_RENDER_DRIFT",
+  "SCREENING_UNDERWRITING_SECTION_LEAK",
+  "UNSUPPORTED_CURRENT_DEBT_RENDERED",
+  "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
+  "RENDERED_SOURCE_RECONCILIATION_VARIANCE_MISMATCH",
+];
+
+for (const [index, selfHealCode] of deterministicSelfHealRenderCodes.entries()) {
+  const baseViolation = {
+    code: selfHealCode,
+    severity: "high",
+    blocks_customer_delivery: false,
+    blocks_public_sample: true,
+    blocks_high_value_outreach: true,
+  };
+  const withoutProof = gateLockScenario({
+    reportContractQa: {
+      contract_status: "block",
+      customer_delivery_ready: false,
+      violations: [baseViolation],
+    },
+  });
+  assert.notEqual(withoutProof.delivery_gate_status, "deliverable", `${selfHealCode} must block without post-heal proof`);
+  assert.equal(withoutProof.customer_publish_eligible, false, `${selfHealCode} must fail publish eligibility without post-heal proof`);
+  assert.equal(withoutProof.report_publishable, false, `${selfHealCode} must be non-publishable without post-heal proof`);
+
+  const proof = index % 3 === 0
+    ? { post_self_heal_validation_passed: true }
+    : index % 3 === 1
+      ? { final_render_validation_clean: true }
+      : { resolved_by_self_heal: true, verified_final_output_clean: true };
+  const withProof = gateLockScenario({
+    reportContractQa: {
+      contract_status: "pass",
+      customer_delivery_ready: true,
+      violations: [{ ...baseViolation, ...proof }],
+    },
+  });
+  assert.equal(withProof.delivery_gate_status, "deliverable", `${selfHealCode} may deliver with explicit post-heal clean-output proof`);
+  assert.equal(withProof.customer_publish_eligible, true, `${selfHealCode} may publish with explicit post-heal clean-output proof`);
+  assert.equal(withProof.report_publishable, true, `${selfHealCode} may be publishable with explicit post-heal clean-output proof`);
+}
 
 const gateLockPublicOnly = gateLockScenario({
   qaActionPlan: {
@@ -2449,8 +2638,11 @@ const gateLockHardDefect = gateLockScenario({
     ],
   },
 });
-assert.equal(gateLockHardDefect.delivery_gate_status, "user_needs_documents");
-assert.equal(gateLockHardDefect.customer_publish_eligible, true);
+assert.notEqual(gateLockHardDefect.delivery_gate_status, "deliverable");
+assert.equal(gateLockHardDefect.customer_publish_eligible, false);
+assert.equal(gateLockHardDefect.report_publishable, false);
+assert.equal(gateLockHardDefect.customer_delivery_ready, false);
+assert.equal(gateLockHardDefect.report_blocked, true);
 
 const gateLockMissingCoreDoc = gateLockScenario({
   sourceReportCoverageQa: {
@@ -2515,7 +2707,7 @@ const gateLockUnknownExplicitContractBlock = gateLockScenario({
     ],
   },
 });
-assert.equal(gateLockUnknownExplicitContractBlock.delivery_gate_status, "user_needs_documents");
+assert.equal(gateLockUnknownExplicitContractBlock.delivery_gate_status, "deliverable");
 assert.equal(gateLockUnknownExplicitContractBlock.customer_publish_eligible, true);
 assert.equal(gateLockUnknownExplicitContractBlock.report_publishable, true);
 assert.equal(
@@ -2545,7 +2737,7 @@ const gateLockUnknownExplicitContractBlockWithRationale = gateLockScenario({
     ],
   },
 });
-assert.equal(gateLockUnknownExplicitContractBlockWithRationale.delivery_gate_status, "user_needs_documents");
+assert.equal(gateLockUnknownExplicitContractBlockWithRationale.delivery_gate_status, "deliverable");
 assert.equal(gateLockUnknownExplicitContractBlockWithRationale.customer_publish_eligible, true);
 assert.equal(gateLockUnknownExplicitContractBlockWithRationale.report_publishable, true);
 assert.equal(
@@ -2585,18 +2777,19 @@ const canonicalDeliverableOverrideGate = buildDeliveryGateDecision({
   },
   canonicalDeliveryDecisionState: {
     source: "canonical_delivery_decision",
+    core_valid_required_coverage: true,
     delivery_gate_status: "deliverable",
     customer_delivery_allowed: true,
     public_sample_ready: false,
     high_value_outreach_ready: false,
   },
 });
-assert.equal(canonicalDeliverableOverrideGate.delivery_gate_status, "deliverable");
-assert.equal(canonicalDeliverableOverrideGate.customer_publish_eligible, true);
-assert.equal(canonicalDeliverableOverrideGate.report_publishable, true);
-assert.equal(canonicalDeliverableOverrideGate.customer_delivery_ready, true);
-assert.equal(canonicalDeliverableOverrideGate.report_blocked, false);
-assert.equal(canonicalDeliverableOverrideGate.readiness_source, "canonical_delivery_state");
+assert.equal(canonicalDeliverableOverrideGate.delivery_gate_status, "user_needs_documents");
+assert.equal(canonicalDeliverableOverrideGate.customer_publish_eligible, false);
+assert.equal(canonicalDeliverableOverrideGate.report_publishable, false);
+assert.equal(canonicalDeliverableOverrideGate.customer_delivery_ready, false);
+assert.equal(canonicalDeliverableOverrideGate.report_blocked, true);
+assert.equal(canonicalDeliverableOverrideGate.readiness_source, "canonical_source_coverage_fail_closed");
 assert.equal(canonicalDeliverableOverrideGate.readiness_fallback_used, false);
 
 const canonicalAdminReviewOverrideGate = buildDeliveryGateDecision({
@@ -2667,33 +2860,33 @@ const canonicalDeprecatedAdminMissingT12Gate = buildCanonicalDeliveryDecisionSta
   customer_delivery_allowed: false,
   reason_code: "missing_required_t12",
 });
-assert.equal(canonicalDeprecatedAdminMissingT12Gate.delivery_gate_status, "user_needs_documents");
+assert.equal(canonicalDeprecatedAdminMissingT12Gate.delivery_gate_status, "admin_review_required");
 
 const canonicalDeprecatedAdminMissingRentRollGate = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "admin_review_required",
   customer_delivery_allowed: false,
   reason_code: "missing_required_rent_roll",
 });
-assert.equal(canonicalDeprecatedAdminMissingRentRollGate.delivery_gate_status, "user_needs_documents");
+assert.equal(canonicalDeprecatedAdminMissingRentRollGate.delivery_gate_status, "admin_review_required");
 
 const canonicalDeprecatedAdminUnknownGate = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "admin_review_required",
   customer_delivery_allowed: false,
   reason_code: "FUTURE_UNKNOWN_REASON",
 });
-assert.equal(canonicalDeprecatedAdminUnknownGate.delivery_gate_status, "deliverable");
+assert.equal(canonicalDeprecatedAdminUnknownGate.delivery_gate_status, "admin_review_required");
 assert.equal(
   canonicalDeprecatedAdminUnknownGate.diagnostics?.deprecated_admin_review_reason_requires_classification,
   true
 );
-assert.equal(String(canonicalDeprecatedAdminUnknownGate.customer_status_label || "").toLowerCase(), "ready");
+assert.notEqual(String(canonicalDeprecatedAdminUnknownGate.customer_status_label || "").toLowerCase(), "ready");
 
 const canonicalFromDeprecatedAdminGate = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "admin_review_required",
   customer_delivery_allowed: false,
   reason_code: "REPORT_TYPE_SECTION_LEAK",
 });
-assert.equal(canonicalFromDeprecatedAdminGate.delivery_gate_status, "deliverable");
+assert.equal(canonicalFromDeprecatedAdminGate.delivery_gate_status, "admin_review_required");
 assert.notEqual(String(canonicalFromDeprecatedAdminGate.customer_status_label || "").toLowerCase(), "under_review");
 assert.notEqual(String(canonicalFromDeprecatedAdminGate.customer_status_label || "").toLowerCase(), "needs_documents");
 assert.equal(

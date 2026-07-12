@@ -119,4 +119,27 @@ assert.equal(reviewCopy.creditLine, null);
 assert.equal(/under review|admin review|needs documents/i.test(JSON.stringify(reviewCopy)), false);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(reviewCopy)), false);
 
+for (const errorCode of [
+  'SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED',
+  'REPORT_RENDER_FAILED',
+  'REPORT_CONTRACT_FAILED',
+  'PDF_ARTIFACT_FAILED',
+  'STORAGE_PUBLICATION_FAILED',
+]) {
+  const copy = buildCustomerFailureMessage({ error_code: errorCode }, { creditRestored: true });
+  assert.equal(copy.title, 'Generation failed - credit restored');
+  assert.equal(copy.referenceCode, errorCode);
+  assert.equal(/replace|clearer|rent roll|operating statement|source package could not/i.test(JSON.stringify(copy)), false);
+}
+
+for (const errorCode of [
+  'CORE_T12_CATASTROPHICALLY_UNUSABLE',
+  'CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE',
+  'CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY',
+]) {
+  const copy = buildCustomerFailureMessage({ error_code: errorCode });
+  assert.equal(copy.referenceCode, errorCode);
+  assert.equal(/could not be verified|could not be reconciled/i.test(JSON.stringify(copy)), true);
+}
+
 console.log('job-failure-messaging-smoke: ok');

@@ -296,9 +296,45 @@ const isXlsxName = (name) => String(name || '').toLowerCase().endsWith('.xlsx');
 const isCsvName = (name) => String(name || '').toLowerCase().endsWith('.csv');
 const isCsvMime = (mime) => String(mime || '').toLowerCase().includes('csv');
 
+const detectExplicitSupportingDocTypeFromText = (text) => {
+  const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  if (norm.length < 20) return 'unknown';
+  const lead = norm.slice(0, 900);
+  const leadHas = (terms) => terms.some((term) => lead.includes(term));
+
+  if (
+    leadHas([
+      'STRUCTURED RENOVATION / CAPEX PLAN',
+      'STRUCTURED RENOVATION / CAPEX CONTEXT',
+      'FORWARD-LOOKING RENOVATION PLAN',
+      'RENOVATION / CAPEX PLAN DOCUMENT ROLE',
+    ]) ||
+    (leadHas(['TOTAL RENOVATION BUDGET', 'RENOVATION BUDGET']) && leadHas(['RENT LIFT', 'PHASING', 'UNIT SCOPE']))
+  ) {
+    return 'renovation';
+  }
+  if (leadHas(['EXISTING CURRENT DEBT STATEMENT', 'CURRENT MORTGAGE STATEMENT', 'CURRENT DEBT CONTEXT DOCUMENT ROLE'])) {
+    return 'mortgage_statement';
+  }
+  if (leadHas(['PURCHASE ASSUMPTIONS / PROPOSED ACQUISITION FINANCING', 'PURCHASE ASSUMPTIONS DOCUMENT ROLE'])) {
+    return 'loan_term_sheet';
+  }
+  if (leadHas(['APPRAISAL SUMMARY / VALUATION CONTEXT', 'APPRAISAL SUMMARY DOCUMENT ROLE', 'APPRAISAL CONTEXT DOCUMENT ROLE'])) {
+    return 'appraisal';
+  }
+  if (leadHas(['MARKET RENT SURVEY CONTEXT DOCUMENT ROLE', 'MARKET SURVEY CONTEXT DOCUMENT ROLE', 'MARKET RENT SURVEY DOCUMENT ROLE'])) {
+    return 'supporting_documents_unclassified';
+  }
+  if (leadHas(['PHASE I ESA SUMMARY DOCUMENT ROLE', 'ENVIRONMENTAL DUE DILIGENCE CONTEXT DOCUMENT ROLE'])) {
+    return 'supporting_documents_unclassified';
+  }
+  return 'unknown';
+};
+
 const detectRequiredFinancialDocTypeFromText = (text) => {
   const norm = String(text || '').toUpperCase().replace(/\s+/g, ' ');
   if (norm.length < 40) return 'unknown';
+  if (detectExplicitSupportingDocTypeFromText(text) !== 'unknown') return 'unknown';
   const has = (terms) => terms.some((term) => norm.includes(term));
   const count = (terms) => terms.filter((term) => norm.includes(term)).length;
   const t12Score = count([
@@ -476,6 +512,8 @@ export function resolveLoanTermCurrentDebtPromotion({
 export function inferSupportingDocTypeFromText(text, options = {}) {
   const allowFilenameHint = options.allowFilenameHint !== false;
   const filename = options.filename || '';
+  const explicitSupportingDocType = detectExplicitSupportingDocTypeFromText(text);
+  if (explicitSupportingDocType !== 'unknown') return explicitSupportingDocType;
   const requiredFinancialType = detectRequiredFinancialDocTypeFromText(text);
   if (requiredFinancialType !== 'unknown') return requiredFinancialType;
 
@@ -2823,13 +2861,6 @@ export default async function handler(req, res) {
       }
     }
 
-    if (detectedDocType !== 'unknown' && detectedDocType !== declaredDocType) {
-      await supabaseAdmin
-        .from('analysis_job_files')
-        .update({ doc_type: detectedDocType })
-        .eq('id', fileRow.id);
-    }
-
     if (effectiveDocType === 'other') {
       let extraction = { ok: false, method: 'none' };
       let warning = null;
@@ -3630,7 +3661,7 @@ export default async function handler(req, res) {
 
               const { error: rescuedT12StatusErr } = await supabaseAdmin
                 .from('analysis_job_files')
-                .update({ parse_status: 'parsed', parse_error: null, doc_type: 't12' })
+                .update({ parse_status: 'parsed', parse_error: null })
                 .eq('id', file.id);
               if (rescuedT12StatusErr) {
                 throw new Error(`Failed to mark opposite-rescued t12 parsed: ${rescuedT12StatusErr.message}`);
@@ -4683,7 +4714,7 @@ export default async function handler(req, res) {
 
               const { error: rescuedRentRollStatusErr } = await supabaseAdmin
                 .from('analysis_job_files')
-                .update({ parse_status: 'parsed', parse_error: null, doc_type: 'rent_roll' })
+                .update({ parse_status: 'parsed', parse_error: null })
                 .eq('id', file.id);
               if (rescuedRentRollStatusErr) {
                 throw new Error(

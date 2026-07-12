@@ -1,3 +1,5 @@
+import { classifyTerminalFailureCode } from '../../lib/terminal-failure-taxonomy.js';
+
 const SYSTEM_FAILURE_HINTS = [
   /report generation failed/i,
   /\b500\b/,
@@ -46,14 +48,17 @@ function classifyMissingDocumentCategory(job = {}) {
   return 'source_package';
 }
 
-function buildNeutralSystemFailureCopy({ creditRestored = false } = {}) {
+function buildNeutralSystemFailureCopy({
+  creditRestored = false,
+  referenceCode = 'REPORT_GENERATION_FAILED',
+} = {}) {
   return {
-    title: creditRestored ? 'Generation paused before publication - credit restored' : 'Generation paused before publication',
+    title: creditRestored ? 'Generation failed - credit restored' : 'Generation failed',
     body: creditRestored
-      ? 'Generation paused before publication. No completed report was published. The issue was logged for review, and your report credit has been returned to your account.'
-      : 'Generation paused before publication. No completed report was published. The issue was logged for review. If a report credit was consumed, credit restoration will be handled according to the report status.',
-    nextStep: 'Do not repeatedly retry the same property if it fails again. Contact reports@investoriq.tech with the property name.',
-    referenceCode: 'REPORT_GENERATION_FAILED',
+      ? 'Generation failed before publication. No completed report was published. The issue was logged for review, and your report credit has been returned to your account.'
+      : 'Generation failed before publication. No completed report was published. If a report credit was consumed, it will be restored automatically.',
+    nextStep: 'Try generating again once. If it fails again, contact reports@investoriq.tech with the property name.',
+    referenceCode,
     creditLine: creditRestored ? 'Your report credit has been returned to your account.' : null,
   };
 }
@@ -62,6 +67,17 @@ export function classifyFailure(job = {}, options = {}) {
   const code = String(job?.error_code || '').trim().toUpperCase();
   const reason = String(job?.failure_reason || job?.error_message || '').trim();
   const coreValidRequiredCoverage = options.coreValidRequiredCoverage === true;
+  const terminalClassification = classifyTerminalFailureCode(code);
+
+  if (terminalClassification.failure_class === 'internal_system_failure') {
+    return { kind: 'system_failure', referenceCode: terminalClassification.code };
+  }
+  if (terminalClassification.failure_class === 'customer_document_failure') {
+    if (terminalClassification.code === 'CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY') {
+      return { kind: 'document_mismatch', referenceCode: terminalClassification.code };
+    }
+    return { kind: 'missing_documents', referenceCode: terminalClassification.code };
+  }
 
   if (code === 'ADMIN_REVIEW_REQUIRED' || matchesAny(reason, ADMIN_REVIEW_HINTS)) {
     return { kind: 'system_failure', referenceCode: 'REPORT_GENERATION_FAILED' };
@@ -125,7 +141,7 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   const pendingSystemFailureBody =
     'Generation failed before publication. No report was published. If this was a platform-side failure, your report credit will be restored automatically.';
   if (coreValidRequiredCoverage && classification.kind !== 'system_failure') {
-    return buildNeutralSystemFailureCopy({ creditRestored });
+    return buildNeutralSystemFailureCopy({ creditRestored, referenceCode });
   }
 
   if (classification.kind === 'missing_documents') {
@@ -183,7 +199,7 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   }
 
   if (classification.kind === 'system_failure') {
-    return buildNeutralSystemFailureCopy({ creditRestored });
+    return buildNeutralSystemFailureCopy({ creditRestored, referenceCode });
   }
 
   return {
