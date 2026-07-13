@@ -15,10 +15,6 @@ import {
 import {
   buildAcquisitionMemoV2SupportDocAuthorityRows,
 } from "./acquisition-memo-v2-role-reconciler.js";
-import {
-  buildSupportDocTaxonomyState,
-  resolveCanonicalSupportDocAuthority,
-} from "./support-doc-taxonomy.js";
 
 const DATA_NOT_AVAILABLE = "Not assessed";
 
@@ -399,59 +395,18 @@ function buildAuthorityRows(args = {}) {
 
 function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, canonicalSupportDocMap = null } = {}) {
   const filename = row?.original_filename || row?.originalFilename || row?.file_name || row?.filename || "Support Document";
-  const environmentalSignalsText = [
-    filename,
-    row?.source_text,
-    row?.raw_text,
-    row?.notes,
-    row?.semantic_doc_role_reason,
-    row?.semantic_doc_display_label,
-    row?.display_doc_type,
-    row?.doc_type,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const hasEnvironmentalSignals =
-    roleIncludesEnvironmentalMarker(row?.semantic_doc_role) ||
-    roleIncludesEnvironmentalMarker(row?.semantic_doc_display_label) ||
-    roleIncludesEnvironmentalMarker(row?.display_doc_type) ||
-    roleIncludesEnvironmentalMarker(row?.doc_type) ||
-    /phase\s*i|phase\s*1|phase i esa|phase 1 esa|environmental|environment|esa/i.test(environmentalSignalsText);
   const canonicalFromMap =
     canonicalSupportDocMap instanceof Map
       ? canonicalSupportDocMap.get(filename) || canonicalSupportDocMap.get(row?.id) || null
       : null;
-  const canonical =
-    canonicalFromMap ||
-    resolveCanonicalSupportDocAuthority({
-      originalFilename: filename,
-      rawText: [row?.source_text, row?.raw_text, row?.notes, row?.semantic_doc_role_reason].filter(Boolean).join(" "),
-      payload: row,
-    });
-  const taxonomy = buildSupportDocTaxonomyState({
-    declaredDocType: row?.doc_type || null,
-    detectedDocType: row?.display_doc_type || null,
-    originalFilename: filename,
-    rawText: [row?.source_text, row?.raw_text, row?.notes, row?.semantic_doc_role_reason].filter(Boolean).join(" "),
-    payload: row,
-  });
+  const canonical = canonicalFromMap || null;
   const boundPropertyTax =
-    !hasEnvironmentalSignals &&
-    canonical?.role === "property_tax" &&
+    canonical?.canonicalRole === "property_tax_support" &&
     isValidAnnualPropertyTaxValue(propertyTaxPayload?.annual_tax) &&
     (
       String(propertyTaxPayload?.source_file_id || "").trim() === String(row?.id || row?.file_id || row?.source_file_id || "").trim() ||
       String(propertyTaxPayload?.original_filename || "").trim().toLowerCase() === String(filename).trim().toLowerCase()
     );
-  if (hasEnvironmentalSignals) {
-    return {
-      filename,
-      displayLabel: "Environmental Due Diligence Context",
-      treatment: "Context only",
-      use: "Environmental due-diligence context only; not used quantitatively.",
-      category: "Listed but Not Quantitatively Modeled",
-    };
-  }
   if (boundPropertyTax) {
     return {
       filename,
@@ -461,20 +416,7 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Modeled Inputs",
     };
   }
-  const canonicalRole = String(row?.canonical_support_doc_role || canonical?.role || "").trim().toLowerCase();
-  const taxonomyRole = String(taxonomy?.semantic_doc_role || "").trim().toLowerCase();
-  const rowSemanticRole = String(row?.semantic_doc_role || "").trim().toLowerCase();
-  const historicalOnlyOverride =
-    taxonomyRole === "historical_capex_only" ||
-    canonicalRole === "historical_capex_only" ||
-    rowSemanticRole === "historical_capex_only";
-  const role = String(
-    historicalOnlyOverride
-      ? "historical_capex_only"
-      : canonicalRole || rowSemanticRole || taxonomyRole || ""
-  )
-    .trim()
-    .toLowerCase();
+  const role = String(canonical?.canonicalRole || canonical?.role || "").trim().toLowerCase();
   if (role === "purchase_assumptions" || role === "proposed_acquisition_financing") {
     return {
       filename,
@@ -511,7 +453,7 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Displayed / Limited Use",
     };
   }
-  if (role === "renovation_capex_budget_context" || role === "renovation_budget") {
+  if (role === "renovation_capex_context" || role === "renovation_capex_budget_context" || role === "renovation_budget") {
     return {
       filename,
       displayLabel: "Renovation / CapEx Budget Context",
@@ -520,7 +462,7 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Displayed / Limited Use",
     };
   }
-  if (role === "property_tax") {
+  if (role === "property_tax_support" || role === "property_tax") {
     return {
       filename,
       displayLabel: "Property Tax Support",
@@ -529,7 +471,7 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Displayed / Limited Use",
     };
   }
-  if (role.includes("market")) {
+  if (role === "market_survey_context") {
     return {
       filename,
       displayLabel: "Market Rent Context",
@@ -538,11 +480,7 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Listed but Not Quantitatively Modeled",
     };
   }
-  if (
-    role.includes("environmental") ||
-    role.includes("esa") ||
-    /phase\s*i|phase\s*1|phase i esa|phase 1 esa|environmental|environment|esa/i.test(environmentalSignalsText)
-  ) {
+  if (role === "environmental_context") {
     return {
       filename,
       displayLabel: "Environmental Due Diligence Context",
@@ -551,7 +489,7 @@ function classifyDocumentTreatmentRow(row = {}, { propertyTaxPayload = null, can
       category: "Listed but Not Quantitatively Modeled",
     };
   }
-  if (role.includes("appraisal")) {
+  if (role === "appraisal_context") {
     return {
       filename,
       displayLabel: "Appraisal Context",

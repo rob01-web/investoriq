@@ -64,9 +64,10 @@ const validatedAcquisition = validateAcquisitionPurchaseAssumptionsCandidate(
   acquisitionSourceText
 );
 
-assert.equal(validatedAcquisition.method, "ai_support_doc_recovery_validated");
+assert.equal(validatedAcquisition.method, "ai_support_doc_candidate_evidence_checked");
 assert.equal(validatedAcquisition.ai_assisted, true);
-assert.equal(validatedAcquisition.validated, true);
+assert.equal(validatedAcquisition.candidate_only, true);
+assert.equal(validatedAcquisition.candidate_claim_status, "evidence_checked");
 assert.equal(validatedAcquisition.purchase_price, 3750000);
 assert.equal(validatedAcquisition.ltv, 75);
 assert.equal(validatedAcquisition.interest_rate, 5.85);
@@ -278,7 +279,7 @@ const renovationCandidate = validateRenovationCandidate(
   renovationSourceText
 );
 
-assert.equal(renovationCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(renovationCandidate.method, "ai_support_doc_candidate_evidence_checked");
 assert.equal(renovationCandidate.total_budget, 215000);
 assert.equal(renovationCandidate.budget_rows.length, 4);
 assert.equal(renovationCandidate.unit_count, 12);
@@ -406,7 +407,7 @@ const propertyTaxCandidate = validatePropertyTaxCandidate(
   propertyTaxSourceText
 );
 
-assert.equal(propertyTaxCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(propertyTaxCandidate.method, "ai_support_doc_candidate_evidence_checked");
 assert.equal(propertyTaxCandidate.annual_tax, 42300);
 assert.equal(propertyTaxCandidate.tax_year, "2025");
 assert.equal(propertyTaxCandidate.assessed_value, 12500000);
@@ -448,7 +449,7 @@ const appraisalCandidate = validateAppraisalCandidate(
   appraisalSourceText
 );
 
-assert.equal(appraisalCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(appraisalCandidate.method, "ai_support_doc_candidate_evidence_checked");
 assert.equal(appraisalCandidate.appraised_value, 12500000);
 assert.equal(appraisalCandidate.valuation_date, "2025-03-31");
 assert.equal(appraisalCandidate.cap_rate, 4.99);
@@ -631,9 +632,10 @@ const currentMortgageCandidate = validateCurrentMortgageCandidate(
   currentMortgageSourceText
 );
 
-assert.equal(currentMortgageCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(currentMortgageCandidate.method, "ai_support_doc_candidate_evidence_checked");
 assert.equal(currentMortgageCandidate.ai_assisted, true);
-assert.equal(currentMortgageCandidate.validated, true);
+assert.equal(currentMortgageCandidate.candidate_only, true);
+assert.equal(currentMortgageCandidate.candidate_claim_status, "evidence_checked");
 assert.equal(currentMortgageCandidate.outstanding_balance, 2100000);
 assert.equal(currentMortgageCandidate.monthly_payment, 13625);
 assert.equal(currentMortgageCandidate.annual_debt_service, 163500);

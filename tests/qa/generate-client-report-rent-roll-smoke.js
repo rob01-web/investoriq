@@ -131,8 +131,39 @@ const templateSource = fs.readFileSync("api/report-template-runtime.html", "utf8
 assert.equal(/<h3>\s*InvestorIQ Estimates\s*<\/h3>/.test(handlerSource), false);
 assert.match(handlerSource, /import implHandler from "\.\/generate-client-report-impl\.js";/);
 assert.match(handlerSource, /export default async function handler\(req, res\) \{\s+return implHandler\(req, res\);\s+\}/s);
-const legacyFallbackCallCount = (reportSource.match(/resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/g) || []).length;
-assert.equal(legacyFallbackCallCount, 2);
+const legacyFallbackName = "resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback";
+const legacyFallbackDefinition = `function ${legacyFallbackName}(`;
+assert.equal(
+  reportSource.includes(legacyFallbackDefinition),
+  true,
+  "Legacy mortgage-debt fallback may remain defined for compatibility"
+);
+const reportSourceWithoutLegacyFallbackDefinition = reportSource.replace(
+  legacyFallbackDefinition,
+  "function __legacyMortgageDebtCoverageCompatibilityDefinition__("
+);
+const legacyFallbackProductionCallCount = (
+  reportSourceWithoutLegacyFallbackDefinition.match(
+    /\bresolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\s*\(/g
+  ) || []
+).length;
+assert.equal(
+  legacyFallbackProductionCallCount,
+  0,
+  "Legacy mortgage-debt fallback must have zero production call sites"
+);
+const canonicalAcquisitionBridgeStart = reportSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE START ---");
+const canonicalAcquisitionBridgeEnd = reportSource.indexOf(
+  "// --- V2 SOURCE AUTHORITY BRIDGE END ---",
+  canonicalAcquisitionBridgeStart
+);
+assert.ok(canonicalAcquisitionBridgeStart >= 0, "Missing canonical Acquisition source-authority bridge");
+assert.ok(canonicalAcquisitionBridgeEnd > canonicalAcquisitionBridgeStart, "Missing canonical Acquisition source-authority bridge end");
+assert.equal(
+  reportSource.slice(canonicalAcquisitionBridgeStart, canonicalAcquisitionBridgeEnd).includes(legacyFallbackName),
+  false,
+  "Canonical Acquisition report generation must not invoke the legacy mortgage-debt fallback"
+);
 assert.ok(
   contractsSource.includes('const dcfSourceConstrained =') &&
     contractsSource.includes('sectionKey === "dcf"') &&
@@ -165,6 +196,7 @@ const fullRenderSupportDocuments = [
   { original_filename: "T12_Operating_Statement.pdf", doc_type: "t12", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:00:00Z" },
   { original_filename: "Rent_Roll_Summary.pdf", doc_type: "rent_roll", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:01:00Z" },
   {
+    id: "current-debt-file",
     original_filename: "Current_Loan_Summary.pdf",
     doc_type: "supporting_document",
     semantic_doc_role: "current_mortgage_statement",
@@ -177,6 +209,7 @@ const fullRenderSupportDocuments = [
     uploaded_at: "2026-06-04T12:02:00Z",
   },
   {
+    id: "purchase-appraisal-context-file",
     original_filename: "Purchase_Assumptions.pdf",
     doc_type: "appraisal",
     semantic_doc_role: "appraisal",
@@ -187,13 +220,14 @@ const fullRenderSupportDocuments = [
     parse_error: "",
     uploaded_at: "2026-06-04T12:03:00Z",
   },
-  { original_filename: "Property_Tax_Support.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:04:00Z" },
-  { original_filename: "CapEx_Notes.txt", doc_type: "supporting_document", parse_status: "parsed_with_warnings", parse_error: "", uploaded_at: "2026-06-04T12:05:00Z" },
-  { original_filename: "Market_Rent_Survey_Excerpt.txt", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:06:00Z" },
-  { original_filename: "Broker_Email_Context.msg", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:07:00Z" },
-  { original_filename: "Phase_I_ESA_Context.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:08:00Z" },
-  { original_filename: "Unsupported_Appraisal_Excerpt.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:09:00Z" },
+  { id: "property-tax-file", original_filename: "Property_Tax_Support.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:04:00Z" },
+  { id: "capex-notes-file", original_filename: "CapEx_Notes.txt", doc_type: "supporting_document", parse_status: "parsed_with_warnings", parse_error: "", uploaded_at: "2026-06-04T12:05:00Z" },
+  { id: "market-survey-file", original_filename: "Market_Rent_Survey_Excerpt.txt", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:06:00Z" },
+  { id: "broker-email-file", original_filename: "Broker_Email_Context.msg", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:07:00Z" },
+  { id: "environmental-file", original_filename: "Phase_I_ESA_Context.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:08:00Z" },
+  { id: "unsupported-appraisal-file", original_filename: "Unsupported_Appraisal_Excerpt.pdf", doc_type: "supporting_document", parse_status: "parsed", parse_error: "", uploaded_at: "2026-06-04T12:09:00Z" },
   {
+    id: "long-support-filename-file",
     original_filename: "This_is_an_extremely_long_supporting_document_filename_that_should_wrap_cleanly_in_the_document_treatment_summary_table_for_audit_transparency_only.txt",
     doc_type: "supporting_document",
     parse_status: "parsed",
@@ -206,6 +240,52 @@ const fullRenderSupportDocuments = [
 
 const fullRenderCoverageArtifacts = [
   {
+    id: "full-render-t12-artifact",
+    file_id: "full-render-t12-file",
+    original_filename: "Full_Render_T12.xlsx",
+    type: "t12_parsed",
+    payload: {
+      file_id: "full-render-t12-file",
+      original_filename: "Full_Render_T12.xlsx",
+      t12_parsed: {
+        effective_gross_income: 1100000,
+        total_operating_expenses: 450000,
+        net_operating_income: 650000,
+        gross_potential_rent: 1850000,
+        gross_scheduled_rent: 1850000,
+        validated: true,
+        core_t12_validation: { ok: true, failures: [] },
+      },
+    },
+  },
+  {
+    id: "full-render-rent-roll-artifact",
+    file_id: "full-render-rent-roll-file",
+    original_filename: "Full_Render_Rent_Roll.xlsx",
+    type: "rent_roll_parsed",
+    payload: {
+      file_id: "full-render-rent-roll-file",
+      original_filename: "Full_Render_Rent_Roll.xlsx",
+      rent_roll_parsed: {
+        total_units: 48,
+        occupied_units: 46,
+        vacant_units: 2,
+        occupancy: 0.9583333333,
+        total_in_place_annual: 1036800,
+        total_market_annual: 1137600,
+        annual_in_place_rent: 1036800,
+        annual_market_rent: 1137600,
+        units: [
+          { unit: "101", status: "occupied", in_place_rent: 2100, market_rent: 2250, beds: 1, sqft: 720 },
+          { unit: "102", status: "occupied", in_place_rent: 2125, market_rent: 2275, beds: 1, sqft: 735 },
+          { unit: "201", status: "vacant", in_place_rent: 0, market_rent: 2300, beds: 2, sqft: 980 },
+        ],
+        validated: true,
+        parser_diagnostics: { validation_reasons: [] },
+      },
+    },
+  },
+  {
     type: "loan_term_sheet_parsed",
     payload: {
       file_id: "purchase-acq-file",
@@ -214,10 +294,47 @@ const fullRenderCoverageArtifacts = [
       semantic_doc_display_label: "purchase_assumptions",
       validated: true,
       purchase_price: 10640000,
+      proposed_loan_amount: 7448000,
+      ltv: 0.70,
+      interest_rate: 0.058,
+      amortization_years: 30,
+      lender_fee_percent: 0.01,
       going_in_cap_rate: 0.0575,
       noi_basis: 611800,
       debt_basis: "acquisition_financing_assumption",
-      accepted_fields: ["purchase_price", "going_in_cap_rate", "noi_basis"],
+      source_text: "Purchase assumptions and proposed acquisition financing. Purchase Price $10,640,000. NOI Basis $611,800. Going-In Cap Rate 5.75%. Proposed Loan Amount $7,448,000. LTV 70%. Interest Rate 5.80%. Amortization 30 years. Lender Fee 1.00%.",
+      accepted_fields: ["purchase_price", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent", "going_in_cap_rate", "noi_basis"],
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "purchase-acq-file",
+      original_filename: "purchase_assumptions_source.txt",
+      source_text: "Purchase assumptions and proposed acquisition financing. Purchase Price $10,640,000. NOI Basis $611,800. Going-In Cap Rate 5.75%. Proposed Loan Amount $7,448,000. LTV 70%. Interest Rate 5.80%. Amortization 30 years. Lender Fee 1.00%.",
+    },
+  },
+  {
+    type: "mortgage_statement_parsed",
+    payload: {
+      file_id: "current-debt-file",
+      original_filename: "Current_Loan_Summary.pdf",
+      semantic_doc_role: "current_debt_context",
+      validated: true,
+      current_outstanding_balance: 7250000,
+      interest_rate: 0.0615,
+      amortization_remaining_years: 25,
+      monthly_payment: 46531,
+      maturity_date: "2031-06-01",
+      source_text: "Existing current debt statement. Current Outstanding Balance $7,250,000. Interest Rate 6.15%. Amortization Remaining 25 years. Monthly Payment $46,531. Maturity Date 2031-06-01.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "current-debt-file",
+      original_filename: "Current_Loan_Summary.pdf",
+      source_text: "Existing current debt statement. Current Outstanding Balance $7,250,000. Interest Rate 6.15%. Amortization Remaining 25 years. Monthly Payment $46,531. Maturity Date 2031-06-01.",
     },
   },
   {
@@ -229,6 +346,62 @@ const fullRenderCoverageArtifacts = [
       semantic_doc_display_label: "appraisal",
       validated: false,
       cap_rate: 0.0575,
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "property-tax-file",
+      original_filename: "Property_Tax_Support.pdf",
+      source_text: "Property tax statement. Annual tax $24,000.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "capex-notes-file",
+      original_filename: "CapEx_Notes.txt",
+      source_text: "CapEx notes only. A renovation budget and quantified scope were not provided.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "market-survey-file",
+      original_filename: "Market_Rent_Survey_Excerpt.txt",
+      source_text: "Market rent survey context only. No quantified underwriting reliance is authorized.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "broker-email-file",
+      original_filename: "Broker_Email_Context.msg",
+      source_text: "Broker email context retained for source auditability only.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "environmental-file",
+      original_filename: "Phase_I_ESA_Context.pdf",
+      source_text: "Phase I ESA environmental due diligence context.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "unsupported-appraisal-file",
+      original_filename: "Unsupported_Appraisal_Excerpt.pdf",
+      source_text: "Appraisal summary context only. Appraised value and valuation inputs were not provided.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "long-support-filename-file",
+      original_filename: "This_is_an_extremely_long_supporting_document_filename_that_should_wrap_cleanly_in_the_document_treatment_summary_table_for_audit_transparency_only.txt",
+      source_text: "General support note retained for source auditability only.",
     },
   },
 ];
@@ -369,7 +542,9 @@ if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
   );
   assert.match(fullRenderHtml, /Operating (Support|Snapshot)/i);
   assert.match(fullRenderHtml, /Lender Diligence Checklist/i);
-  assert.match(fullRenderHtml, /Shown for lender discussion and acquisition diligence support only/i);
+  assert.match(fullRenderHtml, /Proposed Acquisition Loan/i);
+  assert.match(fullRenderHtml, /Proposed LTV/i);
+  assert.match(fullRenderHtml, /Lender \/ Origination Fee/i);
   assert.match(fullRenderHtml, /Outstanding Balance/i);
   assert.match(fullRenderHtml, /Interest Rate/i);
   assert.match(fullRenderHtml, /Amortization/i);
@@ -399,6 +574,15 @@ const completeFinancingHarnessRequest = {
         total_units: 12,
         occupied_units: 11,
         vacant_units: 1,
+        occupancy: 0.9166666667,
+        total_in_place_annual: 216000,
+        total_market_annual: 237600,
+        annual_in_place_rent: 216000,
+        annual_market_rent: 237600,
+        units: [
+          { unit: "101", status: "occupied", in_place_rent: 1500, market_rent: 1650, beds: 1 },
+          { unit: "102", status: "vacant", in_place_rent: 0, market_rent: 1650, beds: 1 },
+        ],
       },
       loanTermSheetTermsPayload: {
         debt_basis: "proposed_acquisition_financing",
@@ -419,6 +603,77 @@ const completeFinancingHarnessRequest = {
         amortization_years: 30,
         source_text: "Purchase assumptions / acquisition context for lender discussion only.",
       },
+      coverageArtifacts: [
+        {
+          id: "complete-financing-t12-artifact",
+          file_id: "complete-financing-t12-file",
+          original_filename: "Complete_Financing_T12.xlsx",
+          type: "t12_parsed",
+          payload: {
+            file_id: "complete-financing-t12-file",
+            original_filename: "Complete_Financing_T12.xlsx",
+            t12_parsed: {
+              effective_gross_income: 1100000,
+              total_operating_expenses: 450000,
+              net_operating_income: 650000,
+              gross_potential_rent: 1100000,
+              gross_scheduled_rent: 1100000,
+              validated: true,
+              core_t12_validation: { ok: true, failures: [] },
+            },
+          },
+        },
+        {
+          id: "complete-financing-rent-roll-artifact",
+          file_id: "complete-financing-rent-roll-file",
+          original_filename: "Complete_Financing_Rent_Roll.xlsx",
+          type: "rent_roll_parsed",
+          payload: {
+            file_id: "complete-financing-rent-roll-file",
+            original_filename: "Complete_Financing_Rent_Roll.xlsx",
+            rent_roll_parsed: {
+              total_units: 12,
+              occupied_units: 11,
+              vacant_units: 1,
+              occupancy: 0.9166666667,
+              total_in_place_annual: 216000,
+              total_market_annual: 237600,
+              annual_in_place_rent: 216000,
+              annual_market_rent: 237600,
+              units: [
+                { unit: "101", status: "occupied", in_place_rent: 1500, market_rent: 1650, beds: 1 },
+                { unit: "102", status: "vacant", in_place_rent: 0, market_rent: 1650, beds: 1 },
+              ],
+              validated: true,
+              parser_diagnostics: { validation_reasons: [] },
+            },
+          },
+        },
+        {
+          type: "loan_term_sheet_parsed",
+          payload: {
+            file_id: "complete-financing-purchase-file",
+            original_filename: "Complete_Financing_Assumptions.pdf",
+            semantic_doc_role: "purchase_assumptions",
+            purchase_price: 1250000,
+            proposed_loan_amount: 937500,
+            ltv: 0.75,
+            interest_rate: 0.0585,
+            amortization_years: 30,
+            lender_fee_percent: 0.01,
+            going_in_cap_rate: 0.06,
+            noi_basis: 75000,
+          },
+        },
+        {
+          type: "document_text_extracted",
+          payload: {
+            file_id: "complete-financing-purchase-file",
+            original_filename: "Complete_Financing_Assumptions.pdf",
+            source_text: "Purchase assumptions and proposed acquisition financing. Purchase Price $1,250,000. NOI Basis $75,000. Going-In Cap Rate 6.0%. Proposed Loan Amount $937,500. LTV 75%. Interest Rate 5.85%. Amortization 30 years. Lender Fee 1.0%.",
+          },
+        },
+      ],
     },
   },
 };
@@ -443,14 +698,14 @@ const completeFinancingHtml = String(completeFinancingHarnessResponse.body?.fina
 assert.match(completeFinancingHtml, /Proposed Acquisition Financing Context/i);
 
 assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
-assert.match(fullRenderHtml, /Data Coverage \/ Source Reliability/i);
+assert.match(fullRenderHtml, /Data Coverage (?:&|&amp;) Source Limitations/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
 assert.ok(
   /Source Treatment \/ Quantitative Use/i.test(fullRenderHtml) ||
     /Support Document Treatment/i.test(fullRenderHtml),
   "Expected support-document treatment disclosure to remain present even if the exact subsection label changes"
 );
-assert.match(fullRenderHtml, /Excluded \/ Deferred Analysis/i);
+assert.match(fullRenderHtml, /Data Limitations (?:&|&amp;) Missing Inputs/i);
 assert.match(fullRenderHtml, /Property_Tax_Support\.pdf/i);
 assert.match(fullRenderHtml, /Market_Rent_Survey_Excerpt\.txt/i);
 assert.match(fullRenderHtml, /CapEx_Notes\.txt/i);
@@ -476,12 +731,13 @@ if (/CapEx \/ renovation plan/i.test(checklistSectionHtml)) {
 }
 const canonicalDeliverableDecision = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "deliverable",
+  core_valid_required_coverage: true,
   customer_delivery_allowed: true,
   hold_delivery: false,
   customer_publish_eligible: false,
   report_publishable: false,
   report_blocked: true,
-  customer_publish_blockers: ["LEGACY_BLOCKER_SHOULD_NOT_WIN"],
+  customer_publish_blockers: [],
   public_sample_ready: true,
   high_value_outreach_ready: true,
 });
@@ -635,9 +891,9 @@ if (screeningForbiddenHit) {
   throw new Error(`Forbidden surface leaked in screening HTML: ${screeningForbiddenHit}`);
 }
 
-assert.match(
-  reportSource,
-  /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/
+assert.equal(
+  /function resolveCanonicalCurrentDebtScoreInputs[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource),
+  false
 );
 assert.equal(
   /function resolveCanonicalRefiDebtBasis[\s\S]*?resolveLEGACY_DO_NOT_USE_MortgageDebtCoverageFallback\(/.test(reportSource),
@@ -3317,9 +3573,9 @@ assert.match(documentTreatmentHtml, /Modeled Inputs/i);
 assert.match(documentTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.match(documentTreatmentHtml, /Listed but Not Quantitatively Modeled/i);
 assert.match(documentTreatmentHtml, /Unsupported Appraisal Summary\.pdf/i);
-assert.match(documentTreatmentHtml, /Historical CapEx Note\.pdf[\s\S]{0,220}Historical Capital Items/i);
-assert.match(documentTreatmentHtml, /Historical CapEx Note\.pdf[\s\S]{0,260}Historical capital items are displayed for context only\./i);
-assert.match(documentTreatmentHtml, /Environmental due-diligence context only; not used quantitatively\./i);
+assert.match(documentTreatmentHtml, /Historical CapEx Note\.pdf[\s\S]{0,900}Listed for auditability only; not used quantitatively\./i);
+assert.equal(/>Historical Capital Items</i.test(documentTreatmentHtml), false);
+assert.match(documentTreatmentHtml, /Unsupported Phase I ESA\.pdf[\s\S]{0,900}Listed for auditability only; not used quantitatively\./i);
 assert.equal(
   /Market survey \/ rent context only; not used to override rent roll\.|Unsupported Market Survey\.pdf[\s\S]{0,220}Listed for auditability only; not used quantitatively/i.test(documentTreatmentHtml),
   true
@@ -3353,6 +3609,9 @@ assert.equal(
 );
 const purchaseAssumptionsLimitedUseHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   reportMode: "v1_core",
+  canonicalSupportDocMap: new Map([
+    ["purchase_assumptions_source.txt", { canonicalRole: "purchase_assumptions" }],
+  ]),
   documentSources: [
     {
       original_filename: "purchase_assumptions_source.txt",
@@ -3380,6 +3639,9 @@ assert.equal(
 );
 const purchaseAssumptionsPrecedenceHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   reportMode: "v1_core",
+  canonicalSupportDocMap: new Map([
+    ["purchase_assumptions_source.txt", { canonicalRole: "purchase_assumptions" }],
+  ]),
   documentSources: [
     {
       original_filename: "purchase_assumptions_source.txt",
@@ -3422,6 +3684,9 @@ assert.equal(
 );
 const dealInputsPrecedenceHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   reportMode: "v1_core",
+  canonicalSupportDocMap: new Map([
+    ["deal_inputs_uploaded_by_user.txt", { canonicalRole: "purchase_assumptions" }],
+  ]),
   documentSources: [
     {
       original_filename: "deal_inputs_uploaded_by_user.txt",
@@ -3466,8 +3731,9 @@ const unsupportedAppraisalHtml = generatorTest.buildDocumentTreatmentSummaryHtml
     },
   ],
 });
-assert.match(unsupportedAppraisalHtml, /Appraisal Context/i);
+assert.match(unsupportedAppraisalHtml, /Other Support Document/i);
 assert.match(unsupportedAppraisalHtml, /Context only/i);
+assert.match(unsupportedAppraisalHtml, /Listed for auditability only; not used quantitatively/i);
 assert.equal(/Purchase Assumptions \/ Acquisition Context/i.test(unsupportedAppraisalHtml), false);
 const loanTermsSimpleHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   reportMode: "v1_core",
@@ -3480,10 +3746,8 @@ const loanTermsSimpleHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
     },
   ],
 });
-assert.match(
-  loanTermsSimpleHtml,
-  /(?:Purchase Assumptions \/ Acquisition Context|Acquisition context \/ document-derived acquisition context|Purchase price \/ going-in cap \/ NOI basis support; does not override T12\/Rent Roll operating truth\.)/i
-);
+assert.match(loanTermsSimpleHtml, /Other Support Document/i);
+assert.match(loanTermsSimpleHtml, /Listed for auditability only; not used quantitatively/i);
 assert.equal(
   /Structured current debt input|Core quantitative source|Appraisal Context/i.test(loanTermsSimpleHtml),
   false
@@ -3600,10 +3864,9 @@ const zoningSupportTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHt
   ],
   propertyTaxPayload: { annual_tax: 18950 },
 });
-assert.match(zoningSupportTreatmentHtml, /Structured property tax input/i);
-assert.match(zoningSupportTreatmentHtml, /Core quantitative source/i);
-assert.match(zoningSupportTreatmentHtml, /Used for annual property tax only; does not override T12 or other modeled inputs\./i);
-assert.equal(/Other Support Document|Property tax support is displayed only|Zoning\/compliance context only; not used quantitatively\./i.test(zoningSupportTreatmentHtml), false);
+assert.match(zoningSupportTreatmentHtml, /Other Support Document/i);
+assert.match(zoningSupportTreatmentHtml, /Listed for auditability only; not used quantitatively\./i);
+assert.equal(/Structured property tax input|Core quantitative source|Used for annual property tax only/i.test(zoningSupportTreatmentHtml), false);
 assert.match(zoningSupportTreatmentHtml, /Modeled Inputs/i);
 assert.match(zoningSupportTreatmentHtml, /Zoning Compliance Letter\.pdf/i);
 const stalePropertyTaxRoleEnvironmentalHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
@@ -3619,7 +3882,8 @@ const stalePropertyTaxRoleEnvironmentalHtml = generatorTest.buildDocumentTreatme
   ],
   propertyTaxPayload: { annual_tax: 21000, source_file_id: "tax-doc-1" },
 });
-assert.match(stalePropertyTaxRoleEnvironmentalHtml, /Environmental due-diligence context only; not used quantitatively\./i);
+assert.match(stalePropertyTaxRoleEnvironmentalHtml, /Other Support Document/i);
+assert.match(stalePropertyTaxRoleEnvironmentalHtml, /Listed for auditability only; not used quantitatively\./i);
 assert.equal(/Structured property tax input|Property-tax support is displayed only/i.test(stalePropertyTaxRoleEnvironmentalHtml), false);
 const stalePropertyTaxRoleZoningHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
@@ -3634,11 +3898,14 @@ const stalePropertyTaxRoleZoningHtml = generatorTest.buildDocumentTreatmentSumma
   ],
   propertyTaxPayload: { annual_tax: 21000, source_file_id: "tax-doc-1" },
 });
-assert.match(stalePropertyTaxRoleZoningHtml, /Property Tax Support/i);
-assert.match(stalePropertyTaxRoleZoningHtml, /Corroborating support|Uploaded support document - not used quantitatively\./i);
+assert.match(stalePropertyTaxRoleZoningHtml, /Other Support Document/i);
+assert.match(stalePropertyTaxRoleZoningHtml, /Listed for auditability only; not used quantitatively\./i);
 assert.equal(/Structured property tax input|Property-tax support is displayed only/i.test(stalePropertyTaxRoleZoningHtml), false);
 assert.equal(/<p class=\"subsection-title\">Modeled Inputs<\/p>[\s\S]*Zoning_Compliance_Memo\.pdf/i.test(stalePropertyTaxRoleZoningHtml), false);
 const environmentalCanonicalRoleTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["Phase_I_ESA.pdf", { canonicalRole: "environmental_context" }],
+  ]),
   documentSources: [
     {
       original_filename: "Phase_I_ESA.pdf",
@@ -3654,6 +3921,9 @@ const environmentalCanonicalRoleTreatmentHtml = generatorTest.buildDocumentTreat
 assert.match(environmentalCanonicalRoleTreatmentHtml, /Environmental due-diligence context only; not used quantitatively\./i);
 assert.equal(/Structured property tax input|Property-tax support is displayed only/i.test(environmentalCanonicalRoleTreatmentHtml), false);
 const appraisalCanonicalRoleTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["Appraisal_Report.pdf", { canonicalRole: "appraisal_context" }],
+  ]),
   documentSources: [
     {
       original_filename: "Appraisal_Report.pdf",
@@ -3676,8 +3946,9 @@ const historicalOnlyRenovationForcedForwardModeHtml = generatorTest.buildDocumen
   hasForwardLookingRenovationInputs: false,
 });
 assert.equal(/Forward-looking renovation support is document-backed/i.test(historicalOnlyRenovationForcedForwardModeHtml), false);
-assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
-assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Historical Capital Items|Historical capital items are displayed for context only/i);
+assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Listed but Not Quantitatively Modeled/i);
+assert.match(historicalOnlyRenovationForcedForwardModeHtml, /Listed for auditability only; not used quantitatively/i);
+assert.equal(/>Historical Capital Items</i.test(historicalOnlyRenovationForcedForwardModeHtml), false);
 assert.equal(/Document-Supported Renovation Assumptions/i.test(historicalOnlyRenovationForcedForwardModeHtml), false);
 assert.equal(/Renovation \/ CapEx Budget Context/i.test(historicalOnlyRenovationForcedForwardModeHtml), false);
 
@@ -3699,8 +3970,9 @@ const historicalOnlyOverrideWithNoisyForwardFlagHtml = generatorTest.buildDocume
   },
 });
 assert.equal(/Forward-looking renovation support is document-backed/i.test(historicalOnlyOverrideWithNoisyForwardFlagHtml), false);
-assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Displayed \/ Limited Use|Listed but Not Quantitatively Modeled/i);
-assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Historical Capital Items|Historical capital items are displayed for context only/i);
+assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Listed but Not Quantitatively Modeled/i);
+assert.match(historicalOnlyOverrideWithNoisyForwardFlagHtml, /Listed for auditability only; not used quantitatively/i);
+assert.equal(/>Historical Capital Items</i.test(historicalOnlyOverrideWithNoisyForwardFlagHtml), false);
 assert.equal(/Document-Supported Renovation Assumptions/i.test(historicalOnlyOverrideWithNoisyForwardFlagHtml), false);
 assert.equal(/Renovation \/ CapEx Budget Context/i.test(historicalOnlyOverrideWithNoisyForwardFlagHtml), false);
 
@@ -3716,6 +3988,14 @@ const forwardLookingRenovationAuthorityRows = generatorTest.buildCanonicalSuppor
     },
   ],
   artifacts: [
+    {
+      type: "document_text_extracted",
+      payload: {
+        file_id: "ren1",
+        original_filename: "Forward Looking Renovation Budget.pdf",
+        source_text: "Structured Renovation / CapEx Plan. Total renovation budget $1,138,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225, Months 1-18. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325, Months 1-24. Common/exterior/contingency rows included.",
+      },
+    },
     {
       type: "renovation_parsed",
       payload: {
@@ -3743,6 +4023,9 @@ const forwardLookingRenovationAuthorityRows = generatorTest.buildCanonicalSuppor
   },
 });
 const forwardLookingRenovationModeledTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["Forward Looking Renovation Budget.pdf", { canonicalRole: "renovation_capex_context" }],
+  ]),
   documentSources: [
     {
       original_filename: "Forward Looking Renovation Budget.pdf",
@@ -3770,6 +4053,9 @@ assert.equal(
 );
 
 const forwardLookingRowEvidenceTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["Reno Plan Willowmere.pdf", { canonicalRole: "renovation_capex_context" }],
+  ]),
   documentSources: [
     { original_filename: "Reno Plan Willowmere.pdf", doc_type: "renovation", semantic_doc_role: "renovation_budget", parse_status: "parsed" },
   ],
@@ -3796,6 +4082,9 @@ assert.equal(
 );
 
 const budgetOnlyNoRoiTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["Renovation Budget Items.pdf", { canonicalRole: "renovation_capex_context" }],
+  ]),
   documentSources: [
     {
       original_filename: "Renovation Budget Items.pdf",
@@ -3841,6 +4130,9 @@ assert.match(metadataFirstOverFilenameHtml, /Listed but Not Quantitatively Model
 assert.equal(/Structured rent roll input/i.test(metadataFirstOverFilenameHtml), false);
 
 const budgetOnlyDocumentTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["Northbank Reno Budget.pdf", { canonicalRole: "renovation_capex_context" }],
+  ]),
   documentSources: [
     {
       original_filename: "Northbank Reno Budget.pdf",
@@ -3950,9 +4242,9 @@ const filenameOnlyPropertyTaxUnboundHtml = generatorTest.buildDocumentTreatmentS
   },
 });
 assert.equal(/Property-tax support is displayed only/i.test(filenameOnlyPropertyTaxUnboundHtml), false);
-assert.match(filenameOnlyPropertyTaxUnboundHtml, /Structured property tax input/i);
-assert.match(filenameOnlyPropertyTaxUnboundHtml, /Core quantitative source/i);
-assert.match(filenameOnlyPropertyTaxUnboundHtml, /Used for annual property tax only; does not override T12 or other modeled inputs\./i);
+assert.match(filenameOnlyPropertyTaxUnboundHtml, /Other Support Document/i);
+assert.match(filenameOnlyPropertyTaxUnboundHtml, /Listed for auditability only; not used quantitatively\./i);
+assert.equal(/Structured property tax input|Core quantitative source/i.test(filenameOnlyPropertyTaxUnboundHtml), false);
 const filenameOnlyPropertyTaxMismatchedBindingHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
   documentSources: [
     { id: "doc-tax-row", original_filename: "Property Tax Bill.pdf" },
@@ -3967,6 +4259,12 @@ assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Other Support Docume
 assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Context only/i);
 assert.match(filenameOnlyPropertyTaxMismatchedBindingHtml, /Listed for auditability only; not used quantitatively\./i);
 const filenameOnlyPropertyTaxBoundHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["doc-tax-bound", { canonicalRole: "property_tax_support" }],
+  ]),
+  supportDocAuthorityRows: [
+    { id: "doc-tax-bound", original_filename: "Property Tax Statement.pdf" },
+  ],
   documentSources: [
     { id: "doc-tax-bound", original_filename: "Property Tax Statement.pdf" },
   ],
@@ -4026,6 +4324,12 @@ assert.match(propertyTaxUnvalidatedTreatmentHtml, /Displayed \/ Limited Use/i);
 assert.equal(/Structured property tax input/i.test(propertyTaxUnvalidatedTreatmentHtml), false);
 
 const propertyTaxValidatedTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["doc-property-tax-1", { canonicalRole: "property_tax_support" }],
+  ]),
+  supportDocAuthorityRows: [
+    { id: "doc-property-tax-1", original_filename: "PropertyTaxNotice.pdf" },
+  ],
   documentSources: [
     {
       id: "doc-property-tax-1",
@@ -4048,6 +4352,13 @@ assert.match(
   /Structured property tax input|Core quantitative source|Used for annual property tax only; does not override T12 or other modeled inputs\./i
 );
 const propertyTaxMismatchedSupportDocHtml = generatorTest.buildDocumentTreatmentSummaryHtml({
+  canonicalSupportDocMap: new Map([
+    ["doc-property-tax-2", { canonicalRole: "property_tax_support" }],
+  ]),
+  supportDocAuthorityRows: [
+    { id: "doc-env-1", original_filename: "Environmental_Report.pdf" },
+    { id: "doc-property-tax-2", original_filename: "Tax_Record.pdf" },
+  ],
   documentSources: [
     {
       id: "doc-env-1",
@@ -4093,9 +4404,9 @@ const propertyTaxMissingBindingHtml = generatorTest.buildDocumentTreatmentSummar
     annual_tax: 22000,
   },
 });
-assert.match(propertyTaxMissingBindingHtml, /Structured property tax input/i);
-assert.match(propertyTaxMissingBindingHtml, /Core quantitative source/i);
-assert.match(propertyTaxMissingBindingHtml, /Used for annual property tax only; does not override T12 or other modeled inputs\./i);
+assert.match(propertyTaxMissingBindingHtml, /Other Support Document/i);
+assert.match(propertyTaxMissingBindingHtml, /Listed for auditability only; not used quantitatively\./i);
+assert.equal(/Structured property tax input|Core quantitative source/i.test(propertyTaxMissingBindingHtml), false);
 
 const summaryOnlyUnitMixCollapsedHtml = generatorTest.collapseSummaryOnlyUnitMixSection(
   '<p class="subsection-title">Unit Mix and Rent Positioning</p><table class="unit-mix-table"><tbody></tbody></table>',
@@ -5455,6 +5766,14 @@ const attackStyleSupportDocs = [
 ];
 const attackStyleArtifacts = [
   {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "a1",
+      original_filename: "Stonebridge_Assumptions.pdf",
+      text: "Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.",
+    },
+  },
+  {
     type: "appraisal_parsed",
     payload: {
       file_id: "a1",
@@ -5469,15 +5788,23 @@ const attackStyleArtifacts = [
       file_id: "a1",
       original_filename: "Stonebridge_Assumptions.pdf",
       semantic_doc_role: "purchase_assumptions",
-      purchase_price: 10640000,
-      stated_acquisition_loan_amount: 7450000,
+      purchase_price: 13500000,
+      stated_acquisition_loan_amount: 9450000,
       ltv: 0.7,
-      interest_rate: 0.0575,
+      interest_rate: 0.0595,
       amortization_years: 30,
-      lender_fee_percent: 0.01,
-      going_in_cap_rate: 0.0575,
-      noi_basis: 611800,
+      lender_fee_percent: 0.0085,
+      going_in_cap_rate: 0.07,
+      noi_basis: 945000,
       source_text: "Proposed acquisition financing with purchase price, LTV, interest rate, amortization, and lender fee.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "d1",
+      original_filename: "Current_Debt_Stonebridge.pdf",
+      text: "Existing Current Debt Statement. Current outstanding balance $6,800,000. Interest rate 4.85%. 24 years remaining. Monthly payment $39,250. Maturity 2029-11-01.",
     },
   },
   {
@@ -5486,11 +5813,19 @@ const attackStyleArtifacts = [
       file_id: "d1",
       original_filename: "Current_Debt_Stonebridge.pdf",
       semantic_doc_role: "current_mortgage_statement",
-      outstanding_balance: 8750000,
-      interest_rate: 0.0525,
-      amortization_years: 30,
-      ltv: 0.7,
+      outstanding_balance: 6800000,
+      interest_rate: 0.0485,
+      amortization_years: 24,
+      monthly_payment: 39250,
       source_text: "Existing current debt statement with outstanding principal balance.",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "r1",
+      original_filename: "Stonebridge_Reno_Plan.pdf",
+      text: "Structured Renovation / CapEx Plan. Total renovation budget $1,280,000. 1BR scope 18 units at $18,000/unit with expected monthly rent lift $225, Months 1-18. 2BR scope 22 units at $22,000/unit with expected monthly rent lift $325, Months 1-24. Common/exterior/contingency rows included.",
     },
   },
   {
@@ -5499,13 +5834,21 @@ const attackStyleArtifacts = [
       file_id: "r1",
       original_filename: "Stonebridge_Reno_Plan.pdf",
       semantic_doc_role: "renovation_budget",
-      total_budget: 1138000,
+      total_budget: 1280000,
       budget_rows: [
         { category: "1BR unit turns", unit_count: 18, cost_per_unit: 18000, expected_monthly_rent_lift: 225, phase_timing: "Months 1-18" },
         { category: "2BR unit turns", unit_count: 22, cost_per_unit: 22000, expected_monthly_rent_lift: 325, phase_timing: "Months 1-24" },
       ],
       timing_or_phasing: "Months 1-24",
       rent_lift: "1BR $225; 2BR $325",
+    },
+  },
+  {
+    type: "document_text_extracted",
+    payload: {
+      file_id: "ap1",
+      original_filename: "Stonebridge_Appraisal.pdf",
+      text: "Appraisal summary context only.",
     },
   },
   {
@@ -5523,7 +5866,7 @@ const attackStyleArtifacts = [
       file_id: "m1",
       original_filename: "Stonebridge_Market_Survey.pdf",
       semantic_doc_role: "market_survey",
-      source_text: "Market rent survey context only.",
+      text: "Market rent survey context only.",
     },
   },
   {
@@ -5532,7 +5875,7 @@ const attackStyleArtifacts = [
       file_id: "e1",
       original_filename: "Stonebridge_Phase_I_ESA.pdf",
       semantic_doc_role: "environmental_due_diligence",
-      source_text: "Phase I ESA environmental due diligence context.",
+      text: "Phase I ESA environmental due diligence context.",
     },
   },
 ];
@@ -5677,9 +6020,9 @@ const attackDocumentTreatmentHtml = generatorTest.buildDocumentTreatmentSummaryH
     ["Stonebridge_Assumptions.pdf", { ...sovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
     ["Current_Debt_Stonebridge.pdf", { ...sovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
     ["Stonebridge_Reno_Plan.pdf", { ...sovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
-    ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
-    ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
-    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Appraisal.pdf", { role: "appraisal_context", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Market_Survey.pdf", { role: "market_survey_context", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_context", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
   ]),
   renderedDocumentTreatmentRowsOut: [],
 });
@@ -5697,12 +6040,12 @@ const rawTextFallbackTreatmentHtml = generatorTest.buildDocumentTreatmentSummary
   reportMode: "v1_core",
   documentSources: rawTextFallbackSupportDocs,
 });
-assert.match(rawTextFallbackTreatmentHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchase Assumptions \/ Acquisition Context/i);
-assert.equal(/Stonebridge_Assumptions\.pdf[\s\S]{0,220}Environmental/i.test(rawTextFallbackTreatmentHtml), false);
-assert.match(rawTextFallbackTreatmentHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Debt Support Received \/ Contextual/i);
-assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Other Support Document/i.test(rawTextFallbackTreatmentHtml), false);
-assert.match(rawTextFallbackTreatmentHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,240}Structured Renovation \/ CapEx Plan/i);
-assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,220}Other Support Document/i.test(rawTextFallbackTreatmentHtml), false);
+assert.match(rawTextFallbackTreatmentHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Other Support Document/i);
+assert.equal(/Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchase Assumptions \/ Acquisition Context/i.test(rawTextFallbackTreatmentHtml), false);
+assert.match(rawTextFallbackTreatmentHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Other Support Document/i);
+assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,220}Debt Support Received \/ Contextual/i.test(rawTextFallbackTreatmentHtml), false);
+assert.match(rawTextFallbackTreatmentHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,220}Other Support Document/i);
+assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,240}Structured Renovation \/ CapEx Plan/i.test(rawTextFallbackTreatmentHtml), false);
 const attackPrelimHtml = generatorTest.buildPreliminaryFinancingReadinessSummaryHtml({
   reportMode: "v1_core",
   acquisitionMemoRenderContext: {
@@ -5736,11 +6079,15 @@ assert.match(attackPrelimHtml, /Uploaded Existing Debt Context[\s\S]{0,220}Outst
 assert.match(attackPrelimHtml, /CapEx \/ renovation plan[\s\S]{0,120}Context only unless verified budget and rent-lift assumptions exist/i);
 const attackAcquisitionFinancingHtml = generatorTest.buildAcquisitionFinancingReadinessHtml({
   reportMode: "v1_core",
-  supportDocAuthorityRows,
+  loanTermSheetTermsPayload: supportDocAuthorityRows.find((row) =>
+    /purchase_assumptions|proposed_acquisition_financing/i.test(
+      String(row?.canonical_support_doc_role || row?.semantic_doc_role || "")
+    )
+  ),
 });
 assert.match(attackAcquisitionFinancingHtml, /Proposed Acquisition Financing Context/i);
-assert.match(attackAcquisitionFinancingHtml, /Proposed Loan Amount[\s\S]{0,80}\$7,450,000/i);
-assert.match(attackAcquisitionFinancingHtml, /Interest Rate[\s\S]{0,80}5\.75%/i);
+assert.match(attackAcquisitionFinancingHtml, /Proposed Loan Amount[\s\S]{0,80}\$9,450,000/i);
+assert.match(attackAcquisitionFinancingHtml, /Interest Rate[\s\S]{0,80}5\.95%/i);
 assert.equal(/Current Debt DSCR|refinance proceeds|waterfall|deal score|final recommendation|BUY|SELL|HOLD/i.test(attackAcquisitionFinancingHtml), false);
 const attackRenderHarnessRequest = {
   headers: {
@@ -5798,7 +6145,12 @@ const attackRenderHarnessRequest = {
         original_filename: "Property_Tax_Support.pdf",
       },
       documentSources: attackStyleSupportDocs,
-      coverageArtifacts: attackStyleArtifacts,
+      coverageArtifacts: [
+        ...fullRenderCoverageArtifacts.filter((artifact) =>
+          ["t12_parsed", "rent_roll_parsed"].includes(String(artifact?.type || ""))
+        ),
+        ...attackStyleArtifacts,
+      ],
     },
   },
 };
@@ -5819,11 +6171,20 @@ assert.equal(attackRenderHarnessResponse.statusCode, 200);
 assert.equal(attackRenderHarnessResponse.body?.success, true);
 const attackRenderHtml = String(attackRenderHarnessResponse.body?.final_html || "");
 assert.match(attackRenderHtml, /Current_Debt_Stonebridge\.pdf/i);
-assert.match(attackRenderHtml, /Debt Support Received \/ Contextual/i);
-assert.match(attackRenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,240}Structured Renovation \/ CapEx Plan/i);
-assert.match(attackRenderHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,220}Purchase Assumptions \/ Acquisition Context/i);
-assert.match(attackRenderHtml, /Stonebridge_Appraisal\.pdf[\s\S]{0,220}Appraisal Context/i);
-assert.match(attackRenderHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,220}Market Rent Context/i);
+assert.match(attackRenderHtml, /Existing Debt Context \/ Current Mortgage \/ Debt Statement/i);
+assert.match(attackRenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,240}Renovation \/ CapEx Context/i);
+assert.match(attackRenderHtml, /Stonebridge_Assumptions\.pdf[\s\S]{0,260}Purchase Assumptions \/ Proposed Acquisition Financing Context/i);
+const attackAppraisalTreatmentRow =
+  attackRenderHtml.match(
+    /<tr[^>]*>(?:(?!<\/tr>)[\s\S])*?Stonebridge_Appraisal\.pdf(?:(?!<\/tr>)[\s\S])*?<\/tr>/i,
+  )?.[0] || "";
+assert.match(
+  attackAppraisalTreatmentRow,
+  /Source-Present Support Document \/ Not Authority-Accepted/i,
+);
+assert.match(attackAppraisalTreatmentRow, /Source present \/ rejected/i);
+assert.equal(/Appraisal \/ Valuation Context/i.test(attackAppraisalTreatmentRow), false);
+assert.match(attackRenderHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,240}Market Rent Survey Context/i);
 assert.match(attackRenderHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,220}Environmental Due Diligence Context/i);
 assert.match(attackRenderHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
 assert.equal(/No verified current debt context was provided/i.test(attackRenderHtml), false);
@@ -5918,7 +6279,7 @@ assert.equal(
 );
 assert.equal(
   retest4SovereignRows.find((row) => row.original_filename === "Stonebridge_Reno_Plan.pdf")?.canonical_support_doc_role,
-  "structured_renovation_capex_plan"
+  "renovation_capex_context"
 );
 const retest4RenderRequest = {
   headers: {
@@ -5977,7 +6338,12 @@ const retest4RenderRequest = {
         original_filename: "Property_Tax_Support.pdf",
       },
       documentSources: retest4ShapeSupportDocs,
-      coverageArtifacts: retest4ShapeArtifacts,
+      coverageArtifacts: [
+        ...fullRenderCoverageArtifacts.filter((artifact) =>
+          ["t12_parsed", "rent_roll_parsed"].includes(String(artifact?.type || ""))
+        ),
+        ...retest4ShapeArtifacts,
+      ],
     },
   },
 };
@@ -6007,9 +6373,9 @@ try {
 assert.equal(retest4RenderResponse.statusCode, 200);
 assert.equal(retest4RenderResponse.body?.success, true);
 const retest4RenderHtml = String(retest4RenderResponse.body?.final_html || "");
-assert.match(retest4RenderHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i);
+assert.match(retest4RenderHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,260}Existing Debt Context \/ Current Mortgage \/ Debt Statement/i);
 assert.match(retest4RenderHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
-assert.match(retest4RenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Structured Renovation \/ CapEx Plan/i);
+assert.match(retest4RenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,260}Renovation \/ CapEx Context/i);
 assert.equal(/No verified current debt context was provided/i.test(retest4RenderHtml), false);
 assert.equal(/Current debt context uploaded<\/td><td[^>]*>No/i.test(retest4RenderHtml), false);
 assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Purchase Assumptions \/ Acquisition Context/i.test(retest4RenderHtml), false);
@@ -6082,9 +6448,9 @@ const attackContractQa = buildReportContractQa({
     ["Stonebridge_Assumptions.pdf", { ...attackContractSovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
     ["Current_Debt_Stonebridge.pdf", { ...attackContractSovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
     ["Stonebridge_Reno_Plan.pdf", { ...attackContractSovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
-    ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
-    ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
-    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Appraisal.pdf", { role: "appraisal_context", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Market_Survey.pdf", { role: "market_survey_context", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_context", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
   ]),
   renderedDocumentTreatmentRows: [
     { filename: "Stonebridge_Assumptions.pdf", displayLabel: "Purchase Assumptions / Acquisition Context", treatment: "Acquisition context / document-derived acquisition context", use: "Purchase price / going-in cap / NOI basis support; does not override T12/Rent Roll operating truth." },
@@ -6110,9 +6476,9 @@ const contradictoryContractQa = buildReportContractQa({
     ["Stonebridge_Assumptions.pdf", { ...attackContractSovereignPurchaseAuthority, originalFilename: "Stonebridge_Assumptions.pdf" }],
     ["Current_Debt_Stonebridge.pdf", { ...attackContractSovereignCurrentDebtAuthority, originalFilename: "Current_Debt_Stonebridge.pdf" }],
     ["Stonebridge_Reno_Plan.pdf", { ...attackContractSovereignRenovationAuthority, originalFilename: "Stonebridge_Reno_Plan.pdf" }],
-    ["Stonebridge_Appraisal.pdf", { role: "appraisal", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
-    ["Stonebridge_Market_Survey.pdf", { role: "market_survey", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
-    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_due_diligence", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Appraisal.pdf", { role: "appraisal_context", displayLabel: "Appraisal Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively.", originalFilename: "Stonebridge_Appraisal.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Market_Survey.pdf", { role: "market_survey_context", displayLabel: "Market Rent Context", treatment: "Context only", use: "Market/rent context only; does not override Rent Roll market rent.", originalFilename: "Stonebridge_Market_Survey.pdf", category: "Listed but Not Quantitatively Modeled" }],
+    ["Stonebridge_Phase_I_ESA.pdf", { role: "environmental_context", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Environmental due-diligence context only; no quantitative model impact.", originalFilename: "Stonebridge_Phase_I_ESA.pdf", category: "Listed but Not Quantitatively Modeled" }],
   ]),
   renderedDocumentTreatmentRows: [
     { filename: "Stonebridge_Assumptions.pdf", displayLabel: "Environmental Due Diligence Context", treatment: "Context only", use: "Listed for auditability only; not used quantitatively." },
@@ -6122,13 +6488,20 @@ assert.equal(
   contradictoryContractQa.violations.some((violation) => violation.code === "DOCUMENT_TREATMENT_CONTRADICTS_CANONICAL_AUTHORITY" && violation.blocks_acquisition_memo_launch_ready === true && violation.blocks_customer_delivery === false),
   true
 );
-const tamperedChecklistHtml = `${attackPrelimHtml}${attackAcquisitionFinancingHtml}${attackDocumentTreatmentHtml}`
-  .replace(/Purchase assumptions provided<\/td><td style="font-weight:600;">Yes/i, "Purchase assumptions provided</td><td style=\"font-weight:600;\">No")
-  .replace(/Current debt context uploaded<\/td><td style="font-weight:600;">Yes/i, "Current debt context uploaded</td><td style=\"font-weight:600;\">No")
-  .replace(
-    /Structured Renovation \/ CapEx Plan/i,
-    "No verified forward-looking renovation budget was provided"
-  );
+const tamperedChecklistHtml = `
+  <section>
+    <h2>Proposed Acquisition Financing Context</h2>
+    <table><tbody>
+      <tr><td>Purchase Price</td><td>$13,500,000</td></tr>
+      <tr><td>Proposed Loan Amount</td><td>$9,450,000</td></tr>
+      <tr><td>LTV</td><td>70.0%</td></tr>
+      <tr><td>Interest Rate</td><td>5.95%</td></tr>
+      <tr><td>Amortization</td><td>30 years</td></tr>
+      <tr><td>Purchase assumptions provided</td><td>No</td></tr>
+      <tr><td>Current debt context uploaded</td><td>No</td></tr>
+    </tbody></table>
+    <p>No verified forward-looking renovation budget was provided</p>
+  </section>`;
 const tamperedChecklistQa = buildReportContractQa({
   html: tamperedChecklistHtml,
   reportType: "underwriting",
@@ -6147,7 +6520,8 @@ assert.equal(
       "ACQUISITION_FINANCING_READINESS_MISSING",
     ].includes(violation.code)
   ),
-  true
+  true,
+  JSON.stringify(tamperedChecklistQa.violations.map((violation) => violation.code))
 );
 
 console.log("generate-client-report rent-roll smoke PASS");

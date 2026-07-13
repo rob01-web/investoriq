@@ -1,8 +1,10 @@
 import assert from "assert";
+import fs from "fs";
+import path from "path";
 
-import { buildCanonicalSourcePackage } from "../../api/_lib/canonical-source-package.js";
+import { buildCanonicalSourcePackage as buildLegacyFixtureSourcePackage } from "../../api/_lib/canonical-source-package.js";
 
-function buildStonebridgeSourcePackage() {
+function buildStonebridgeLegacyFixtureSourcePackage() {
   const uploadedFiles = [
     { fileId: "t12-file", originalFilename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
     { fileId: "rent-roll-file", originalFilename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
@@ -25,12 +27,12 @@ function buildStonebridgeSourcePackage() {
     { fileId: "phase-file", semantic_doc_role: "phase_i_esa", payload: { text: "Phase I ESA / Environmental Due Diligence Context\nEnvironmental review only." } },
   ];
 
-  return buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts);
+  return buildLegacyFixtureSourcePackage(uploadedFiles, parsedArtifacts);
 }
 
-const sourcePackage = buildStonebridgeSourcePackage();
+const sourcePackage = buildStonebridgeLegacyFixtureSourcePackage();
 
-assert.equal(sourcePackage.authorityVersion, "v2");
+assert.equal(sourcePackage.authorityVersion, "legacy_fixture_v2");
 assert.equal(sourcePackage.coreT12?.role, "core_t12");
 assert.equal(sourcePackage.coreRentRoll?.role, "core_rent_roll");
 assert.equal(sourcePackage.supportDocs.get("assumptions-file")?.canonicalRole, "purchase_assumptions");
@@ -43,5 +45,32 @@ assert.equal(sourcePackage.supportDocs.has("t12-file"), false);
 assert.equal(sourcePackage.supportDocs.has("rent-roll-file"), false);
 assert.equal(sourcePackage.supportDocs.get("assumptions-file")?.canonicalRole === "current_debt_context", false);
 assert.equal(sourcePackage.supportDocs.get("current-debt-file")?.canonicalRole === "purchase_assumptions", false);
+
+function collectProductionJavaScriptFiles(root) {
+  const files = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const absolutePath = path.join(root, entry.name);
+    if (entry.isDirectory()) files.push(...collectProductionJavaScriptFiles(absolutePath));
+    else if (entry.isFile() && entry.name.endsWith(".js")) files.push(absolutePath);
+  }
+  return files;
+}
+
+const legacyFixtureOwner = path.resolve("api/_lib/canonical-source-package.js");
+const productionJavaScriptFiles = [
+  ...collectProductionJavaScriptFiles(path.resolve("api")),
+  ...collectProductionJavaScriptFiles(path.resolve("lib")),
+].filter((filePath) => path.resolve(filePath) !== legacyFixtureOwner);
+const legacyFixtureProductionUses = productionJavaScriptFiles.filter((filePath) => {
+  const source = fs.readFileSync(filePath, "utf8");
+  const importsLegacyFixtureBuilder = /import[\s\S]{0,240}\bbuildCanonicalSourcePackage\b[\s\S]{0,240}from\s*["'][^"']*canonical-source-package\.js["']/.test(source);
+  const callsLegacyFixtureBuilder = /\bbuildCanonicalSourcePackage\s*\(/.test(source);
+  return importsLegacyFixtureBuilder || callsLegacyFixtureBuilder;
+});
+assert.deepEqual(
+  legacyFixtureProductionUses,
+  [],
+  "Legacy fixture source-package builder must not be imported or called from production API/lib/parser code"
+);
 
 console.log("source-authority smoke PASS");

@@ -250,6 +250,8 @@ function normalizeSupportDocRecord(doc, sourceLabel = null) {
     acceptedProvenance: normalizeBossContractFact(acceptedProvenance || {}),
     acceptedPurchaseAssumptionsTruth,
     acceptedCurrentDebtTruth,
+    sectionEligibility: normalizeBossContractFact(source.sectionEligibility || source.section_eligibility || {}),
+    primaryForRole: source.primaryForRole === true || source.primary_for_role === true,
   });
 }
 
@@ -661,6 +663,10 @@ function factAvailability(requiredFacts, availableFacts, sourceBacked = false) {
   };
 }
 
+function hasFiniteFact(value) {
+  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+}
+
 function buildBossContractAssertion(code, description, severity = "critical", section = null) {
   return {
     code,
@@ -999,6 +1005,9 @@ function collapseAcquisitionMemoBossViolationsHtml(bossContract, html, routing =
 
   for (const violation of Array.isArray(routed.collapseable_surface) ? routed.collapseable_surface : []) {
     const code = String(violation?.code || "");
+    // Forbidden terminology is scrubbed below. Do not collapse an otherwise
+    // source-backed debt section and thereby discard accepted document facts.
+    if (code === "NO_FORBIDDEN_SURFACES") continue;
     const sectionTitle = getCollapseTargetSectionTitleByViolationCode(code);
     const collapseText = getCollapsedReasonForViolationCode(code);
     if (sectionTitle) {
@@ -1112,15 +1121,19 @@ function buildAcquisitionMemoBossContract({
   const supplementedCoreT12Facts = supplementT12FactsFromEvidence(normalizeBossContractFact(coreT12?.extractedFacts || {}), coreT12Source);
   const supplementedCoreT12FactsFromPayload = supplementT12FactsFromPayload(supplementedCoreT12Facts, t12Payload);
   const supplementedPurchaseFacts = normalizePurchaseAssumptionLoanAmountFacts(
-    supplementPurchaseFactsFromEvidence(
-      normalizeBossContractFact(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts || {}),
-      purchaseAssumptionsDoc
-    )
+    hasCanonicalSourceTruth
+      ? normalizeBossContractFact(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts || {})
+      : supplementPurchaseFactsFromEvidence(
+          normalizeBossContractFact(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts || {}),
+          purchaseAssumptionsDoc
+        )
   );
-  const supplementedCurrentDebtFacts = supplementCurrentDebtFactsFromEvidence(
-    normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || promotedCurrentDebtDoc?.extractedFacts || {}),
-    promotedCurrentDebtDoc
-  );
+  const supplementedCurrentDebtFacts = hasCanonicalSourceTruth
+    ? normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || {})
+    : supplementCurrentDebtFactsFromEvidence(
+        normalizeBossContractFact(acquisitionMemoProjection?.currentDebtContext?.extractedFacts || promotedCurrentDebtDoc?.extractedFacts || {}),
+        promotedCurrentDebtDoc
+      );
   const coreT12SourceTruth = coreT12 ? { ...coreT12, extractedFacts: supplementedCoreT12FactsFromPayload } : null;
   const supportDocsWithSupplementedFacts = supportDocs.map((doc) => {
     const role = String(doc?.canonicalRole || doc?.role || "").trim().toLowerCase();
@@ -1159,6 +1172,21 @@ function buildAcquisitionMemoBossContract({
   const t12Facts = normalizeBossContractFact(coreT12SourceTruth?.extractedFacts || supplementedCoreT12FactsFromPayload || {});
   const purchaseFacts = supplementedPurchaseFacts;
   const currentDebtFacts = supplementedCurrentDebtFacts;
+  const supportAuthorityDecisions = Array.isArray(sourceTruthPackage?.support?.adjudication_decisions)
+    ? sourceTruthPackage.support.adjudication_decisions
+    : [];
+  const purchaseAssumptionsSourcePresent = hasCanonicalSourceTruth
+    ? supportAuthorityDecisions.some((decision) =>
+        decision?.canonicalRole === "purchase_assumptions" ||
+        decision?.semanticEvidence?.families?.acquisition_financing?.hasAffirmativeEvidence === true
+      )
+    : Boolean(purchaseAssumptionsDoc);
+  const currentDebtSourcePresent = hasCanonicalSourceTruth
+    ? supportAuthorityDecisions.some((decision) =>
+        decision?.canonicalRole === "current_debt_context" ||
+        decision?.semanticEvidence?.families?.current_debt?.hasAffirmativeEvidence === true
+      )
+    : Boolean(promotedCurrentDebtDoc);
 
   const unitMixAvailable = hasStructuredValues(rentRollFacts?.unit_mix) || hasStructuredValues(rentRollFacts?.units);
   const totalUnitsAvailable = Number.isFinite(Number(rentRollFacts?.total_units)) || Number.isFinite(Number(coreMetrics?.units));
@@ -1169,11 +1197,15 @@ function buildAcquisitionMemoBossContract({
   const currentDebtAvailable =
     Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ||
     hasStructuredValues(currentDebtFacts);
-  const currentDebtSourceBacked = Boolean(promotedCurrentDebtDoc?.acceptedCurrentDebtTruth);
+  const currentDebtSourceBacked = hasCanonicalSourceTruth
+    ? Boolean(promotedCurrentDebtDoc?.acceptedCurrentDebtTruth)
+    : Boolean(promotedCurrentDebtDoc);
   const purchaseAssumptionsAvailable =
     Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ||
     hasStructuredValues(purchaseFacts);
-  const purchaseAssumptionsSourceBacked = Boolean(purchaseAssumptionsDoc?.acceptedPurchaseAssumptionsTruth);
+  const purchaseAssumptionsSourceBacked = hasCanonicalSourceTruth
+    ? Boolean(purchaseAssumptionsDoc?.acceptedPurchaseAssumptionsTruth)
+    : Boolean(purchaseAssumptionsDoc);
   const supportDocsAvailable = supportDocs.length > 0;
   const currentDebtRequiredFacts = [
     "current_outstanding_balance",
@@ -1210,6 +1242,35 @@ function buildAcquisitionMemoBossContract({
     "lender_fee_percent",
   ];
   const documentTreatmentRequiredFacts = ["support_docs", "treatments", "uses"];
+  const availableCurrentDebtFacts = [
+    ...(hasFiniteFact(currentDebtFacts?.current_outstanding_balance) ? ["current_outstanding_balance"] : []),
+    ...(hasFiniteFact(currentDebtFacts?.interest_rate) ? ["interest_rate"] : []),
+    ...(hasFiniteFact(currentDebtFacts?.amortization_remaining_years) ? ["amortization_remaining_years"] : []),
+    ...(hasFiniteFact(currentDebtFacts?.monthly_payment) ? ["monthly_payment"] : []),
+    ...(currentDebtFacts?.maturity_date ? ["maturity_date"] : []),
+  ];
+  const availableProposedFinancingFacts = [
+    ...(resolvePurchaseAssumptionLoanAmountCandidate(purchaseFacts?.proposed_loan_amount) != null ? ["proposed_loan_amount"] : []),
+    ...(hasFiniteFact(purchaseFacts?.ltv) ? ["ltv"] : []),
+    ...(hasFiniteFact(purchaseFacts?.interest_rate) ? ["interest_rate"] : []),
+    ...(hasFiniteFact(purchaseFacts?.amortization_years) ? ["amortization_years"] : []),
+    ...(hasFiniteFact(purchaseFacts?.lender_fee_percent) ? ["lender_fee_percent"] : []),
+  ];
+  const availableAcquisitionRequestFacts = [
+    ...(hasFiniteFact(purchaseFacts?.purchase_price) ? ["purchase_price"] : []),
+    ...(hasFiniteFact(purchaseFacts?.noi_basis) ? ["noi_basis"] : []),
+    ...(hasFiniteFact(purchaseFacts?.going_in_cap_rate) ? ["going_in_cap_rate"] : []),
+    ...availableProposedFinancingFacts,
+  ];
+  const currentDebtDisplayReady = hasCanonicalSourceTruth
+    ? promotedCurrentDebtDoc?.sectionEligibility?.currentDebt === true
+    : currentDebtSourceBacked && currentDebtRequiredFacts.every((fact) => availableCurrentDebtFacts.includes(fact));
+  const proposedFinancingDisplayReady = hasCanonicalSourceTruth
+    ? purchaseAssumptionsDoc?.sectionEligibility?.proposedFinancing === true
+    : purchaseAssumptionsSourceBacked && proposedFinancingRequiredFacts.every((fact) => availableProposedFinancingFacts.includes(fact));
+  const acquisitionRequestDisplayReady = hasCanonicalSourceTruth
+    ? purchaseAssumptionsDoc?.sectionEligibility?.acquisitionRequest === true
+    : purchaseAssumptionsSourceBacked && acquisitionRequestRequiredFacts.every((fact) => availableAcquisitionRequestFacts.includes(fact));
 
   const sections = {
     executiveSummary: buildSectionContract({
@@ -1318,24 +1379,14 @@ function buildAcquisitionMemoBossContract({
       ],
     }),
     acquisitionRequestContext: buildSectionContract({
-      status: purchaseAssumptionsSourceBacked ? "required" : "collapsed",
+      status: acquisitionRequestDisplayReady ? "required" : "collapsed",
       requiredFacts: acquisitionRequestRequiredFacts,
       sourceBindings: buildSectionBindings("purchase_assumptions", ["purchase_price", "noi_basis", "going_in_cap_rate", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"]),
       collapseInstructions: ["If purchase assumptions are absent, collapse the acquisition request context instead of inventing terms."],
-      factAvailability: factAvailability(
-        acquisitionRequestRequiredFacts,
-        [
-          ...(Number.isFinite(Number(purchaseFacts?.purchase_price)) ? ["purchase_price"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.noi_basis)) ? ["noi_basis"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.going_in_cap_rate)) ? ["going_in_cap_rate"] : []),
-          ...(resolvePurchaseAssumptionLoanAmountCandidate(purchaseFacts?.proposed_loan_amount) != null ? ["proposed_loan_amount"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.ltv)) ? ["ltv"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.interest_rate)) ? ["interest_rate"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.lender_fee_percent)) ? ["lender_fee_percent"] : []),
-        ],
-        purchaseAssumptionsSourceBacked
-      ),
+      factAvailability: {
+        ...factAvailability(acquisitionRequestRequiredFacts, availableAcquisitionRequestFacts, acquisitionRequestDisplayReady),
+        sourcePresent: purchaseAssumptionsSourcePresent,
+      },
       postRenderAssertions: [
         buildBossContractAssertion("ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Acquisition request facts are required when purchase assumptions are source-backed.", "critical", "acquisitionRequestContext"),
         buildBossContractAssertion("PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Proposed financing facts are required when purchase assumptions are source-backed.", "critical", "acquisitionRequestContext"),
@@ -1352,42 +1403,28 @@ function buildAcquisitionMemoBossContract({
       sourceBindings: buildSectionBindings("core_rent_roll", ["annual_in_place_rent", "annual_market_rent", "unit_mix"]),
     }),
     currentDebtContext: buildSectionContract({
-      status: currentDebtSourceBacked ? "required" : "collapsed",
+      status: currentDebtDisplayReady ? "required" : "collapsed",
       requiredFacts: currentDebtRequiredFacts,
       sourceBindings: buildSectionBindings("current_debt_context", ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"]),
       collapseInstructions: ["If current debt facts are unavailable or unusable, collapse the debt context section with a customer-safe note."],
       renderRequirements: ["Render source-backed current debt facts when available.", "Do not treat proposed acquisition financing as current debt."],
-      factAvailability: factAvailability(
-        currentDebtRequiredFacts,
-        [
-          ...(Number.isFinite(Number(currentDebtFacts?.current_outstanding_balance)) ? ["current_outstanding_balance"] : []),
-          ...(Number.isFinite(Number(currentDebtFacts?.interest_rate)) ? ["interest_rate"] : []),
-          ...(Number.isFinite(Number(currentDebtFacts?.amortization_remaining_years)) ? ["amortization_remaining_years"] : []),
-          ...(Number.isFinite(Number(currentDebtFacts?.monthly_payment)) ? ["monthly_payment"] : []),
-          ...(currentDebtFacts?.maturity_date ? ["maturity_date"] : []),
-        ],
-        currentDebtSourceBacked
-      ),
+      factAvailability: {
+        ...factAvailability(currentDebtRequiredFacts, availableCurrentDebtFacts, currentDebtDisplayReady),
+        sourcePresent: currentDebtSourcePresent,
+      },
       postRenderAssertions: [
         buildBossContractAssertion("CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Current debt facts are required when current debt is source-backed.", "critical", "currentDebtContext"),
       ],
     }),
     proposedFinancingContext: buildSectionContract({
-      status: purchaseAssumptionsSourceBacked ? "required" : "collapsed",
+      status: proposedFinancingDisplayReady ? "required" : "collapsed",
       requiredFacts: proposedFinancingRequiredFacts,
       sourceBindings: buildSectionBindings("purchase_assumptions", ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"]),
       collapseInstructions: ["If proposed financing facts are unavailable, collapse the proposed financing context section rather than borrowing current debt facts."],
-      factAvailability: factAvailability(
-        proposedFinancingRequiredFacts,
-        [
-          ...(resolvePurchaseAssumptionLoanAmountCandidate(purchaseFacts?.proposed_loan_amount) != null ? ["proposed_loan_amount"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.ltv)) ? ["ltv"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.interest_rate)) ? ["interest_rate"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.amortization_years)) ? ["amortization_years"] : []),
-          ...(Number.isFinite(Number(purchaseFacts?.lender_fee_percent)) ? ["lender_fee_percent"] : []),
-        ],
-        purchaseAssumptionsSourceBacked
-      ),
+      factAvailability: {
+        ...factAvailability(proposedFinancingRequiredFacts, availableProposedFinancingFacts, proposedFinancingDisplayReady),
+        sourcePresent: purchaseAssumptionsSourcePresent,
+      },
       postRenderAssertions: [
         buildBossContractAssertion("PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Proposed financing facts are required when purchase assumptions are source-backed.", "critical", "proposedFinancingContext"),
       ],

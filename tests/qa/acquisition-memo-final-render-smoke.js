@@ -65,21 +65,21 @@ describe("acquisition memo final render smoke", () => {
 
     assert.ok(currentDebtRow);
     assert.ok(assumptionsRow);
-    assert.match(currentDebtRow[0], /Current Outstanding Balance: \$6,800,000/);
-    assert.match(currentDebtRow[0], /Interest Rate: 4\.85%/);
-    assert.match(currentDebtRow[0], /Amortization Remaining: 24 years/);
-    assert.match(currentDebtRow[0], /Monthly Payment: \$39,250/);
-    assert.match(currentDebtRow[0], /Maturity Date: 2029-11-01/);
+    assert.match(currentDebtRow[0], /Current Debt Balance: \$6,800,000/);
+    assert.match(currentDebtRow[0], /Current Debt Rate: 4\.85%/);
+    assert.match(currentDebtRow[0], /Current Debt Amortization Remaining: 24 years/);
+    assert.match(currentDebtRow[0], /Current Debt Monthly Payment: \$39,250/);
+    assert.match(currentDebtRow[0], /Current Debt Maturity: 2029-11-01/);
     assert.ok(!/Purchase Price: \$13,500,000/.test(currentDebtRow[0]));
     assert.ok(!/Proposed Loan Amount: \$9,450,000/.test(currentDebtRow[0]));
     assert.match(assumptionsRow[0], /Purchase Price: \$13,500,000/);
     assert.match(assumptionsRow[0], /NOI Basis: \$945,000/);
     assert.match(assumptionsRow[0], /Going-In Cap Rate: 7\.0%/);
-    assert.match(assumptionsRow[0], /Proposed Loan Amount: \$9,450,000/);
-    assert.match(assumptionsRow[0], /Interest Rate: 5\.95%/);
-    assert.match(assumptionsRow[0], /Amortization: 30 years/);
-    assert.match(assumptionsRow[0], /LTV: 70%/);
-    assert.match(assumptionsRow[0], /Lender Fee: 0\.85%/);
+    assert.match(assumptionsRow[0], /Proposed Acquisition Loan: \$9,450,000/);
+    assert.match(assumptionsRow[0], /Proposed Rate: 5\.95%/);
+    assert.match(assumptionsRow[0], /Proposed Amortization: 30 years/);
+    assert.match(assumptionsRow[0], /LTV: 70\.0%/);
+    assert.match(assumptionsRow[0], /Lender \/ Origination Fee: 0\.85%/);
   });
 
   it("renders coreSourceSummaryHtml confirming T12 and Rent Roll as core sources", () => {

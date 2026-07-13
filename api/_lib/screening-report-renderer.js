@@ -63,8 +63,9 @@ function resolveCanonicalT12GprValue(t12Payload = null) {
 }
 
 export function buildT12PerUnitRows(t12EgiValue = null, t12TotalExpensesValue = null, t12NoiValue = null, rrUnits = null, formatCurrencyFn = formatCurrency) {
-  const unitCount = Number.isFinite(Number(rrUnits)) ? Number(rrUnits) : null;
-  const divisor = Math.max(1, Number(unitCount) || 1);
+  const unitCount = coerceNumber(rrUnits);
+  if (!Number.isFinite(unitCount) || unitCount <= 0) return "";
+  const divisor = unitCount;
   const rows = [];
   if (Number.isFinite(t12EgiValue)) {
     rows.push(`<tr><td>EGI / Unit</td><td>${formatCurrencyFn(t12EgiValue / divisor)}</td></tr>`);
@@ -94,12 +95,12 @@ function isEligiblePositiveExpenseDriver(row) {
 
 function buildScreeningUnitMixRows(unitMix = [], totalUnits = null, formatValue = formatCurrency) {
   const rows = Array.isArray(unitMix) ? unitMix : [];
-  const total = Number(totalUnits);
+  const total = coerceNumber(totalUnits);
   return rows
     .map((row) => {
       const unitType = String(row?.unit_type ?? row?.name ?? row?.label ?? "").trim();
       if (!unitType) return "";
-      const unitCount = Number(row?.unit_count ?? row?.count);
+      const unitCount = coerceNumber(row?.unit_count ?? row?.count);
       const share = Number.isFinite(unitCount) && Number.isFinite(total) && total > 0
         ? `${((unitCount / total) * 100).toFixed(1)}%`
         : "";
@@ -212,9 +213,7 @@ function buildScreeningUpsidePathwayHtml({
   formatCurrency,
   rrUnits = null,
 } = {}) {
-  const totalUnits = Number.isFinite(Number(rrUnits))
-    ? Number(rrUnits)
-    : coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+  const totalUnits = coerceNumber(rrUnits) ?? coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
   const annualTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
   const annualInPlace = coerceNumber(annualTotals?.in_place?.value ?? computedRentRoll?.total_annual_in_place);
   const annualMarket = coerceNumber(annualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
@@ -812,7 +811,7 @@ export function buildScreeningCustomerOutput({
   {
     const snapRows = [];
     const coverSnapshotValueStyle = "color:#F9FAFB;font-size:11px;font-weight:600;";
-    const _coverRrUnits = Number(computedRentRoll?.total_units);
+    const _coverRrUnits = coerceNumber(computedRentRoll?.total_units);
     const unitCount = Number.isFinite(_coverRrUnits) && _coverRrUnits > 0 ? _coverRrUnits : null;
     if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
     const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
@@ -1025,9 +1024,7 @@ export function buildScreeningCustomerOutput({
     const unitMixRows = suppressUnitLevelRentLift
       ? ""
       : buildScreeningUnitMixRows(unitMix, totalUnits, formatCurrency);
-    const descriptorUnits = Number.isFinite(Number(rrUnits))
-      ? Number(rrUnits)
-      : coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
+    const descriptorUnits = coerceNumber(rrUnits) ?? coerceNumber(computedRentRoll?.total_units ?? rentRollPayload?.total_units);
     const descriptorLine = Number.isFinite(descriptorUnits) && descriptorUnits > 0
       ? `${descriptorUnits}-Unit Multifamily`
       : "";

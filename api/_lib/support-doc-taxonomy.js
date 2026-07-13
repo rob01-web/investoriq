@@ -1,3 +1,5 @@
+import { evaluateFinancingSemanticEvidence } from "./support-doc-semantic-evidence.js";
+
 function normalizeText(value) {
   return String(value || "")
     .replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028\u2029\u2060\ufeff\ufffe\uffff]/g, " ")
@@ -119,17 +121,9 @@ function resolveExplicitSupportDocAuthority({
     payload?.extracted_text,
   ].filter(Boolean).join(" "));
   const hasText = (terms = []) => terms.some((term) => text.includes(normalizeText(term)));
+  const financingEvidence = evaluateFinancingSemanticEvidence(text);
 
-  const purchaseAssumptions = hasText([
-    "purchase assumptions / proposed acquisition financing",
-    "purchase assumptions",
-    "proposed acquisition financing",
-    "acquisition context",
-    "purchase price",
-    "going-in cap rate",
-    "noi basis",
-  ]);
-  if (purchaseAssumptions) {
+  if (financingEvidence.hasAffirmativeAcquisitionEvidence) {
     return {
       semantic_doc_role: "purchase_assumptions",
       semantic_doc_role_reason: "explicit_purchase_assumptions_source_text",
@@ -138,20 +132,7 @@ function resolveExplicitSupportDocAuthority({
     };
   }
 
-  const currentDebt = hasText([
-    "existing current debt statement",
-    "current outstanding balance",
-    "current debt context",
-    "current mortgage statement",
-    "existing mortgage",
-    "true current debt",
-    "outstanding principal",
-    "unpaid principal",
-    "current loan balance",
-    "monthly payment",
-    "maturity",
-  ]);
-  if (currentDebt) {
+  if (financingEvidence.hasAffirmativeCurrentDebtEvidence) {
     return {
       semantic_doc_role: "current_mortgage_statement",
       semantic_doc_role_reason: "explicit_current_debt_source_text",

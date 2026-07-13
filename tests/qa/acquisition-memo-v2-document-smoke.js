@@ -407,7 +407,7 @@ assert.equal(/canonical source package determines document roles/i.test(retest6F
 assert.equal(/V2 projection determines readiness/i.test(retest6FinalHtml), false);
 assert.equal(/Document-driven Acquisition Memo V2/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Acquisition Memo Summary/i);
-assert.match(retest6FinalHtml, /64-Unit Multifamily/i);
+assert.equal(/64-Unit Multifamily/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /ACQUISITION MEMO/i);
 assert.match(retest6FinalHtml, /Key Metrics Snapshot/i);
 assert.match(retest6FinalHtml, /Key Upside Drivers/i);

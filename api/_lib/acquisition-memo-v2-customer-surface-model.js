@@ -46,11 +46,13 @@ function normalizeText(value) {
 }
 
 function normalizeMoney(value) {
+  if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
 
 function normalizeCapRatio(value) {
+  if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   if (n > 1) return n / 100;
@@ -69,12 +71,14 @@ function isApprovedVisibleClassification(value) {
 }
 
 function formatMoneyForSurface(value) {
+  if (value === null || value === undefined || value === "") return "";
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
   return `$${Math.round(n).toLocaleString("en-US")}`;
 }
 
 function formatPercentForSurface(value) {
+  if (value === null || value === undefined || value === "") return "";
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
   const pct = Math.abs(n) <= 1 ? n * 100 : n;
@@ -84,6 +88,7 @@ function formatPercentForSurface(value) {
 }
 
 function formatYearsForSurface(value) {
+  if (value === null || value === undefined || value === "") return "";
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
   return `${Math.round(n)} years`;
@@ -159,6 +164,26 @@ function supportDocIdentityKeys(doc) {
   if (originalFilename) keys.push(`filename:${normalizeText(originalFilename)}`);
   if (keys.length === 0) keys.push(uniqueSupportDocKey(doc));
   return keys;
+}
+
+function normalizeCustomerSurfaceSupportRole(role) {
+  const normalized = String(role || "").trim().toLowerCase();
+  switch (normalized) {
+    case "current_debt":
+    case "current_mortgage_statement":
+    case "current_debt_terms":
+    case "mortgage_statement":
+      return "current_debt_context";
+    case "appraisal":
+    case "appraisal_valuation_context":
+      return "appraisal_context";
+    case "renovation_capex_context":
+      return "structured_renovation_capex_plan";
+    case "environmental_due_diligence_context":
+      return "environmental_context";
+    default:
+      return normalized;
+  }
 }
 
 function normalizeSupportDoc(doc, sourceKind = "support_doc") {
@@ -251,7 +276,7 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
   } else if (explicitAcceptedCurrentDebtTruth && !explicitAcceptedPurchaseTruth) {
     acceptedCurrentDebtTruth = true;
   }
-  const canonicalRole = String(
+  const canonicalRole = normalizeCustomerSurfaceSupportRole(
     normalizedAcceptedSemanticDocRole ||
       source.canonicalRole ||
       source.role ||
@@ -259,7 +284,7 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
       source.doc_type ||
       source.sourceRole ||
       ""
-  ).trim();
+  );
   const originalFilename = String(
     source.originalFilename ||
       source.original_filename ||
@@ -565,6 +590,9 @@ function collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection, b
     for (const doc of bucket) {
       const normalizedDoc = normalizeSupportDoc(doc);
       if (!normalizedDoc) continue;
+      // A role-only projection is an aggregate view, not another uploaded
+      // source. Customer surfaces count and render physical documents only.
+      if (!normalizedDoc.fileId && !normalizedDoc.originalFilename) continue;
       const keys = supportDocIdentityKeys(normalizedDoc);
       const matchedIndexes = Array.from(new Set(keys.filter((key) => seen.has(key)).map((key) => seen.get(key)))).sort((a, b) => a - b);
       if (matchedIndexes.length > 0) {
@@ -684,7 +712,17 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "acquisitionRequestContext") {
     const purchaseAssumptions = supportDocsByRole.purchase_assumptions || null;
     const proposed = purchaseAssumptions?.extractedFacts || {};
-    const purchaseAssumptionsSourceBacked = Boolean(purchaseAssumptions?.acceptedPurchaseAssumptionsTruth);
+    const purchaseAssumptionsSourcePresent = Boolean(section?.factAvailability?.sourcePresent || purchaseAssumptions?.acceptedPurchaseAssumptionsTruth);
+    const purchaseAssumptionsSourceBacked = section?.factAvailability?.sourceBacked === true && [
+      normalizeMoney(proposed.purchase_price),
+      normalizeMoney(proposed.noi_basis),
+      normalizeCapRatio(proposed.going_in_cap_rate),
+      normalizeMoney(proposed.proposed_loan_amount),
+      normalizeCapRatio(proposed.ltv),
+      normalizeCapRatio(proposed.interest_rate),
+      normalizeMoney(proposed.amortization_years),
+      normalizeCapRatio(proposed.lender_fee_percent),
+    ].every((value) => value !== null);
     if (!purchaseAssumptions || !purchaseAssumptionsSourceBacked) {
       return {
         ...section,
@@ -706,6 +744,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           available: [],
           missing: ["purchase_price", "proposed_loan_amount"],
           sourceBacked: false,
+          sourcePresent: purchaseAssumptionsSourcePresent,
         },
         boundaries: {
           purchaseAssumptionsRemainPurchaseAssumptions: true,
@@ -763,6 +802,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
               .includes(factName)
         ),
         sourceBacked: purchaseAssumptionsSourceBacked,
+        sourcePresent: purchaseAssumptionsSourcePresent,
       },
       sourceDoc: purchaseAssumptions,
     };
@@ -771,7 +811,14 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "currentDebtContext") {
     const currentDebt = supportDocsByRole.current_debt_context || null;
     const currentDebtFacts = currentDebt?.extractedFacts || {};
-    const currentDebtSourceBacked = Boolean(currentDebt?.acceptedCurrentDebtTruth);
+    const currentDebtSourcePresent = Boolean(section?.factAvailability?.sourcePresent || currentDebt?.acceptedCurrentDebtTruth);
+    const currentDebtSourceBacked = section?.factAvailability?.sourceBacked === true && [
+      normalizeMoney(currentDebtFacts.current_outstanding_balance),
+      normalizeCapRatio(currentDebtFacts.interest_rate),
+      normalizeMoney(currentDebtFacts.amortization_remaining_years),
+      normalizeMoney(currentDebtFacts.monthly_payment),
+      String(currentDebtFacts.maturity_date || "").trim() || null,
+    ].every((value) => value !== null);
     if (!currentDebt || !currentDebtSourceBacked) {
       return {
         ...section,
@@ -790,6 +837,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           available: [],
           missing: ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"],
           sourceBacked: false,
+          sourcePresent: currentDebtSourcePresent,
         },
         boundaries: {
           currentDebtIsNotPurchaseAssumptions: true,
@@ -838,6 +886,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
               .includes(factName)
         ),
         sourceBacked: currentDebtSourceBacked,
+        sourcePresent: currentDebtSourcePresent,
       },
       sourceDoc: currentDebt,
     };
@@ -846,7 +895,14 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "proposedFinancingContext") {
     const purchaseAssumptions = supportDocsByRole.purchase_assumptions || null;
     const proposed = purchaseAssumptions?.extractedFacts || {};
-    const purchaseAssumptionsSourceBacked = Boolean(purchaseAssumptions?.acceptedPurchaseAssumptionsTruth);
+    const purchaseAssumptionsSourcePresent = Boolean(section?.factAvailability?.sourcePresent || purchaseAssumptions?.acceptedPurchaseAssumptionsTruth);
+    const purchaseAssumptionsSourceBacked = section?.factAvailability?.sourceBacked === true && [
+      normalizeMoney(proposed.proposed_loan_amount),
+      normalizeCapRatio(proposed.ltv),
+      normalizeCapRatio(proposed.interest_rate),
+      normalizeMoney(proposed.amortization_years),
+      normalizeCapRatio(proposed.lender_fee_percent),
+    ].every((value) => value !== null);
     if (!purchaseAssumptions || !purchaseAssumptionsSourceBacked) {
       return {
         ...section,
@@ -865,6 +921,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           available: [],
           missing: ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"],
           sourceBacked: false,
+          sourcePresent: purchaseAssumptionsSourcePresent,
         },
         boundaries: {
           proposedFinancingIsNotCurrentDebt: true,
@@ -911,6 +968,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
               .includes(factName)
         ),
         sourceBacked: purchaseAssumptionsSourceBacked,
+        sourcePresent: purchaseAssumptionsSourcePresent,
       },
       sourceDoc: purchaseAssumptions,
     };
@@ -938,7 +996,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
           available: [],
           missing: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
-          sourceBacked: Boolean(appraisal),
+          sourceBacked: false,
+          sourcePresent: Boolean(section?.factAvailability?.sourcePresent || appraisal),
         },
         boundaries: {
           appraisalIsContextOnly: true,
@@ -978,7 +1037,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         })
           .filter(([, value]) => !(Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value))))
           .map(([keyName]) => keyName),
-        sourceBacked: true,
+        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        sourcePresent: Boolean(section?.factAvailability?.sourcePresent || appraisal),
       },
       sourceDoc: appraisal,
     };
@@ -1004,7 +1064,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: ["total_renovation_budget"],
           available: [],
           missing: ["total_renovation_budget"],
-          sourceBacked: Boolean(renovation),
+          sourceBacked: false,
+          sourcePresent: Boolean(section?.factAvailability?.sourcePresent || renovation),
         },
         boundaries: {
           renovationIsContextOnly: true,
@@ -1039,7 +1100,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         })
           .filter(([, value]) => !Number.isFinite(normalizeMoney(value)))
           .map(([keyName]) => keyName),
-        sourceBacked: true,
+        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        sourcePresent: Boolean(section?.factAvailability?.sourcePresent || renovation),
       },
       sourceDoc: renovation,
     };
@@ -1065,7 +1127,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: [],
           available: [],
           missing: [],
-          sourceBacked: Boolean(marketSurvey),
+          sourceBacked: false,
+          sourcePresent: Boolean(section?.factAvailability?.sourcePresent || marketSurvey),
         },
         boundaries: {
           marketSurveyIsContextOnly: true,
@@ -1095,7 +1158,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Array.isArray(value))
           .map(([keyName]) => keyName),
         missing: [],
-        sourceBacked: true,
+        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        sourcePresent: Boolean(section?.factAvailability?.sourcePresent || marketSurvey),
       },
       sourceDoc: marketSurvey,
     };
@@ -1118,7 +1182,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           required: [],
           available: [],
           missing: [],
-          sourceBacked: Boolean(environmental),
+          sourceBacked: false,
+          sourcePresent: Boolean(section?.factAvailability?.sourcePresent || environmental),
         },
         boundaries: {
           environmentalIsContextOnly: true,
@@ -1144,7 +1209,8 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           .filter(([, value]) => String(value || "").trim().length > 0)
           .map(([keyName]) => keyName),
         missing: [],
-        sourceBacked: true,
+        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        sourcePresent: Boolean(section?.factAvailability?.sourcePresent || environmental),
       },
       sourceDoc: environmental,
     };
@@ -1172,7 +1238,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         total_units: normalizeMoney(facts.total_units),
         occupancy: normalizeCapRatio(facts.occupancy),
         unit_mix: clone(facts.unit_mix || []),
-        units: Number.isFinite(normalizeMoney(facts.total_units)) ? normalizeMoney(facts.total_units) : clone(facts.units || []),
+        units: clone(facts.units || []),
         annual_in_place_rent: normalizeMoney(facts.annual_in_place_rent),
         annual_market_rent: normalizeMoney(facts.annual_market_rent),
       },
@@ -1685,7 +1751,10 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
   if (acceptedPurchaseAssumptionsPresent && /no purchase assumptions uploaded|purchase assumptions provided\s+no/i.test(htmlText)) {
     pushIssue("HTML_PURCHASE_ASSUMPTIONS_FALSE_MISSING", "Accepted purchase assumptions truth cannot be rendered as missing.", "critical", "html.purchaseAssumptions");
   }
-  if (acceptedCurrentDebtPresent && /no current debt|current debt maturity not available|current debt.*not available/i.test(htmlText)) {
+  if (
+    acceptedCurrentDebtPresent &&
+    /no (?:verified )?current debt(?: document| context)?|current debt maturity\s+(?:is\s+)?not available|current debt (?:document|context|balance|terms|service)\s+(?:is\s+)?not available/i.test(htmlText)
+  ) {
     pushIssue("HTML_CURRENT_DEBT_FALSE_MISSING", "Accepted current debt truth cannot be rendered as missing.", "critical", "html.currentDebtContext");
   }
   const labelChecks = [

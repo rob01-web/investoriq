@@ -123,10 +123,10 @@ assert.equal(sourceTruthPackage.core_publishable, true);
 assert.deepEqual(sourceTruthPackage.true_blockers, []);
 assert.equal(sourceTruthPackage.core_input_sufficiency_state?.publishability_bucket, "disclose_only_publishable");
 assert.equal(sourceTruthPackage.section_policy.source_reconciliation, "disclose");
-assert.equal(sourceTruthPackage.section_policy.renovation_strategy, "collapse");
+assert.equal(sourceTruthPackage.section_policy.renovation_strategy, "render");
 assert.equal(
-  sourceTruthPackage.support.rejected.some(
-    (entry) => entry.file_id === misleadingRenovation.file_id && entry.customer_delivery_blocker === false
+  sourceTruthPackage.support.accepted.some(
+    (entry) => entry.file_id === misleadingRenovation.file_id && entry.canonical_role === "renovation_capex_context"
   ),
   true
 );
@@ -141,7 +141,7 @@ const constrainedCanonicalSourcePackage = constrainCanonicalSourcePackageToSourc
 assert.equal(constrainedCanonicalSourcePackage.sourceTruthAuthority?.core_publishable, true);
 assert.equal(constrainedCanonicalSourcePackage.coreT12?.fileId, t12.file_id);
 assert.equal(constrainedCanonicalSourcePackage.coreRentRoll?.fileId, rentRoll.file_id);
-assert.equal(constrainedCanonicalSourcePackage.supportDocs.has(misleadingRenovation.file_id), false);
+assert.equal(constrainedCanonicalSourcePackage.supportDocs.has(misleadingRenovation.file_id), true);
 
 const invalidLaterT12Candidate = {
   id: "invalid-later-t12-candidate",

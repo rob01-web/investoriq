@@ -4,6 +4,10 @@ import {
   buildSourceReconciliationState,
   buildT12SufficiencyState,
 } from "./report-surface-contracts.js";
+import {
+  adjudicateSupportDocumentAuthority,
+  buildSupportDocumentAuthorityShadowComparison,
+} from "./support-document-authority-adjudicator.js";
 
 const SOURCE_TRUTH_MARKER = "canonical_source_truth_package";
 const SOURCE_TRUTH_SCHEMA_VERSION = 1;
@@ -86,6 +90,72 @@ function hasExplicitValidationRejection(payload = {}) {
   return payload?.core_t12_validation?.ok === false || payload?.validated === false;
 }
 
+function positiveNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0;
+}
+
+function expectedSupportSemanticRole(artifactType = "") {
+  const roles = {
+    loan_term_sheet_parsed: "purchase_assumptions",
+    mortgage_statement_parsed: "current_debt_context",
+    appraisal_parsed: "appraisal",
+    renovation_parsed: "structured_renovation_capex_plan",
+    property_tax_parsed: "property_tax",
+  };
+  return roles[String(artifactType || "").trim()] || null;
+}
+
+function hasCoherentSupportFacts(artifact = null) {
+  const payload = artifact?.payload || {};
+  switch (artifact?.type) {
+    case "loan_term_sheet_parsed":
+      return Boolean(
+        positiveNumber(payload.purchase_price) ||
+        positiveNumber(payload.proposed_loan_amount) ||
+        positiveNumber(payload.stated_acquisition_loan_amount) ||
+        positiveNumber(payload.derived_acquisition_loan_amount) ||
+        positiveNumber(payload.ltv)
+      );
+    case "mortgage_statement_parsed":
+      return Boolean(
+        positiveNumber(payload.outstanding_balance) ||
+        positiveNumber(payload.current_outstanding_balance) ||
+        positiveNumber(payload.current_loan_balance) ||
+        positiveNumber(payload.monthly_payment)
+      );
+    case "appraisal_parsed":
+      return positiveNumber(payload.appraised_value);
+    case "renovation_parsed":
+      return Boolean(positiveNumber(payload.total_budget) || (Array.isArray(payload.budget_rows) && payload.budget_rows.length > 0));
+    case "property_tax_parsed":
+      return positiveNumber(payload.annual_tax);
+    default:
+      return payload?.validated === true;
+  }
+}
+
+function isAcceptedSupportArtifact(artifact = null) {
+  if (!artifact || !String(artifact.type || "").endsWith("_parsed")) return false;
+  if (artifact.payload?.validated !== true) return false;
+  return hasCoherentSupportFacts(artifact);
+}
+
+function normalizeAcceptedSupportFacts(artifact = null) {
+  const payload = artifact?.payload || {};
+  const expectedRole = expectedSupportSemanticRole(artifact?.type);
+  if (!expectedRole) return payload;
+  const parserSemanticRole = payload?.semantic_doc_role || null;
+  return {
+    ...payload,
+    semantic_doc_role: expectedRole,
+    semantic_doc_role_reason: parserSemanticRole && parserSemanticRole !== expectedRole
+      ? "source_truth_role_fact_coherence_reconciliation"
+      : (payload?.semantic_doc_role_reason || "source_truth_validated_artifact_role"),
+    parser_semantic_doc_role: parserSemanticRole,
+  };
+}
+
 function resolveCoreFacts(artifact, type) {
   const nested = artifact?.payload?.[type];
   return nested && typeof nested === "object" && !Array.isArray(nested)
@@ -155,50 +225,119 @@ function buildSupportAuthority(artifacts, coreFileIds) {
     byFile.set(artifact.file_id, rows);
   }
 
-  const accepted = [];
-  const advisory = [];
-  const rejected = [];
+  const decisions = [];
+  const shadowComparisons = [];
   for (const [fileId, rows] of byFile.entries()) {
     const parsed = rows.filter((row) => row.type.endsWith("_parsed") && !["t12_parsed", "rent_roll_parsed"].includes(row.type));
-    const acceptedArtifact = parsed.find((row) => row.payload?.validated !== false) || null;
-    const rejectedArtifacts = rows.filter((row) => row.type.endsWith("_parse_error") || row.payload?.validated === false);
-    const textArtifact = rows.find((row) => row.type === "document_text_extracted") || null;
+    const acceptedArtifact = parsed.find(isAcceptedSupportArtifact) || null;
     const originalFilename = rows.find((row) => row.original_filename)?.original_filename || null;
+    shadowComparisons.push(
+      buildSupportDocumentAuthorityShadowComparison({
+        file: { file_id: fileId, original_filename: originalFilename },
+        artifacts: rows,
+        legacyDecision: acceptedArtifact?.payload || parsed[0]?.payload || null,
+      })
+    );
+    decisions.push(
+      adjudicateSupportDocumentAuthority({
+        file: { file_id: fileId, original_filename: originalFilename },
+        artifacts: rows,
+      })
+    );
+  }
 
-    if (acceptedArtifact) {
-      accepted.push({
-        file_id: fileId,
-        original_filename: acceptedArtifact.original_filename || originalFilename,
-        validated_role: acceptedArtifact.type.replace(/_parsed$/, ""),
-        artifact_id: acceptedArtifact.id,
-        accepted_facts: acceptedArtifact.payload,
-      });
-      continue;
-    }
-    if (rejectedArtifacts.length > 0) {
-      rejected.push({
-        file_id: fileId,
-        original_filename: originalFilename,
-        candidate_roles: [...new Set(rejectedArtifacts.map((row) => row.type.replace(/_parse_error$/, "")))],
-        artifact_ids: rejectedArtifacts.map((row) => row.id),
-        reasons: rejectedArtifacts
-          .map((row) => row.payload?.error_message || row.payload?.reason || row.payload?.rejection_reason || null)
-          .filter(Boolean),
-        customer_delivery_blocker: false,
-      });
-      continue;
-    }
-    if (textArtifact) {
-      advisory.push({
-        file_id: fileId,
-        original_filename: textArtifact.original_filename || originalFilename,
-        artifact_id: textArtifact.id,
-        status: "candidate_only",
-        customer_delivery_blocker: false,
-      });
+  const duplicateFileIds = new Set();
+  const firstByFingerprint = new Map();
+  for (const decision of [...decisions].sort((left, right) => String(left.fileId).localeCompare(String(right.fileId)))) {
+    if (!decision.sourceFingerprint) continue;
+    if (firstByFingerprint.has(decision.sourceFingerprint)) duplicateFileIds.add(decision.fileId);
+    else firstByFingerprint.set(decision.sourceFingerprint, decision.fileId);
+  }
+
+  const conflictingFileIds = new Set();
+  const acceptedByRole = new Map();
+  for (const decision of decisions) {
+    if (!decision.roleAccepted || duplicateFileIds.has(decision.fileId)) continue;
+    const bucket = acceptedByRole.get(decision.canonicalRole) || [];
+    bucket.push(decision);
+    acceptedByRole.set(decision.canonicalRole, bucket);
+  }
+  for (const roleDecisions of acceptedByRole.values()) {
+    for (let leftIndex = 0; leftIndex < roleDecisions.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < roleDecisions.length; rightIndex += 1) {
+        const left = roleDecisions[leftIndex];
+        const right = roleDecisions[rightIndex];
+        for (const field of Object.keys(left.acceptedFacts || {})) {
+          if (!(field in (right.acceptedFacts || {}))) continue;
+          if (String(left.acceptedFacts[field]) !== String(right.acceptedFacts[field])) {
+            conflictingFileIds.add(left.fileId);
+            conflictingFileIds.add(right.fileId);
+          }
+        }
+      }
     }
   }
-  return { accepted, advisory, rejected };
+
+  const validatedRoleByCanonicalRole = {
+    purchase_assumptions: "loan_term_sheet",
+    current_debt_context: "mortgage_statement",
+    appraisal_context: "appraisal",
+    renovation_capex_context: "renovation",
+    market_survey_context: "market_survey",
+    environmental_context: "environmental",
+    property_tax_support: "property_tax",
+    historical_debt_context: "historical_debt",
+  };
+  const primaryFileByRole = new Map();
+  for (const [role, roleDecisions] of acceptedByRole.entries()) {
+    const primary = roleDecisions
+      .filter((decision) => !duplicateFileIds.has(decision.fileId) && !conflictingFileIds.has(decision.fileId))
+      .sort((left, right) =>
+        Object.values(right.sectionEligibility || {}).filter(Boolean).length - Object.values(left.sectionEligibility || {}).filter(Boolean).length ||
+        Object.keys(right.acceptedFacts || {}).length - Object.keys(left.acceptedFacts || {}).length ||
+        String(left.fileId).localeCompare(String(right.fileId))
+      )[0] || null;
+    if (primary) primaryFileByRole.set(role, primary.fileId);
+  }
+  const accepted = decisions
+    .filter((decision) => decision.roleAccepted && !duplicateFileIds.has(decision.fileId) && !conflictingFileIds.has(decision.fileId))
+    .map((decision) => ({
+      file_id: decision.fileId,
+      original_filename: decision.originalFilename,
+      validated_role: validatedRoleByCanonicalRole[decision.canonicalRole] || decision.canonicalRole,
+      canonical_role: decision.canonicalRole,
+      artifact_id: null,
+      accepted_facts: decision.acceptedFacts,
+      accepted_fact_evidence: decision.acceptedFactEvidence,
+      section_eligibility: decision.sectionEligibility,
+      primary_for_role: primaryFileByRole.get(decision.canonicalRole) === decision.fileId,
+      authority_decision: decision,
+    }));
+  const advisory = decisions
+    .filter((decision) => !decision.roleAccepted || duplicateFileIds.has(decision.fileId) || conflictingFileIds.has(decision.fileId))
+    .map((decision) => ({
+      file_id: decision.fileId,
+      original_filename: decision.originalFilename,
+      status: duplicateFileIds.has(decision.fileId)
+        ? "duplicate"
+        : conflictingFileIds.has(decision.fileId)
+          ? "conflicting"
+          : decision.adjudicationState,
+      authority_decision: decision,
+      customer_delivery_blocker: false,
+    }));
+  const rejected = advisory
+    .filter((entry) => ["rejected", "unreadable"].includes(entry.status))
+    .map((entry) => ({ ...entry, reasons: [entry.status], customer_delivery_blocker: false }));
+  return {
+    accepted,
+    advisory,
+    rejected,
+    adjudication_decisions: decisions,
+    shadow_comparisons: shadowComparisons,
+    conflicts: [...conflictingFileIds],
+    duplicates: [...duplicateFileIds],
+  };
 }
 
 function hasAcceptedSupportRole(support, roles) {
@@ -271,21 +410,102 @@ export function constrainCanonicalSourcePackageToSourceTruth(
   if (!isCanonicalSourceTruthPackage(sourceTruthPackage)) {
     throw new Error("CANONICAL_SOURCE_TRUTH_PACKAGE_REQUIRED");
   }
-  const acceptedSupportFileIds = new Set(
-    toArray(sourceTruthPackage?.support?.accepted).map((entry) => String(entry?.file_id || "").trim()).filter(Boolean)
-  );
-  const legacySupportDocs = canonicalSourcePackage?.supportDocs instanceof Map
-    ? canonicalSourcePackage.supportDocs
-    : new Map();
+  const canonicalRoleLabels = {
+    purchase_assumptions: "Purchase Assumptions / Proposed Acquisition Financing Context",
+    current_debt_context: "Existing Debt Context / Current Mortgage / Debt Statement",
+    appraisal_context: "Appraisal / Valuation Context",
+    renovation_capex_context: "Renovation / CapEx Context",
+    market_survey_context: "Market Rent Survey Context",
+    environmental_context: "Environmental Due Diligence Context",
+    property_tax_support: "Property Tax Support",
+    historical_debt_context: "Historical Debt Context",
+  };
   const constrainedSupportDocs = new Map(
-    [...legacySupportDocs.entries()].filter(([fileId]) => acceptedSupportFileIds.has(String(fileId || "").trim()))
+    toArray(sourceTruthPackage?.support?.accepted)
+      .map((entry) => {
+        const fileId = String(entry?.file_id || "").trim();
+        const canonicalRole = String(entry?.canonical_role || entry?.accepted_facts?.acceptedSemanticDocRole || "").trim();
+        if (!fileId || !canonicalRole) return null;
+        const canonicalLabel = canonicalRoleLabels[canonicalRole] || "Other Support Document";
+        return [fileId, {
+          fileId,
+          originalFilename: entry?.original_filename || null,
+          sourceKind: "support_doc",
+          canonicalRole,
+          canonicalLabel,
+          roleLabel: canonicalLabel,
+          treatment: "Document-derived context",
+          use: "Canonical Source Truth accepted facts only.",
+          category: "Displayed / Limited Use",
+          allowedUses: [canonicalRole],
+          forbiddenUses: ["source_reclassification", "raw_parser_fallback"],
+          extractedFacts: entry?.accepted_facts || {},
+          sourceEvidence: entry?.accepted_fact_evidence || {},
+          sourceAuthorityVersion: `source_truth_v${SOURCE_TRUTH_SCHEMA_VERSION}`,
+          authorityBasis: SOURCE_TRUTH_MARKER,
+          acceptedSemanticDocRole: canonicalRole,
+          acceptedDebtBasis: canonicalRole === "purchase_assumptions"
+            ? "acquisition_financing_assumption"
+            : canonicalRole === "current_debt_context"
+              ? "current_debt_context"
+              : canonicalRole,
+          acceptedSemanticDocDisplayLabel: canonicalLabel,
+          acceptedSourceIdentityKey: `file:${fileId}`,
+          acceptedSourceTruth: {
+            hasPurchaseAssumptions: canonicalRole === "purchase_assumptions",
+            hasCurrentDebt: canonicalRole === "current_debt_context",
+          },
+          acceptedPurchaseAssumptionsTruth: canonicalRole === "purchase_assumptions",
+          acceptedCurrentDebtTruth: canonicalRole === "current_debt_context",
+          acceptedProvenance: {
+            acceptedSourceIdentityKey: `file:${fileId}`,
+            acceptedSemanticDocRole: canonicalRole,
+            authorityBasis: SOURCE_TRUTH_MARKER,
+          },
+          sectionEligibility: entry?.section_eligibility || {},
+          primaryForRole: entry?.primary_for_role === true,
+        }];
+      })
+      .filter(Boolean)
   );
+  for (const entry of toArray(sourceTruthPackage?.support?.advisory)) {
+    const fileId = String(entry?.file_id || "").trim();
+    if (!fileId || constrainedSupportDocs.has(fileId)) continue;
+    const authorityDecision = entry?.authority_decision || null;
+    const adjudicationStatus = String(entry?.status || authorityDecision?.adjudicationState || "unclassified").trim();
+    constrainedSupportDocs.set(fileId, {
+      fileId,
+      originalFilename: entry?.original_filename || null,
+      sourceKind: "support_doc",
+      canonicalRole: "unclassified_support",
+      canonicalLabel: "Source-Present Support Document / Not Authority-Accepted",
+      roleLabel: "Source-Present Support Document / Not Authority-Accepted",
+      treatment: `Source present / ${adjudicationStatus}`,
+      use: "Retained for source auditability; no accepted quantitative facts.",
+      category: "Source Present / Not Source-Backed",
+      allowedUses: ["source_presence_disclosure"],
+      forbiddenUses: ["source_reclassification", "raw_parser_fallback", "quantitative_fact_authority"],
+      extractedFacts: {},
+      sourceEvidence: {},
+      sourceAuthorityVersion: `source_truth_v${SOURCE_TRUTH_SCHEMA_VERSION}`,
+      authorityBasis: SOURCE_TRUTH_MARKER,
+      sourcePresent: authorityDecision?.sourcePresent === true,
+      roleAccepted: false,
+      factAccepted: false,
+      sourceBacked: false,
+      sectionDisplayReady: false,
+      candidateCanonicalRole: authorityDecision?.canonicalRole || null,
+      ambiguity: authorityDecision?.ambiguity || null,
+      adjudicationStatus,
+      primaryForRole: false,
+    });
+  }
   const t12FileId = String(sourceTruthPackage?.core?.t12?.file_id || "").trim();
   const rentRollFileId = String(sourceTruthPackage?.core?.rent_roll?.file_id || "").trim();
-  const legacyT12 = String(canonicalSourcePackage?.coreT12?.fileId || "").trim() === t12FileId
+  const legacyT12 = canonicalSourcePackage?.coreT12 && t12FileId && String(canonicalSourcePackage.coreT12.fileId || "").trim() === t12FileId
     ? canonicalSourcePackage.coreT12
     : null;
-  const legacyRentRoll = String(canonicalSourcePackage?.coreRentRoll?.fileId || "").trim() === rentRollFileId
+  const legacyRentRoll = canonicalSourcePackage?.coreRentRoll && rentRollFileId && String(canonicalSourcePackage.coreRentRoll.fileId || "").trim() === rentRollFileId
     ? canonicalSourcePackage.coreRentRoll
     : null;
 
@@ -302,6 +522,7 @@ export function constrainCanonicalSourcePackageToSourceTruth(
       "Core Quantitative Source - Rent Roll"
     ),
     supportDocs: constrainedSupportDocs,
+    supportAuthorityDecisions: toArray(sourceTruthPackage?.support?.adjudication_decisions),
     authorityVersion: `source_truth_v${SOURCE_TRUTH_SCHEMA_VERSION}`,
     sourceTruthAuthority: {
       source: sourceTruthPackage.source,

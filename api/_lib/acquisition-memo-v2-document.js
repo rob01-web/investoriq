@@ -95,6 +95,7 @@ function resolveValidGoingInCapRate({ coreMetrics = null, acquisitionMemoProject
 }
 
 function formatMoney(value) {
+  if (value === null || value === undefined || value === "") return "";
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
   const normalized = Object.is(n, -0) ? 0 : n;
@@ -102,13 +103,14 @@ function formatMoney(value) {
 }
 
 function formatPercentDisplay(value) {
+  if (value === null || value === undefined || value === "") return "";
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
   const pct = Math.abs(n) <= 1 ? n * 100 : n;
   return `${pct.toFixed(1)}%`;
 }
 
-function formatAssetIdentityForSurface({ customerSurfaceModel = null, sourcePackage = null, coreMetrics = null } = {}) {
+function formatAssetIdentityForSurface({ customerSurfaceModel = null, sourcePackage = null, coreMetrics = null, propertyProfile = null } = {}) {
   const unitCount = Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
     ? Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units)
     : Number.isFinite(Number(coreMetrics?.units))
@@ -120,6 +122,8 @@ function formatAssetIdentityForSurface({ customerSurfaceModel = null, sourcePack
     customerSurfaceModel?.identity?.assetClass ||
       sourcePackage?.propertyProfile?.assetClass ||
       sourcePackage?.propertyProfile?.asset_class ||
+      propertyProfile?.assetClass ||
+      propertyProfile?.asset_class ||
       coreMetrics?.assetClass ||
       ""
   ).trim();
@@ -523,6 +527,7 @@ function normalizeStructuredUnitMixRow(row) {
       row.bedroom_type ??
       row.bedroomType ??
       row.bedrooms ??
+      row.beds ??
       row.bedroom_count ??
       ""
   ).trim();
@@ -568,6 +573,7 @@ function deriveStructuredUnitMixRowsFromUnits(units) {
         unit.bedroom_type ??
         unit.bedroomType ??
         unit.bedrooms ??
+        unit.beds ??
         unit.bedroom_count ??
         ""
     ).trim();
@@ -627,12 +633,12 @@ function renderSourceDocRows(sourcePackage = null) {
   return rows;
 }
 
-function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics, customerSurfaceModel = null }) {
+function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics, propertyProfile = null, customerSurfaceModel = null }) {
   const modelIdentity = customerSurfaceModel?.identity || {};
   const supportDocCount = Number.isFinite(Number(customerSurfaceModel?.supportSourceCounts?.uniqueUploadedFileCount))
     ? Number(customerSurfaceModel.supportSourceCounts.uniqueUploadedFileCount)
     : getSupportDocs(sourcePackage).length;
-  const assetIdentity = formatAssetIdentityForSurface({ customerSurfaceModel, sourcePackage, coreMetrics });
+  const assetIdentity = formatAssetIdentityForSurface({ customerSurfaceModel, sourcePackage, coreMetrics, propertyProfile });
   const assetClass = String(modelIdentity?.assetClass || "").trim() || assetIdentity;
   const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
   const coverUnits = Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
@@ -785,25 +791,40 @@ function renderAcquisitionRequestContextSection({
   customerSurfaceModel = null,
 } = {}) {
   const modelSection = getCustomerSurfaceSection(customerSurfaceModel, "acquisitionRequestContext");
+  const proposedModelSection = getCustomerSurfaceSection(customerSurfaceModel, "proposedFinancingContext");
   const sectionContract = modelSection || getBossSectionContract(bossContract, "acquisitionRequestContext");
-  if (modelSection?.status === "collapsed") {
+  const proposedSectionContract = proposedModelSection || getBossSectionContract(bossContract, "proposedFinancingContext");
+  const canonicalMode = bossContract?.coreGate?.sourceTruthPackageValid === true;
+  const acquisitionSourceBacked = modelSection?.factAvailability?.sourceBacked === true;
+  const proposedFinancingSourceBacked = proposedModelSection?.factAvailability?.sourceBacked === true;
+  if (canonicalMode && !acquisitionSourceBacked && !proposedFinancingSourceBacked) {
     return renderSection("Acquisition Request Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
   }
-  if (sectionHasSourceBackedFacts(sectionContract) && sectionHasMissingRequiredFacts(sectionContract)) {
+  if (modelSection?.status === "collapsed" && proposedModelSection?.status === "collapsed") {
+    return renderSection("Acquisition Request Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
+  }
+  if (
+    sectionHasSourceBackedFacts(sectionContract) &&
+    sectionHasMissingRequiredFacts(sectionContract) &&
+    !(sectionHasSourceBackedFacts(proposedSectionContract) && !sectionHasMissingRequiredFacts(proposedSectionContract))
+  ) {
     return renderSection("Acquisition Request Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
   }
   const purchaseAssumptionsDoc = modelSection?.sourceDoc || getBossSupportDocByRole(bossContract, sourcePackage, "purchase_assumptions");
-  const acquisitionFacts = modelSection?.facts || {};
-  const purchasePrice = toFiniteNumber(acquisitionFacts?.purchase_price ?? coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.purchase_price ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price ?? purchaseAssumptionsDoc?.extractedFacts?.purchase_price ?? acquisitionTermsPayload?.purchase_price ?? acquisitionTermsPayload?.purchasePrice ?? NaN);
-  const noiBasis = toFiniteNumber(acquisitionFacts?.noi_basis ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? purchaseAssumptionsDoc?.extractedFacts?.noi_basis ?? acquisitionTermsPayload?.noi_basis ?? acquisitionTermsPayload?.noi ?? NaN);
+  const acquisitionFacts = {
+    ...(acquisitionSourceBacked && modelSection?.facts ? modelSection.facts : {}),
+    ...(proposedFinancingSourceBacked && proposedModelSection?.facts ? proposedModelSection.facts : {}),
+  };
+  const purchasePrice = toFiniteNumber(canonicalMode ? acquisitionFacts?.purchase_price : acquisitionFacts?.purchase_price ?? coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.purchase_price ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price ?? purchaseAssumptionsDoc?.extractedFacts?.purchase_price ?? acquisitionTermsPayload?.purchase_price ?? acquisitionTermsPayload?.purchasePrice ?? NaN);
+  const noiBasis = toFiniteNumber(canonicalMode ? acquisitionFacts?.noi_basis : acquisitionFacts?.noi_basis ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? purchaseAssumptionsDoc?.extractedFacts?.noi_basis ?? acquisitionTermsPayload?.noi_basis ?? acquisitionTermsPayload?.noi ?? NaN);
   const goingInCapRate = resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage, bossContract });
-  const proposedLoan = toFiniteNumber(acquisitionFacts?.proposed_loan_amount ?? acquisitionFacts?.loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.proposed_loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.loan_amount ?? acquisitionTermsPayload?.proposed_loan_amount ?? acquisitionTermsPayload?.loan_amount ?? acquisitionTermsPayload?.stated_acquisition_loan_amount ?? acquisitionTermsPayload?.proposed_acquisition_loan_amount ?? NaN);
-  const ltv = normalizePercentFraction(acquisitionFacts?.ltv ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.ltv ?? acquisitionTermsPayload?.ltv ?? acquisitionTermsPayload?.loan_to_value ?? acquisitionTermsPayload?.loanToValue);
-  const interestRate = normalizePercentFraction(acquisitionFacts?.interest_rate ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.interest_rate ?? acquisitionTermsPayload?.interest_rate ?? acquisitionTermsPayload?.interestRate ?? acquisitionTermsPayload?.rate);
-  const amortization = toFiniteNumber(acquisitionFacts?.amortization_years ?? acquisitionFacts?.amortization_remaining_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_remaining_years ?? acquisitionTermsPayload?.amortization_years ?? acquisitionTermsPayload?.amortizationYears ?? NaN);
-  const lenderFee = normalizePercentFraction(acquisitionFacts?.lender_fee_percent ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.lender_fee_percent ?? acquisitionTermsPayload?.lender_fee_percent ?? acquisitionTermsPayload?.lenderFeePercent ?? acquisitionTermsPayload?.origination_fee_percent);
-  const interestRateDisplay = Number.isFinite(interestRate) ? `${(interestRate * 100).toFixed(2)}%` : null;
-  const lenderFeeDisplay = Number.isFinite(lenderFee) ? `${(lenderFee * 100).toFixed(2)}%` : null;
+  const proposedLoan = toFiniteNumber(canonicalMode ? acquisitionFacts?.proposed_loan_amount : acquisitionFacts?.proposed_loan_amount ?? acquisitionFacts?.loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.proposed_loan_amount ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.loan_amount ?? acquisitionTermsPayload?.proposed_loan_amount ?? acquisitionTermsPayload?.loan_amount ?? acquisitionTermsPayload?.stated_acquisition_loan_amount ?? acquisitionTermsPayload?.proposed_acquisition_loan_amount ?? NaN);
+  const ltv = normalizePercentFraction(canonicalMode ? acquisitionFacts?.ltv : acquisitionFacts?.ltv ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.ltv ?? acquisitionTermsPayload?.ltv ?? acquisitionTermsPayload?.loan_to_value ?? acquisitionTermsPayload?.loanToValue);
+  const interestRate = normalizePercentFraction(canonicalMode ? acquisitionFacts?.interest_rate : acquisitionFacts?.interest_rate ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.interest_rate ?? acquisitionTermsPayload?.interest_rate ?? acquisitionTermsPayload?.interestRate ?? acquisitionTermsPayload?.rate);
+  const amortization = toFiniteNumber(canonicalMode ? acquisitionFacts?.amortization_years : acquisitionFacts?.amortization_years ?? acquisitionFacts?.amortization_remaining_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_remaining_years ?? acquisitionTermsPayload?.amortization_years ?? acquisitionTermsPayload?.amortizationYears ?? NaN);
+  const lenderFee = normalizePercentFraction(canonicalMode ? acquisitionFacts?.lender_fee_percent : acquisitionFacts?.lender_fee_percent ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.lender_fee_percent ?? acquisitionTermsPayload?.lender_fee_percent ?? acquisitionTermsPayload?.lenderFeePercent ?? acquisitionTermsPayload?.origination_fee_percent);
+  const interestRateDisplay = Number.isFinite(interestRate) ? formatPercentDisplay(interestRate) : null;
+  const lenderFeeDisplay = Number.isFinite(lenderFee) ? formatPercentDisplay(lenderFee) : null;
   const rows = [
     Number.isFinite(purchasePrice) ? `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(purchasePrice)}</td></tr>` : "",
     Number.isFinite(noiBasis) ? `<tr><td>NOI Basis</td><td style="font-weight:600;">${formatMoney(noiBasis)}</td></tr>` : "",
@@ -815,7 +836,18 @@ function renderAcquisitionRequestContextSection({
     lenderFeeDisplay ? `<tr><td>Lender / Origination Fee</td><td style="font-weight:600;">${lenderFeeDisplay}</td></tr>` : "",
   ].filter(Boolean).join("");
   if (!rows) return renderSection("Acquisition Request Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
-  return renderSection("Acquisition Request Context", `<table class="detail-table"><tbody>${rows}</tbody></table>`, { pageBreakBefore: true });
+  const acceptedContextLabels = [
+    acquisitionSourceBacked ? modelSection?.visibleLabel : null,
+    proposedFinancingSourceBacked ? proposedModelSection?.visibleLabel : null,
+  ].map((value) => String(value || "").trim()).filter((value, index, values) => value && values.indexOf(value) === index);
+  const acceptedContextLabelsHtml = acceptedContextLabels
+    .map((label) => `<p class="subsection-title">${escapeHtml(label)}</p>`)
+    .join("");
+  return renderSection(
+    "Acquisition Request Context",
+    `${acceptedContextLabelsHtml}<table class="detail-table"><tbody>${rows}</tbody></table>`,
+    { pageBreakBefore: true }
+  );
 }
 
 function renderOperatingSupportSection({ coreMetrics = null } = {}) {
@@ -859,6 +891,10 @@ function renderDebtFinancingContextSection({
 } = {}) {
   const modelSection = getCustomerSurfaceSection(customerSurfaceModel, "currentDebtContext");
   const currentDebtSection = modelSection || getBossSectionContract(bossContract, "currentDebtContext");
+  const canonicalMode = bossContract?.coreGate?.sourceTruthPackageValid === true;
+  if (canonicalMode && (!modelSection || modelSection?.factAvailability?.sourceBacked !== true)) {
+    return renderSection("Debt / Financing Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
+  }
   if (modelSection?.status === "collapsed") {
     return renderSection("Debt / Financing Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
   }
@@ -872,18 +908,18 @@ function renderDebtFinancingContextSection({
     || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext
     || null;
   const facts = currentDebt?.extractedFacts || {};
-  const currentDebtText = getSourceEvidenceText(currentDebt);
+  const currentDebtText = canonicalMode ? "" : getSourceEvidenceText(currentDebt);
   const outstandingBalance = Number.isFinite(toFiniteNumber(facts?.current_outstanding_balance))
     ? toFiniteNumber(facts.current_outstanding_balance)
     : Number.isFinite(toFiniteNumber(facts?.outstanding_balance))
     ? toFiniteNumber(facts.outstanding_balance)
-    : Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.current_outstanding_balance))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.current_outstanding_balance))
     ? toFiniteNumber(loanTermSheetTermsPayload.current_outstanding_balance)
-    : Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.outstanding_balance))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.outstanding_balance))
     ? toFiniteNumber(loanTermSheetTermsPayload.outstanding_balance)
-    : Number.isFinite(toFiniteNumber(mortgagePayload?.current_outstanding_balance))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(mortgagePayload?.current_outstanding_balance))
     ? toFiniteNumber(mortgagePayload.current_outstanding_balance)
-    : Number.isFinite(toFiniteNumber(mortgagePayload?.outstanding_balance))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(mortgagePayload?.outstanding_balance))
     ? toFiniteNumber(mortgagePayload.outstanding_balance)
     : extractCurrencyFromText(currentDebtText, [
         /\bcurrent outstanding balance[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
@@ -895,19 +931,19 @@ function renderDebtFinancingContextSection({
     /\binterest rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
     /\bnote rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
     /\bcoupon rate[:\s]+([0-9]+(?:\.[0-9]+)?)\s*%?/i,
-  ]) ?? normalizePercentFraction(loanTermSheetTermsPayload?.interest_rate ?? loanTermSheetTermsPayload?.rate ?? mortgagePayload?.interest_rate ?? mortgagePayload?.rate);
+  ]) ?? (canonicalMode ? null : normalizePercentFraction(loanTermSheetTermsPayload?.interest_rate ?? loanTermSheetTermsPayload?.rate ?? mortgagePayload?.interest_rate ?? mortgagePayload?.rate));
   const currentDebtRateDisplay = Number.isFinite(currentDebtRate) ? `${(currentDebtRate * 100).toFixed(2)}%` : null;
   const currentDebtAmortYears = Number.isFinite(toFiniteNumber(facts?.amortization_remaining_years))
     ? toFiniteNumber(facts.amortization_remaining_years)
     : Number.isFinite(toFiniteNumber(facts?.amortization_years))
     ? toFiniteNumber(facts.amortization_years)
-    : Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.amortization_remaining_years))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.amortization_remaining_years))
     ? toFiniteNumber(loanTermSheetTermsPayload.amortization_remaining_years)
-    : Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.amortization_years))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.amortization_years))
     ? toFiniteNumber(loanTermSheetTermsPayload.amortization_years)
-    : Number.isFinite(toFiniteNumber(mortgagePayload?.amortization_remaining_years))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(mortgagePayload?.amortization_remaining_years))
     ? toFiniteNumber(mortgagePayload.amortization_remaining_years)
-    : Number.isFinite(toFiniteNumber(mortgagePayload?.amort_years))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(mortgagePayload?.amort_years))
     ? toFiniteNumber(mortgagePayload.amort_years)
     : extractYears(currentDebtText, [
         /\bamortization remaining[:\s]+([0-9]+(?:\.[0-9]+)?)/i,
@@ -916,9 +952,9 @@ function renderDebtFinancingContextSection({
       ]);
   const currentDebtMonthlyPayment = Number.isFinite(toFiniteNumber(facts?.monthly_payment))
     ? toFiniteNumber(facts.monthly_payment)
-    : Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.monthly_payment))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(loanTermSheetTermsPayload?.monthly_payment))
     ? toFiniteNumber(loanTermSheetTermsPayload.monthly_payment)
-    : Number.isFinite(toFiniteNumber(mortgagePayload?.monthly_payment))
+    : !canonicalMode && Number.isFinite(toFiniteNumber(mortgagePayload?.monthly_payment))
     ? toFiniteNumber(mortgagePayload.monthly_payment)
     : extractCurrencyFromText(currentDebtText, [
         /\bmonthly payment[:\s]+\$?([0-9][0-9,]*(?:\.[0-9]+)?)/i,
@@ -928,7 +964,7 @@ function renderDebtFinancingContextSection({
   const maturityDate = String(facts?.maturity_date || facts?.maturityDate || extractDate(currentDebtText, [
     /\bmaturity date[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
     /\bmatures?[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
-  ]) || loanTermSheetTermsPayload?.maturity_date || loanTermSheetTermsPayload?.maturityDate || "").trim();
+  ]) || (canonicalMode ? "" : loanTermSheetTermsPayload?.maturity_date || loanTermSheetTermsPayload?.maturityDate) || "").trim();
   const rows = [
     Number.isFinite(outstandingBalance) ? `<tr><td>Current Outstanding Balance</td><td style="font-weight:600;">${formatMoney(outstandingBalance)}</td></tr>` : "",
     currentDebtRateDisplay ? `<tr><td>Interest Rate</td><td style="font-weight:600;">${currentDebtRateDisplay}</td></tr>` : "",
@@ -1076,36 +1112,38 @@ function renderCapRateValueSection({ acquisitionMemoProjection = null, sourcePac
 
 function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null, bossContract = null, customerSurfaceModel = null) {
   const rows = [];
-  const units = Number.isFinite(Number(coreMetrics?.units))
-    ? Number(coreMetrics.units)
-    : Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
-    ? Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units)
-    : Number.isFinite(Number(bossContract?.sourceTruth?.coreRentRoll?.extractedFacts?.total_units))
-    ? Number(bossContract.sourceTruth.coreRentRoll.extractedFacts.total_units)
-    : Number.isFinite(Number(sourcePackage?.coreRentRoll?.extractedFacts?.total_units))
-    ? Number(sourcePackage.coreRentRoll.extractedFacts.total_units)
-    : null;
-  const annualInPlace = Number(coreMetrics?.annualInPlaceRent);
-  const annualMarket = Number(coreMetrics?.annualMarketRent);
+  const units =
+    toFiniteNumber(coreMetrics?.units) ??
+    toFiniteNumber(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units) ??
+    toFiniteNumber(bossContract?.sourceTruth?.coreRentRoll?.extractedFacts?.total_units) ??
+    toFiniteNumber(sourcePackage?.coreRentRoll?.extractedFacts?.total_units);
+  const occupancy = toFiniteNumber(coreMetrics?.occupancy);
+  const annualInPlace = toFiniteNumber(coreMetrics?.annualInPlaceRent);
+  const annualMarket = toFiniteNumber(coreMetrics?.annualMarketRent);
+  const egi = toFiniteNumber(coreMetrics?.egi);
+  const opEx = toFiniteNumber(coreMetrics?.opEx);
+  const noi = toFiniteNumber(coreMetrics?.noi);
+  const expenseRatio = toFiniteNumber(coreMetrics?.expenseRatio);
+  const noiMargin = toFiniteNumber(coreMetrics?.noiMargin);
+  const breakEvenOccupancy = toFiniteNumber(coreMetrics?.breakEvenOccupancy);
   const annualUpside = Number.isFinite(annualInPlace) && Number.isFinite(annualMarket) ? annualMarket - annualInPlace : null;
   const rentGapPct = Number.isFinite(annualUpside) && Number.isFinite(annualInPlace) && annualInPlace > 0 ? annualUpside / annualInPlace : null;
-  const purchasePrice = Number(coreMetrics?.purchasePrice);
-  const noi = Number(coreMetrics?.noi);
+  const purchasePrice = toFiniteNumber(coreMetrics?.purchasePrice);
   const pricePerUnit = Number.isFinite(purchasePrice) && Number.isFinite(units) && units > 0 ? purchasePrice / units : null;
   const noiPerUnit = Number.isFinite(noi) && Number.isFinite(units) && units > 0 ? noi / units : null;
   if (Number.isFinite(units) && units > 0) rows.push(`<tr><td>Units</td><td style="font-weight:600;">${Math.round(units)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.occupancy))) rows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.annualInPlaceRent))) rows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualInPlaceRent)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.annualMarketRent))) rows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualMarketRent)}</td></tr>`);
+  if (Number.isFinite(occupancy)) rows.push(`<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(occupancy)}</td></tr>`);
+  if (Number.isFinite(annualInPlace)) rows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(annualInPlace)}</td></tr>`);
+  if (Number.isFinite(annualMarket)) rows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatMoney(annualMarket)}</td></tr>`);
   if (Number.isFinite(annualUpside)) rows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatMoney(annualUpside)}</td></tr>`);
   if (Number.isFinite(rentGapPct)) rows.push(`<tr><td>Rent Gap %</td><td style="font-weight:600;">${formatPercentDisplay(rentGapPct)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.egi))) rows.push(`<tr><td>EGI</td><td style="font-weight:600;">${formatMoney(coreMetrics.egi)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.opEx))) rows.push(`<tr><td>Operating Expenses</td><td style="font-weight:600;">${formatMoney(coreMetrics.opEx)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.noi))) rows.push(`<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(coreMetrics.noi)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.expenseRatio))) rows.push(`<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.expenseRatio)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.noiMargin))) rows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.noiMargin)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.breakEvenOccupancy))) rows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.breakEvenOccupancy)}</td></tr>`);
-  if (Number.isFinite(Number(coreMetrics?.purchasePrice))) rows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(coreMetrics.purchasePrice)}</td></tr>`);
+  if (Number.isFinite(egi)) rows.push(`<tr><td>EGI</td><td style="font-weight:600;">${formatMoney(egi)}</td></tr>`);
+  if (Number.isFinite(opEx)) rows.push(`<tr><td>Operating Expenses</td><td style="font-weight:600;">${formatMoney(opEx)}</td></tr>`);
+  if (Number.isFinite(noi)) rows.push(`<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(noi)}</td></tr>`);
+  if (Number.isFinite(expenseRatio)) rows.push(`<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercentDisplay(expenseRatio)}</td></tr>`);
+  if (Number.isFinite(noiMargin)) rows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercentDisplay(noiMargin)}</td></tr>`);
+  if (Number.isFinite(breakEvenOccupancy)) rows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(breakEvenOccupancy)}</td></tr>`);
+  if (Number.isFinite(purchasePrice)) rows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(purchasePrice)}</td></tr>`);
   const goingInCapRate = resolveValidGoingInCapRate({ coreMetrics, sourcePackage, bossContract });
   if (Number.isFinite(goingInCapRate)) rows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercentDisplay(goingInCapRate)}</td></tr>`);
   if (Number.isFinite(pricePerUnit)) rows.push(`<tr><td>Price per Unit</td><td style="font-weight:600;">${formatMoney(pricePerUnit)}</td></tr>`);
@@ -1326,7 +1364,7 @@ export function renderCompleteAcquisitionMemoV2Html({
     const propertyAddress = surfaceIdentity?.propertyAddress || propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
     const propertyTitle = surfaceIdentity?.propertyTitle || propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
     const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
-    const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics, customerSurfaceModel });
+    const coverSection = renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle, reportMeta, sourcePackage, coreMetrics, propertyProfile, customerSurfaceModel });
     const headerStrip = `<div class="header-strip">
       <div class="header-top">
         <div>
@@ -1348,7 +1386,10 @@ export function renderCompleteAcquisitionMemoV2Html({
     const valueSensitivitySection = renderSafely("Rent Upside / Value Sensitivity", () => renderValueSensitivitySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.rentUpsideValueSensitivity });
     const capRateValueSection = renderSafely("Cap-Rate Value Indication", () => renderCapRateValueSection({ acquisitionMemoProjection, sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.capRateValueIndication });
     const readinessSection = renderSafely("Preliminary Financing Readiness Summary", () => renderReadinessSection({ renderedAcquisitionMemo, acquisitionMemoProjection, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.preliminaryFinancingReadinessSummary });
-    const acquisitionRequestContextSection = renderSafely("Acquisition Request Context", () => renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, acquisitionTermsPayload, loanTermSheetTermsPayload, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.acquisitionRequestContext });
+    const acquisitionRequestSurfaceContract = bossSections.acquisitionRequestContext?.status !== "collapsed"
+      ? bossSections.acquisitionRequestContext
+      : bossSections.proposedFinancingContext;
+    const acquisitionRequestContextSection = renderSafely("Acquisition Request Context", () => renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, acquisitionTermsPayload, loanTermSheetTermsPayload, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: acquisitionRequestSurfaceContract });
     const operatingSupportSection = renderSafely("Operating Support", () => renderOperatingSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.operatingSupport });
     const rentValueSupportSection = renderSafely("Rent / Value Support", () => renderRentValueSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.rentValueSupport });
     const debtFinancingContextSection = renderSafely("Debt / Financing Context", () => renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage, loanTermSheetTermsPayload, mortgagePayload, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.debtFinancingContext });

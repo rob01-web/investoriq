@@ -1,9 +1,9 @@
 import assert from "assert";
 import fs from "fs";
 
-const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const reportSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 
-const screeningBranchAnchor = reportSource.indexOf('outputHtml = stripMarkedSection(outputHtml, "SECTION_7_REFI_STABILITY");');
+const screeningBranchAnchor = reportSource.indexOf('finalHtml = stripMarkedSection(finalHtml, "SECTION_7_REFI_STABILITY");');
 const screeningBranchStart = reportSource.lastIndexOf('if (effectiveReportMode === "screening_v1") {', screeningBranchAnchor);
 
 assert.ok(screeningBranchAnchor >= 0, "Missing screening branch anchor");
@@ -115,7 +115,7 @@ assert.equal(/renderCompleteAcquisitionMemoV2Html\(/.test(screeningBranchSource)
 assert.equal(/Preliminary Financing Readiness Summary/i.test(screeningBranchSource), false);
 assert.equal(/Source Context \/ Support Document Treatment/i.test(screeningBranchSource), false);
 
-const screeningLaneOutputAnchor = reportSource.search(/\b(?:const|let)\s+screeningLaneOutput\s*=/);
+const screeningLaneOutputAnchor = reportSource.search(/\bconst\s+screeningFinalization\s*=/);
 const acquisitionDocTreatmentAnchor = reportSource.indexOf("const richerDocumentTreatmentHtml = buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane({");
 const v2FinalizationAnchor = reportSource.indexOf('if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled && acquisitionMemoV2Bridge?.acquisitionMemoProjection)', screeningLaneOutputAnchor);
 assert.ok(screeningLaneOutputAnchor >= 0, "Missing screening lane output anchor");

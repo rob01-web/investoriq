@@ -18,6 +18,12 @@ const OPTIONAL_SECTION_KEYS = new Set([
   "methodologyDataTransparency",
 ]);
 
+const SOURCE_BACKED_CORE_SECTION_KEYS = new Set([
+  "unitMix",
+  "capRateValueIndication",
+  "operatingStatementTTMSummary",
+]);
+
 const REPAIRABLE_BOSS_CODES = new Map([
   ["ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "acquisitionRequestContext"],
   ["CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "currentDebtContext"],
@@ -213,6 +219,10 @@ export function buildAcquisitionMemoV2BossRepairPlan({
 
     const sectionKeys = extractRepairableSectionsFromViolation(violation);
     if (sectionKeys.length > 0) {
+      if (sectionKeys.some((sectionKey) => SOURCE_BACKED_CORE_SECTION_KEYS.has(sectionKey))) {
+        coreFatal.push(violation);
+        continue;
+      }
       repairableOptionalSupport.push(violation);
       for (const sectionKey of sectionKeys) repairableSectionKeys.add(sectionKey);
       continue;
@@ -240,13 +250,17 @@ export function applyAcquisitionMemoV2BossRepairPlan(customerSurfaceModel, repai
     const section = repaired?.sections?.[sectionKey];
     if (!isPlainObject(section)) continue;
     const existingFactAvailability = isPlainObject(section.factAvailability) ? section.factAvailability : null;
+    if (SOURCE_BACKED_CORE_SECTION_KEYS.has(sectionKey) && existingFactAvailability?.sourceBacked === true) {
+      continue;
+    }
     section.status = "collapsed";
     if (existingFactAvailability) {
       section.factAvailability = {
         required: Array.isArray(existingFactAvailability.required) ? clone(existingFactAvailability.required) : [],
         available: Array.isArray(existingFactAvailability.available) ? clone(existingFactAvailability.available) : [],
         missing: Array.isArray(existingFactAvailability.missing) ? clone(existingFactAvailability.missing) : [],
-        sourceBacked: Boolean(existingFactAvailability.sourceBacked),
+        sourceBacked: false,
+        sourcePresent: Boolean(existingFactAvailability.sourcePresent || existingFactAvailability.sourceBacked),
       };
     }
   }

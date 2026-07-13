@@ -16,6 +16,10 @@ import {
 import { recoverRentRollWithAI } from '../../lib/ai-rent-roll-recovery.js';
 import { recoverT12WithAI } from '../../lib/ai-t12-recovery.js';
 import { buildSupportDocTaxonomyState } from '../_lib/support-doc-taxonomy.js';
+import {
+  evaluateFinancingSemanticEvidence,
+  resolveFinancingParserRoute,
+} from '../_lib/support-doc-semantic-evidence.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 
@@ -25,20 +29,59 @@ const attachSupportDocTaxonomy = (payload, {
   originalFilename = null,
   rawText = null,
 } = {}) => {
+  const forbiddenAuthorityFields = new Set([
+    'validated',
+    'accepted_role',
+    'accepted_facts',
+    'acceptedSemanticDocRole',
+    'accepted_semantic_doc_role',
+    'canonical_role',
+    'canonicalRole',
+    'sourceBacked',
+    'source_backed',
+    'sectionDisplayReady',
+    'section_display_ready',
+    'semantic_doc_role',
+    'semantic_doc_role_confidence',
+    'semantic_doc_role_reason',
+    'semantic_doc_family',
+    'semantic_doc_display_label',
+  ]);
+  const candidatePayload = Object.fromEntries(
+    Object.entries(payload || {}).filter(([key]) => !forbiddenAuthorityFields.has(key))
+  );
   const taxonomy = buildSupportDocTaxonomyState({
     declaredDocType,
     detectedDocType,
     originalFilename,
     rawText,
-    payload,
+    payload: candidatePayload,
   });
+  const candidateFacts = Object.fromEntries(
+    Object.entries(candidatePayload).filter(([key, value]) =>
+      value !== null &&
+      value !== undefined &&
+      ![
+        'validated',
+        'candidate_only',
+        'candidate_span_validated',
+        'method',
+        'ai_assisted',
+        'confidence',
+        'parse_warnings',
+        'validation_diagnostics',
+        'ai_recovery_evidence',
+      ].includes(key)
+    )
+  );
   return {
-    ...payload,
-    semantic_doc_role: taxonomy.semantic_doc_role,
-    semantic_doc_role_confidence: taxonomy.semantic_doc_role_confidence,
-    semantic_doc_role_reason: taxonomy.semantic_doc_role_reason,
-    semantic_doc_family: taxonomy.semantic_doc_family,
-    semantic_doc_display_label: taxonomy.semantic_doc_display_label,
+    ...candidatePayload,
+    candidate_only: true,
+    candidate_role: taxonomy.semantic_doc_role,
+    candidate_facts: candidateFacts,
+    candidate_evidence: candidatePayload?.ai_recovery_evidence || null,
+    candidate_confidence: Number.isFinite(Number(candidatePayload?.confidence)) ? Number(candidatePayload.confidence) : null,
+    candidate_extractor: candidatePayload?.candidate_extractor || candidatePayload?.method || 'deterministic_support_doc_parser',
   };
 };
 
@@ -313,12 +356,8 @@ const detectExplicitSupportingDocTypeFromText = (text) => {
   ) {
     return 'renovation';
   }
-  if (leadHas(['EXISTING CURRENT DEBT STATEMENT', 'CURRENT MORTGAGE STATEMENT', 'CURRENT DEBT CONTEXT DOCUMENT ROLE'])) {
-    return 'mortgage_statement';
-  }
-  if (leadHas(['PURCHASE ASSUMPTIONS / PROPOSED ACQUISITION FINANCING', 'PURCHASE ASSUMPTIONS DOCUMENT ROLE'])) {
-    return 'loan_term_sheet';
-  }
+  const financingRoute = resolveFinancingParserRoute(lead);
+  if (financingRoute) return financingRoute;
   if (leadHas(['APPRAISAL SUMMARY / VALUATION CONTEXT', 'APPRAISAL SUMMARY DOCUMENT ROLE', 'APPRAISAL CONTEXT DOCUMENT ROLE'])) {
     return 'appraisal';
   }
@@ -446,9 +485,9 @@ function evaluateSupportingDocFinancingRoute(text = "") {
   const source = String(text || "");
   const norm = source.toUpperCase().replace(/\s+/g, " ");
   const has = (terms) => terms.some((t) => norm.includes(String(t || "").toUpperCase()));
-
-  const explicitCurrentDebtProof = /\b(?:current\s+mortgage\s+statement|existing\s+mortgage|true\s+(?:existing\s+)?current\s+debt|current\s+outstanding\s+principal\s+balance|unpaid\s+principal\s+balance|current\s+loan\s+balance|current\s+mortgage\s+balance|payoff\s+(?:statement|balance)|current\s+monthly\s+debt\s+service)\b/i.test(source);
-  const hasAcquisitionOrProposedFinancingText = /\b(?:acquisition\s+financing|indicative\s+acquisition\s+financing|proposed\s+loan(?:\s+amount)?|proposed\s+ltv|borrower\s+to\s+be\s+determined|purchaser|purchase\s+price|acquisition\s+price|loan\s+amount\s+at\s+purchase\s+price|not\s+a\s+financing\s+commitment)\b/i.test(source);
+  const semanticEvidence = evaluateFinancingSemanticEvidence(source);
+  const explicitCurrentDebtProof = semanticEvidence.hasAffirmativeCurrentDebtEvidence;
+  const hasAcquisitionOrProposedFinancingText = semanticEvidence.hasAffirmativeAcquisitionEvidence;
   const hasCurrentDebtBalancePhrase = /\b(?:outstanding\s+loan\s+balance|outstanding\s+balance|existing\s+debt\s+balance|current\s+loan\s+balance|current\s+outstanding\s+balance|current\s+mortgage\s+balance|unpaid\s+principal\s+balance)\b/i.test(source);
   const hasRateSignal = /\b(?:interest\s*rate|note\s*rate|coupon\s*rate|fixed\s*rate|loan\s*rate)\b/i.test(source);
   const hasAmortizationSignal = /\b(?:amortization|amort(?:\s+remaining)?|amort\s*[:\-]?)\b/i.test(source);
@@ -521,33 +560,8 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
   const explicitNorm = explicitText.toUpperCase().replace(/\s+/g, ' ');
   const explicitHas = (terms) => terms.some((term) => explicitNorm.includes(String(term || '').toUpperCase()));
   const explicitCount = (terms) => terms.filter((term) => explicitNorm.includes(String(term || '').toUpperCase())).length;
-  const explicitPurchaseAssumptions =
-    explicitHas([
-      "PURCHASE ASSUMPTIONS / PROPOSED ACQUISITION FINANCING",
-      "PURCHASE ASSUMPTIONS",
-      "PROPOSED ACQUISITION FINANCING",
-      "ACQUISITION CONTEXT",
-      "PURCHASE PRICE",
-      "GOING-IN CAP RATE",
-      "NOI BASIS",
-    ]);
-  if (explicitPurchaseAssumptions) return 'loan_term_sheet';
-
-  const explicitCurrentDebt =
-    explicitHas([
-      "EXISTING CURRENT DEBT STATEMENT",
-      "CURRENT OUTSTANDING BALANCE",
-      "CURRENT DEBT CONTEXT",
-      "CURRENT MORTGAGE STATEMENT",
-      "EXISTING MORTGAGE",
-      "TRUE CURRENT DEBT",
-      "OUTSTANDING PRINCIPAL",
-      "UNPAID PRINCIPAL",
-      "CURRENT LOAN BALANCE",
-      "MONTHLY PAYMENT",
-      "MATURITY",
-    ]);
-  if (explicitCurrentDebt) return 'mortgage_statement';
+  const financingRoute = resolveFinancingParserRoute(explicitText);
+  if (financingRoute) return financingRoute;
 
   const explicitRenovation =
     explicitHas([
@@ -590,12 +604,12 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
     has(['MARKET SURVEY', 'APPRAISAL SUMMARY', 'APPRAISAL EXCERPT', 'PHASE I ESA', 'ENVIRONMENTAL REPORT']);
   if (unsupportedSupportDoc) return 'supporting_documents_unclassified';
 
-  const financingRoute = evaluateSupportingDocFinancingRoute(text);
+  const evaluatedFinancingRoute = evaluateSupportingDocFinancingRoute(text);
   const currentDebtSignals = countMatches(SUPPORTING_DOC_ALIASES.mortgage_statement);
-  if (financingRoute.explicitDebtTermsProof) {
-    return 'loan_term_sheet';
+  if (evaluatedFinancingRoute.explicitDebtTermsProof) {
+    return 'mortgage_statement';
   }
-  if (financingRoute.explicitCurrentDebtProof && currentDebtSignals >= 2) {
+  if (evaluatedFinancingRoute.explicitCurrentDebtProof && currentDebtSignals >= 2) {
     return 'mortgage_statement';
   }
   const propertyTaxSignals = countMatches(SUPPORTING_DOC_ALIASES.property_tax);
@@ -5043,7 +5057,7 @@ export default async function handler(req, res) {
               if (Number.isFinite(parsed) && parsed >= 10000) candidates.push(parsed);
             };
             const explicitMatches = rawText.matchAll(
-              /loan amount(?:\s*\([^)]*\))?\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/gi
+              /(?:proposed\s+acquisition\s+loan|proposed\s+loan(?:\s+amount)?|loan amount)(?:\s*\([^)]*\))?\s*[:\-]?\s*\$?\s*([\d,]+(?:\.\d{2})?)/gi
             );
             for (const match of explicitMatches) addCandidate(match[1]);
             const compactLoanMatches = rawText.matchAll(
@@ -5128,6 +5142,14 @@ export default async function handler(req, res) {
               'acquisition closing costs',
               'transaction costs',
               'acquisition costs',
+            ]);
+
+          const lender_fee_percent =
+            extractPercentNear(rawText, [
+              'lender / origination fee',
+              'lender fee',
+              'origination fee',
+              'financing fee',
             ]);
 
           const interest_rate =
@@ -5224,8 +5246,18 @@ export default async function handler(req, res) {
             closing_costs_percent,
             isValidClosingCostsPercent
           );
+          const validatedLenderFeePercent = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.lender_fee_percent,
+            lender_fee_percent,
+            isValidClosingCostsPercent
+          );
 
-          let validatedDerivedAcquisitionLoanAmount = derived_acquisition_loan_amount;
+          const validatedStatedAcquisitionLoanAmount = mergeValidatedAcquisitionField(
+            maybeAiAcquisitionRecovery?.proposed_loan_amount ?? maybeAiAcquisitionRecovery?.stated_acquisition_loan_amount,
+            loan_amount,
+            isValidPurchasePrice
+          );
+          let validatedDerivedAcquisitionLoanAmount = validatedStatedAcquisitionLoanAmount ?? derived_acquisition_loan_amount;
           if (
             !Number.isFinite(validatedDerivedAcquisitionLoanAmount) &&
             Number.isFinite(validatedPurchasePrice) &&
@@ -5280,6 +5312,8 @@ export default async function handler(req, res) {
             current_outstanding_balance: shouldExposeCurrentDebtAliases ? outstanding_balance : null,
             current_loan_balance: shouldExposeCurrentDebtAliases ? outstanding_balance : null,
             loan_amount,
+            proposed_loan_amount: validatedStatedAcquisitionLoanAmount,
+            stated_acquisition_loan_amount: validatedStatedAcquisitionLoanAmount,
             purchase_price: validatedPurchasePrice,
             derived_acquisition_loan_amount: validatedDerivedAcquisitionLoanAmount,
             debt_basis: normalizedDebtBasis,
@@ -5289,6 +5323,7 @@ export default async function handler(req, res) {
             amort_years: validatedAmortYears,
             going_in_cap_rate: validatedGoingInCapRate,
             closing_costs_percent: validatedClosingCostsPercent,
+            lender_fee_percent: validatedLenderFeePercent,
             refi_cap_rate,
             parse_warnings,
             ai_recovery_evidence: maybeAiAcquisitionRecovery?.ai_recovery_evidence || null,
@@ -5706,12 +5741,15 @@ export default async function handler(req, res) {
                 ai_assisted: acquisitionRecovery.ai_assisted,
                 validated: acquisitionRecovery.validated,
                 purchase_price: acquisitionRecovery.purchase_price,
+                proposed_loan_amount: acquisitionRecovery.proposed_loan_amount,
+                stated_acquisition_loan_amount: acquisitionRecovery.stated_acquisition_loan_amount,
                 ltv: acquisitionRecovery.ltv,
                 interest_rate: acquisitionRecovery.interest_rate,
                 amortization_years: acquisitionRecovery.amortization_years,
                 amort_years: acquisitionRecovery.amort_years,
                 going_in_cap_rate: acquisitionRecovery.going_in_cap_rate,
                 closing_costs_percent: acquisitionRecovery.closing_costs_percent,
+                lender_fee_percent: acquisitionRecovery.lender_fee_percent,
                 derived_acquisition_loan_amount: acquisitionRecovery.derived_acquisition_loan_amount,
                 debt_basis: acquisitionRecovery.debt_basis,
                 parse_warnings: acquisitionRecovery.parse_warnings,
@@ -5743,10 +5781,11 @@ export default async function handler(req, res) {
                 userId: fileRow.user_id || null,
                 fileId: fileRow.id,
                 filename: fileRow.original_filename,
+                supportDocRecoveryType: 'acquisition_purchase_assumptions',
                 initialDocType: effectiveDocType,
                 declaredDocType,
                 detectedDocType,
-                eligibleAcquisitionRecovery,
+                eligibleRecovery: eligibleAcquisitionRecovery,
                 diagnostics: acquisitionRecoveryDiagnostics,
               });
             }

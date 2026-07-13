@@ -1,3 +1,5 @@
+import { evaluateFinancingSemanticEvidence } from "./support-doc-semantic-evidence.js";
+
 function toText(value) {
   return String(value ?? "")
     .replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028\u2029\u2060\ufeff\ufffe\uffff]/g, " ")
@@ -103,6 +105,55 @@ function collectTextParts(source = {}, artifacts = []) {
   return parts.join("\n");
 }
 
+function collectDocumentEvidenceText(source = {}, artifacts = []) {
+  const parts = [];
+  const push = (value) => {
+    const text = String(value ?? "").trim();
+    if (text) parts.push(text);
+  };
+  const sourceIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(source);
+  for (const value of [
+    source?.source_text,
+    source?.raw_text,
+    source?.extracted_text,
+    source?.document_text_extracted,
+    source?.text,
+    source?.excerpt,
+    source?.payload?.source_text,
+    source?.payload?.raw_text,
+    source?.payload?.extracted_text,
+    source?.payload?.document_text_extracted,
+    source?.payload?.text,
+    source?.payload?.excerpt,
+  ]) push(value);
+
+  for (const artifact of toArray(artifacts)) {
+    if (!artifact || typeof artifact !== "object") continue;
+    const artifactSource = artifact?.payload && typeof artifact.payload === "object" ? artifact.payload : artifact;
+    const artifactIdentityKey =
+      getAcquisitionMemoV2SupportDocIdentityKey(artifactSource) ||
+      getAcquisitionMemoV2SupportDocIdentityKey(artifact);
+    if (!sourceIdentityKey || !artifactIdentityKey || artifactIdentityKey !== sourceIdentityKey) continue;
+    const artifactType = String(artifact?.type || artifactSource?.type || "").trim();
+    if (artifactType && artifactType !== "document_text_extracted") continue;
+    for (const value of [
+      artifact?.source_text,
+      artifact?.raw_text,
+      artifact?.extracted_text,
+      artifact?.document_text_extracted,
+      artifact?.text,
+      artifact?.excerpt,
+      artifactSource?.source_text,
+      artifactSource?.raw_text,
+      artifactSource?.extracted_text,
+      artifactSource?.document_text_extracted,
+      artifactSource?.text,
+      artifactSource?.excerpt,
+    ]) push(value);
+  }
+  return [...new Set(parts)].join("\n");
+}
+
 function findArtifactField(source = {}, artifacts = [], fieldNames = []) {
   for (const fieldName of toArray(fieldNames)) {
     const value =
@@ -124,9 +175,8 @@ function findArtifactField(source = {}, artifacts = [], fieldNames = []) {
 
 function hasCurrentDebtEvidenceInSource(source = {}, text = "") {
   const normalizedText = toText(text);
-  const currentDebtSignals =
-    /(existing current debt statement|current debt context|existing current debt|current debt terms|current mortgage|existing debt|current mortgage statement|current debt|debt statement)/i.test(normalizedText) &&
-    /(current outstanding balance|outstanding principal|outstanding balance|principal balance|monthly payment|maturity date|amortization remaining|remaining years|current loan balance|mortgage balance|loan balance)/i.test(normalizedText);
+  const semanticEvidence = evaluateFinancingSemanticEvidence(normalizedText);
+  const currentDebtSignals = semanticEvidence.hasAffirmativeCurrentDebtEvidence;
 
   const currentDebtFieldsPresent =
     firstFinite(
@@ -148,9 +198,8 @@ function hasCurrentDebtEvidenceInSource(source = {}, text = "") {
 
 function hasPurchaseAssumptionsEvidenceInSource(source = {}, text = "") {
   const normalizedText = toText(text);
-  const purchaseSignals =
-    /(purchase assumptions|proposed acquisition financing|proposed acquisition loan|acquisition financing assumption|purchase price|going[-\s]*in cap|noi basis|ltv|lender fee|origination fee|financing fee)/i.test(normalizedText) &&
-    /(purchase price|going[-\s]*in cap|noi basis|proposed acquisition loan|proposed loan amount|ltv|lender fee|interest rate|amortization)/i.test(normalizedText);
+  const semanticEvidence = evaluateFinancingSemanticEvidence(normalizedText);
+  const purchaseSignals = semanticEvidence.hasAffirmativeAcquisitionEvidence;
 
   const purchaseFieldsPresent =
     firstFinite(
@@ -388,7 +437,8 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
   acceptedTruth = null,
 } = {}) {
   const text = collectTextParts(source, artifacts);
-  const normalizedText = String(text || "").toLowerCase();
+  const documentEvidenceText = collectDocumentEvidenceText(source, artifacts);
+  const normalizedText = String(documentEvidenceText || "").toLowerCase();
   const acceptedSourceIdentityKey = getAcquisitionMemoV2SupportDocIdentityKey(source);
   const parserSemanticDocRole = normalizeIdentityToken(
     acceptedTruth?.semanticDocRole ||
@@ -412,8 +462,8 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
       ""
   ).trim();
   const parserRole = normalizeAcquisitionMemoV2CanonicalRole(parserSemanticDocRole || parserDebtBasis || parserDisplayLabel);
-  const hasCurrentDebtEvidence = hasCurrentDebtEvidenceInSource(source, text);
-  const hasPurchaseAssumptionsEvidence = hasPurchaseAssumptionsEvidenceInSource(source, text);
+  const hasCurrentDebtEvidence = hasCurrentDebtEvidenceInSource(source, documentEvidenceText);
+  const hasPurchaseAssumptionsEvidence = hasPurchaseAssumptionsEvidenceInSource(source, documentEvidenceText);
   const hasHistoricalOnlyRenovation = hasHistoricalOnlyRenovationSignalsLocal(normalizedText, source);
   const hasRenovationEvidence = hasRenovationEvidenceLocal(normalizedText, source);
   const hasEnvironmentalEvidence = Boolean(/(phase\s*i|phase\s*1|esa|environment|environmental|site assessment)/i.test(normalizedText));
@@ -427,14 +477,26 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
   );
   const hasMarketSurveyEvidence = Boolean(/(market survey|rent survey|rent comp|rent comparable)/i.test(normalizedText));
   const hasCoreT12Evidence = Boolean(
-    parserRole === "core_t12" ||
-      firstFinite(source?.gross_potential_rent, source?.effective_gross_income, source?.total_operating_expenses, source?.net_operating_income, source?.gross_scheduled_rent) != null
+    firstFinite(source?.effective_gross_income) != null &&
+      firstFinite(source?.total_operating_expenses) != null &&
+      firstFinite(source?.net_operating_income) != null
+  );
+  const hasStructuredRentRollRows = Boolean(
+    Array.isArray(source?.units) && source.units.length > 0 ||
+      Array.isArray(source?.unit_mix) && source.unit_mix.length > 0
   );
   const hasCoreRentRollEvidence = Boolean(
-    parserRole === "core_rent_roll" ||
-      firstFinite(source?.total_units, source?.occupied_units, source?.in_place_rent_annual, source?.market_rent_annual) != null ||
-      Array.isArray(source?.unit_mix) && source.unit_mix.length > 0 ||
-      Array.isArray(source?.units) && source.units.length > 0
+    hasStructuredRentRollRows ||
+      (
+        firstFinite(source?.total_units) != null &&
+        firstFinite(
+          source?.occupied_units,
+          source?.occupancy,
+          source?.occupancy_rate,
+          source?.in_place_rent_annual,
+          source?.market_rent_annual
+        ) != null
+      )
   );
 
   const currentDebtFieldCount = [
@@ -454,6 +516,16 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     firstFinite(source?.amortization_years, source?.amort_years),
     firstFinite(source?.lender_fee_percent, source?.closing_costs_percent, source?.financing_fee_percent, source?.origination_fee_percent),
   ].filter(Boolean).length;
+  const hasPurchaseSpecificStructuredEvidence = firstFinite(
+    source?.purchase_price,
+    source?.acquisition_price,
+    source?.asking_price,
+    source?.stated_acquisition_loan_amount,
+    source?.proposed_loan_amount,
+    source?.ltv,
+    source?.lender_fee_percent,
+    source?.origination_fee_percent
+  ) != null;
 
   const roleCandidates = [
     {
@@ -572,10 +644,15 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
   const bestCandidate = roleCandidates.find((candidate) => candidate.hasPositiveEvidence === true) || null;
   const acceptedTruthSemanticDocRole = normalizeIdentityToken(acceptedTruth?.semanticDocRole);
   const acceptedTruthDebtBasis = normalizeIdentityToken(acceptedTruth?.debtBasis);
-  const hasAcceptedTruthRole = acceptedTruthSemanticDocRole.length > 0;
-  const sovereignAcceptedSemanticDocRole = hasAcceptedTruthRole
-    ? normalizeAcquisitionMemoV2CanonicalRole(acceptedTruthSemanticDocRole)
-    : null;
+  const proposedSovereignRole = normalizeAcquisitionMemoV2CanonicalRole(acceptedTruthSemanticDocRole);
+  const proposedSovereignCandidate = roleCandidates.find((candidate) => candidate.role === proposedSovereignRole) || null;
+  const hasAcceptedTruthRole = Boolean(
+    acceptedTruthSemanticDocRole.length > 0 &&
+    proposedSovereignCandidate?.hasPositiveEvidence === true &&
+    (proposedSovereignRole !== "purchase_assumptions" || hasPurchaseAssumptionsEvidence || hasPurchaseSpecificStructuredEvidence) &&
+    (proposedSovereignRole !== "current_debt_context" || hasCurrentDebtEvidence || currentDebtFieldCount >= 2)
+  );
+  const sovereignAcceptedSemanticDocRole = hasAcceptedTruthRole ? proposedSovereignRole : null;
   const selectedCandidate = hasAcceptedTruthRole
     ? roleCandidates.find((candidate) => candidate.role === sovereignAcceptedSemanticDocRole) || null
     : bestCandidate;
@@ -638,6 +715,8 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
       },
       evidence: {
         roleCandidates,
+        currentDebtScore: Number(roleCandidates.find((candidate) => candidate.role === "current_debt_context")?.score || 0),
+        purchaseScore: Number(roleCandidates.find((candidate) => candidate.role === "purchase_assumptions")?.score || 0),
         hasCurrentDebtEvidence,
         hasPurchaseAssumptionsEvidence,
         hasHistoricalOnlyRenovation,
@@ -693,6 +772,8 @@ function buildAcquisitionMemoV2SupportDocRoleDecision({
     },
     evidence: {
       roleCandidates,
+      currentDebtScore: Number(roleCandidates.find((candidate) => candidate.role === "current_debt_context")?.score || 0),
+      purchaseScore: Number(roleCandidates.find((candidate) => candidate.role === "purchase_assumptions")?.score || 0),
       hasCurrentDebtEvidence,
       hasPurchaseAssumptionsEvidence,
       hasHistoricalOnlyRenovation,

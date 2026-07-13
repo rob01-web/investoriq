@@ -36,7 +36,6 @@ import {
   formatAssumptionAttributionLabel,
   formatCurrentDebtAssessmentCopy,
 } from "./acquisition-memo-v2-surface-copy.js";
-import { buildCanonicalSourcePackage } from "./canonical-source-package.js";
 import {
   buildCanonicalSourceTruthPackage,
   constrainCanonicalSourcePackageToSourceTruth,
@@ -49,10 +48,6 @@ import {
   validateAcquisitionMemoBossContract,
 } from "./acquisition-memo-boss-contract.js";
 import { runAcquisitionMemoV2Pipeline } from "./acquisition-memo-v2-pipeline.js";
-import {
-  buildAcquisitionMemoV2SupportDocAuthorityRows as buildAcquisitionMemoV2SupportDocAuthorityRowsLane,
-  canonicalizeAcquisitionMemoV2DocumentTreatmentSources as canonicalizeAcquisitionMemoV2DocumentTreatmentSourcesLane,
-} from "./acquisition-memo-v2-role-reconciler.js";
 import {
   buildAcquisitionMemoV2DocumentTreatmentSummaryHtml as buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane,
   buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtml as buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtmlLane,
@@ -4637,11 +4632,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         console.error("Failed to persist source_truth_package artifact:", sourceTruthArtifactErr);
       }
     }
-    const acqMemoV2SourceAuthorityEnabled =
-      process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY === "true" ||
-      body?.__test_enable_acq_memo_v2_source_authority === true;
+    const acqMemoV2SourceAuthorityEnabled = effectiveReportMode === "v1_core";
     let acquisitionMemoV2Bridge = null;
     let acquisitionMemoV2Finalization = null;
+    const sourceTruthCanonicalSourcePackage = constrainCanonicalSourcePackageToSourceTruth(
+      null,
+      sourceTruthPackageResult
+    );
     // --- V2 SOURCE AUTHORITY BRIDGE START ---
     if (effectiveReportMode === "v1_core" && acqMemoV2SourceAuthorityEnabled) {
       const testAcqMemoV2SourcePackage =
@@ -4650,13 +4647,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         !Array.isArray(body.__test_acq_memo_v2_source_package)
           ? body.__test_acq_memo_v2_source_package
           : null;
-      const unconstrainedCanonicalSourcePackage =
-        testAcqMemoV2SourcePackage ||
-        buildCanonicalSourcePackage(coverageFiles, coverageArtifacts);
-      const canonicalSourcePackage = constrainCanonicalSourcePackageToSourceTruth(
-        unconstrainedCanonicalSourcePackage,
-        sourceTruthPackageResult
-      );
+      const canonicalSourcePackage = testAcqMemoV2SourcePackage
+        ? constrainCanonicalSourcePackageToSourceTruth(testAcqMemoV2SourcePackage, sourceTruthPackageResult)
+        : sourceTruthCanonicalSourcePackage;
       const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage);
       const renderedAcquisitionMemo = renderAcquisitionMemo(acquisitionMemoProjection);
       acquisitionMemoV2Bridge = {
@@ -4666,26 +4659,16 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         renderedAcquisitionMemo,
       };
     }
-    const supportFileRows = Array.isArray(coverageFiles)
-      ? coverageFiles.filter((file) => {
-        const text = String([
-          file?.original_filename,
-          file?.doc_type,
-          file?.display_doc_type,
-        ].filter(Boolean).join(" ")).toLowerCase();
-        return !/(t12|rent[_\s-]*roll)/i.test(text);
-      })
-      : [];
-    const canonicalSupportDocAuthorityRows = buildAcquisitionMemoV2SupportDocAuthorityRowsLane({
-      documentSources: supportFileRows,
-      artifacts: coverageArtifacts,
-      loanTermSheetTermsPayload,
-      acquisitionTermsPayload,
-      mortgagePayload,
-      renovationPayload: null,
-      propertyTaxPayload,
-      appraisalPayload,
-    });
+    const canonicalSupportDocAuthorityRows = Array.from(sourceTruthCanonicalSourcePackage.supportDocs.values()).map((doc) => ({
+      ...doc,
+      file_id: doc.fileId,
+      original_filename: doc.originalFilename,
+      canonical_support_doc_role: doc.canonicalRole,
+      document_role_label: doc.roleLabel,
+      treatment_label: doc.treatment,
+      use_label: doc.use,
+      ...(doc.extractedFacts || {}),
+    }));
     const canonicalSupportDocMap = new Map();
     const canonicalSupportDocAuthorityMapRows = [];
     const supportDocMapKeyForRow = (row = {}) => String(
@@ -4717,11 +4700,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         map_keys_written: [mapKey],
         extracted_text_present: Boolean(extractedText),
         extracted_text_snippet: extractedText ? extractedText.slice(0, 500) : null,
-        parser_role: authority?.semantic_doc_role || null,
-        parser_display_label: authority?.semantic_doc_display_label || null,
         authority_source: authority?.authoritySource || authority?.authority_source || null,
-        final_canonical_role: authority?.canonical_support_doc_role || authority?.semantic_doc_role || null,
-        final_display_label: authority?.document_role_label || authority?.semantic_doc_display_label || null,
+        final_canonical_role: authority?.canonical_support_doc_role || null,
+        final_display_label: authority?.document_role_label || null,
         treatment: authority?.treatment_label || authority?.treatment || null,
         use: authority?.use_label || authority?.use || null,
         confidence: Number.isFinite(Number(authority?.confidence)) ? Number(authority.confidence) : null,
@@ -4775,20 +4756,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       expenseRatio: expenseRatioR,
       noiMargin: noiMarginR,
       breakEvenOccupancy: breakEvenOccR,
-      purchasePrice: Number.isFinite(coerceNumber(acquisitionTermsPayload?.purchase_price))
-        ? coerceNumber(acquisitionTermsPayload?.purchase_price)
-        : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.purchase_price))
-          ? coerceNumber(loanTermSheetTermsPayload?.purchase_price)
-          : Number.isFinite(coerceNumber(renderAcquisitionAuthorityRow?.purchase_price))
-            ? coerceNumber(renderAcquisitionAuthorityRow?.purchase_price)
-          : null,
-      goingInCapRate: Number.isFinite(coerceNumber(acquisitionTermsPayload?.going_in_cap_rate))
-        ? coerceNumber(acquisitionTermsPayload?.going_in_cap_rate)
-        : Number.isFinite(coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate))
-          ? coerceNumber(loanTermSheetTermsPayload?.going_in_cap_rate)
-          : Number.isFinite(coerceNumber(renderAcquisitionAuthorityRow?.going_in_cap_rate))
-            ? coerceNumber(renderAcquisitionAuthorityRow?.going_in_cap_rate)
-          : null,
+      purchasePrice: Number.isFinite(coerceNumber(renderAcquisitionAuthorityRow?.purchase_price))
+        ? coerceNumber(renderAcquisitionAuthorityRow.purchase_price)
+        : null,
+      goingInCapRate: Number.isFinite(coerceNumber(renderAcquisitionAuthorityRow?.going_in_cap_rate))
+        ? coerceNumber(renderAcquisitionAuthorityRow.going_in_cap_rate)
+        : null,
       acquisitionNoiBasis: execNoi,
       hasForwardLookingRenovationInputs,
       renovationDisplayMode: null,
@@ -5542,8 +5515,19 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       "{{SCREENING_REFI_DATA_SUFFICIENCY_BLOCK}}",
       screeningRefiSufficiencyHtml
     );
-    let renovationPayload = null;
-    if (jobId) {
+    const renovationAuthorityRows = acquisitionMemoRenderContext?.canonicalSupportDocMap instanceof Map && acquisitionMemoRenderContext.canonicalSupportDocMap.size > 0
+      ? Array.from(acquisitionMemoRenderContext.canonicalSupportDocMap.values()).filter((row) => row && typeof row === "object")
+      : Array.isArray(acquisitionMemoRenderContext?.supportDocAuthorityRows) && acquisitionMemoRenderContext.supportDocAuthorityRows.length > 0
+      ? acquisitionMemoRenderContext.supportDocAuthorityRows
+      : [];
+    const canonicalRenovationAuthorityRow = renovationAuthorityRows.find((row) =>
+      row?.canonicalRole === "renovation_capex_context" ||
+      row?.canonical_support_doc_role === "renovation_capex_context"
+    ) || null;
+    let renovationPayload = effectiveReportMode === "v1_core"
+      ? canonicalRenovationAuthorityRow?.extractedFacts || null
+      : null;
+    if (effectiveReportMode !== "v1_core" && jobId) {
       const { data: renovationArtifact } = await supabase
         .from("analysis_artifacts")
         .select("payload")
@@ -5604,46 +5588,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           renovationPayload?.payback_period,
         ].some((value) => hasMeaningfulRenovationText(value))
     );
-    const renovationFilenameTerms = [
-      "capex",
-      "cap ex",
-      "capital expenditure",
-      "capital expenditures",
-      "capital plan",
-      "capital budget",
-      "renovation",
-      "renovations",
-      "renovation budget",
-      "reno",
-      "budget",
-      "construction budget",
-      "scope of work",
-      "improvement",
-      "improvements",
-    ];
-    const renovationSourceFilenames = Array.isArray(documentSources) ? documentSources
-      .map((row) => String(row?.original_filename || "").trim())
-      .filter((name) => {
-        const lower = name.toLowerCase();
-        return lower && renovationFilenameTerms.some((term) => lower.includes(term));
-      }) : [];
-    const renovationAuthorityRows = acquisitionMemoRenderContext?.canonicalSupportDocMap instanceof Map && acquisitionMemoRenderContext.canonicalSupportDocMap.size > 0
-      ? Array.from(acquisitionMemoRenderContext.canonicalSupportDocMap.values()).filter((row) => row && typeof row === "object")
-      : Array.isArray(acquisitionMemoRenderContext?.supportDocAuthorityRows) && acquisitionMemoRenderContext.supportDocAuthorityRows.length > 0
-      ? acquisitionMemoRenderContext.supportDocAuthorityRows
-      : buildAcquisitionMemoV2SupportDocAuthorityRowsLane({
-          documentSources,
-          renovationPayload,
-        });
-    const canonicalRenovationAuthorityRow = renovationAuthorityRows.find((row) =>
-      row?.role === "structured_renovation" ||
-      row?.role === "renovation_capex_budget_context" ||
-      /structured_renovation|renovation_capex_budget_context|renovation|capex/i.test(String(row?.canonical_support_doc_role || row?.semantic_doc_role || row?.document_role_label || row?.treatment_label || ""))
-    ) || null;
-    const hasRenovationFilenameSignal = renovationSourceFilenames.length > 0;
     const hasRenovationAuthoritySignal = Boolean(canonicalRenovationAuthorityRow);
-    const renovationSourceFilenameText = renovationSourceFilenames.map((name) => escapeHtml(name)).join(", ");
-    const renovationAcknowledgmentHtml = !hasRenovationFilenameSignal && !hasRenovationAuthoritySignal
+    const renovationAcknowledgmentHtml = !hasRenovationAuthoritySignal
       ? ""
       : canonicalRenovationAuthorityRow?.role === "structured_renovation" ||
         hasForwardLookingRenovationAssumptions ||
@@ -6790,7 +6736,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         alignDealScorecardVisibleClassificationHtml,
         resolveCanonicalDataCoverageHeadlineState,
         buildDealScorecardState,
-        buildScreeningRefiSufficiencyTable,
+        buildScreeningRefiSufficiencyTable: screeningReportRenderer.buildScreeningRefiSufficiencyTable,
         sourceReconciliationCapActive,
         coreSupportInsufficient,
         debtCoverageConstraintActive,
@@ -7141,15 +7087,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         }
       }
     }
-    if (isFullRenderHarness) {
-      const htmlStringRaw =
-        typeof safeHtml === "string"
-          ? safeHtml
-          : safeHtml && typeof safeHtml === "object" && typeof safeHtml.html === "string"
-            ? safeHtml.html
-            : String(safeHtml || "");
-      let htmlString = sanitizeTypography(htmlStringRaw);
-    }
 // 9. Send to DocRaptor (STILL IN TEST MODE)
 const htmlStringRaw =
   typeof safeHtml === "string"
@@ -7250,6 +7187,7 @@ try {
     hasDebtTermsPayload(mortgagePayload);
   const acquisitionFinancingInputsUsable =
     effectiveReportMode === "v1_core" &&
+    !acquisitionMemoV2OwnsFinalHtml &&
     isFinitePositive(loanTermSheetTermsPayload?.purchase_price) &&
     isFinitePositive(loanTermSheetTermsPayload?.ltv) &&
     isFinitePositive(loanTermSheetTermsPayload?.interest_rate) &&
@@ -7259,6 +7197,7 @@ try {
     /Proposed Acquisition Financing Context|Acquisition Financing Readiness|Proposed Loan Amount|Documented LTV/i.test(htmlString);
   const acquisitionFinancingReadinessInputsUsable =
     effectiveReportMode === "v1_core" &&
+    !acquisitionMemoV2OwnsFinalHtml &&
     /acquisition|proposed|purchase/i.test(
       String(
         loanTermSheetTermsPayload?.debt_basis ||
@@ -7342,7 +7281,7 @@ try {
       admin_check: "Inspect launch acquisition financing readiness rendering and section gating.",
     });
   }
-  if (effectiveReportMode === "v1_core" && !acquisitionPurchasePricePresent && isFinitePositive(loanTermSheetTermsPayload?.ltv)) {
+  if (effectiveReportMode === "v1_core" && !acquisitionMemoV2OwnsFinalHtml && !acquisitionPurchasePricePresent && isFinitePositive(loanTermSheetTermsPayload?.ltv)) {
     qaFlags.push({
       code: "ACQUISITION_FINANCING_FIELD_LIMITED",
       severity: "medium",
@@ -7355,7 +7294,7 @@ try {
       admin_check: "Review canonical acquisition field extraction for purchase price support.",
     });
   }
-  if (effectiveReportMode === "v1_core" && !acquisitionStatedLoanPresent && !isFinitePositive(loanTermSheetTermsPayload?.derived_acquisition_loan_amount)) {
+  if (effectiveReportMode === "v1_core" && !acquisitionMemoV2OwnsFinalHtml && !acquisitionStatedLoanPresent && !isFinitePositive(loanTermSheetTermsPayload?.derived_acquisition_loan_amount)) {
     qaFlags.push({
       code: "ACQUISITION_FINANCING_FIELD_LIMITED",
       severity: "medium",
@@ -7368,7 +7307,7 @@ try {
       admin_check: "Review canonical acquisition field extraction for stated loan amount support.",
     });
   }
-  if (effectiveReportMode === "v1_core" && !acquisitionLenderFeePresent) {
+  if (effectiveReportMode === "v1_core" && !acquisitionMemoV2OwnsFinalHtml && !acquisitionLenderFeePresent) {
     qaFlags.push({
       code: "ACQUISITION_FINANCING_FIELD_LIMITED",
       severity: "low",
@@ -7380,7 +7319,7 @@ try {
       admin_check: "Confirm fee terms were absent or unparseable in source acquisition support.",
     });
   }
-  if (effectiveReportMode === "v1_core" && loanTermSheetTermsPayload?.debt_basis === "acquisition_financing_assumption") {
+  if (effectiveReportMode === "v1_core" && !acquisitionMemoV2OwnsFinalHtml && loanTermSheetTermsPayload?.debt_basis === "acquisition_financing_assumption") {
     qaFlags.push({
       code: "ACQUISITION_NOT_CURRENT_DEBT_CLASSIFICATION",
       severity: "low",
@@ -7396,6 +7335,7 @@ try {
 
   if (
     effectiveReportMode === "v1_core" &&
+    !acquisitionMemoV2OwnsFinalHtml &&
     !isFinitePositive(parsedDebtBalance) &&
     !acquisitionFinancingDerivedOnlyRendered &&
     (debtArtifactWithMissingBalance || (debtLookingFile && debtTermsPresent))
@@ -7835,9 +7775,7 @@ try {
   sourceCoverageQa.support_document_authority_rows = supportDocAuthorityRowsForQa;
   sourceCoverageQa.document_treatment_canonical_rows = supportDocAuthorityRowsForQa.length > 0
     ? supportDocAuthorityRowsForQa
-    : canonicalizeAcquisitionMemoV2DocumentTreatmentSourcesLane(
-      Array.isArray(sourceCoverageQa?.uploaded_files) ? sourceCoverageQa.uploaded_files : []
-    );
+    : [];
   if (typeof finalHtml === "string" && /Proposed Acquisition Financing Context|Source-complete inputs provided \/ available for future underwriting\./i.test(finalHtml)) {
     const renderedSignals = Array.isArray(sourceCoverageQa.rendered_text_signals)
       ? sourceCoverageQa.rendered_text_signals
@@ -7928,8 +7866,8 @@ try {
       bucket: "internal",
       object_path: `analysis_jobs/${jobId || "unknown"}/canonical_support_doc_authority/${canonicalSupportDocAuthorityTimestamp}.json`,
       payload: {
-        canonical_support_doc_entries: canonicalSupportDocEntries,
-        canonical_support_doc_count: canonicalSupportDocEntries.length,
+        canonical_support_doc_entries: supportDocAuthorityRowsForQa,
+        canonical_support_doc_count: supportDocAuthorityRowsForQa.length,
       },
     },
   ]);
@@ -8652,6 +8590,30 @@ try {
       };
       throw finalBossError;
     }
+  }
+  if (isFullRenderHarness) {
+    const harnessDeliveryState =
+      acquisitionMemoV2Finalization?.finalDeliveryDecision ||
+      acquisitionMemoV2Finalization?.deliveryState ||
+      deliveryDecisionStateResult ||
+      null;
+    const harnessDeliveryAliases = buildDeliveryResponseCompatibilityAliases(harnessDeliveryState);
+    return res.status(200).json({
+      success: true,
+      report_type: reportType,
+      report_mode: effectiveReportMode,
+      final_html: docHtml,
+      qa_html: qaHtml,
+      deliveryDecisionState: harnessDeliveryState,
+      delivery_gate_status: harnessDeliveryAliases.delivery_gate_status,
+      hold_delivery: harnessDeliveryAliases.hold_delivery,
+      customer_delivery_allowed: harnessDeliveryAliases.customer_delivery_allowed,
+      report_publishable: harnessDeliveryAliases.report_publishable,
+      report_blocked: harnessDeliveryAliases.report_blocked,
+      customer_delivery_ready: harnessDeliveryAliases.customer_delivery_ready,
+      customer_publish_eligible: harnessDeliveryAliases.customer_publish_eligible,
+      test_harness: true,
+    });
   }
   pdfResponse = await axios.post(
     "https://docraptor.com/docs",

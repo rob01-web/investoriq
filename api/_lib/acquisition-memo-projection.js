@@ -8,38 +8,12 @@ function isCanonicalSupportDocEntry(entry) {
   return Boolean(entry) && typeof entry === "object";
 }
 
-function getAcceptedSupportDocRole(entry) {
-  return String(
-    entry?.acceptedSemanticDocRole ||
-      entry?.accepted_semantic_doc_role ||
-      entry?.acceptedProvenance?.acceptedSemanticDocRole ||
-      entry?.acceptedProvenance?.accepted_semantic_doc_role ||
-      entry?.accepted_provenance?.acceptedSemanticDocRole ||
-      entry?.accepted_provenance?.accepted_semantic_doc_role ||
-      ""
-  ).trim();
-}
-
-function roleMatchesProjectionBucket(role, bucket) {
-  const normalizedRole = String(role || "").trim();
-  const normalizedBucket = String(bucket || "").trim();
-  if (!normalizedRole || !normalizedBucket) return false;
-  if (normalizedRole === normalizedBucket) return true;
-  const aliases = {
-    structured_renovation_capex_plan: ["renovation_capex_context"],
-    appraisal_context: ["appraisal_valuation_context"],
-    environmental_context: ["environmental_due_diligence_context"],
-  };
-  const bucketAliases = aliases[normalizedBucket] || [];
-  if (bucketAliases.includes(normalizedRole)) return true;
-  const roleAliases = Object.entries(aliases).find(([, values]) => values.includes(normalizedRole));
-  return Boolean(roleAliases && roleAliases[0] === normalizedBucket);
-}
-
 function isSupportRole(entry, role) {
-  const acceptedRole = getAcceptedSupportDocRole(entry);
-  if (acceptedRole) return roleMatchesProjectionBucket(acceptedRole, role);
-  return roleMatchesProjectionBucket(String(entry?.canonicalRole || "").trim(), role);
+  return String(entry?.canonicalRole || "").trim() === String(role || "").trim();
+}
+
+function selectAdjudicatedPrimaryByRole(entries, role) {
+  return entries.find((entry) => entry?.primaryForRole === true && isSupportRole(entry, role)) || null;
 }
 
 function cloneEntry(entry) {
@@ -83,7 +57,7 @@ function buildChecklist(projection) {
     },
     {
       label: "Proposed acquisition loan terms complete",
-      value: Boolean(projection?.supportDocProjection?.purchaseAssumptions?.extractedFacts?.proposed_loan_amount),
+      value: projection?.supportDocProjection?.purchaseAssumptions?.sectionEligibility?.proposedFinancing === true,
     },
     {
       label: "Property tax support",
@@ -106,12 +80,12 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
     : new Map();
 
   const allSupportDocs = Array.from(supportDocsMap.values()).filter(isCanonicalSupportDocEntry);
-  const purchaseAssumptions = allSupportDocs.find((entry) => isSupportRole(entry, "purchase_assumptions")) || null;
-  const currentDebtContext = allSupportDocs.find((entry) => isSupportRole(entry, "current_debt_context")) || null;
-  const structuredRenovation = allSupportDocs.find((entry) => isSupportRole(entry, "structured_renovation_capex_plan")) || null;
-  const appraisalContext = allSupportDocs.find((entry) => isSupportRole(entry, "appraisal_context")) || null;
-  const marketSurveyContext = allSupportDocs.find((entry) => isSupportRole(entry, "market_survey_context")) || null;
-  const environmentalContext = allSupportDocs.find((entry) => isSupportRole(entry, "environmental_context")) || null;
+  const purchaseAssumptions = selectAdjudicatedPrimaryByRole(allSupportDocs, "purchase_assumptions");
+  const currentDebtContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "current_debt_context");
+  const structuredRenovation = selectAdjudicatedPrimaryByRole(allSupportDocs, "structured_renovation_capex_plan");
+  const appraisalContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "appraisal_context");
+  const marketSurveyContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "market_survey_context");
+  const environmentalContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "environmental_context");
   const otherSupportDocs = allSupportDocs.filter(
     (entry) =>
       !isSupportRole(entry, "purchase_assumptions") &&
@@ -149,6 +123,15 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
     financingReadinessSignals: {
       hasPurchaseAssumptions: Boolean(purchaseAssumptions),
       hasCurrentDebtContext: Boolean(currentDebtContext),
+      purchaseAssumptionsSourcePresent: Array.isArray(canonicalSourcePackage?.supportAuthorityDecisions) && canonicalSourcePackage.supportAuthorityDecisions.some((decision) =>
+        decision?.canonicalRole === "purchase_assumptions" || decision?.semanticEvidence?.families?.acquisition_financing?.hasAffirmativeEvidence === true
+      ),
+      currentDebtSourcePresent: Array.isArray(canonicalSourcePackage?.supportAuthorityDecisions) && canonicalSourcePackage.supportAuthorityDecisions.some((decision) =>
+        decision?.canonicalRole === "current_debt_context" || decision?.semanticEvidence?.families?.current_debt?.hasAffirmativeEvidence === true
+      ),
+      acquisitionRequestDisplayReady: purchaseAssumptions?.sectionEligibility?.acquisitionRequest === true,
+      proposedFinancingDisplayReady: purchaseAssumptions?.sectionEligibility?.proposedFinancing === true,
+      currentDebtDisplayReady: currentDebtContext?.sectionEligibility?.currentDebt === true,
       hasStructuredRenovation: Boolean(structuredRenovation),
       hasAppraisalContext: Boolean(appraisalContext),
       hasMarketSurveyContext: Boolean(marketSurveyContext),
@@ -157,7 +140,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
     sourceAuthorityDiagnostic: {
       competingDecisionMakersEliminated: true,
       authorityVersion: "v2",
-      classifiedBy: "buildCanonicalSourcePackage",
+      classifiedBy: "canonical_source_truth_support_adjudicator",
       projectedBy: "buildAcquisitionMemoProjection",
     },
   };

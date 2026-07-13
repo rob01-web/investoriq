@@ -1238,10 +1238,17 @@ export function buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts) {
       }
   }
 
+  const primaryRoles = new Set();
+  for (const doc of [...supportDocs.values()].sort((left, right) => String(left.fileId || "").localeCompare(String(right.fileId || "")))) {
+    const role = String(doc?.acceptedSemanticDocRole || doc?.canonicalRole || "").trim();
+    doc.primaryForRole = Boolean(role) && !primaryRoles.has(role);
+    if (doc.primaryForRole) primaryRoles.add(role);
+  }
+
   return {
     coreT12,
     coreRentRoll,
     supportDocs,
-    authorityVersion: "v2",
+    authorityVersion: "legacy_fixture_v2",
   };
 }

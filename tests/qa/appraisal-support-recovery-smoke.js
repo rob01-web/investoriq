@@ -48,7 +48,7 @@ const appraisalCandidate = validateAppraisalCandidate(
   formalAppraisalText
 );
 
-assert.equal(appraisalCandidate.method, "ai_support_doc_recovery_validated");
+assert.equal(appraisalCandidate.method, "ai_support_doc_candidate_evidence_checked");
 assert.equal(appraisalCandidate.appraised_value, 12500000);
 assert.equal(appraisalCandidate.cap_rate, 4.99);
 assert.equal(appraisalCandidate.value_basis, "as_is");
