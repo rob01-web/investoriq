@@ -1,33 +1,35 @@
-# July 13, 2026 Morning Checkpoint — Six-Patch Support Authority Repair Implemented Locally / Final UnitMix Provenance HOLD / Admin Quality Dashboard Next
+# July 15, 2026 Active Continuation - P0-A Through P0-D PASS Locally / Controlled Live Acquisition Proof Next
 
-### This addendum supersedes the July 12 commit `6c15de1` live-retest checkpoint as the active continuation point.
+### The July 15 Semantic Authority and Publication Evidence Addendum at the end of this ledger is the controlling continuation point. The July 13 evidence below remains historical evidence only.
 
 ## Current exact state
 
 ```text
-LAST PROTECTED COMMIT:
-6c15de1
-Lock Source Truth delivery authority and terminal failure gates.
+CURRENT COMMITTED BASELINE:
+414945a
+updates
 
 CURRENT WORKING TREE:
 DIRTY / UNCOMMITTED.
-Contains Sol's six-patch Support Document Authority repair plus test updates.
+Contains the accepted Support Document Authority repair and P0-A through P0-D local bundle.
 
 DEPLOYMENT:
 NO.
 
 LIVE RETEST:
-NO.
+One controlled Acquisition proof authorized after commit and deployment.
 
 PRODUCTION CERTIFICATION:
 HOLD.
 
-NEXT ACTIVE BLOCKER:
-REPAIR_PROVENANCE_REGRESSION on unitMix sourceBacked preservation.
+NEXT ACTIVE BOUNDARY:
+Commit and deploy, then run one controlled live Acquisition retest in DocRaptor test mode.
 
 ADMIN QUALITY INCIDENT DASHBOARD:
-MANDATORY NEXT MAJOR FEATURE after the active authority repair is frozen, accepted, and committed.
+MANDATORY after the controlled live proof and Canonical Report Quality Manifest.
 ```
+
+## Historical July 13 checkpoint evidence begins below
 
 ## Why the architecture was reopened after `6c15de1`
 
@@ -7834,3 +7836,135 @@ a final gate that does not require full final compliance
 ```
 
 That is the root evidence base for the next Codex execution phase.
+
+---
+
+# July 15, 2026 Semantic Authority and Publication Evidence Addendum
+
+This addendum preserves the accepted July 13 authority work and records the completed P0 customer-egress and publication proof. Earlier next-task instructions are historical only.
+
+## Authority state after P0-A through P0-D
+
+```text
+Raw extraction
+-> deterministic semantic evidence
+-> optional evidence-bound AI candidate analysis
+-> exact source-excerpt/value validation
+-> conflict and ambiguity adjudication
+-> canonical accepted role and fact bundle in Source Truth
+-> consume-only Projection
+-> consume-only Boss Contract
+-> consume-only CustomerSurfaceModel
+-> deterministic calculations and reconciliation
+-> deterministic Contract QA Seal
+-> Delivery Seal
+-> final PDF rendering
+-> Final PDF Publication Quality Boss
+-> storage/publication
+```
+
+No P0 change grants AI, filename, parser route, artifact type, taxonomy, renderer, or compatibility alias independent truth authority.
+
+## Permanent RETEST 24 evidence
+
+Sanitized fixture:
+
+```text
+tests/qa/fixtures/retest24-sanitized-permanent-replay.json
+```
+
+Replay owner:
+
+```text
+tests/qa/p0d-retest24-permanent-regression-replay-smoke.js
+```
+
+The replay binds source excerpts to these accepted, role-separated facts:
+
+```text
+purchase_assumptions:
+  purchase price 13,500,000
+  NOI basis 945,000
+  going-in cap rate 7.00%
+  proposed loan 9,450,000
+  LTV 70.0%
+  proposed rate 5.95%
+  amortization 30 years
+  lender fee 0.85%
+
+current_debt_context:
+  current outstanding balance 6,800,000
+  current rate 4.85%
+  amortization remaining 24 years
+  monthly payment 39,250
+  maturity 2029-11-01
+
+appraisal_context:
+  appraisal value 14,200,000
+  stabilized NOI 1,050,000
+  stabilized cap rate 7.40%
+```
+
+Cross-role eligibility is explicitly false:
+
+```text
+purchase assumptions -> not current debt, not appraisal
+current debt -> not purchase assumptions, not proposed acquisition financing
+appraisal -> not purchase assumptions, not current debt
+```
+
+## Reconciliation authority proof
+
+```text
+T12 Gross Potential Rent: 1,612,800
+Rent Roll annual in-place rent: 1,432,800
+Rent Roll less T12: (180,000)
+canonical variance: -0.11160714285714286
+customer display: -11.16%
+disclosure: InvestorIQ has not reconciled this variance and does not infer the cause.
+```
+
+The disclosure is mandatory because provenance does not explain causation and InvestorIQ never infers the source of a variance.
+
+## New evidence item: delivery compatibility alias regression
+
+P0-D proved the sealed Acquisition final decision was correct while the compatibility adapter emitted false blocked aliases. The owner was `api/_lib/report-delivery-output.js`.
+
+The correction accepts `acq_memo_v2_final_delivery_decision_v1` only when all of the following agree:
+
+```text
+exact version and product
+exact final-delivery authority
+deliverable final status
+coreGate.publishAllowed true
+Boss validation true
+CustomerSurfaceModel validation true
+customer-surface HTML validation true
+zero final compliance violations
+customer delivery ready true
+customer publish eligible true
+report publishable true
+report blocked false
+zero blocking reasons
+```
+
+Any missing or contradictory field still fails closed.
+
+## P0 local evidence
+
+```text
+P0-A: PASS
+P0-B: PASS
+P0-C: PASS
+P0-D: PASS
+full Acquisition render harness: PASS
+Support Document Authority cutover: PASS
+worker publication contract: PASS
+production build: PASS
+```
+
+## Preserved ELITE authority rule
+
+Every later module, including debt analytics, renovation underwriting, valuation, scenario analysis, returns, risk, diligence, and visualization, must consume accepted Source Truth and deterministic calculations. Later modules may add analysis only when their complete role-specific fact bundle is accepted. Missing optional evidence must collapse the narrow section, not mutate core truth or block a valid report.
+
+Production certification remains HOLD pending one controlled live Acquisition retest after commit and deployment.

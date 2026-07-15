@@ -1,15 +1,13 @@
-# July 13, 2026 Morning Status Addendum
+# July 15, 2026 Active Status
 
 The Admin Quality Incident and Customer Remedy Doctrine remains mandatory.
 
-Implementation is intentionally queued immediately after the current uncommitted six-patch Support Document Authority repair is:
+The Support Document Authority repair and P0-A through P0-D now pass locally. Implementation is intentionally queued after:
 
 ```text
-1. cleared of the unitMix provenance HOLD;
-2. independently accepted;
-3. frozen;
-4. committed;
-5. ready for controlled deployment and one live proof.
+1. the accepted local bundle is committed and deployed;
+2. one controlled live Acquisition proof passes;
+3. the Canonical Report Quality Manifest contract is implemented.
 ```
 
 The dashboard must consume a canonical Report Quality Manifest. It must not infer truth independently from filenames, parser labels, raw file rows, HTML, or scattered logs.
@@ -17,10 +15,10 @@ The dashboard must consume a canonical Report Quality Manifest. It must not infe
 Current next-project order:
 
 ```text
-finish authority repair
--> freeze and commit
--> Sol audit of existing admin architecture
+commit and deploy P0-A through P0-D
+-> one controlled live Acquisition proof
 -> canonical Report Quality Manifest
+-> bounded audit of existing admin architecture against the Manifest
 -> persistence and quality-event capture
 -> dashboard queues
 -> incident detail
@@ -386,3 +384,94 @@ This work must not weaken:
 - terminal failure taxonomy
 - worker publication lock
 - automatic credit restoration for blocked reports
+
+---
+
+# July 15, 2026 P0 Completion and Dashboard Continuation Addendum
+
+The prerequisite P0-A through P0-D local program is complete.
+
+```text
+P0-A Financial Truth and Reconciliation Egress Seal: PASS locally
+P0-B Deterministic Contract QA Seal: PASS locally
+P0-C Final PDF Publication Quality Boss: PASS locally
+P0-D RETEST 24 Permanent Regression Replay: PASS locally
+PRODUCTION CERTIFICATION: HOLD pending one controlled live Acquisition retest
+```
+
+The permanent replay also caught and closed a false delivery-alias regression in which a valid sealed Acquisition decision could be represented as blocked by a legacy compatibility adapter. That incident family must be represented in the future Report Quality Manifest as canonical-decision disagreement, even if a later layer prevents customer harm.
+
+## Updated immediate execution order
+
+```text
+1. commit and deploy the accepted P0-A through P0-D bundle
+2. run one controlled live Acquisition retest in DocRaptor test mode
+3. inspect the complete PDF and canonical artifact chain
+4. verify customer state, job state, worker state, publication state, and credit state agree
+5. keep production certification HOLD if any P0/P1 trust defect remains
+6. implement the Canonical Report Quality Manifest
+7. implement the Admin Quality Incident and Customer Remedy Dashboard
+8. begin institutional ELITE expansion only through the protected bounded stages
+```
+
+## Report Quality Manifest additions proved necessary by P0
+
+In addition to the existing mandatory fields, persist:
+
+```text
+deterministic_contract_qa_seal_version
+deterministic_contract_qa_status
+deterministic_contract_issue_codes
+final_pdf_publication_boss_version
+final_pdf_publication_status
+final_pdf_issue_codes
+pdf_page_count
+pdf_artifact_mode
+pdf_publication_target
+approved_surface_financial_row_count
+approved_surface_reconciliation_required
+canonical_delivery_decision_version
+canonical_delivery_authority
+compatibility_alias_agreement
+compatibility_alias_disagreement_codes
+source_reconciliation_status
+source_reconciliation_difference
+source_reconciliation_variance
+source_reconciliation_disclosure_rendered
+optional_support_collapse_count
+optional_support_conflict_count
+permanent_regression_fixture_id
+```
+
+## Required dashboard queues after the live proof
+
+```text
+Canonical decision disagreement
+Contract QA internal render failure
+Final PDF publication failure
+Source reconciliation disclosure review
+Optional support collapsed or rejected
+Support role/fact conflict
+Core catastrophic failure
+Storage/publication failure
+Credit restoration and remedy audit
+Permanent regression recurrence
+```
+
+## ELITE roadmap dependency
+
+The dashboard and Manifest are Gate 2 and Gate 3 of ELITE readiness, after the controlled live proof and before advanced institutional modeling. Subsequent stages remain:
+
+```text
+institutional composition and distribution hygiene
+deterministic visual system
+role-specific support fact bundles
+debt and lender analytics
+renovation and value-creation underwriting
+valuation and scenario analysis
+returns engine
+risk register and diligence tracker
+Elite certification
+```
+
+The dashboard is operational accountability, not a new truth authority. It must consume canonical decisions and persisted evidence and must never infer customer truth independently.

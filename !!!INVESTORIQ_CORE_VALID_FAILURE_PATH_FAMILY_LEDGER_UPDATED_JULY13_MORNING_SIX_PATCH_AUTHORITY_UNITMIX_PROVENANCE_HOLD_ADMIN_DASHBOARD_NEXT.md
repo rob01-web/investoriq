@@ -1,33 +1,35 @@
-# July 13, 2026 Morning Checkpoint — Six-Patch Support Authority Repair Implemented Locally / Final UnitMix Provenance HOLD / Admin Quality Dashboard Next
+# July 15, 2026 Active Continuation - P0-A Through P0-D PASS Locally / Controlled Live Acquisition Proof Next
 
-### This addendum supersedes the July 12 commit `6c15de1` live-retest checkpoint as the active continuation point.
+### The July 15 P0 Completion Addendum at the end of this ledger is the controlling continuation point. The July 13 evidence below remains historical evidence only.
 
 ## Current exact state
 
 ```text
-LAST PROTECTED COMMIT:
-6c15de1
-Lock Source Truth delivery authority and terminal failure gates.
+CURRENT COMMITTED BASELINE:
+414945a
+updates
 
 CURRENT WORKING TREE:
 DIRTY / UNCOMMITTED.
-Contains Sol's six-patch Support Document Authority repair plus test updates.
+Contains the accepted Support Document Authority repair and P0-A through P0-D local bundle.
 
 DEPLOYMENT:
 NO.
 
 LIVE RETEST:
-NO.
+One controlled Acquisition proof authorized after commit and deployment.
 
 PRODUCTION CERTIFICATION:
 HOLD.
 
-NEXT ACTIVE BLOCKER:
-REPAIR_PROVENANCE_REGRESSION on unitMix sourceBacked preservation.
+NEXT ACTIVE BOUNDARY:
+Commit and deploy, then run one controlled live Acquisition retest in DocRaptor test mode.
 
 ADMIN QUALITY INCIDENT DASHBOARD:
-MANDATORY NEXT MAJOR FEATURE after the active authority repair is frozen, accepted, and committed.
+MANDATORY after the controlled live proof and Canonical Report Quality Manifest.
 ```
+
+## Historical July 13 checkpoint evidence begins below
 
 ## Why the architecture was reopened after `6c15de1`
 
@@ -18854,3 +18856,91 @@ Likely fault: canonicalSupportDocMap contains authority-row fields, but buildDoc
 Next patch must normalize the map consumer and inspect remaining v1_core call sites.
 No live retest until node tests/qa/generate-client-report-rent-roll-smoke.js passes.
 ```
+
+---
+
+# July 15, 2026 P0 Completion Addendum
+
+This addendum supersedes the July 13 continuation instructions above. The historical evidence remains valid; its stale next-task directions do not.
+
+## Current exact state
+
+```text
+P0-A Financial Truth and Reconciliation Egress Seal: PASS locally
+P0-B Deterministic Contract QA Seal: PASS locally
+P0-C Final PDF Publication Quality Boss: PASS locally
+P0-D RETEST 24 Permanent Regression Replay: PASS locally
+
+PRODUCTION CERTIFICATION: HOLD
+DEPLOYMENT: NO
+COMMIT: NO
+LIVE RETEST: one controlled Acquisition proof authorized only after commit and deployment
+```
+
+## Failure families closed locally
+
+```text
+CVF-P0-01 incorrect Break-Even Occupancy formula
+  closed by deterministic OpEx / T12 GPR calculation and render assertion
+
+CVF-P0-02 unauthorized gross-rent capitalization
+  closed by calculation/surface prohibition and Contract QA assertion
+
+CVF-P0-03 reconciliation truth lost downstream
+  closed by canonical T12 GPR, Rent Roll in-place rent, difference,
+  variance, and non-inference disclosure through Projection/Boss/Model/render
+
+CVF-P0-04 QA falsely approves an unsafe customer surface
+  closed by an independent deterministic Contract QA Seal
+
+CVF-P0-05 final HTML survives but PDF drops or damages approved content
+  closed by the post-render Final PDF Publication Quality Boss before publication
+
+CVF-P0-06 RETEST 24 recurrence not permanently represented
+  closed by the sanitized permanent RETEST 24 fixture and replay
+
+CVF-P0-07 sealed Acquisition decision becomes false blocked compatibility aliases
+  discovered by P0-D and closed at report-delivery-output.js with a strict,
+  schema-specific, fail-closed Acquisition final-decision adapter
+```
+
+## Core-valid optional-support doctrine proven
+
+The permanent replay proves that a valid T12 and Rent Roll still publish when every optional support document is unusable. Optional support may collapse, omit, qualify, or disclose. It cannot manufacture a core blocker.
+
+The same replay proves that:
+
+```text
+purchase assumptions remain acquisition-only
+current debt remains current-debt-only
+appraisal remains appraisal-only
+Screening remains isolated from Acquisition support behavior
+Contract QA, Publication Boss, and Delivery Seal agree
+```
+
+## Local acceptance evidence
+
+```text
+node tests/qa/p0a-financial-truth-egress-smoke.js: PASS
+node tests/qa/p0b-deterministic-contract-qa-seal-smoke.js: PASS
+node tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js: PASS
+node tests/qa/p0d-retest24-permanent-regression-replay-smoke.js: PASS
+node tests/qa/generate-client-report-rent-roll-smoke.js: PASS
+node tests/qa/support-document-authority-cutover-smoke.js: PASS
+node tests/qa/admin-run-worker-publish-contract-smoke.js: PASS
+npm.cmd run build: PASS
+```
+
+## Exact next boundary
+
+```text
+commit and deploy the accepted P0-A through P0-D bundle
+-> one controlled live Acquisition retest in DocRaptor test mode
+-> inspect the full PDF, artifacts, delivery state, worker state, and credit state
+-> keep production certification HOLD unless every surface agrees
+-> build the Canonical Report Quality Manifest
+-> build the Admin Quality Incident and Customer Remedy Dashboard
+-> execute the institutional ELITE stages preserved in the July 15 Master
+```
+
+No broad Source Truth or Support Document Authority reopening is authorized by this addendum.

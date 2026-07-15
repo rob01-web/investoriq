@@ -1,0 +1,1535 @@
+# InvestorIQ Master Context and Current Doctrine
+## July 15, 2026 Active Authority File
+This file is the concise active InvestorIQ execution context.
+
+It intentionally excludes superseded historical checkpoints. Historical evidence remains preserved in:
+- `Very Old and Archived MD Files/`
+- the Core Valid Failure Path Family Ledger
+- the Semantic Authority Evidence Ledger
+- the Admin Quality Incident and Customer Remedy Doctrine
+- Git history
+
+Older archived instructions must not override this file.
+
+---
+# 1. Current Repository Baseline
+```text
+CURRENT REPOSITORY BASELINE:
+414945a
+
+COMMIT MESSAGE:
+updates
+
+LOCAL HEAD:
+414945a
+
+ORIGIN/MAIN:
+414945a
+
+BRANCH:
+main
+
+REMOTE ALIGNMENT:
+PASS
+```
+Earlier protected implementation checkpoint:
+
+```text
+4a5be56
+Centralize support document authority and preserve repair provenance
+```
+`4a5be56` remains the protected Support Document Authority implementation checkpoint.
+
+It is not the current repository HEAD.
+
+---
+# 2. Current Production Status
+```text
+SUPPORT DOCUMENT AUTHORITY REPAIR:
+PASS / accepted / frozen / pushed
+
+UNITMIX PROVENANCE REGRESSION:
+PRODUCTION_REGRESSION / repaired / accepted
+
+RETEST 23:
+Permanent split-brain delivery regression case
+
+RETEST 24:
+Live pipeline PASS
+Publication PASS
+Support Document Authority PASS
+Current debt / proposed financing separation PASS
+Institutional customer deliverable HOLD
+
+LIVE RETEST:
+ONE CONTROLLED ACQUISITION RETEST AUTHORIZED after commit and deployment of the locally accepted P0-A through P0-D bundle
+
+PRODUCTION CERTIFICATION:
+HOLD
+
+LOCAL P0-A THROUGH P0-D CERTIFICATION:
+PASS on July 15, 2026
+```
+RETEST 23 proved that a report could publish while the job and customer status showed failure and the credit was restored.
+
+RETEST 24 proved the pipeline and authority architecture can publish correctly, but the customer PDF still contained material financial, disclosure, identity, QA, and pagination defects.
+
+---
+# 3. Strategic Product Decision
+InvestorIQ will not resurrect the legacy Full Underwriting Report pipeline.
+
+The old Underwriting pipeline accumulated conflicting authority and unsafe behavior across:
+
+```text
+current debt
+proposed acquisition financing
+refinance logic
+DSCR
+DCF
+scenario modeling
+capital stack
+readiness aliases
+legacy renderer decisions
+```
+The accepted strategy is:
+
+```text
+Keep the functional Acquisition Memo lane
+-> expand it through bounded source-bound modules
+-> preserve one-way authority
+-> render, qualify, collapse, or omit according to accepted evidence
+-> never revive legacy underwriting authority or renderer inference
+```
+Provisionally preferred commercial name:
+
+```text
+InvestorIQ Acquisition Underwriting Memo
+```
+This name is not yet a required runtime rename.
+
+Runtime identity must be stabilized separately.
+
+The product may later earn the name:
+
+```text
+InvestorIQ Full Underwriting Report
+```
+only after debt, renovation, valuation, scenarios, returns, risk, quality assurance, and publication certification are mature.
+
+---
+# 4. Commercial Product Ladder
+```text
+SCREEN
+-> SELECT
+-> UNDERWRITE
+-> FINANCE
+```
+## Screening Report
+Purpose:
+
+```text
+Quickly evaluate two or three candidate properties.
+Identify whether a property deserves deeper time, diligence, and capital.
+```
+## Acquisition Underwriting Memo
+Purpose:
+
+```text
+Deeply analyze the selected property.
+Support financing, lender, partner, and investment-committee discussions.
+State the thesis, risks, capital structure, reconciliations, decision conditions,
+and source-backed return analysis where the full authorized input bundle exists.
+```
+## Flagship Package Concept
+```text
+2 or 3 Screening Reports
++
+1 Acquisition Underwriting Memo
+```
+The intended customer journey is:
+
+```text
+Compare
+-> Select
+-> Underwrite
+-> Finance
+```
+---
+# 5. RETEST 24 Institutional Verdict
+```text
+LIVE PIPELINE:
+PASS
+
+SOURCE AUTHORITY:
+PASS
+
+CURRENT DEBT / ACQUISITION FINANCING SEPARATION:
+PASS
+
+PUBLICATION STATE:
+PASS
+
+CUSTOMER DELIVERY SAFETY:
+HOLD
+
+HIGH-VALUE INVESTOR OR LENDER OUTREACH:
+BLOCKED
+
+ELITE INSTITUTIONAL READINESS:
+HOLD
+```
+RETEST 24 is an internal permanent regression case.
+
+Its bounded failure chain is:
+
+```text
+correct canonical facts
+-> incomplete reconciliation egress
+-> missing mandatory customer disclosure
+-> incorrect financial semantics remain in customer HTML
+-> QA validates labels or presence instead of meaning
+-> no authoritative post-PDF publication-quality gate
+-> materially defective PDF publishes
+```
+---
+# 6. Immediate RETEST 24 Defects
+## 6.1 Break-Even Occupancy is wrong
+The report shows:
+
+```text
+37.0%
+```
+as Break-Even Occupancy.
+
+Current formula:
+
+```text
+Operating Expenses / Effective Gross Income
+$555,000 / $1,500,000
+= 37.0%
+```
+That is the Expense Ratio.
+
+It is not Break-Even Occupancy.
+
+Potential distinct concepts:
+
+```text
+Operating expense break-even:
+Operating Expenses / Gross Potential Rent
+
+Current-debt-inclusive break-even:
+(Operating Expenses + accepted annual current debt service)
+/
+Gross Potential Rent
+
+Proposed-financing break-even:
+Only when the payment convention is explicitly authorized
+```
+Immediate doctrine:
+
+```text
+Remove the false 37.0% Break-Even Occupancy.
+
+Render any break-even metric only when:
+- the Financial Calculation Constitution authorizes the formula;
+- every required input is accepted;
+- the label matches the exact formula;
+- final QA validates the value and label.
+```
+P0 must remain conservative.
+
+Do not add proposed-financing break-even merely because P0 is open.
+## 6.2 Gross rent upside must not be capitalized as NOI
+The report capitalizes:
+
+```text
+Annual Gross Rent Upside = $285,600
+```
+directly at cap rates.
+
+That assumes full gross-rent-to-NOI conversion and ignores:
+
+```text
+vacancy
+bad debt
+concessions
+turnover
+renovation downtime
+operating costs
+collection loss
+execution timing
+```
+Accepted doctrine:
+
+```text
+Keep the source-backed gross rent gap.
+Remove incremental-value rows by default.
+Reinstate only when a source-backed, customer-supplied,
+or constitutionally authorized scenario provides:
+- an explicit NOI conversion basis;
+- visible assumption provenance;
+- a visible formula;
+- complete required inputs.
+```
+Relabeling and caveats alone are not sufficient.
+## 6.3 Mandatory reconciliation disclosure disappeared downstream
+Canonical Source Truth identified:
+
+```text
+T12 Gross Potential Rent:          $1,612,800
+Rent Roll annual in-place rent:    $1,432,800
+Absolute difference:                 $180,000
+Variance:                              11.16%
+Status:                 source_reconciliation_required
+Customer impact:        disclose_only
+```
+The customer report used generic reconciliation language without showing:
+
+```text
+the two conflicting values
+the dollar difference
+the percentage variance
+the unreconciled status
+the canonical statement that InvestorIQ did not infer the cause
+```
+This is an InvestorIQ-owned Source Truth egress defect.
+
+Required consume-only path:
+
+```text
+Source Truth reconciliation package
+-> Projection
+-> Boss Contract
+-> CustomerSurfaceModel
+-> renderer
+-> deterministic contract QA
+-> post-PDF Publication Quality Boss
+```
+The package must preserve:
+
+```text
+exact values
+source identity
+status
+reason code
+customer impact
+canonical disclosure text
+```
+## 6.4 Final QA approved an unsafe output
+RETEST 24 QA artifacts disagreed:
+
+```text
+qa_action_plan:
+elite_ready false
+public/high-value outreach false
+
+source package QA:
+external review required
+
+rendered report QA:
+warned about stabilization value presentation
+
+report_contract_qa:
+PASS
+customer-ready
+quality-ready
+zero violations
+
+qa_director_review:
+no_missed_issue_detected
+```
+Accepted doctrine:
+
+```text
+A generic label is not proof that a required disclosure rendered.
+HTML presence is not proof that financial meaning is correct.
+An advisory model cannot overrule deterministic failures.
+Final PDF publication cannot rely only on earlier HTML checks.
+```
+## 6.5 Report-family identity drift remains
+Acquisition jobs and artifacts must not disagree between:
+
+```text
+underwriting / tier 2
+screening / tier 1
+Acquisition Memo
+v1_core
+```
+P0 runtime identity recommendation:
+
+```text
+canonical family:
+acquisition_memo
+
+commercial display name:
+separate controlled decision
+
+legacy compatibility input:
+underwriting
+
+forbidden:
+infer report family from v1_core
+```
+One canonical report family must be verified across:
+
+```text
+generation
+CustomerSurfaceModel
+QA
+Delivery Seal
+worker
+Report Quality Manifest
+PDF metadata
+dashboard
+```
+## 6.6 Blank page and running-header failure
+RETEST 24 includes:
+
+```text
+a blank page containing only a section heading
+duplicated or fragmented running header
+forced page breaks
+sparse repeated pages
+support-treatment pagination damage
+```
+These are deterministic customer-surface defects.
+
+They are not cosmetic preferences.
+
+---
+# 7. Four Bounded Authorities
+InvestorIQ does not need additional vague or overlapping Bossmen.
+
+The accepted architecture has four bounded authorities.
+## 7.1 Source Authority Adjudicator
+Owns:
+
+```text
+accepted document roles
+accepted source-backed facts
+evidence binding
+negation
+temporality
+mixed-document handling
+conflict handling
+duplicate handling
+```
+Must never own:
+
+```text
+financial formulas
+customer composition
+PDF layout
+publication quality
+```
+## 7.2 Financial Calculation Constitution
+Owns:
+
+```text
+permitted formulas
+required inputs
+units
+labels
+rounding
+formula versions
+assumption provenance
+calculation eligibility
+```
+Must never own:
+
+```text
+source acceptance
+document roles
+customer publication authority
+```
+## 7.3 Customer Surface Boss
+Owns:
+
+```text
+which accepted facts render
+which authorized calculations render
+which sections render
+which sections qualify
+which sections collapse
+which sections omit
+which disclosures are mandatory
+customer-facing labels
+```
+Must never:
+
+```text
+invent facts
+change accepted numbers
+authorize unapproved formulas
+erase mandatory disclosures
+```
+## 7.4 PDF Publication Quality Boss
+Owns verification that the approved report survived PDF creation.
+
+Checks:
+
+```text
+blank pages
+nearly empty pages
+missing page numbers
+duplicate or broken running headers
+orphaned headings
+table and heading separation
+page overflow
+unreadable tables
+missing required facts
+missing mandatory disclosures
+wrong metadata
+test-mode PDF on an external distribution path
+PDF text disagreement with approved CustomerSurfaceModel
+```
+Must never:
+
+```text
+discover source truth
+accept facts
+authorize calculations
+reinterpret finance
+```
+## AI boundary
+AI may:
+
+```text
+review
+summarize
+flag warnings
+suggest escalation
+improve prose
+review presentation
+```
+AI may not:
+
+```text
+accept a source fact
+change a number
+authorize a calculation
+remove a mandatory disclosure
+manufacture publication authority
+overrule deterministic failure states
+```
+---
+# 8. Immediate P0 Program
+No advanced underwriting expansion begins until P0-A through P0-D pass locally.
+## P0-A: Financial Truth and Reconciliation Egress Seal
+Scope:
+
+```text
+1. Remove or correctly replace false Break-Even Occupancy.
+2. Remove gross-rent capitalization without authorized NOI conversion.
+3. Carry reconciliation state and exact canonical disclosure through all consume-only layers.
+4. Render:
+   - T12 GPR
+   - Rent Roll annual in-place rent
+   - dollar difference
+   - percentage variance
+   - exact canonical disclosure
+5. Correct Acquisition report-family and tier identity.
+6. Remove generic reconciliation placeholder language.
+7. Remove customer-visible em dashes.
+8. Apply institutional negative-number formatting.
+```
+Do not add new underwriting analytics in P0-A.
+## P0-B: Deterministic Contract QA Seal
+Required assertions:
+
+```text
+reconciliation required + missing rendered values
+-> contract failure
+
+rendered variance
+-> must match canonical variance
+
+Break-Even label, formula, inputs, and result
+-> must agree
+
+gross rent
+-> may not be capitalized as NOI without authorized basis
+
+Acquisition, Screening, and Underwriting identity
+-> may not disagree
+
+mandatory support facts
+-> may not be represented by presence-only Yes
+
+generic label
+-> cannot satisfy fact completeness
+
+customer-visible prohibited punctuation
+-> deterministic failure
+
+canonical QA disagreement
+-> must be surfaced
+```
+The source reconciliation itself remains:
+
+```text
+disclose_only
+publishable
+```
+Failure to render the required disclosure becomes:
+
+```text
+internal render/contract failure
+```
+It must never become a customer-document failure.
+## P0-C: Final PDF Publication Quality Boss
+Validate actual PDF bytes after DocRaptor and before storage/publication.
+
+Required checks:
+
+```text
+blank pages
+nearly blank pages
+missing required financial facts
+missing reconciliation disclosure
+broken or duplicated running headers
+page overflow
+orphaned headings
+tables separated from headings
+unreadable tables
+missing page numbers
+prohibited punctuation
+test-mode PDF on external path
+PDF content disagreement with approved customer surface
+```
+This Boss verifies rendering survival only.
+
+It does not infer source truth or financial meaning.
+## P0-D: RETEST 24 Permanent Regression Replay
+Create a sanitized permanent fixture from RETEST 24 artifacts.
+
+It must assert:
+
+```text
+all correct acquisition financing fields
+all correct current-debt fields
+exact reconciliation values and disclosure
+no unauthorized incremental-value table
+correct or collapsed break-even metrics
+no blank page
+no duplicate title
+appraisal remains appraisal-only
+current debt remains current-debt-only
+purchase assumptions remain acquisition-only
+Screening remains unchanged
+optional support cannot block valid core
+Contract QA, Publication Boss, and Delivery Seal agree
+```
+## Gate 1 exit criteria
+Only after P0-A through P0-D pass locally:
+
+```text
+run one controlled live Acquisition retest
+inspect complete PDF and artifacts
+confirm publication
+confirm no P0 or P1 customer-trust defect
+keep DocRaptor in test mode for that internal retest
+```
+No second live retest loop.
+
+---
+# 9. Core-Gated Publish-or-Collapse Constitution
+Permanent doctrine:
+
+```text
+Usable T12 + usable Rent Roll
+-> publish
+
+Complete usable core
+-> publish
+
+Usable core with optional/support limitations
+-> publish with collapse, omission, qualification, or disclosure
+
+Catastrophically unusable core T12 or Rent Roll
+-> fail closed
+
+True runtime, storage, PDF, publication, or platform fatal
+-> fail closed
+```
+Optional/support limitations must not become false core blockers.
+
+However:
+
+```text
+Publish-or-Collapse must never hide a quality failure.
+```
+A missing mandatory disclosure or materially misleading rendered calculation is an internal report-contract defect.
+
+---
+# 10. Protected Authority Spine
+The permanent authority spine is:
+
+```text
+Canonical Source Truth
+-> Projection
+-> Boss Contract
+-> CustomerSurfaceModel
+-> deterministic authorized calculations
+-> renderer
+-> deterministic contract QA
+-> Delivery Seal
+-> PDF creation
+-> post-PDF Publication Quality Boss
+-> canonical deliveryDecisionState
+-> worker/publication lock
+-> Report Quality Manifest
+-> dashboard and remedy workflow
+```
+No downstream layer may recreate or reinterpret upstream truth.
+
+---
+# 11. Forbidden Patterns
+```text
+legacy Full Underwriting authority resurrection
+renderer-level inference
+raw parser fallback
+filename sovereignty
+AI confidence as financial authority
+hidden default assumptions
+Number(null) to zero
+gross revenue treated as NOI
+generic disclosure labels without required facts
+QA approval based only on keyword presence
+post-PDF publication without deterministic visual certification
+support-document presence treated as fact completeness
+current debt treated as proposed financing
+proposed financing treated as current debt
+appraisal cap rate treated as interest rate
+accepted truth collapsed into false absence
+top-level aliases authorizing publication
+compatibility aliases authorizing publication without canonical state
+```
+---
+# 12. DocRaptor Doctrine
+Internal development and controlled testing:
+
+```text
+DocRaptor test mode allowed
+watermark expected
+cost-conscious
+```
+External distribution:
+
+```text
+production PDF mode mandatory
+no test watermark
+no vendor-help language
+no test artifact labels
+```
+External distribution includes:
+
+```text
+paying customers
+lenders
+investors
+public samples
+high-value prospects
+partner outreach
+```
+Do not pay production PDF costs for every internal iteration.
+
+Do not declare external readiness while test watermarking remains.
+
+---
+# 13. Dynamic Report Length Doctrine
+No fixed page target.
+
+Accepted range examples:
+
+```text
+concise evidence package:
+8 to 12 pages
+
+fully supported institutional package:
+12 to 18 pages
+```
+Controlling rule:
+
+```text
+Every page must earn its place.
+```
+Forbidden:
+
+```text
+forced page count
+blank filler pages
+duplicate metric pages
+large empty sections
+arbitrary section-per-page rules
+```
+---
+# 14. Report Quality Manifest
+After Gate 1 passes, implement one immutable canonical Report Quality Manifest for every report.
+
+Required report-level fields:
+
+```text
+report_id
+job_id
+user_id
+canonical report family
+generated_at
+core validation state
+final delivery status
+overall quality state
+final Boss decision
+Delivery Seal decision
+PDF Publication Boss decision
+credit restoration state
+customer remedy state
+customer/public/outreach readiness
+```
+Required document-level fields:
+
+```text
+filename
+document identity
+extraction state
+extraction quality
+OCR warnings
+candidate semantic roles
+adjudicated role
+accepted facts
+rejected facts
+exact evidence references
+conflicts
+duplicate-group identity
+sourcePresent
+roleAccepted
+factAccepted
+sourceBacked
+sectionDisplayReady
+```
+Required calculation fields:
+
+```text
+calculation name
+formula version
+required inputs
+input provenance
+units
+result
+render eligibility
+collapse reason
+```
+Required section-level fields:
+
+```text
+rendered
+collapsed
+omitted
+qualified
+disclosed
+reason code
+internal severity
+customer-visible impact
+expected or unexpected collapse
+requires admin review
+requires proactive customer contact
+```
+Required final receipts:
+
+```text
+CustomerSurfaceModel result
+HTML contract result
+PDF Publication Boss result
+Delivery decision
+exact blocking or advisory codes
+```
+The Manifest is the single quality receipt.
+
+---
+# 15. Admin Quality Incident Dashboard
+The Admin Dashboard consumes only:
+
+```text
+Report Quality Manifest
+canonical delivery state
+```
+It must never reconstruct truth from:
+
+```text
+filenames
+parser labels
+raw file rows
+HTML fragments
+scattered logs
+legacy aliases
+```
+Mandatory queues:
+
+```text
+BLOCKED
+PUBLISHED WITH LIMITATIONS
+PUBLISHED CLEAN
+```
+Mandatory collapse classification:
+
+```text
+collapse_expected
+collapse_unexpected
+collapse_requires_review
+```
+Mandatory Customer Attention Risk:
+
+```text
+HIGH
+MEDIUM
+LOW
+```
+Dashboard capabilities:
+
+```text
+pipeline health
+publication failures
+customer-document versus internal failures
+parser/recovery issues
+source reconciliation advisories
+contract failures
+PDF quality failures
+credit restoration status
+regeneration eligibility
+customer remedy actions
+recurring defect-family counts
+report and PDF inspection links
+safe retry controls
+owner routing
+```
+Customer remedy controls:
+
+```text
+mark for review
+mark customer contacted
+issue free rerun
+restore credit
+request replacement documents
+attach corrected report
+issue account credit
+record refund
+close incident
+link incident to permanent regression case
+```
+Permanent doctrine:
+
+```text
+A failure happens once.
+It must never happen the same way twice.
+```
+---
+# 16. Responsibility and Remedy Doctrine
+## InvestorIQ-owned defect
+InvestorIQ owns the failure when readable, clear evidence is:
+
+```text
+misclassified
+dropped
+contradicted
+rendered incorrectly
+converted into false zero
+lost through an internal pipeline failure
+hidden from the customer despite a mandatory disclosure state
+```
+Remedy ladder:
+
+```text
+Level 1:
+minor disclosed limitation
+
+Level 2:
+automatic free corrected rerun
+
+Level 3:
+credit restoration + priority corrected report + proactive contact
+
+Level 4:
+refund or customer-selected account credit when InvestorIQ
+cannot provide a materially correct report
+```
+## Customer source limitation
+Examples:
+
+```text
+missing pages
+unreadable scan
+password protection
+contradictory documents
+covered or obscured text
+genuinely incomplete financing bundle
+source does not support requested section
+```
+InvestorIQ must still:
+
+```text
+identify the limitation
+avoid guessing
+publish valid core analysis
+explain what was not used
+offer a replacement-document rerun path
+```
+---
+# 17. Institutional Expansion Roadmap
+Institutional expansion begins only after Gate 1 and the quality platform.
+## Stage 1: Institutional Composition and Distribution Hygiene
+```text
+real property identity
+address
+as-of date
+prepared-for metadata
+production PDF for external delivery
+one-page Investment Committee Summary
+transaction snapshot
+investment thesis
+principal constraints
+decision conditions
+revenue reconciliation table
+no blank or duplicate pages
+no raw filenames in primary analysis
+institutional number formatting
+dynamic pagination
+```
+## Stage 2: Deterministic Visual System
+Source-bound components:
+
+```text
+InvestmentSnapshotGrid
+ExecutiveDecisionBox
+MetricStrip
+RevenueReconciliationTable
+OperatingBridge
+SourcesAndUsesTable
+DebtCoverageTable
+ScenarioTable
+SensitivityMatrix
+RenovationPlanTable
+RiskRegister
+DiligenceTracker
+SourceBadge
+LimitationCallout
+```
+Charts may include:
+
+```text
+NOI and expense bridge
+unit-mix composition
+in-place versus market rent
+occupancy and authorized break-even
+capital stack
+debt coverage
+cap-rate sensitivity
+reconciliation bridge
+renovation timing when supported
+```
+All charts must derive from the same canonical facts shown in tables.
+
+Forbidden:
+
+```text
+stock photography
+fabricated maps
+invented market narrative
+decorative analytics
+```
+## Stage 3: Role-Specific Support Fact Bundles
+Evidence-bound schemas for:
+
+```text
+renovation scope
+renovation costs
+renovation timing
+source-stated rent lift
+appraisal value
+stabilized NOI
+stabilized cap rate
+market rent ranges
+actual comparable rows
+Phase I status
+recognized environmental conditions
+report dates
+limitations
+property tax
+insurance
+other recurring support families
+```
+No role presence becomes customer truth.
+
+Every displayed fact requires accepted evidence.
+
+Do not broadly reopen the six-patch authority architecture.
+## Stage 4: Debt and Lender Analytics
+Only from complete accepted inputs and authorized formulas:
+
+```text
+capital stack
+equity requirement
+lender fee dollars
+annual debt service
+DSCR
+debt yield
+debt-service break-even occupancy
+LTV constraints
+DSCR constraints
+rate sensitivity
+maturity risk
+refinance risk
+sources and uses
+```
+Current debt and proposed acquisition financing remain permanently separate.
+## Stage 5: Renovation and Value-Creation Underwriting
+Structured fields:
+
+```text
+total budget
+unit types
+unit count
+cost per unit
+source-stated rent lift
+timeline
+annual pace
+downtime
+stabilized incremental rent
+yield on cost
+payback
+execution risks
+```
+Every field is one of:
+
+```text
+SOURCE_SUPPLIED
+CUSTOMER_SUPPLIED
+INVESTORIQ_STANDARD_SCENARIO
+CALCULATED
+UNAVAILABLE
+```
+No renovation return or value impact renders without the required evidence and assumptions.
+## Stage 6: Valuation and Scenario Analysis
+```text
+current NOI capitalization
+stabilized NOI capitalization
+appraisal context
+purchase-price comparison
+downside case
+base case
+upside case
+cap-rate sensitivity
+revenue sensitivity
+expense sensitivity
+source fact versus standardized scenario distinction
+```
+## Stage 7: Returns Engine
+Potential outputs:
+
+```text
+annual operating forecast
+unlevered cash flow
+levered cash flow
+debt amortization
+sale proceeds
+levered IRR
+unlevered IRR
+equity multiple
+cash-on-cash return
+yield on cost
+minimum DSCR
+```
+Required accepted inputs may include:
+
+```text
+hold period
+entry price
+transaction costs
+financing terms
+payment convention
+rent growth
+expense growth
+renovation timing
+renovation cost
+vacancy
+collection loss
+exit cap rate
+sale costs
+```
+A return metric renders only when the full required input contract exists.
+
+No gap filling.
+
+No hidden defaults.
+
+No AI completion of missing assumptions.
+
+No false zeroes.
+
+Unavailable inputs collapse the affected section with plain disclosure.
+## Stage 8: Risk Register and Diligence Tracker
+Risk categories:
+
+```text
+operating
+revenue
+expense
+capital structure
+physical/capital
+environmental
+valuation
+execution
+documentation
+```
+Every issue includes:
+
+```text
+source
+severity
+financial exposure when deterministically measurable
+required diligence action
+section impact
+publication impact
+```
+Diligence tracker fields:
+
+```text
+required item
+reason
+responsible party
+status
+closing impact
+```
+## Stage 9: Elite Certification
+Certification includes:
+
+```text
+generated adversarial document variants
+all existing source-authority tests
+RETEST 24 replay
+complete and incomplete financing
+contradictory support
+duplicate support
+unusable optional support with valid core
+Screening isolation
+long property names
+large tables
+missing property metadata
+negative numbers
+multiple report lengths
+final PDF inspection
+several clean controlled live reports across materially different document packages
+```
+---
+# 18. Target Elite Report Architecture
+Dynamic evidence-driven structure:
+
+```text
+1. Cover and document control
+2. Investment Committee Executive Summary
+3. Transaction overview and capital stack
+4. Property and operating overview
+5. Historical financial performance
+6. Revenue and Rent Roll reconciliation
+7. Expense and NOI analysis
+8. Renovation and value-creation plan
+9. Debt and capitalization analysis
+10. Valuation
+11. Return analysis
+12. Downside, base, and upside scenarios
+13. Risk register
+14. Diligence and closing conditions
+15. Source, methodology, formula, and provenance appendix
+```
+Sections render, qualify, collapse, or omit according to accepted evidence.
+
+---
+# 19. Execution Order
+```text
+1. P0-A Financial Truth and Reconciliation Egress Seal
+2. P0-B Deterministic Contract QA
+3. P0-C Final PDF Publication Quality Boss
+4. P0-D RETEST 24 permanent replay and Screening isolation
+5. One controlled live Acquisition retest
+6. Canonical Report Quality Manifest
+7. Admin Quality Incident Dashboard
+8. Institutional memo composition
+9. Deterministic visual system
+10. Role-specific support fact bundles
+11. Debt and lender analytics
+12. Renovation underwriting
+13. Valuation and scenarios
+14. Returns engine
+15. Risk register and diligence tracker
+16. Elite certification
+17. Flagship package launch
+```
+Do not reorder advanced product depth ahead of the P0 correctness seal.
+
+---
+# 20. Model and Workflow Doctrine
+Use GPT-5.6 Sol only where deep repository reasoning is most valuable.
+
+Preferred split:
+
+```text
+Sol:
+bounded architecture tracing
+medium-batch owner analysis
+cross-file contract reasoning
+final architecture review
+
+Terra or Codex:
+tiny implementation edits
+bounded UI and CSS
+copy changes
+migrations
+small tests
+
+ChatGPT:
+doctrine keeper
+manual verifier
+PASS / HOLD authority
+roadmap sequencing
+```
+Permanent rules:
+
+```text
+Do not trust model receipts by themselves.
+Inspect actual changed files.
+Do not run live services casually.
+Do not run repeated live retests.
+Do not use broad smoke walls as a substitute for authority proof.
+Do not reopen protected authority families without concrete current-code evidence.
+Do not hard-code Stonebridge or any one report.
+Do not let implementation convenience redefine doctrine.
+```
+---
+# 21. Current Exact Next Task
+```text
+Commit and deploy the accepted P0-A through P0-D bundle,
+then run one controlled live Acquisition retest in DocRaptor test mode.
+```
+Do not:
+
+```text
+start advanced returns modeling
+start broad Full Underwriting rebuild
+reopen Source Truth broadly
+reopen Support Document Authority broadly
+run more than the one authorized controlled live Acquisition retest
+start institutional visual redesign
+rename runtime families without a controlled identity migration
+```
+The controlled live retest must prove the complete customer PDF, canonical artifacts,
+publication state, worker state, and credit state agree before production certification changes from HOLD.
+
+---
+# 22. Protected Short-Form Handoff
+```text
+CURRENT BASELINE:
+414945a / updates
+
+InvestorIQ will not revive the old Full Underwriting pipeline.
+
+The current Acquisition Memo will evolve into a source-bound
+Acquisition Underwriting Memo through bounded modules.
+
+RETEST 24:
+live pipeline PASS
+institutional/customer deliverable HOLD
+
+Immediate blockers:
+- RETEST 24 P0 defect family closed locally by P0-A through P0-D
+- production proof remains pending one controlled live Acquisition retest
+
+NEXT:
+commit and deploy the accepted P0-A through P0-D bundle
+run one controlled live Acquisition retest in DocRaptor test mode
+
+THEN:
+Report Quality Manifest
+Admin Quality Incident Dashboard
+institutional composition and distribution hygiene
+deterministic visual system
+role-specific support fact bundles
+debt and lender analytics
+renovation and value-creation underwriting
+valuation and scenario analysis
+returns engine
+risk register and diligence tracker
+Elite certification
+
+DO NOT:
+- broadly reopen Source Truth
+- broadly reopen Support Document Authority
+- resurrect legacy Full Underwriting authority
+- run uncontrolled or repeated live retests outside the single authorized proof
+```
+---
+# 23. Historical Record
+The prior July 13 Master Context was preserved byte-for-byte in:
+
+```text
+Very Old and Archived MD Files/
+!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY13_MORNING_SIX_PATCH_AUTHORITY_UNITMIX_PROVENANCE_HOLD_ADMIN_DASHBOARD_NEXT.md
+```
+Verified archived Git object hash:
+
+```text
+55ff05efe0f8e769944302a33b854028b88408ee
+```
+The original committed July 13 file and the archived copy matched exactly.
+
+Historical details remain available through:
+
+```text
+Very Old and Archived MD Files/
+Git history
+Core Valid Failure Path Family Ledger
+Semantic Authority Evidence Ledger
+Admin Quality Incident and Customer Remedy Doctrine
+```
+Historical checkpoints are evidence only.
+
+They are not active execution instructions.
+
+---
+# 24. July 15 P0-A Through P0-D Local Completion Receipt
+```text
+VERDICT:
+LOCAL PASS
+
+PRODUCTION CERTIFICATION:
+HOLD pending one controlled live Acquisition retest
+
+DEPLOYMENT:
+NO
+
+COMMIT:
+NO
+
+LIVE SERVICE:
+NO
+```
+
+## P0-A completed
+
+The Financial Truth and Reconciliation Egress Seal now enforces:
+
+```text
+Break-Even Occupancy = T12 Operating Expenses / T12 Gross Potential Rent
+gross rent difference is not capitalized as NOI or incremental value
+canonical T12 GPR, Rent Roll annual in-place rent, dollar difference,
+variance, and the exact non-inference disclosure reach the customer surface
+Acquisition report-family identity is explicit
+negative financial values use institutional formatting
+customer-visible prohibited dash punctuation is removed
+```
+
+## P0-B completed
+
+The deterministic Contract QA Seal independently validates:
+
+```text
+report-family identity
+reconciliation completeness and numeric agreement
+Break-Even Occupancy formula and rendered result
+support-document bundle semantics
+absence of unauthorized gross-rent capitalization
+absence of prohibited customer-visible punctuation
+agreement between independent canonical QA decisions
+```
+
+Contract failure remains an internal render/contract failure. It is never reclassified as a customer-document failure.
+
+## P0-C completed
+
+The Final PDF Publication Quality Boss now runs on final PDF bytes after rendering and before storage/publication. The direct report path and worker download path both enforce it.
+
+It checks:
+
+```text
+valid PDF bytes
+blank and nearly blank pages
+required financial facts and disclosures
+approved-surface agreement
+running headers
+page overflow
+orphaned headings
+table separation and unreadable tables
+page numbers
+prohibited punctuation
+test-mode PDF external-publication attempts
+```
+
+## P0-D completed
+
+Permanent sanitized fixture:
+
+```text
+tests/qa/fixtures/retest24-sanitized-permanent-replay.json
+```
+
+Permanent replay:
+
+```text
+tests/qa/p0d-retest24-permanent-regression-replay-smoke.js
+```
+
+The replay preserves RETEST 24 financial and semantic evidence without customer identifiers or production IDs. It proves:
+
+```text
+complete acquisition financing bundle
+complete current-debt bundle
+appraisal-only authority
+purchase-assumptions-only authority
+current-debt-only authority
+exact $1,612,800 versus $1,432,800 reconciliation
+($180,000) difference and -11.16% customer display
+exact non-inference disclosure
+34.4% Break-Even Occupancy
+no unauthorized incremental-value table
+no false Purchase Price $0 row
+single report title and no blank PDF page
+optional support collapse with valid core publication
+Screening isolation
+Contract QA, PDF Publication Boss, and Delivery Seal agreement
+```
+
+P0-D exposed one real production regression: the delivery compatibility adapter rejected the sealed Acquisition final-decision schema and emitted false top-level publication aliases. `api/_lib/report-delivery-output.js` now recognizes that schema only when its version, authority, core gate, Boss checks, publish flags, and zero-blocker state all agree. The adapter remains fail closed for any incomplete or contradictory state.
+
+## Local evidence
+
+```text
+P0-A financial truth egress smoke: PASS
+P0-B deterministic Contract QA seal smoke: PASS
+P0-C final PDF Publication Quality Boss smoke: PASS
+P0-D RETEST 24 permanent regression replay: PASS
+full Acquisition render harness: PASS
+Support Document Authority cutover smoke: PASS
+worker publication contract smoke: PASS
+production build: PASS
+```
+
+## Preserved ELITE execution sequence
+
+```text
+Gate 1: one controlled live Acquisition proof
+Gate 2: Canonical Report Quality Manifest
+Gate 3: Admin Quality Incident and Customer Remedy Dashboard
+Stage 1: institutional composition and distribution hygiene
+Stage 2: deterministic visual system
+Stage 3: role-specific support fact bundles
+Stage 4: debt and lender analytics
+Stage 5: renovation and value-creation underwriting
+Stage 6: valuation and scenario analysis
+Stage 7: returns engine
+Stage 8: risk register and diligence tracker
+Stage 9: Elite certification across correctness, provenance, layout,
+         disclosure, role separation, remedy, and adversarial replay
+```
+
+No later stage may bypass Source Truth, the Support Document Authority Adjudicator, deterministic calculations, CustomerSurfaceModel, Boss, Contract QA, Delivery Seal, or the Final PDF Publication Quality Boss.
+
+---
+# End of Active Master Context
