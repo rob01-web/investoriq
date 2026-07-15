@@ -188,6 +188,22 @@ await assertIssue("PDF_TABLE_SEPARATED_FROM_HEADING", (analysis) => {
 await assertIssue("PDF_UNREADABLE_TABLE", (analysis) => {
   analysis.pages[1].lines.push(makeLine("$1,612,800 $806,400 -50.00%", 210, { fontSize: 5 }));
 });
+const smallFooterAnalysis = validAnalysis();
+for (const page of smallFooterAnalysis.pages.filter((candidate) => candidate.pageNumber > 1)) {
+  const footer = page.lines.find((line) => /^Page\s+\d+\s+of\s+\d+$/i.test(line.text));
+  footer.fontSize = 5.25;
+  for (const item of footer.items) {
+    item.fontSize = 5.25;
+    item.height = 5.25;
+  }
+}
+refreshText(smallFooterAnalysis);
+const smallFooterResult = await inspect(smallFooterAnalysis);
+assert.equal(smallFooterResult.ok, true);
+assert.equal(
+  smallFooterResult.issues.some((issue) => issue.code === "PDF_UNREADABLE_TABLE"),
+  false
+);
 await assertIssue("PDF_PAGE_NUMBERS_MISSING", (analysis) => {
   analysis.pages[2].lines = analysis.pages[2].lines.filter((line) => !/^Page 3/.test(line.text));
 });

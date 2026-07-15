@@ -230,15 +230,19 @@ function meaningfulPageText(page = {}) {
     .trim();
 }
 
+function isPageNumberLine(line = {}, page = {}, pageCount = 0) {
+  const height = Number(page?.height) || 792;
+  if (Number(line?.y) > height * 0.16) return false;
+  const text = String(line?.text || "").trim();
+  return /^(?:page\s*)?\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(text) ||
+    new RegExp(`^page\\s+${Number(page?.pageNumber)}\\s+of\\s+${pageCount}$`, "i").test(text);
+}
+
 function hasPageNumber(page = {}, pageCount = 0) {
   if (page?.hasPageNumber === true) return true;
-  const height = Number(page?.height) || 792;
-  return (Array.isArray(page?.lines) ? page.lines : []).some((line) => {
-    if (Number(line?.y) > height * 0.16) return false;
-    const text = String(line?.text || "").trim();
-    return /^(?:page\s*)?\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(text) ||
-      new RegExp(`^page\\s+${Number(page?.pageNumber)}\\s+of\\s+${pageCount}$`, "i").test(text);
-  });
+  return (Array.isArray(page?.lines) ? page.lines : []).some((line) =>
+    isPageNumberLine(line, page, pageCount)
+  );
 }
 
 function isHeadingLine(line = {}) {
@@ -299,7 +303,8 @@ function inspectLayout(analysis = {}) {
         separatedTableHeadings.push({ page: page.pageNumber, heading: line.text, y: line.y, following_lines: below.length });
       }
       const numericTokens = String(line?.text || "").match(/(?:[$€£]?\(?\d[\d,.]*\)?%?)/g) || [];
-      if (numericTokens.length >= 2 && Number(line?.fontSize) > 0 && Number(line.fontSize) < 6) {
+      const pageNumberLine = isPageNumberLine(line, page, Number(analysis?.pageCount) || pages.length);
+      if (!pageNumberLine && numericTokens.length >= 2 && Number(line?.fontSize) > 0 && Number(line.fontSize) < 6) {
         unreadableTableRows.push({ page: page.pageNumber, text: line.text, font_size: line.fontSize });
       }
     }
