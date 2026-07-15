@@ -56,6 +56,12 @@ function assertPublishableInBothLanes(name, sourceTruthPackage) {
     sourceTruthPackage,
     sourceTruthRequired: true,
     deliveryGateDecisionResult: gate,
+    deterministicContractQaSeal: {
+      source: "deterministic_report_contract_qa",
+      ok: true,
+      status: "sealed",
+      issues: [],
+    },
   });
   assert.equal(screening.sealedLane, "screening_lane");
 

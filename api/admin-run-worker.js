@@ -7,6 +7,7 @@ import {
   ensureReportDownloadArtifact,
   resolveOrCreateReportPublicationRecord,
 } from './_lib/report-delivery-output.js';
+import { finalizeReportQualityManifest } from './_lib/report-quality-manifest.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 const normalizeAuditText = (value) => String(value || '').toLowerCase();
@@ -2808,6 +2809,101 @@ export default async function handler(req, res) {
           const creditResult = await consumeCreditOnce(job);
           if (creditResult.error) {
             throw new Error(`Credit deduction failed: ${creditResult.error.message}`);
+          }
+
+          const manifestCandidate = reportData?.report_quality_manifest_candidate || null;
+          if (manifestCandidate) {
+            try {
+              const publicationQualityBoss =
+                artifactResolution?.publicationQualityBoss ||
+                reportData?.final_pdf_publication_quality_boss ||
+                null;
+              const reportQualityManifest = finalizeReportQualityManifest({
+                candidate: manifestCandidate,
+                reportId,
+                storagePath,
+                deliveryDecision: {
+                  deliveryGateStatus: resolvedDeliveryDecision.deliveryGateStatus,
+                  customerDeliveryAllowed: resolvedDeliveryDecision.customerDeliveryAllowed,
+                  holdDelivery: resolvedDeliveryDecision.holdDelivery,
+                  customerStatusReasonCode: resolvedDeliveryDecision.customerStatusReasonCode,
+                  failClosedReasonCode: resolvedDeliveryDecision.failClosedReasonCode,
+                },
+                finalPdfPublicationQualityBoss: publicationQualityBoss,
+                publicationState: 'published',
+                creditState: {
+                  state: 'reconciled',
+                  consumed: creditResult.ok === true,
+                  previouslyConsumedOrPrepaid: creditResult.skipped === true,
+                },
+                remedyState: { state: 'not_required' },
+                finalizedAt: nowIso,
+              });
+              const manifestArtifactPath = `analysis_jobs/${job.id}/report_quality_manifest/${safeTimestamp(
+                nowIso
+              )}.json`;
+              const { error: manifestArtifactErr } = await supabaseAdmin
+                .from('analysis_artifacts')
+                .insert([
+                  {
+                    job_id: job.id,
+                    user_id: job.user_id,
+                    type: 'report_quality_manifest',
+                    bucket: 'internal',
+                    object_path: manifestArtifactPath,
+                    payload: reportQualityManifest,
+                  },
+                ]);
+              if (manifestArtifactErr) {
+                throw new Error(`Failed to persist Report Quality Manifest: ${manifestArtifactErr.message}`);
+              }
+            } catch (manifestErr) {
+              console.error(
+                `[worker] Report Quality Manifest finalization requires internal repair for job ${job.id}:`,
+                manifestErr?.context || manifestErr?.message || manifestErr
+              );
+              const manifestFailureEventErr = await writeWorkerEventArtifact(
+                job.id,
+                job.user_id,
+                'report_quality_manifest_finalize_failed',
+                {
+                  code: 'REPORT_QUALITY_MANIFEST_FINALIZE_FAILED',
+                  internal_only: true,
+                  customer_delivery_unchanged: true,
+                  report_id: reportId,
+                  storage_path: storagePath,
+                  error: String(manifestErr?.message || manifestErr || ''),
+                  validation: manifestErr?.context?.validation || null,
+                  timestamp: nowIso,
+                }
+              );
+              if (manifestFailureEventErr) {
+                console.error(
+                  `[worker] Failed to write Report Quality Manifest repair event for job ${job.id}:`,
+                  manifestFailureEventErr.message
+                );
+              }
+            }
+          } else if (generatorSource !== 'existing_report') {
+            const manifestMissingEventErr = await writeWorkerEventArtifact(
+              job.id,
+              job.user_id,
+              'report_quality_manifest_candidate_missing',
+              {
+                code: 'REPORT_QUALITY_MANIFEST_CANDIDATE_MISSING',
+                internal_only: true,
+                customer_delivery_unchanged: true,
+                report_id: reportId,
+                storage_path: storagePath,
+                timestamp: nowIso,
+              }
+            );
+            if (manifestMissingEventErr) {
+              console.error(
+                `[worker] Failed to write missing Report Quality Manifest candidate event for job ${job.id}:`,
+                manifestMissingEventErr.message
+              );
+            }
           }
 
           const { data: publishedEmail } = await supabaseAdmin

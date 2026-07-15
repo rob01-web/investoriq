@@ -41,6 +41,7 @@ import {
   constrainCanonicalSourcePackageToSourceTruth,
   isCanonicalSourceTruthPackage,
 } from "./source-truth-package.js";
+import { buildReportQualityManifestCandidate } from "./report-quality-manifest.js";
 import { buildAcquisitionMemoProjection } from "./acquisition-memo-projection.js";
 import { renderAcquisitionMemo } from "./acquisition-memo-renderer.js";
 import {
@@ -179,6 +180,34 @@ async function persistFinalAcquisitionMemoV2ComplianceDiagnostics({
     }
   } catch (err) {
     console.error("Failed to persist final Acquisition Memo V2 compliance diagnostics:", err?.message || err);
+  }
+}
+async function persistReportQualityManifestCandidate({
+  jobId = null,
+  userId = null,
+  candidate = null,
+} = {}) {
+  if (!jobId || !candidate) return false;
+  try {
+    const timestamp = new Date().toISOString().replace(/:/g, "-");
+    const { error } = await supabase.from("analysis_artifacts").insert([
+      {
+        job_id: jobId,
+        user_id: userId || null,
+        type: "report_quality_manifest_candidate",
+        bucket: "internal",
+        object_path: `analysis_jobs/${jobId}/report_quality_manifest_candidate/${timestamp}.json`,
+        payload: candidate,
+      },
+    ]);
+    if (error) {
+      console.error("Failed to write report_quality_manifest_candidate artifact:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Failed to persist Report Quality Manifest candidate:", err?.message || err);
+    return false;
   }
 }
 function sanitizeReportIdentityTitle(value) {
@@ -8404,6 +8433,35 @@ try {
       },
       deliveryState: deliveryDecisionStateResult || null,
     }, "screening");
+    let reportQualityManifestCandidate = null;
+    if (jobId && isCanonicalSourceTruthPackage(sourceTruthPackageResult)) {
+      try {
+        reportQualityManifestCandidate = buildReportQualityManifestCandidate({
+          jobId,
+          userId: effectiveUserId || null,
+          reportFamily: "screening",
+          reportType,
+          reportMode: effectiveReportMode,
+          propertyName: propertyNameDisplay || property_name || jobPropertyName || null,
+          sourceTruthPackage: sourceTruthPackageResult,
+          deterministicContractQaSeal:
+            reportContractQaResult?.deterministic_contract_qa_seal || null,
+          deliveryDecision:
+            immutableScreeningOutput.deliveryState || deliveryDecisionStateResult || null,
+          sourceCoverageQa: sourceCoverageQaResult,
+          renderedQaStatus,
+          sourcePackageQa: sourcePackageQaResult,
+          qaManagerReview: qaManagerReviewResult,
+        });
+        await persistReportQualityManifestCandidate({
+          jobId,
+          userId: effectiveUserId || null,
+          candidate: reportQualityManifestCandidate,
+        });
+      } catch (manifestErr) {
+        console.error("Failed to build Screening Report Quality Manifest candidate:", manifestErr?.context || manifestErr?.message || manifestErr);
+      }
+    }
     return res.status(200).json({
       success: true,
       report_type: reportType,
@@ -8427,6 +8485,7 @@ try {
       source_reconciliation: {
         state: sourceReconciliationState || null,
       },
+      report_quality_manifest_candidate: reportQualityManifestCandidate,
       pdf_required_text_anchors: ["Preliminary Investment Screening Memorandum"],
     });
   }
@@ -8788,6 +8847,51 @@ try {
       }
       signedData = signedResult || signedData;
     }
+    let reportQualityManifestCandidate = null;
+    if (jobId && isCanonicalSourceTruthPackage(sourceTruthPackageResult)) {
+      try {
+        reportQualityManifestCandidate = buildReportQualityManifestCandidate({
+          jobId,
+          userId: effectiveUserId || null,
+          reportId,
+          reportFamily: "acquisition_memo",
+          reportType,
+          reportMode: effectiveReportMode,
+          propertyName: propertyNameDisplay || propertyName || null,
+          sourceTruthPackage: sourceTruthPackageResult,
+          customerSurfaceModel: acquisitionMemoV2Finalization?.customerSurfaceModel || null,
+          customerSurfaceModelValidation:
+            acquisitionMemoV2Finalization?.customerSurfaceModelValidation ||
+            acquisitionMemoV2Finalization?.metadata?.customerSurfaceModelValidation ||
+            null,
+          customerSurfaceHtmlValidation:
+            acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation ||
+            acquisitionMemoV2Finalization?.metadata?.customerSurfaceHtmlValidation ||
+            null,
+          deterministicContractQaSeal:
+            acquisitionMemoV2Finalization?.deterministicContractQaSeal ||
+            reportContractQaResult?.deterministic_contract_qa_seal ||
+            null,
+          bossCompliance:
+            acquisitionMemoV2Finalization?.bossCompliance ||
+            acquisitionMemoV2Finalization?.compliance ||
+            null,
+          deliveryDecision: canonicalDeliveryDecisionState,
+          sourceCoverageQa: sourceCoverageQaResult,
+          renderedQaStatus,
+          sourcePackageQa: sourcePackageQaResult,
+          qaManagerReview: qaManagerReviewResult,
+          finalPdfPublicationQualityBoss: finalPdfPublicationQualityBossResult,
+        });
+        await persistReportQualityManifestCandidate({
+          jobId,
+          userId: effectiveUserId || null,
+          candidate: reportQualityManifestCandidate,
+        });
+      } catch (manifestErr) {
+        console.error("Failed to build Acquisition Memo Report Quality Manifest candidate:", manifestErr?.context || manifestErr?.message || manifestErr);
+      }
+    }
     // 13. Return JSON with the report URL and report_id
     const deliveryAliases = buildDeliveryResponseCompatibilityAliases(canonicalDeliveryDecisionState);
     res.status(200).json({
@@ -8798,6 +8902,7 @@ try {
       url: signedData.signedUrl,
       pdf_artifact_mode: docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf",
       final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
+      report_quality_manifest_candidate: reportQualityManifestCandidate,
       deliveryDecisionState: canonicalDeliveryDecisionState,
     delivery_gate_status: deliveryAliases.delivery_gate_status,
     customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
