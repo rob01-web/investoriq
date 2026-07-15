@@ -73,6 +73,13 @@ function getCustomerSurfaceSection(customerSurfaceModel = null, sectionKey = "")
   return customerSurfaceModel?.sections?.[sectionKey] || null;
 }
 
+function getSourceReconciliationForSurface(customerSurfaceModel = null, bossContract = null, acquisitionMemoProjection = null) {
+  return customerSurfaceModel?.sourceTruth?.sourceReconciliation ||
+    bossContract?.sourceTruth?.sourceReconciliation ||
+    acquisitionMemoProjection?.sourceReconciliation ||
+    null;
+}
+
 function sectionHasSourceBackedFacts(sectionContract = null) {
   return Boolean(sectionContract?.factAvailability?.sourceBacked);
 }
@@ -101,7 +108,8 @@ function formatMoney(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
   const normalized = Object.is(n, -0) ? 0 : n;
-  return `$${normalized.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  const absolute = Math.abs(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  return normalized < 0 ? `($${absolute})` : `$${absolute}`;
 }
 
 function formatPercentDisplay(value) {
@@ -110,6 +118,14 @@ function formatPercentDisplay(value) {
   if (!Number.isFinite(n)) return "";
   const pct = Math.abs(n) <= 1 ? n * 100 : n;
   return `${pct.toFixed(1)}%`;
+}
+
+function formatReconciliationVariance(value) {
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const pct = Math.abs(n) <= 1 ? n * 100 : n;
+  return `${pct.toFixed(2)}%`;
 }
 
 function formatAssetIdentityForSurface({ customerSurfaceModel = null, sourcePackage = null, coreMetrics = null, propertyProfile = null } = {}) {
@@ -207,12 +223,7 @@ export function buildRentUpsideValueSensitivityCard({
 } = {}) {
   if (!Number.isFinite(annualInPlace) || annualInPlace <= 0 || !Number.isFinite(annualMarket) || annualMarket <= annualInPlace) return "";
   const annualGap = annualMarket - annualInPlace;
-  const capRates = [5.0, 6.0, 7.0];
-  const capRows = capRates.map((cap) => {
-    const impliedLift = annualGap / (cap / 100);
-    return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}% cap rate</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
-  }).join("");
-  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Rent Upside / Value Sensitivity</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr><tr style="background:#FEFCE8;font-weight:700;"><td style="color:#B8860B;">Annual Gross Rent Upside</td><td style="color:#B8860B;">${formatCurrency(annualGap)}</td></tr></tbody></table><div style="margin-top:10px;"><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table></div><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Implied value sensitivity capitalizes the verified annual rent gap at standardized cap-rate assumptions. It remains conditional on market-rent capture and occupancy.</p></div>`;
+  return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Documented Rent Position</p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Annual In-Place Rent</td><td>${formatCurrency(annualInPlace)}</td></tr><tr><td>Annual Market Rent</td><td>${formatCurrency(annualMarket)}</td></tr><tr style="background:#FEFCE8;font-weight:700;"><td style="color:#B8860B;">Annual Gross Rent Difference</td><td style="color:#B8860B;">${formatCurrency(annualGap)}</td></tr></tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">The gross rent difference is not capitalized or treated as NOI without an authorized NOI conversion basis.</p></div>`;
 }
 
 export function buildLaunchSourceContextBlock({
@@ -666,7 +677,7 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
           <div class="cover-prop-name">${escapeHtml(propertyName || "Acquisition Memo")}</div>
           <div class="cover-prop-sub">ACQUISITION MEMO</div>
           <div class="cover-verdict-value">CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.</div>
-          <div class="cover-disclosure">Review / Source Reconciliation Disclosure</div>
+          <div class="cover-disclosure">${escapeHtml(customerSurfaceModel?.identity?.visibleClassification || "Acquisition Underwriting Review")}</div>
           <hr class="cover-divider" />
           <div class="cover-metric-strip">
             <div class="cover-metric-row">${escapeHtml([assetIdentity || (coverUnits ? `${coverUnits} Units` : "Property Identity"), coverNoi ? `NOI ${coverNoi}` : "", coverExpenseRatio ? `Expense Ratio ${coverExpenseRatio}` : "", coverNoiMargin ? `NOI Margin ${coverNoiMargin}` : ""].filter(Boolean).join(" \u00a0\u00a0|\u00a0\u00a0 "))}</div>
@@ -677,7 +688,7 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
             <div><span>Documents</span><strong>${escapeHtml(`${supportDocCount + (sourcePackage?.coreT12 ? 1 : 0) + (sourcePackage?.coreRentRoll ? 1 : 0)} uploaded files`)}</strong></div>
           </div>
           <div class="cover-footer-row">
-            <span class="cover-footer-text">Confidential &mdash; InvestorIQ Technologies Inc.</span>
+            <span class="cover-footer-text">Confidential - InvestorIQ Technologies Inc.</span>
             <span class="cover-footer-text">${escapeHtml(generatedLabel || propertyAddress || propertyTitle || "")}</span>
           </div>
         </td>
@@ -695,7 +706,7 @@ function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoPr
     `<tr><td>ACQUISITION MEMO</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
     `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(coreT12?.filename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(coreRentRoll?.filename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
-    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "currentDebtContext", acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true))}</td></tr>`,
   ];
   const occupancy = Number.isFinite(Number(coreMetrics?.occupancy)) ? formatPercentDisplay(coreMetrics.occupancy) : "Not available";
   const noi = Number.isFinite(Number(coreMetrics?.noi)) ? formatMoney(coreMetrics.noi) : "Not available";
@@ -704,7 +715,7 @@ function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoPr
     : "Not available";
   return `<div class="card no-break">
     <p class="subsection-title">Executive Summary</p>
-    <p class="body-copy">Review / Source Reconciliation Disclosure. Deal overview, operating profile, and primary risk drivers.</p>
+    <p class="body-copy">Source-backed acquisition overview, operating profile, and primary risk drivers.</p>
     <table class="detail-table"><tbody>${rows.join("")}</tbody></table>
     <div class="summary-strip">
       <div><span>Occupancy</span><strong>${escapeHtml(occupancy)}</strong></div>
@@ -718,7 +729,7 @@ function renderKeyUpsideDriversSection({ sourcePackage = null, coreMetrics = nul
   const drivers = [];
   if (Number.isFinite(Number(coreMetrics?.occupancy))) drivers.push(`Occupancy ${formatPercentDisplay(coreMetrics.occupancy)} anchored by the canonical Rent Roll.`);
   if (Number.isFinite(Number(coreMetrics?.annualMarketRent)) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent))) {
-    drivers.push(`Annual rent gap of ${formatMoney(Number(coreMetrics.annualMarketRent) - Number(coreMetrics.annualInPlaceRent))} supports value sensitivity.`);
+    drivers.push(`Annual gross rent difference of ${formatMoney(Number(coreMetrics.annualMarketRent) - Number(coreMetrics.annualInPlaceRent))} is documented; no NOI or value conversion is assumed.`);
   }
   if (Number.isFinite(Number(coreMetrics?.noi))) drivers.push(`NOI of ${formatMoney(coreMetrics.noi)} drives cap-rate value indication.`);
   if (Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext)) drivers.push(`Current debt context is uploaded and retained as contextual support.`);
@@ -729,13 +740,18 @@ function renderKeyUpsideDriversSection({ sourcePackage = null, coreMetrics = nul
   return `<div class="card no-break"><p class="subsection-title">Key Upside Drivers</p><ul style="margin:0;padding-left:18px;">${drivers.map((driver) => `<li style="margin-bottom:4px;">${escapeHtml(driver)}</li>`).join("")}</ul><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Primary quantitative anchors: ${escapeHtml(t12Name)} and ${escapeHtml(rentRollName)}.</p></div>`;
 }
 
-function renderPrimaryConstraintSection({ sourcePackage = null, acquisitionMemoProjection = null } = {}) {
-  const currentDebt = Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext);
-  const purchaseAssumptions = Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions);
-  const wording = currentDebt && purchaseAssumptions
-    ? "Review - Source Reconciliation Disclosure: current debt is retained as contextual support while purchase assumptions remain separate acquisition context."
-    : "Review - Source Reconciliation Disclosure: core quantitative inputs are accepted as provided; support documents remain source-transparent and non-overriding.";
-  return `<div class="card no-break"><p class="subsection-title">Primary Constraint / Review Disclosure</p><p class="body-copy">${escapeHtml(wording)}</p></div>`;
+function renderPrimaryConstraintSection({ acquisitionMemoProjection = null, bossContract = null, customerSurfaceModel = null } = {}) {
+  const reconciliation = getSourceReconciliationForSurface(customerSurfaceModel, bossContract, acquisitionMemoProjection);
+  const state = reconciliation?.state || null;
+  if (!["source_reconciliation_required", "parser_suspected"].includes(String(state?.status || "").trim())) return "";
+  if (reconciliation?.sourceBacked !== true) return "";
+  const rows = [
+    `<tr><td>T12 Gross Potential Rent</td><td style="font-weight:600;">${formatMoney(state.t12_gpr)}</td></tr>`,
+    `<tr><td>Rent Roll Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(state.rr_annual_in_place)}</td></tr>`,
+    `<tr><td>Rent Roll less T12</td><td style="font-weight:600;">${formatMoney(state.difference_amount)}</td></tr>`,
+    `<tr><td>Variance</td><td style="font-weight:600;">${formatReconciliationVariance(state.variance_pct)}</td></tr>`,
+  ];
+  return `<div class="card no-break"><p class="subsection-title">Primary Constraint / Source Reconciliation</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table><p class="body-copy">${escapeHtml(state.source_reconciliation_disclosure)}</p></div>`;
 }
 
 function renderSupportDocRows(sourcePackage = null) {
@@ -758,7 +774,10 @@ function renderUploadedFilesSection({ sourcePackage = null } = {}) {
   return renderSection("Uploaded Files / Source Context", `<table class="detail-table"><tbody>${rows}</tbody></table>`, { pageBreakBefore: false });
 }
 
-function renderReadinessBodyHtml({ renderedAcquisitionMemo = null, acquisitionMemoProjection = null } = {}) {
+function renderReadinessBodyHtml({ renderedAcquisitionMemo = null, acquisitionMemoProjection = null, customerSurfaceModel = null } = {}) {
+  if (customerSurfaceModel) {
+    return `<p class="body-copy">Support readiness is stated from canonical fact-bundle completeness below. Missing or incomplete optional support does not alter validated core T12 and Rent Roll authority.</p>`;
+  }
   const signals = acquisitionMemoProjection?.financingReadinessSignals || {};
   const summaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.financingReadinessSummaryHtml || "").trim();
   return summaryHtml
@@ -766,19 +785,37 @@ function renderReadinessBodyHtml({ renderedAcquisitionMemo = null, acquisitionMe
     : `<p class="body-copy">Shown for lender discussion and acquisition diligence support only.</p>`;
 }
 
+function supportFactBundleStatus(customerSurfaceModel = null, sectionKey = "", fallbackSourcePresent = false) {
+  const section = customerSurfaceModel?.sections?.[sectionKey] || null;
+  const availability = section?.factAvailability || null;
+  const required = Array.isArray(availability?.required) ? availability.required : [];
+  const missing = Array.isArray(availability?.missing) ? availability.missing : [];
+  if (availability?.sourceBacked === true && missing.length === 0) {
+    return required.length > 0 ? "Source-backed fact bundle complete" : "Source-backed context accepted";
+  }
+  if (availability?.sourcePresent === true || section?.sourceDoc) {
+    return required.length > 0
+      ? "Document received; structured fact bundle incomplete"
+      : "Context document received";
+  }
+  if (!section && fallbackSourcePresent === true) {
+    return "Document received; canonical fact completeness unavailable";
+  }
+  return "Not provided";
+}
+
 function renderReadinessSection({ renderedAcquisitionMemo = null, acquisitionMemoProjection = null, customerSurfaceModel = null } = {}) {
-  const signals = customerSurfaceModel?.diagnostics || acquisitionMemoProjection?.financingReadinessSignals || {};
   const rows = [
-    `<tr><td>Current debt context uploaded</td><td style="font-weight:600;">${Boolean(signals?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Purchase assumptions provided</td><td style="font-weight:600;">${Boolean(signals?.hasPurchaseAssumptions ?? acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(signals?.hasStructuredRenovation ?? acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Appraisal context</td><td style="font-weight:600;">${Boolean(signals?.hasAppraisalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasAppraisalContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Market survey context</td><td style="font-weight:600;">${Boolean(signals?.hasMarketSurveyContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${Boolean(signals?.hasEnvironmentalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "currentDebtContext", acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true))}</td></tr>`,
+    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "acquisitionRequestContext", acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions === true))}</td></tr>`,
+    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "renovationContext", acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation === true))}</td></tr>`,
+    `<tr><td>Appraisal context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "appraisalContext", acquisitionMemoProjection?.financingReadinessSignals?.hasAppraisalContext === true))}</td></tr>`,
+    `<tr><td>Market survey context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "marketSurveyContext", acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext === true))}</td></tr>`,
+    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "environmentalContext", acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext === true))}</td></tr>`,
   ];
   return renderSection(
     "Preliminary Financing Readiness Summary",
-    `${renderReadinessBodyHtml({ renderedAcquisitionMemo, acquisitionMemoProjection })}<div class="subsection-block"><p class="subsection-title">Lender Diligence Checklist</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table></div>`,
+    `${renderReadinessBodyHtml({ renderedAcquisitionMemo, acquisitionMemoProjection, customerSurfaceModel })}<div class="subsection-block"><p class="subsection-title">Lender Diligence Checklist</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table></div>`,
     { id: "prelim-readiness-title", pageBreakBefore: true }
   );
 }
@@ -871,14 +908,10 @@ function renderRentValueSupportSection({ coreMetrics = null } = {}) {
   const annualInPlace = Number(coreMetrics?.annualInPlaceRent);
   const annualUpside = Number.isFinite(annualMarket) && Number.isFinite(annualInPlace) ? annualMarket - annualInPlace : null;
   const rentGapPct = Number.isFinite(annualUpside) && Number.isFinite(annualInPlace) && annualInPlace > 0 ? annualUpside / annualInPlace : null;
-  const capRates = [5.0, 6.0, 7.0];
-  const capRows = Number.isFinite(annualUpside) && annualUpside > 0
-    ? capRates.map((cap) => `<tr><td>${cap.toFixed(1)}% cap rate</td><td style="font-weight:600;">${formatMoney(annualUpside / (cap / 100))}</td></tr>`).join("")
-    : "";
-  if (!capRows) return "";
+  if (!Number.isFinite(annualUpside) || annualUpside <= 0) return "";
   return renderSection(
-    "Rent / Value Support",
-    `<p class="body-copy">Annual Gross Rent Upside and implied value sensitivity at stabilization are anchored to the verified rent gap and standardized cap-rate assumptions.</p><table class="detail-table"><tbody><tr><td>Annual Gross Rent Upside</td><td style="font-weight:600;">${formatMoney(annualUpside)}</td></tr><tr><td>Rent Gap %</td><td style="font-weight:600;">${formatPercentDisplay(rentGapPct)}</td></tr></tbody></table><div class="subsection-block"><p class="subsection-title">Implied Value Sensitivity at Stabilization</p><table class="detail-table"><tbody>${capRows}</tbody></table></div>`,
+    "Rent Position Support",
+    `<p class="body-copy">The documented annual gross rent difference is presented without an NOI conversion or capitalized value inference.</p><table class="detail-table"><tbody><tr><td>Annual Gross Rent Difference</td><td style="font-weight:600;">${formatMoney(annualUpside)}</td></tr><tr><td>Rent Difference %</td><td style="font-weight:600;">${formatPercentDisplay(rentGapPct)}</td></tr></tbody></table>`,
     { pageBreakBefore: true }
   );
 }
@@ -986,12 +1019,14 @@ function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePa
   const supportRows = Array.isArray(bossDocs) && bossDocs.length
     ? bossDocs.map((doc) => `<tr><td>${escapeHtml(doc?.originalFilename || doc?.roleLabel || doc?.canonicalLabel || doc?.canonicalRole || "Support Document")}</td><td style="font-weight:600;">${escapeHtml(doc?.canonicalLabel || doc?.roleLabel || doc?.canonicalRole || "Other Support Document")}</td><td>${escapeHtml(doc?.treatment || "")}</td><td>${escapeHtml(doc?.use || "")}</td></tr>`).join("")
     : "";
-  const tableBody = tableHtml || (supportRows ? `<table class="detail-table"><tbody>${supportRows}</tbody></table>` : "");
+  const tableBody = supportRows
+    ? `<table class="detail-table"><tbody>${supportRows}</tbody></table>`
+    : tableHtml;
   if (!tableBody) return "";
   return renderSection(
     "Source Context / Support Document Treatment",
     `<p class="body-copy">Uploaded files are listed for auditability. Support documents are retained as source context and are not used to override modeled outputs.</p><p class="subsection-title">Document Treatment Summary</p>${tableBody}`,
-    { id: "document-treatment-title", pageBreakBefore: true }
+    { id: "document-treatment-title", pageBreakBefore: false }
   );
 }
 
@@ -1005,11 +1040,13 @@ function renderSummarySection({ sourcePackage = null, renderedAcquisitionMemo = 
     `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(t12Name)}</td></tr>`,
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(rentRollName)}</td></tr>`,
     `<tr><td>Support docs classified</td><td style="font-weight:600;">${supportDocCount > 0 ? String(supportDocCount) : "0"}</td></tr>`,
-    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasPurchaseAssumptions ?? acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "currentDebtContext", acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true))}</td></tr>`,
+    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "acquisitionRequestContext", acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions === true))}</td></tr>`,
+    `<tr><td>Renovation / CapEx plan</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "renovationContext", acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation === true))}</td></tr>`,
   ];
-  const renderedCoreSourceSummary = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
+  const renderedCoreSourceSummary = customerSurfaceModel
+    ? ""
+    : stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   return renderSection(
     "Acquisition Memo Summary",
     `<p class="body-copy">Source-bound operating and acquisition context.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p>${renderedCoreSourceSummary}</div>` : ""}`,
@@ -1027,17 +1064,19 @@ function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisition
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.filename || bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.visibleLabel || bossContract?.sourceTruth?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
     `<tr><td>Classified support documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>Included in source treatment schedule</td></tr>`,
   ];
-  const renderedCoreSourceSummary = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
+  const renderedCoreSourceSummary = customerSurfaceModel
+    ? ""
+    : stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   const rows = [
     `<tr><td>Asset Identity</td><td style="font-weight:600;">${escapeHtml(assetIdentity)}</td></tr>`,
     `<tr><td>ACQUISITION MEMO</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
     Number.isFinite(Number(coreMetrics?.occupancy)) ? `<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>` : "",
     Number.isFinite(Number(coreMetrics?.noi)) ? `<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(coreMetrics.noi)}</td></tr>` : "",
-    Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? `<tr><td>Current debt context</td><td style="font-weight:600;">Yes</td></tr>` : "",
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "currentDebtContext", acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true))}</td></tr>`,
   ].filter(Boolean).join("");
   return renderSection(
     "Acquisition Memo Summary",
-    `<p class="body-copy">Review / Source Reconciliation Disclosure. Source-bound operating and acquisition context.</p><table class="detail-table"><tbody>${rows}</tbody></table><div class="subsection-block"><p class="subsection-title">Source Context / Uploaded Files</p><table class="detail-table data-coverage-table data-coverage-table-3col"><tbody>${sourceRows.join("")}</tbody></table></div>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p><div class="data-coverage-source-summary">${renderedCoreSourceSummary}</div></div>` : ""}`,
+    `<p class="body-copy">Source-bound operating and acquisition context.</p><table class="detail-table"><tbody>${rows}</tbody></table><div class="subsection-block"><p class="subsection-title">Source Context / Uploaded Files</p><table class="detail-table data-coverage-table data-coverage-table-3col"><tbody>${sourceRows.join("")}</tbody></table></div>${renderedCoreSourceSummary ? `<div class="subsection-block"><p class="subsection-title">Core Quantitative Sources</p><div class="data-coverage-source-summary">${renderedCoreSourceSummary}</div></div>` : ""}`,
     { pageBreakBefore: false }
   );
 }
@@ -1206,7 +1245,7 @@ function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossCo
   const tableRows = unitMixRows.length
     ? unitMixRows.map((row) => {
         const gapDisplay = Number.isFinite(row.gap) ? formatMoney(row.gap) : "Not available";
-        return `<tr><td>${escapeHtml(row.label)}</td><td style="font-weight:600;">${Number.isFinite(row.count) ? Math.round(row.count) : "—"}</td><td style="font-weight:600;">${Number.isFinite(row.inPlace) ? formatMoney(row.inPlace) : "Not available"}</td><td style="font-weight:600;">${Number.isFinite(row.market) ? formatMoney(row.market) : "Not available"}</td><td style="font-weight:600;">${gapDisplay}</td></tr>`;
+        return `<tr><td>${escapeHtml(row.label)}</td><td style="font-weight:600;">${Number.isFinite(row.count) ? Math.round(row.count) : "Not available"}</td><td style="font-weight:600;">${Number.isFinite(row.inPlace) ? formatMoney(row.inPlace) : "Not available"}</td><td style="font-weight:600;">${Number.isFinite(row.market) ? formatMoney(row.market) : "Not available"}</td><td style="font-weight:600;">${gapDisplay}</td></tr>`;
       }).join("")
     : (sectionHasSourceBackedFacts(unitMixSection)
       ? `<tr><td colspan="5" style="font-weight:600;">${renderSectionCollapseHtml()}</td></tr>`
@@ -1262,14 +1301,14 @@ function renderValueSensitivitySection({ sourcePackage = null, acquisitionMemoPr
     : null;
   const normalizedValueDelta = Number.isFinite(valueDelta) && Math.abs(valueDelta) < 0.5 ? 0 : valueDelta;
   const rows = [
-    `<tr><td>Annual rent upside</td><td style="font-weight:600;">${Number.isFinite(annualRentUpside) ? formatMoney(annualRentUpside) : "Not available"}</td></tr>`,
-    `<tr><td>Rent gap %</td><td style="font-weight:600;">${Number.isFinite(rentGapPct) ? formatPercentDisplay(rentGapPct) : "Not available"}</td></tr>`,
+    `<tr><td>Annual gross rent difference</td><td style="font-weight:600;">${Number.isFinite(annualRentUpside) ? formatMoney(annualRentUpside) : "Not available"}</td></tr>`,
+    `<tr><td>Rent difference %</td><td style="font-weight:600;">${Number.isFinite(rentGapPct) ? formatPercentDisplay(rentGapPct) : "Not available"}</td></tr>`,
     `<tr><td>Implied value at going-in cap rate</td><td style="font-weight:600;">${Number.isFinite(impliedValue) ? formatMoney(impliedValue) : "Not available"}</td></tr>`,
     `<tr><td>Value delta vs purchase price</td><td style="font-weight:600;">${Number.isFinite(normalizedValueDelta) ? formatMoney(normalizedValueDelta) : "Not available"}</td></tr>`,
   ];
   return renderSection(
-    "Rent Upside / Value Sensitivity",
-    `<p class="body-copy">Value sensitivity is shown from the verified rent gap and the document-backed cap-rate frame. No additional transaction narrative is introduced.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>`,
+    "Rent Position / Whole-Property Value Context",
+    `<p class="body-copy">The rent difference is shown as gross rent evidence only. The whole-property value indication is calculated independently from T12 NOI and the document-backed going-in cap rate; the rent difference is not capitalized.</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table>`,
     { id: "value-sensitivity-title", pageBreakBefore: true }
   );
 }
@@ -1283,18 +1322,25 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
     `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.filename || bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.visibleLabel || bossContract?.sourceTruth?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
     `<tr><td>Classified support documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>Included in source treatment schedule</td></tr>`,
   ];
-  const sourceSummaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
+  const sourceSummaryHtml = customerSurfaceModel
+    ? ""
+    : stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   const stateRows = [
-    `<tr><td>Current debt context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasCurrentDebtContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasPurchaseAssumptions ?? acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasStructuredRenovation ?? acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Appraisal context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasAppraisalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasAppraisalContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Market survey context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasMarketSurveyContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext) ? "Yes" : "No"}</td></tr>`,
-    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${Boolean(customerSurfaceModel?.diagnostics?.hasEnvironmentalContext ?? acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext) ? "Yes" : "No"}</td></tr>`,
+    `<tr><td>Current debt context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "currentDebtContext", acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true))}</td></tr>`,
+    `<tr><td>Purchase assumptions</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "acquisitionRequestContext", acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions === true))}</td></tr>`,
+    `<tr><td>Structured renovation / CapEx plan</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "renovationContext", acquisitionMemoProjection?.financingReadinessSignals?.hasStructuredRenovation === true))}</td></tr>`,
+    `<tr><td>Appraisal context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "appraisalContext", acquisitionMemoProjection?.financingReadinessSignals?.hasAppraisalContext === true))}</td></tr>`,
+    `<tr><td>Market survey context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "marketSurveyContext", acquisitionMemoProjection?.financingReadinessSignals?.hasMarketSurveyContext === true))}</td></tr>`,
+    `<tr><td>Environmental / Phase I ESA context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "environmentalContext", acquisitionMemoProjection?.financingReadinessSignals?.hasEnvironmentalContext === true))}</td></tr>`,
   ];
+  const reconciliation = getSourceReconciliationForSurface(customerSurfaceModel, bossContract, acquisitionMemoProjection);
+  const reconciliationState = reconciliation?.state || null;
+  const reconciliationHtml = reconciliation?.sourceBacked === true && ["source_reconciliation_required", "parser_suspected"].includes(String(reconciliationState?.status || "").trim())
+    ? `<div class="subsection-block"><p class="subsection-title">Canonical Source Reconciliation</p><table class="detail-table"><tbody><tr><td>T12 Gross Potential Rent</td><td style="font-weight:600;">${formatMoney(reconciliationState.t12_gpr)}</td></tr><tr><td>Rent Roll Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(reconciliationState.rr_annual_in_place)}</td></tr><tr><td>Rent Roll less T12</td><td style="font-weight:600;">${formatMoney(reconciliationState.difference_amount)}</td></tr><tr><td>Variance</td><td style="font-weight:600;">${formatReconciliationVariance(reconciliationState.variance_pct)}</td></tr></tbody></table><p class="body-copy">${escapeHtml(reconciliationState.source_reconciliation_disclosure)}</p></div>`
+    : "";
   return renderSection(
     "Data Coverage & Source Limitations",
-    `<table class="detail-table data-coverage-table data-coverage-table-3col"><tbody>${rows.join("")}</tbody></table><div class="subsection-block"><p class="subsection-title">Source Reliability Snapshot</p><table class="detail-table data-coverage-table data-coverage-table-2col"><tbody>${stateRows.join("")}</tbody></table></div>${sourceSummaryHtml ? `<div class="subsection-block"><p class="subsection-title">Core Source Summary</p><div class="data-coverage-source-summary">${sourceSummaryHtml}</div></div>` : ""}`,
+    `<table class="detail-table data-coverage-table data-coverage-table-3col"><tbody>${rows.join("")}</tbody></table>${reconciliationHtml}<div class="subsection-block"><p class="subsection-title">Source Reliability Snapshot</p><table class="detail-table data-coverage-table data-coverage-table-2col"><tbody>${stateRows.join("")}</tbody></table></div>${sourceSummaryHtml ? `<div class="subsection-block"><p class="subsection-title">Core Source Summary</p><div class="data-coverage-source-summary">${sourceSummaryHtml}</div></div>` : ""}`,
     { id: "data-coverage-title", pageBreakBefore: true }
   );
 }
@@ -1361,6 +1407,17 @@ export function renderCompleteAcquisitionMemoV2Html({
   customerSurfaceModel = null,
 } = {}) {
   try {
+    const hasCanonicalBreakEvenContract = Boolean(customerSurfaceModel?.financialTruth?.breakEvenOccupancy);
+    const canonicalBreakEvenRaw = customerSurfaceModel?.financialTruth?.breakEvenOccupancy?.result;
+    const canonicalBreakEvenOccupancy = canonicalBreakEvenRaw === null || canonicalBreakEvenRaw === undefined || canonicalBreakEvenRaw === ""
+      ? null
+      : Number(canonicalBreakEvenRaw);
+    if (hasCanonicalBreakEvenContract) {
+      coreMetrics = {
+        ...(coreMetrics || {}),
+        breakEvenOccupancy: Number.isFinite(canonicalBreakEvenOccupancy) ? canonicalBreakEvenOccupancy : null,
+      };
+    }
     const surfaceIdentity = customerSurfaceModel?.identity || {};
     const propertyName = surfaceIdentity?.propertyName || propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Acquisition Memo";
     const propertyAddress = surfaceIdentity?.propertyAddress || propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
@@ -1381,7 +1438,7 @@ export function renderCompleteAcquisitionMemoV2Html({
     const executiveSummarySection = renderSafely("Executive Summary", () => renderExecutiveSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.executiveSummary });
     const metricsSection = renderSafely("Key Metrics Snapshot", () => renderMetricsSnapshotSection(coreMetrics, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.keyMetricsSnapshot });
     const keyUpsideDriversSection = renderSafely("Key Upside Drivers", () => renderKeyUpsideDriversSection({ sourcePackage, coreMetrics, acquisitionMemoProjection }), { pageBreakBefore: true, bossSection: bossSections.keyUpsideDrivers });
-    const primaryConstraintSection = renderSafely("Primary Constraint / Review Disclosure", () => renderPrimaryConstraintSection({ sourcePackage, acquisitionMemoProjection }), { pageBreakBefore: true, bossSection: bossSections.primaryConstraintReviewDisclosure });
+    const primaryConstraintSection = renderSafely("Primary Constraint / Review Disclosure", () => renderPrimaryConstraintSection({ acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.primaryConstraintReviewDisclosure });
     const acquisitionMemoSummarySection = renderSafely("Acquisition Memo Summary", () => renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, renderedAcquisitionMemo, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.acquisitionMemoSummary });
     const operatingSection = renderSafely("Operating Snapshot", () => renderOperatingSnapshotSection({ sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.operatingSnapshot });
     const unitMixSection = renderSafely("Unit Mix and Rent Positioning", () => renderUnitMixSection({ sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.unitMix });
@@ -1409,8 +1466,20 @@ export function renderCompleteAcquisitionMemoV2Html({
   <title>${escapeHtml(`InvestorIQ Capital Intelligence Memorandum - ${propertyName}`)}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    @page { size: Letter; margin: 36px 36px 48px 36px; }
-    @page :first { margin: 0; }
+    @page {
+      size: Letter;
+      margin: 36px 36px 48px 36px;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: 'DM Mono', 'Courier New', monospace;
+        font-size: 7px;
+        color: #9A9A9A;
+      }
+    }
+    @page :first {
+      margin: 0;
+      @bottom-right { content: none; }
+    }
     :root {
       --cover-bg: #0F2318;
       --gold: #C9A84C;
@@ -1460,15 +1529,17 @@ export function renderCompleteAcquisitionMemoV2Html({
     .tagline { font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:var(--ink-4); margin-top:6px; }
     .section { margin-top:18px; padding:24px 0; background:var(--white); }
     .section-break { break-before:page; page-break-before:always; }
-    .section-header { position:relative; margin-top:0; margin-bottom:0.38in; padding-bottom:0.14in; border-bottom:1px solid var(--hairline); }
+    .section-header { position:relative; margin-top:0; margin-bottom:0.38in; padding-bottom:0.14in; border-bottom:1px solid var(--hairline); break-after:avoid-page; page-break-after:avoid; }
     .section-header::after { content:''; position:absolute; left:0; bottom:-1px; width:0.28in; height:1.5px; background:var(--gold); opacity:0.8; }
     .section-header-title { display:block; font-family:var(--font-display); font-size:18pt; font-weight:500; letter-spacing:-0.025em; color:var(--ink); line-height:1.05; word-break:keep-all; overflow-wrap:normal; hyphens:none; margin-bottom:4pt; }
     .card { background:var(--white); border:1px solid var(--border-soft, var(--hairline)); border-top:1px solid var(--hairline); padding:12px 14px; }
     .no-break { break-inside:avoid; page-break-inside:avoid; }
     .body-copy { margin:3px 0 8px 0; color:var(--ink-3); font-size:10px; line-height:1.6; }
     .subsection-block + .subsection-block { margin-top:14px; }
-    .subsection-title { margin:0 0 8px 0; font-family:var(--font-body); font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-4); font-weight:600; }
+    .subsection-title { margin:0 0 8px 0; font-family:var(--font-body); font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-4); font-weight:600; break-after:avoid-page; page-break-after:avoid; }
     .detail-table { width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; }
+    .detail-table thead { display:table-header-group; }
+    .detail-table tr { break-inside:avoid; page-break-inside:avoid; }
     .detail-table td { border-bottom:1px solid var(--hairline); padding:6px 8px; vertical-align:top; line-height:1.35; }
     .detail-table tr:first-child td { border-top:none; }
     .detail-table td:first-child { width:44%; color:var(--ink-3); }

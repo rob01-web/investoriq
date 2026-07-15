@@ -2418,6 +2418,12 @@ export default async function handler(req, res) {
                       createdReportRecord: Boolean(publicationResolution?.createdReportRecord),
                       deliveryGateStatus: resolvedDeliveryDecision.deliveryGateStatus,
                       holdDelivery: resolvedDeliveryDecision.holdDelivery,
+                      deterministicContractQaSeal: reportData?.deterministic_contract_qa_seal || null,
+                      sourceReconciliation: reportData?.source_reconciliation || null,
+                      requiredPdfTextAnchors: Array.isArray(reportData?.pdf_required_text_anchors)
+                        ? reportData.pdf_required_text_anchors
+                        : [],
+                      reportDownloadArtifactMode: reportData?.pdf_artifact_mode || process.env.REPORT_DOWNLOAD_ARTIFACT_MODE || "",
                     });
                   } catch (artifactErr) {
                     generatorErrorCode = 'PDF_ARTIFACT_FAILED';
@@ -2429,6 +2435,8 @@ export default async function handler(req, res) {
                       target_url: fetchUrl,
                       report_id: resolvedReportId,
                       storage_path: resolvedStoragePath,
+                      final_pdf_publication_quality_boss:
+                        artifactErr?.context?.final_pdf_publication_quality_boss || null,
                     };
                   }
                   if (!generatorError) {
@@ -2600,6 +2608,10 @@ export default async function handler(req, res) {
             storage_path: storagePath,
             final_html: typeof reportData?.final_html === 'string' ? reportData.final_html : null,
             final_html_length: typeof reportData?.final_html === 'string' ? reportData.final_html.length : 0,
+            final_pdf_publication_quality_boss:
+              artifactResolution?.publicationQualityBoss ||
+              reportData?.final_pdf_publication_quality_boss ||
+              null,
             timestamp: nowIso,
           });
 

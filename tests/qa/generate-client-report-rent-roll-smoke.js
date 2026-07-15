@@ -533,7 +533,7 @@ if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
   assert.match(fullRenderHtml, /Acquisition Memo Summary/i);
   assert.match(fullRenderHtml, /Operating Snapshot/i);
   assert.match(fullRenderHtml, /(?:Rent Positioning Summary|Unit-Level Rent Positioning|Summary Rent Positioning)/i);
-  assert.match(fullRenderHtml, /Rent Upside \/ Value Sensitivity/i);
+  assert.match(fullRenderHtml, /Rent Position \/ Whole-Property Value Context/i);
   assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
   assert.match(fullRenderHtml, /Preliminary Financing Readiness Summary/i);
   assert.ok(
@@ -4476,8 +4476,9 @@ const rentUpsideValueSensitivityCardHtml = generatorTest.buildRentUpsideValueSen
   annualMarket: 1137600,
   formatCurrency,
 });
-assert.match(rentUpsideValueSensitivityCardHtml, /Rent Upside \/ Value Sensitivity/);
-assert.match(rentUpsideValueSensitivityCardHtml, /Implied Value Sensitivity at Stabilization/);
+assert.match(rentUpsideValueSensitivityCardHtml, /Documented Rent Position/);
+assert.match(rentUpsideValueSensitivityCardHtml, /not capitalized or treated as NOI/i);
+assert.equal(/Implied Value Sensitivity at Stabilization/i.test(rentUpsideValueSensitivityCardHtml), false);
 assert.equal(/Unit-Level/i.test(rentUpsideValueSensitivityCardHtml), false);
 assert.equal(/<table>\s*<\/table>/.test(rentUpsideValueSensitivityCardHtml), false);
 assert.equal(/<table>\s*<\/table>/.test(rentUpsideValueSensitivityCardHtml), false);
@@ -6186,10 +6187,10 @@ assert.match(attackAppraisalTreatmentRow, /Source present \/ rejected/i);
 assert.equal(/Appraisal \/ Valuation Context/i.test(attackAppraisalTreatmentRow), false);
 assert.match(attackRenderHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,240}Market Rent Survey Context/i);
 assert.match(attackRenderHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,220}Environmental Due Diligence Context/i);
-assert.match(attackRenderHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
+assert.match(attackRenderHtml, /Current debt context<\/td><td[^>]*>Document received; structured fact bundle incomplete<\/td>/i);
 assert.equal(/No verified current debt context was provided/i.test(attackRenderHtml), false);
 assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Purchase Assumptions \/ Acquisition Context/i.test(attackRenderHtml), false);
-assert.equal(/Current debt context uploaded<\/td><td[^>]*>No/i.test(attackRenderHtml), false);
+assert.equal(/Current debt context<\/td><td[^>]*>(?:Yes|No)<\/td>/i.test(attackRenderHtml), false);
 assert.equal(/No verified forward-looking renovation budget was provided/i.test(attackRenderHtml), false);
 assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Other Support Document/i.test(attackRenderHtml), false);
 assert.equal(/No verified forward-looking renovation budget/i.test(attackRenderHtml), false);
@@ -6374,10 +6375,10 @@ assert.equal(retest4RenderResponse.statusCode, 200);
 assert.equal(retest4RenderResponse.body?.success, true);
 const retest4RenderHtml = String(retest4RenderResponse.body?.final_html || "");
 assert.match(retest4RenderHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,260}Existing Debt Context \/ Current Mortgage \/ Debt Statement/i);
-assert.match(retest4RenderHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
+assert.match(retest4RenderHtml, /Current debt context<\/td><td[^>]*>Source-backed fact bundle complete<\/td>/i);
 assert.match(retest4RenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,260}Renovation \/ CapEx Context/i);
 assert.equal(/No verified current debt context was provided/i.test(retest4RenderHtml), false);
-assert.equal(/Current debt context uploaded<\/td><td[^>]*>No/i.test(retest4RenderHtml), false);
+assert.equal(/Current debt context<\/td><td[^>]*>(?:Yes|No)<\/td>/i.test(retest4RenderHtml), false);
 assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Purchase Assumptions \/ Acquisition Context/i.test(retest4RenderHtml), false);
 assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Other Support Document/i.test(retest4RenderHtml), false);
 assert.equal(/Stonebridge_Reno_Plan\.pdf[\s\S]{0,300}Other Support Document/i.test(retest4RenderHtml), false);

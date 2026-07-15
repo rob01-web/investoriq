@@ -15,6 +15,7 @@ import {
 } from "./acquisition-memo-v2-boss-repair.js";
 import { buildAcquisitionMemoV2FinalDeliveryDecision } from "./acquisition-memo-v2-final-decision.js";
 import { renderCompleteAcquisitionMemoV2Html } from "./acquisition-memo-v2-document.js";
+import { buildDeterministicReportContractQaSeal } from "./deterministic-report-contract-qa-seal.js";
 
 function stripHtmlForExcerpt(html = "") {
   return String(html || "")
@@ -76,6 +77,7 @@ function buildFinalComplianceDiagnostics({
     bossContractValidationResult: bossContractValidation || finalization?.bossCompliance?.validation || null,
     customerSurfaceModelValidation: customerSurfaceModelValidation || finalization?.customerSurfaceModelValidation || null,
     customerSurfaceHtmlValidation: finalization?.customerSurfaceHtmlValidation || null,
+    deterministicContractQaSeal: finalization?.deterministicContractQaSeal || null,
     repairPlan: repairPlan || null,
     repairAttempted: Boolean(repairAttempted),
     repairedHtmlRevalidated: Boolean(repairedHtmlRevalidated),
@@ -167,8 +169,20 @@ export function runAcquisitionMemoV2Orchestrator({
       repairedHtml,
       customerSurfaceModel
     );
+    const deterministicContractQaSeal = buildDeterministicReportContractQaSeal({
+      html: repairedHtml,
+      reportIdentity: {
+        reportMode: customerSurfaceModel?.reportMode || acquisitionMemoV2DocumentArgs?.reportMode || null,
+        reportType: customerSurfaceModel?.identity?.reportType || acquisitionMemoV2DocumentArgs?.reportMeta?.reportType || null,
+        reportTier: customerSurfaceModel?.identity?.reportTier ?? acquisitionMemoV2DocumentArgs?.reportMeta?.reportTier ?? null,
+      },
+      sourceReconciliation: customerSurfaceModel?.sourceTruth?.sourceReconciliation || null,
+      breakEven: customerSurfaceModel?.financialTruth?.breakEvenOccupancy || null,
+      supportSections: customerSurfaceModel?.sections || null,
+      grossRentCapitalizationAuthorized: false,
+    });
     const compliance = {
-      ok: Boolean(bossCompliance?.ok && customerSurfaceHtmlValidation?.ok),
+      ok: Boolean(bossCompliance?.ok && customerSurfaceHtmlValidation?.ok && deterministicContractQaSeal.ok),
       violations: [
         ...(Array.isArray(bossCompliance?.violations) ? bossCompliance.violations : []),
         ...(Array.isArray(customerSurfaceHtmlValidation?.issues)
@@ -179,6 +193,16 @@ export function runAcquisitionMemoV2Orchestrator({
               message: issue.message,
             }))
           : []),
+        ...deterministicContractQaSeal.issues.map((issue) => ({
+          code: issue.code,
+          severity: issue.severity || "critical",
+          section: issue.path || "deterministicContractQaSeal",
+          category: issue.category || "internal_render_contract_failure",
+          classification: issue.classification || "internal_render_contract_failure",
+          customer_document_failure: false,
+          message: issue.message,
+          evidence: issue.evidence || {},
+        })),
       ],
     };
     return {
@@ -187,6 +211,7 @@ export function runAcquisitionMemoV2Orchestrator({
       bossCompliance,
       customerSurfaceModel,
       customerSurfaceHtmlValidation,
+      deterministicContractQaSeal,
       enforcement,
     };
   };

@@ -110,6 +110,13 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
 
   const coreT12 = canonicalSourcePackage?.coreT12 && typeof canonicalSourcePackage.coreT12 === "object" ? canonicalSourcePackage.coreT12 : null;
   const coreRentRoll = canonicalSourcePackage?.coreRentRoll && typeof canonicalSourcePackage.coreRentRoll === "object" ? canonicalSourcePackage.coreRentRoll : null;
+  const sourceTruthAuthority = canonicalSourcePackage?.sourceTruthAuthority && typeof canonicalSourcePackage.sourceTruthAuthority === "object"
+    ? canonicalSourcePackage.sourceTruthAuthority
+    : null;
+  const sourceReconciliationState = cloneEntry(sourceTruthAuthority?.source_reconciliation_state);
+  const sourceReconciliationDisclosures = Array.isArray(sourceTruthAuthority?.disclosures)
+    ? sourceTruthAuthority.disclosures.map(cloneEntry).filter(Boolean)
+    : [];
   const projection = {
     authorityVersion: "v2",
     coreSourceSummary: {
@@ -154,6 +161,15 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
       authorityVersion: "v2",
       classifiedBy: "canonical_source_truth_support_adjudicator",
       projectedBy: "buildAcquisitionMemoProjection",
+    },
+    sourceReconciliation: {
+      state: sourceReconciliationState,
+      disclosures: sourceReconciliationDisclosures,
+      sourceBacked: Boolean(
+        sourceReconciliationState &&
+        Number.isFinite(Number(sourceReconciliationState.t12_gpr)) &&
+        Number.isFinite(Number(sourceReconciliationState.rr_annual_in_place))
+      ),
     },
   };
 

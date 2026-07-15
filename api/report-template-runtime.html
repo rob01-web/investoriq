@@ -5,13 +5,20 @@
   <title>InvestorIQ Capital Intelligence Memorandum  -  {{PROPERTY_NAME}} ({{CITY}}, {{PROVINCE}})</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    @page {
+  @page {
     size: Letter;
     margin: 36px 36px 48px 36px;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: 'DM Mono', 'Courier New', monospace;
+      font-size: 7px;
+      color: #9A9A9A;
+    }
   }
 
   @page :first {
     margin: 0;
+    @bottom-right { content: none; }
   }
     :root {
       --cover-bg: #0F2318;
@@ -301,6 +308,8 @@
       margin-bottom: 0.38in;
       padding-bottom: 0.14in;
       border-bottom: 1px solid var(--hairline);
+      break-after: avoid-page;
+      page-break-after: avoid;
     }
 
     .section-header::after {
@@ -425,6 +434,8 @@
       overflow-wrap: normal;
       hyphens: none;
       margin: 0 0 6px 0;
+      break-after: avoid-page;
+      page-break-after: avoid;
     }
 
     table {
@@ -831,7 +842,21 @@ h2, h3, .subsection-title {
   page-break-after: avoid;
 }
 
-table, ul, ol, .chart-block, .summary-bullets {
+ul, ol, .chart-block, .summary-bullets {
+  page-break-inside: avoid;
+}
+
+table {
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+thead {
+  display: table-header-group;
+}
+
+tr {
+  break-inside: avoid;
   page-break-inside: avoid;
 }
 
@@ -1287,8 +1312,8 @@ ul, ol {
 <section class="section page-break">
   <div class="section-header">
     <span class="section-header-eyebrow">Section 04A</span>
-    <span class="section-header-title">Rent Upside / Value Sensitivity</span>
-    <span class="section-header-sub">Verified rent gap and implied value sensitivity</span>
+    <span class="section-header-title">Documented Rent Position</span>
+    <span class="section-header-sub">Verified gross rent evidence without NOI or value conversion</span>
   </div>
   {{RENT_UPSIDE_VALUE_SENSITIVITY_BLOCK}}
 </section>

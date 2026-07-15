@@ -1,5 +1,9 @@
 import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
 import { requiredAcquisitionFinancingDisplayLabels } from "./acquisition-financing-display-contract.js";
+import {
+  buildDeterministicReportContractQaSeal,
+  DETERMINISTIC_REPORT_CONTRACT,
+} from "./deterministic-report-contract-qa-seal.js";
 
 import {
   buildCurrentDebtAssessmentState,
@@ -7,7 +11,7 @@ import {
   resolveCanonicalRentRollAnnualTotals,
 } from "./report-surface-contracts.js";
 
-const REPORT_CONTRACT_QA_VERSION = "2026.05.09.1";
+const REPORT_CONTRACT_QA_VERSION = "2026.07.15.p0b";
 
 function stripHtml(html) {
   if (typeof html !== "string") return "";
@@ -174,6 +178,16 @@ function coerceNumber(value) {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function resolveCanonicalT12GprValue(t12Payload = null) {
+  return coerceNumber(
+    t12Payload?.gross_potential_rent ??
+      t12Payload?.gross_potential_income ??
+      t12Payload?.gross_potential_rental_income ??
+      t12Payload?.gpr ??
+      t12Payload?.annual_gross_potential_rent
+  );
 }
 
 function normalizeOccupancyRatio(value) {
@@ -1055,6 +1069,7 @@ export function buildReportContractQa({
   deliveryGateDecision = null,
   canonicalSupportDocMap = null,
   renderedDocumentTreatmentRows = [],
+  upstreamDeterministicContractQaSeal = null,
 } = {}) {
   const rawHtml = String(html || "");
   const text = stripHtml(html);
@@ -3332,6 +3347,54 @@ export function buildReportContractQa({
     }
   }
 
+  const p0bReportMode = reportTypeIsScreening(reportType, reportTier)
+    ? "screening_v1"
+    : Number(reportTier) === 2
+      ? "v1_core"
+      : null;
+  const p0bGrossPotentialRent = resolveCanonicalT12GprValue(t12Payload);
+  const p0bOperatingExpenses = coerceNumber(t12Payload?.total_operating_expenses);
+  const p0bBreakEvenResult = Number.isFinite(p0bOperatingExpenses) && Number.isFinite(p0bGrossPotentialRent) && p0bGrossPotentialRent > 0
+    ? p0bOperatingExpenses / p0bGrossPotentialRent
+    : null;
+  const deterministicContractQaSeal = buildDeterministicReportContractQaSeal({
+    html: rawHtml,
+    reportIdentity: {
+      reportMode: p0bReportMode,
+      reportType,
+      reportTier,
+    },
+    sourceReconciliation: sourceReportCoverageQa?.source_reconciliation_state || null,
+    breakEven: Number.isFinite(p0bBreakEvenResult)
+      ? {
+          label: DETERMINISTIC_REPORT_CONTRACT.breakEvenLabel,
+          formula: DETERMINISTIC_REPORT_CONTRACT.breakEvenFormula,
+          numerator: p0bOperatingExpenses,
+          denominator: p0bGrossPotentialRent,
+          result: p0bBreakEvenResult,
+        }
+      : null,
+    grossRentCapitalizationAuthorized: false,
+    upstreamSeal: upstreamDeterministicContractQaSeal,
+  });
+  for (const issue of deterministicContractQaSeal.issues) {
+    addViolation(violations, {
+      code: issue.code,
+      severity: issue.severity || "critical",
+      category: issue.category || "internal_render_contract_failure",
+      message: issue.message,
+      evidence: {
+        ...(issue.evidence || {}),
+        failure_class: "internal_render_contract_failure",
+        customer_document_failure: false,
+      },
+      customer_delivery_impact: "block",
+      report_quality_impact: "block",
+      blocks_customer_delivery: true,
+      blocks_acquisition_memo_launch_ready: true,
+    });
+  }
+
   const counts = countBySeverity(violations);
   const contractStatus = counts.critical > 0 ? "block" : counts.total > 0 ? "warn" : "pass";
   const violationCustomerDeliveryReady = !violations.some((violation) => violation.blocks_customer_delivery);
@@ -3359,6 +3422,7 @@ export function buildReportContractQa({
     distribution_ready: distributionReady,
     customer_delivery_ready: customerDeliveryReady,
     distribution_readiness_issues: distributionReadinessIssues,
+    deterministic_contract_qa_seal: deterministicContractQaSeal,
     violations,
     counts,
     delivery_conformance_source: canonicalDeliveryResolution.source,

@@ -13,9 +13,9 @@ const APPROVED_VISIBLE_CLASSIFICATIONS = new Set([
   "Stable",
   "Sensitized",
   "Fragile",
-  "Review / Source Reconciliation Disclosure",
-  "Review / Insufficient Core Support",
-  "Review / Debt Coverage Constraint",
+  "Review - Source Reconciliation Disclosure",
+  "Review - Insufficient Core Support",
+  "Review - Debt Coverage Constraint",
 ]);
 
 function isPlainObject(value) {
@@ -188,6 +188,13 @@ function normalizeCustomerSurfaceSupportRole(role) {
   }
 }
 
+function normalizeCustomerPunctuation(value) {
+  return String(value || "")
+    .replace(/&(?:mdash|ndash);|&#(?:8211|8212);|&#x(?:2013|2014);|[–—]/gi, " - ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeSupportDoc(doc, sourceKind = "support_doc") {
   const source = isPlainObject(doc) ? doc : null;
   if (!source) return null;
@@ -311,20 +318,20 @@ function normalizeSupportDoc(doc, sourceKind = "support_doc") {
     fileId,
     originalFilename,
     canonicalRole,
-    roleLabel: String(source.roleLabel || source.role_label || source.canonicalLabel || source.canonical_label || "").trim(),
-    canonicalLabel: String(source.canonicalLabel || source.canonical_label || source.roleLabel || source.role_label || "").trim(),
-    treatment: String(source.treatment || source.documentTreatment || source.document_treatment || "").trim(),
-    use: String(source.use || source.documentUse || source.document_use || "").trim(),
+    roleLabel: normalizeCustomerPunctuation(source.roleLabel || source.role_label || source.canonicalLabel || source.canonical_label || ""),
+    canonicalLabel: normalizeCustomerPunctuation(source.canonicalLabel || source.canonical_label || source.roleLabel || source.role_label || ""),
+    treatment: normalizeCustomerPunctuation(source.treatment || source.documentTreatment || source.document_treatment || ""),
+    use: normalizeCustomerPunctuation(source.use || source.documentUse || source.document_use || ""),
     sourceKind: String(source.sourceKind || source.kind || sourceKind || "support_doc").trim(),
     authorityBasis: String(source.authorityBasis || source.authority_basis || "").trim(),
     allowedUses: Array.isArray(source.allowedUses) ? source.allowedUses.slice() : Array.isArray(source.allowed_uses) ? source.allowed_uses.slice() : [],
     forbiddenUses: Array.isArray(source.forbiddenUses) ? source.forbiddenUses.slice() : Array.isArray(source.forbidden_uses) ? source.forbidden_uses.slice() : [],
     extractedFacts,
     sourceEvidence,
-    visibleLabel: String(source.visibleLabel || source.roleLabel || source.canonicalLabel || source.canonicalRole || originalFilename || "").trim(),
+    visibleLabel: normalizeCustomerPunctuation(source.visibleLabel || source.roleLabel || source.canonicalLabel || source.canonicalRole || originalFilename || ""),
     acceptedSemanticDocRole: acceptedSemanticDocRole || null,
     acceptedDebtBasis: acceptedDebtBasis || null,
-    acceptedSemanticDocDisplayLabel: acceptedSemanticDocDisplayLabel || null,
+    acceptedSemanticDocDisplayLabel: normalizeCustomerPunctuation(acceptedSemanticDocDisplayLabel) || null,
     acceptedPurchaseAssumptionsTruth,
     acceptedCurrentDebtTruth,
   };
@@ -650,10 +657,10 @@ function buildCoreSourceSnapshot(coreDoc, fallbackRole, fallbackLabel) {
     fileId: String(source.fileId || source.file_id || source.id || "").trim(),
     originalFilename: String(source.originalFilename || source.original_filename || source.payload?.source_original_filename || "").trim(),
     canonicalRole: String(source.canonicalRole || source.role || fallbackRole || "").trim(),
-    canonicalLabel: String(source.canonicalLabel || source.canonical_label || fallbackLabel || "").trim(),
+    canonicalLabel: normalizeCustomerPunctuation(source.canonicalLabel || source.canonical_label || fallbackLabel || ""),
     sourceKind: String(source.sourceKind || fallbackRole || "").trim(),
     extractedFacts,
-    visibleLabel: String(source.visibleLabel || source.roleLabel || source.canonicalLabel || fallbackLabel || fallbackRole || "").trim(),
+    visibleLabel: normalizeCustomerPunctuation(source.visibleLabel || source.roleLabel || source.canonicalLabel || fallbackLabel || fallbackRole || ""),
   };
 }
 
@@ -1408,7 +1415,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     reportMeta?.visibleClassification ||
       propertyProfile?.visibleClassification ||
       bossContract?.visibleClassification ||
-      "Review / Source Reconciliation Disclosure"
+      "Review - Source Reconciliation Disclosure"
   ).trim();
   const reportTitle = String(reportMeta?.reportTitle || reportMeta?.report_title || `${propertyName || "Acquisition Memo"}`.trim()).trim();
 
@@ -1422,7 +1429,11 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
   const noi = normalizeMoney(coreMetrics?.noi ?? coreT12?.extractedFacts?.net_operating_income);
   const expenseRatio = normalizeCapRatio(coreMetrics?.expenseRatio);
   const noiMargin = normalizeCapRatio(coreMetrics?.noiMargin);
-  const breakEvenOccupancy = normalizeCapRatio(coreMetrics?.breakEvenOccupancy);
+  const providedBreakEvenOccupancy = normalizeCapRatio(coreMetrics?.breakEvenOccupancy);
+  const grossPotentialRent = normalizeMoney(coreT12?.extractedFacts?.gross_potential_rent);
+  const breakEvenOccupancy = Number.isFinite(opEx) && Number.isFinite(grossPotentialRent) && grossPotentialRent > 0
+    ? opEx / grossPotentialRent
+    : null;
   const purchasePrice = normalizeMoney(coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price);
   const goingInCapRate = normalizeCapRatio(coreMetrics?.goingInCapRate ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.going_in_cap_rate);
   const impliedValueAtGoingInCapRate = Number.isFinite(noi) && Number.isFinite(goingInCapRate) && goingInCapRate > 0 ? noi / goingInCapRate : null;
@@ -1458,6 +1469,28 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     purchaseAssumptionsPresent: supportSources.some((doc) => Boolean(doc?.acceptedPurchaseAssumptionsTruth)),
     currentDebtPresent: supportSources.some((doc) => Boolean(doc?.acceptedCurrentDebtTruth)),
   };
+  const sourceReconciliationState = clone(
+    bossContract?.sourceTruth?.sourceReconciliation?.state ||
+      acquisitionMemoProjection?.sourceReconciliation?.state ||
+      null
+  );
+  const sourceReconciliationDisclosures = clone(
+    bossContract?.sourceTruth?.sourceReconciliation?.disclosures ||
+      acquisitionMemoProjection?.sourceReconciliation?.disclosures ||
+      []
+  );
+  const sourceReconciliation = {
+    state: sourceReconciliationState,
+    disclosures: Array.isArray(sourceReconciliationDisclosures) ? sourceReconciliationDisclosures : [],
+    sourceBacked: Boolean(
+      (bossContract?.sourceTruth?.sourceReconciliation?.sourceBacked === true || acquisitionMemoProjection?.sourceReconciliation?.sourceBacked === true) &&
+      Number.isFinite(normalizeMoney(sourceReconciliationState?.t12_gpr)) &&
+      Number.isFinite(normalizeMoney(sourceReconciliationState?.rr_annual_in_place)) &&
+      Number.isFinite(normalizeMoney(sourceReconciliationState?.difference_amount)) &&
+      Number.isFinite(normalizeCapRatio(sourceReconciliationState?.variance_pct)) &&
+      String(sourceReconciliationState?.source_reconciliation_disclosure || "").trim().length > 0
+    ),
+  };
 
   return {
     modelVersion: MODEL_VERSION,
@@ -1482,6 +1515,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       accepted: acceptedSourceTruth,
       coreT12: coreT12,
       coreRentRoll: coreRentRoll,
+      sourceReconciliation,
     },
     supportSourcesByRole,
     sections,
@@ -1501,6 +1535,19 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       documentTreatment: sections.documentTreatment?.facts || {},
     },
     valueSemantics,
+    financialTruth: {
+      breakEvenOccupancy: {
+        label: "Break-Even Occupancy",
+        formula: "total_operating_expenses / gross_potential_rent",
+        numeratorFact: "total_operating_expenses",
+        denominatorFact: "gross_potential_rent",
+        numerator: opEx,
+        denominator: grossPotentialRent,
+        result: breakEvenOccupancy,
+        upstreamResult: providedBreakEvenOccupancy,
+        displayReady: Number.isFinite(breakEvenOccupancy),
+      },
+    },
     diagnostics: {
       coreGatePublishAllowed: Boolean(bossContract?.coreGate?.publishAllowed),
       supportDocCount: supportSources.length,
@@ -1542,6 +1589,32 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
 
   if (!isPlainObject(model.coreSources)) {
     pushIssue("MODEL_CORE_SOURCES_MISSING", "coreSources is required.", "critical", "model.coreSources");
+  }
+
+  const reconciliationState = model.sourceTruth?.sourceReconciliation?.state || null;
+  if (["source_reconciliation_required", "parser_suspected"].includes(String(reconciliationState?.status || "").trim())) {
+    const reconciliationFactsComplete = [
+      reconciliationState?.t12_gpr,
+      reconciliationState?.rr_annual_in_place,
+      reconciliationState?.difference_amount,
+      reconciliationState?.variance_pct,
+    ].every((value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)));
+    if (!reconciliationFactsComplete || !String(reconciliationState?.source_reconciliation_disclosure || "").trim()) {
+      pushIssue(
+        "SOURCE_RECONCILIATION_FACTS_LOST",
+        "Canonical source reconciliation facts and disclosure must reach the customer surface model.",
+        "critical",
+        "model.sourceTruth.sourceReconciliation"
+      );
+    }
+    if (model.sourceTruth?.sourceReconciliation?.sourceBacked !== true) {
+      pushIssue(
+        "SOURCE_RECONCILIATION_NOT_SOURCE_BACKED",
+        "Required source reconciliation must remain source-backed through the customer surface model.",
+        "critical",
+        "model.sourceTruth.sourceReconciliation.sourceBacked"
+      );
+    }
   }
 
   if (!Array.isArray(model.supportSources)) {

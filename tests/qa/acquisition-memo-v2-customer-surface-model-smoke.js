@@ -40,7 +40,7 @@ function buildFixture() {
           effective_gross_income: 1500000,
           total_operating_expenses: 555000,
           net_operating_income: 945000,
-          gross_potential_rent: 1718400,
+          gross_potential_rent: 1612800,
         },
       },
     },
@@ -376,9 +376,9 @@ assert.ok(
     "Stable",
     "Sensitized",
     "Fragile",
-    "Review / Source Reconciliation Disclosure",
-    "Review / Insufficient Core Support",
-    "Review / Debt Coverage Constraint",
+    "Review - Source Reconciliation Disclosure",
+    "Review - Insufficient Core Support",
+    "Review - Debt Coverage Constraint",
   ].includes(model.identity.visibleClassification)
 );
 assert.match(model.identity.reportTitle, /Stonebridge Lofts/i);
@@ -566,9 +566,9 @@ assert.ok(
     "Stable",
     "Sensitized",
     "Fragile",
-    "Review / Source Reconciliation Disclosure",
-    "Review / Insufficient Core Support",
-    "Review / Debt Coverage Constraint",
+    "Review - Source Reconciliation Disclosure",
+    "Review - Insufficient Core Support",
+    "Review - Debt Coverage Constraint",
   ].includes(genericModel.identity.visibleClassification)
 );
 assert.equal(genericModel.sections.currentDebtContext.facts.current_outstanding_balance, 5400000);

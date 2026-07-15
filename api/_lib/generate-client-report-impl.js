@@ -81,6 +81,7 @@ import {
   assertValidReportPublicationInsert,
   sanitizeTypography,
 } from "./report-delivery-output.js";
+import { inspectFinalPdfPublicationQuality } from "./final-pdf-publication-quality-boss.js";
 import {
   resolveReportTypeAndTier,
   constantTimeEqual,
@@ -3548,11 +3549,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         : null;
     const breakEvenOccupancy =
       Number.isFinite(execOpex) &&
-      Number.isFinite(execEgi) &&
-      execEgi > 0
-        ? execOpex / execEgi
+      Number.isFinite(execGpr) &&
+      execGpr > 0
+        ? execOpex / execGpr
         : null;
     const toRatioMetric = (value) => {
+      if (value === null || value === undefined || value === "") return null;
       const n = Number(value);
       if (!Number.isFinite(n)) return null;
       return n > 1.5 ? n / 100 : n;
@@ -3563,6 +3565,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     const breakEvenOccRatio = breakEvenOccR;
     const breakEvenOcc = breakEvenOccR;
     const toPctValue = (value) => {
+      if (value === null || value === undefined || value === "") return null;
       const n = Number(value);
       if (!Number.isFinite(n)) return null;
       return n > 1.5 ? n : n * 100;
@@ -4344,8 +4347,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       debtCoverageConstraintActive: effectiveReportMode === "v1_core" ? false : debtCoverageConstraintActive,
     };
     const canonicalVisibleClassificationState = buildCanonicalVisibleClassificationState({
-      reportType: effectiveReportMode === "v1_core" ? "screening" : reportType,
-      reportTier: effectiveReportMode === "v1_core" ? 1 : reportTier,
+      reportType,
+      reportTier,
       baseLabel: baseVisibleClass,
       score: dealScoreState?.score,
       hasDscrScore: effectiveReportMode === "screening_v1" ? dealScoreState?.hasDscrScore : false,
@@ -4802,6 +4805,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
               reportType,
               reportMode: effectiveReportMode,
               reportTier,
+              visibleClassification: coverClassificationLabel,
               generatedAt: new Date().toISOString(),
               propertyName: propertyNameDisplay,
               propertyAddress: displayPropertyAddress,
@@ -5066,6 +5070,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         reportType,
         reportMode: effectiveReportMode,
         reportTier,
+        visibleClassification: coverClassificationLabel,
         generatedAt: new Date().toISOString(),
         propertyName: propertyNameDisplay,
         propertyAddress: displayPropertyAddress,
@@ -5352,25 +5357,15 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       const annualMarket  = coerceNumber(rentRollAnnualTotals?.market?.value ?? computedRentRoll?.total_annual_market);
       if (!suppressUnitLevelRentLift && effectiveReportMode === "screening_v1" && Number.isFinite(annualInPlace) && annualInPlace > 0 && Number.isFinite(annualMarket) && annualMarket > annualInPlace) {
         const annualGap = annualMarket - annualInPlace;
-        const capRates = [5.0, 6.0, 7.0];
-        const capRows = capRates.map(cap => {
-          const impliedLift = annualGap / (cap / 100);
-          return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}% cap rate</td>` +
-            `<td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
-        }).join("");
         upsideHtml = `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;">` +
-          `<p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway: Mark-to-Market Analysis</p>` +
-          `<div class="grid-2">` +
-          `<div><table style="width:100%;border-collapse:collapse;font-size:11px;">` +
+          `<p class="subsection-title" style="margin-bottom:8px;">Documented Rent Position</p>` +
+          `<table style="width:100%;border-collapse:collapse;font-size:11px;">` +
           `<tbody>` +
           `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual In-Place Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualInPlace)}</td></tr>` +
           `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr>` +
-          `<tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr>` +
-          `</tbody></table></div>` +
-          `<div><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p>` +
-          `<table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table>` +
-          `<p class="small" style="margin-top:6px;">Implied value sensitivity reflects annual rent gap capitalized at the selected cap-rate assumption and remains conditional on market-rent capture and occupancy.</p></div>` +
-          `</div></div>`;
+          `<tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Difference</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr>` +
+          `</tbody></table>` +
+          `<p class="small" style="margin-top:6px;">The gross rent difference is not capitalized or treated as NOI without an authorized NOI conversion basis.</p></div>`;
       }
       finalHtml = replaceAll(finalHtml, "{{UNIT_VALUE_ADD_UPSIDE_PATHWAY}}", upsideHtml);
     }
@@ -7616,6 +7611,7 @@ if (!hasSectionTwelve) {
   return res.status(500).json({ error: "report_html_incomplete" });
 }
 let pdfResponse;
+let finalPdfPublicationQualityBossResult = null;
 // Final customer-facing HTML surface used for both QA and DocRaptor.
 const buildMarkerValue =
   process.env.VERCEL_GIT_COMMIT_SHA ||
@@ -8180,6 +8176,8 @@ try {
     deliveryGateDecision: deliveryGateDecisionResult || null,
     canonicalSupportDocMap,
     renderedDocumentTreatmentRows,
+    upstreamDeterministicContractQaSeal:
+      acquisitionMemoV2Finalization?.deterministicContractQaSeal || null,
   });
   reportContractQaResult = reportContractQa;
   const contractTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -8382,6 +8380,8 @@ try {
       deliveryGateDecisionResult,
       sourceTruthPackage: sourceTruthPackageResult,
       sourceTruthRequired: true,
+      deterministicContractQaSeal:
+        reportContractQaResult?.deterministic_contract_qa_seal || null,
     });
     const immutableScreeningOutput = assertSealedOutputImmutable({
       ...sealedScreeningOutput,
@@ -8412,6 +8412,12 @@ try {
       sealed_lane: immutableScreeningOutput.sealedLane || "screening_lane",
       sealed_customer_output: true,
       source_coverage_qa: sourceCoverageQaResult || null,
+      deterministic_contract_qa_seal:
+        reportContractQaResult?.deterministic_contract_qa_seal || null,
+      source_reconciliation: {
+        state: sourceReconciliationState || null,
+      },
+      pdf_required_text_anchors: ["Preliminary Investment Screening Memorandum"],
     });
   }
   if (
@@ -8642,6 +8648,47 @@ try {
       responseType: "arraybuffer",
     }
   );
+  const finalPdfArtifactMode = docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf";
+  const finalPdfPublicationTarget = String(process.env.REPORT_PUBLICATION_TARGET || "").trim() ||
+    (finalPdfArtifactMode === "production_pdf" ? "external_customer" : "internal_test");
+  const finalPdfDeterministicContractQaSeal =
+    acquisitionMemoV2Finalization?.deterministicContractQaSeal ||
+    reportContractQaResult?.deterministic_contract_qa_seal ||
+    null;
+  const finalPdfSourceReconciliation =
+    acquisitionMemoV2Finalization?.customerSurfaceModel?.sourceTruth?.sourceReconciliation ||
+    { state: sourceReconciliationState || null };
+  finalPdfPublicationQualityBossResult = await inspectFinalPdfPublicationQuality({
+    pdfBytes: pdfResponse.data,
+    approvedHtml: docHtml,
+    deterministicContractQaSeal: finalPdfDeterministicContractQaSeal,
+    sourceReconciliation: finalPdfSourceReconciliation,
+    requiredTextAnchors: ["Acquisition Memo"],
+    artifactMode: finalPdfArtifactMode,
+    publicationTarget: finalPdfPublicationTarget,
+  });
+  if (jobId) {
+    const pdfBossTimestamp = new Date().toISOString().replace(/:/g, "-");
+    const { error: pdfBossArtifactError } = await supabase.from("analysis_artifacts").insert([{
+      job_id: jobId,
+      user_id: effectiveUserId || null,
+      type: "final_pdf_publication_quality_boss",
+      bucket: "internal",
+      object_path: `analysis_jobs/${jobId}/final_pdf_publication_quality_boss/${pdfBossTimestamp}.json`,
+      payload: finalPdfPublicationQualityBossResult,
+    }]);
+    if (pdfBossArtifactError) console.error("Failed to write final_pdf_publication_quality_boss artifact:", pdfBossArtifactError);
+  }
+  if (!finalPdfPublicationQualityBossResult.ok) {
+    const pdfBossError = new Error("Final PDF failed Publication Quality Boss certification");
+    pdfBossError.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
+    pdfBossError.context = {
+      failure_class: "internal_system_failure",
+      customer_document_failure: false,
+      final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
+    };
+    throw pdfBossError;
+  }
 } catch (err) {
   console.error("DOCRAPTOR ERROR STATUS:", err.response?.status);
   console.error("DOCRAPTOR ERROR BODY:");
@@ -8738,6 +8785,8 @@ try {
       storagePath: validatedStoragePath,
       report_type: reportType,
       url: signedData.signedUrl,
+      pdf_artifact_mode: docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf",
+      final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
       deliveryDecisionState: canonicalDeliveryDecisionState,
     delivery_gate_status: deliveryAliases.delivery_gate_status,
     customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,

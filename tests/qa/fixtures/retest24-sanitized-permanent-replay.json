@@ -1,0 +1,219 @@
+{
+  "schema_version": "retest24_sanitized_permanent_replay_v1",
+  "fixture_purpose": "Permanent, customer-sanitized replay of the RETEST 24 Acquisition Memo authority and publication contract.",
+  "sanitization": {
+    "customer_identifiers_removed": true,
+    "production_ids_removed": true,
+    "financial_and_semantic_evidence_preserved": true
+  },
+  "property": {
+    "name": "Harbourview Court",
+    "address": "100 Harbourview Avenue, Toronto, Ontario",
+    "asset_class": "Multifamily"
+  },
+  "expected": {
+    "acquisition_financing": {
+      "purchase_price": 13500000,
+      "noi_basis": 945000,
+      "going_in_cap_rate": 0.07,
+      "proposed_loan_amount": 9450000,
+      "proposed_ltv": 0.7,
+      "proposed_interest_rate": 0.0595,
+      "proposed_amortization_years": 30,
+      "lender_fee_percent": 0.0085
+    },
+    "current_debt": {
+      "current_outstanding_balance": 6800000,
+      "interest_rate": 0.0485,
+      "amortization_remaining_years": 24,
+      "monthly_payment": 39250,
+      "annual_debt_service": 471000,
+      "maturity_date": "2029-11-01"
+    },
+    "appraisal": {
+      "appraised_value": 14200000,
+      "stabilized_noi": 1050000,
+      "stabilized_cap_rate": 0.074
+    },
+    "reconciliation": {
+      "t12_gross_potential_rent": 1612800,
+      "rent_roll_annual_in_place_rent": 1432800,
+      "difference": -180000,
+      "variance": -0.11160714285714286,
+      "customer_display": "-11.16%"
+    },
+    "break_even_occupancy": 0.3441220238095238
+  },
+  "core": {
+    "t12": {
+      "file_id": "fixture-core-t12",
+      "original_filename": "Harbourview_T12.xlsx",
+      "gross_potential_rent": 1612800,
+      "gross_scheduled_rent": 1612800,
+      "vacancy_allowance": -112800,
+      "effective_gross_income": 1500000,
+      "total_operating_expenses": 555000,
+      "net_operating_income": 945000,
+      "income_lines": [
+        { "label": "Gross Potential Rent", "amount": 1612800 },
+        { "label": "Vacancy Allowance", "amount": -112800 },
+        { "label": "Effective Gross Income", "amount": 1500000 }
+      ],
+      "expense_lines": [
+        { "label": "Property Taxes", "amount": 185000 },
+        { "label": "Insurance", "amount": 72000 },
+        { "label": "Repairs and Maintenance", "amount": 104000 },
+        { "label": "Utilities", "amount": 86000 },
+        { "label": "Property Management", "amount": 60000 },
+        { "label": "Payroll and Administration", "amount": 28000 },
+        { "label": "Other Operating Expenses", "amount": 20000 }
+      ]
+    },
+    "rent_roll": {
+      "file_id": "fixture-core-rent-roll",
+      "original_filename": "Harbourview_Rent_Roll.xlsx",
+      "total_units": 64,
+      "occupied_units": 60,
+      "vacant_units": 4,
+      "occupancy": 0.9375,
+      "annual_in_place_rent": 1432800,
+      "annual_market_rent": 1718400,
+      "unit_groups": [
+        {
+          "prefix": "A",
+          "count": 32,
+          "occupied_count": 32,
+          "beds": 1,
+          "in_place_rent_occupied": 1850,
+          "market_rent": 2050,
+          "square_feet": 650
+        },
+        {
+          "prefix": "B",
+          "count": 32,
+          "occupied_count": 28,
+          "beds": 2,
+          "in_place_rent_occupied": 2150,
+          "market_rent": 2425,
+          "square_feet": 850
+        }
+      ],
+      "unit_mix": [
+        { "unit_type": "1BR", "unit_count": 32, "average_in_place_rent": 1850, "average_market_rent": 2050 },
+        { "unit_type": "2BR", "unit_count": 32, "average_in_place_rent": 1881.25, "average_market_rent": 2425 }
+      ]
+    }
+  },
+  "documents": [
+    {
+      "id": "fixture-purchase-assumptions",
+      "original_filename": "Harbourview_Purchase_Assumptions.pdf",
+      "doc_type": "supporting_documents_unclassified",
+      "parse_status": "parsed",
+      "source_text": "Harbourview Court. Purchase Assumptions / Proposed Acquisition Financing. Document Role: This document represents purchase assumptions and proposed acquisition financing only. It is not a current mortgage statement and does not represent existing debt. Purchase Price $13,500,000. NOI Basis $945,000. Going-In Cap Reference 7.00%. Proposed Acquisition Loan $9,450,000. Proposed LTV 70.0%. Proposed Interest Rate 5.95%. Proposed Amortization 30 years. Lender / Origination Fee 0.85%. These are proposed acquisition financing assumptions for lender discussion only. Do not treat the proposed acquisition loan as current outstanding debt."
+    },
+    {
+      "id": "fixture-current-debt",
+      "original_filename": "Harbourview_Current_Debt.pdf",
+      "doc_type": "supporting_documents_unclassified",
+      "parse_status": "parsed",
+      "source_text": "Harbourview Court. Existing Current Debt Statement. Document Role: This is an existing/current debt context document. It is separate from proposed acquisition financing. Current Outstanding Balance $6,800,000. Interest Rate 4.85%. Amortization Remaining 24 years. Monthly Payment $39,250. Maturity Date 2029-11-01. Display as current/existing debt context only. Keep this document separate from Harbourview_Purchase_Assumptions.pdf proposed acquisition financing."
+    },
+    {
+      "id": "fixture-appraisal",
+      "original_filename": "Harbourview_Appraisal_Summary.pdf",
+      "doc_type": "supporting_documents_unclassified",
+      "parse_status": "parsed",
+      "source_text": "Harbourview Court. Appraisal Summary. Document Role: Appraisal and valuation context only. Appraised Value $14,200,000. Stabilized NOI $1,050,000. Stabilized Cap Rate 7.40%. The appraised value is not a purchase price. The stabilized NOI does not replace the T12 NOI. This document is not purchase assumptions and is not a current debt statement."
+    },
+    {
+      "id": "fixture-renovation",
+      "original_filename": "Harbourview_Renovation_Plan.pdf",
+      "doc_type": "supporting_documents_unclassified",
+      "parse_status": "parsed",
+      "source_text": "Harbourview Court. Structured Renovation / CapEx Plan. Total Renovation Budget $1,280,000. 1BR scope: 20 units at $18,500 per unit, expected monthly rent lift $225, Months 1-18. 2BR scope: 18 units at $24,000 per unit, expected monthly rent lift $325, Months 1-24. Common areas $210,000. Exterior and security $115,000. Contingency $153,000. Context only; no return or value conclusion is authorized."
+    },
+    {
+      "id": "fixture-market-survey",
+      "original_filename": "Harbourview_Market_Survey.pdf",
+      "doc_type": "supporting_documents_unclassified",
+      "parse_status": "parsed",
+      "source_text": "Harbourview Court. Market Rent Survey. Market context only. This document is not a Rent Roll, purchase assumptions, current debt statement, or appraisal."
+    },
+    {
+      "id": "fixture-environmental",
+      "original_filename": "Harbourview_Phase_I_ESA.pdf",
+      "doc_type": "supporting_documents_unclassified",
+      "parse_status": "parsed",
+      "source_text": "Harbourview Court. Phase I Environmental Site Assessment. Environmental due diligence context only. This document contains no purchase assumptions, debt terms, appraisal conclusion, or operating statement authority."
+    }
+  ],
+  "support_artifacts": [
+    {
+      "type": "loan_term_sheet_parsed",
+      "file_id": "fixture-purchase-assumptions",
+      "payload": {
+        "candidate_only": true,
+        "semantic_doc_role": "purchase_assumptions",
+        "debt_basis": "acquisition_financing_assumption",
+        "purchase_price": 13500000,
+        "noi_basis": 945000,
+        "going_in_cap_rate": 0.07,
+        "proposed_loan_amount": 9450000,
+        "ltv": 0.7,
+        "interest_rate": 0.0595,
+        "amortization_years": 30,
+        "lender_fee_percent": 0.0085,
+        "accepted_fields": ["purchase_price", "noi_basis", "going_in_cap_rate", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"]
+      }
+    },
+    {
+      "type": "mortgage_statement_parsed",
+      "file_id": "fixture-current-debt",
+      "payload": {
+        "candidate_only": true,
+        "semantic_doc_role": "current_debt_context",
+        "debt_basis": "current_debt_context",
+        "current_outstanding_balance": 6800000,
+        "outstanding_balance": 6800000,
+        "interest_rate": 0.0485,
+        "amortization_remaining_years": 24,
+        "amortization_years": 24,
+        "monthly_payment": 39250,
+        "annual_debt_service": 471000,
+        "maturity_date": "2029-11-01",
+        "accepted_fields": ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"]
+      }
+    },
+    {
+      "type": "appraisal_parsed",
+      "file_id": "fixture-appraisal",
+      "payload": {
+        "candidate_only": true,
+        "semantic_doc_role": "appraisal_context",
+        "appraised_value": 14200000,
+        "appraisal_noi": 1050000,
+        "appraisal_cap_rate": 0.074,
+        "accepted_fields": ["appraised_value", "appraisal_noi", "appraisal_cap_rate"]
+      }
+    },
+    {
+      "type": "renovation_parsed",
+      "file_id": "fixture-renovation",
+      "payload": {
+        "candidate_only": true,
+        "semantic_doc_role": "renovation_capex_context",
+        "total_budget": 1280000,
+        "total_renovation_budget": 1280000,
+        "budget_rows": [
+          { "category": "1BR unit turns", "unit_count": 20, "cost_per_unit": 18500, "expected_monthly_rent_lift": 225, "phase_timing": "Months 1-18" },
+          { "category": "2BR unit turns", "unit_count": 18, "cost_per_unit": 24000, "expected_monthly_rent_lift": 325, "phase_timing": "Months 1-24" },
+          { "category": "Common areas", "total_cost": 210000 },
+          { "category": "Exterior and security", "total_cost": 115000 },
+          { "category": "Contingency", "total_cost": 153000 }
+        ],
+        "timing_or_phasing": "Months 1-24"
+      }
+    }
+  ]
+}

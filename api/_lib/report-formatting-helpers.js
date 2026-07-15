@@ -4,15 +4,12 @@ export function isNil(value) {
 export function formatCurrency(value, options = {}) {
   const { decimals = 0, prefix = "$", suffix = "" } = options;
   if (isNil(value) || isNaN(Number(value))) return "";
-  const num = Number(value);
-  return (
-    prefix +
-    num.toLocaleString("en-CA", {
+  const num = Object.is(Number(value), -0) ? 0 : Number(value);
+  const formatted = Math.abs(num).toLocaleString("en-CA", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-    }) +
-    suffix
-  );
+    });
+  return num < 0 ? `(${prefix}${formatted}${suffix})` : `${prefix}${formatted}${suffix}`;
 }
 export function formatPercent(value, decimals = 1) {
   if (isNil(value) || isNaN(Number(value))) return "";

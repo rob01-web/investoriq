@@ -160,7 +160,7 @@ function buildStructuredStonebridgeSourcePackage() {
           effective_gross_income: 1500000,
           total_operating_expenses: 555000,
           net_operating_income: 945000,
-          gross_potential_rent: 1718400,
+          gross_potential_rent: 1612800,
         },
       },
     },
@@ -285,7 +285,7 @@ assert.match(finalHtml, /Executive Summary/i);
 assert.match(finalHtml, /Key Metrics Snapshot/i);
 assert.match(finalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(finalHtml, /Lender Diligence Checklist/i);
-assert.match(finalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
+assert.match(finalHtml, /Current debt context<\/td><td[^>]*>Document received; canonical fact completeness unavailable<\/td>/i);
 assert.match(finalHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i);
 const assumptionsRowMatch = finalHtml.match(/<tr[^>]*>[\s\S]{0,1200}?Stonebridge_Assumptions\.pdf[\s\S]*?<\/tr>/i);
 assert.ok(assumptionsRowMatch, "Missing Stonebridge_Assumptions.pdf row");
@@ -370,7 +370,7 @@ const retest6FinalHtml = renderCompleteAcquisitionMemoV2Html({
     noi: 945000,
     expenseRatio: 0.37,
     noiMargin: 0.63,
-    breakEvenOccupancy: 0.37,
+    breakEvenOccupancy: 555000 / 1612800,
     purchasePrice: 13500000,
     goingInCapRate: 0.07,
   },
@@ -411,7 +411,7 @@ assert.equal(/64-Unit Multifamily/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /ACQUISITION MEMO/i);
 assert.match(retest6FinalHtml, /Key Metrics Snapshot/i);
 assert.match(retest6FinalHtml, /Key Upside Drivers/i);
-assert.match(retest6FinalHtml, /Primary Constraint \/ Review Disclosure/i);
+assert.equal(/Primary Constraint \/ Review Disclosure/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Units<\/td><td style="font-weight:600;">64<\/td>/i);
 assert.match(retest6FinalHtml, /Annual In-Place Rent<\/td><td style="font-weight:600;">\$1,432,800<\/td>/i);
 assert.match(retest6FinalHtml, /Annual Market Rent<\/td><td style="font-weight:600;">\$1,718,400<\/td>/i);
@@ -422,7 +422,7 @@ assert.match(retest6FinalHtml, /Operating Expenses<\/td><td style="font-weight:6
 assert.match(retest6FinalHtml, /NOI<\/td><td style="font-weight:600;">\$945,000<\/td>/i);
 assert.match(retest6FinalHtml, /Expense Ratio<\/td><td style="font-weight:600;">37\.0%<\/td>/i);
 assert.match(retest6FinalHtml, /NOI Margin<\/td><td style="font-weight:600;">63\.0%<\/td>/i);
-assert.match(retest6FinalHtml, /Break-Even Occupancy<\/td><td style="font-weight:600;">37\.0%<\/td>/i);
+assert.match(retest6FinalHtml, /Break-Even Occupancy<\/td><td style="font-weight:600;">34\.4%<\/td>/i);
 assert.match(retest6FinalHtml, /Purchase Price<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
 assert.match(retest6FinalHtml, /Going-In Cap Rate<\/td><td style="font-weight:600;">7\.0%<\/td>/i);
 assert.match(retest6FinalHtml, /Price per Unit<\/td><td style="font-weight:600;">\$210,938<\/td>/i);
@@ -434,17 +434,15 @@ assert.match(retest6FinalHtml, /Unit Mix and Rent Positioning/i);
 assert.match(retest6FinalHtml, /Rent Positioning Summary/i);
 assert.match(retest6FinalHtml, /1BR[\s\S]{0,200}32[\s\S]{0,200}\$1,850[\s\S]{0,200}\$2,050[\s\S]{0,200}\$200/i);
 assert.match(retest6FinalHtml, /2BR[\s\S]{0,200}32[\s\S]{0,200}\$1,881[\s\S]{0,200}\$2,425[\s\S]{0,200}\$544/i);
-assert.match(retest6FinalHtml, /Rent Upside \/ Value Sensitivity/i);
-assert.match(retest6FinalHtml, /Annual Gross Rent Upside/i);
-assert.match(retest6FinalHtml, /Implied Value Sensitivity at Stabilization/i);
+assert.match(retest6FinalHtml, /Rent Position \/ Whole-Property Value Context/i);
+assert.match(retest6FinalHtml, /Annual gross rent difference/i);
+assert.equal(/Implied Value Sensitivity at Stabilization/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Cap-Rate Value Indication/i);
-assert.match(retest6FinalHtml, /5\.0% cap rate[\s\S]{0,200}\$5,712,000/i);
-assert.match(retest6FinalHtml, /6\.0% cap rate[\s\S]{0,200}\$4,760,000/i);
-assert.match(retest6FinalHtml, /7\.0% cap rate[\s\S]{0,200}\$4,080,000/i);
+assert.equal(/\$5,712,000|\$4,760,000|\$4,080,000/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(retest6FinalHtml, /Acquisition Request Context/i);
 assert.match(retest6FinalHtml, /Operating Support/i);
-assert.match(retest6FinalHtml, /Rent \/ Value Support/i);
+assert.match(retest6FinalHtml, /Rent Position Support/i);
 assert.match(retest6FinalHtml, /Debt \/ Financing Context/i);
 assert.match(retest6FinalHtml, /Operating Statement \/ TTM Summary/i);
 assert.match(retest6FinalHtml, /Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
@@ -476,11 +474,10 @@ assert.equal(/white-space\s*:\s*nowrap/i.test(dataCoverageSectionMatch[0]), fals
 const requiredSectionOrder = [
   "Executive Summary",
   "Key Upside Drivers",
-  "Primary Constraint / Review Disclosure",
   "Acquisition Memo Summary",
   "Operating Snapshot",
   "Unit Mix and Rent Positioning",
-  "Rent Upside / Value Sensitivity",
+  "Rent Position / Whole-Property Value Context",
   "Preliminary Financing Readiness Summary",
   "Data Coverage & Source Limitations",
   "Source Context / Support Document Treatment",
@@ -498,7 +495,7 @@ for (const sectionTitle of requiredSectionOrder) {
 }
 assert.equal(/Acquisition Memo Summary[\s\S]{0,250}Acquisition Memo Summary/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
-assert.match(retest6FinalHtml, /Current debt context uploaded<\/td><td[^>]*>Yes<\/td>/i);
+assert.match(retest6FinalHtml, /Current debt context<\/td><td[^>]*>Document received; canonical fact completeness unavailable<\/td>/i);
 const currentDebtSectionMatch = retest6FinalHtml.match(/Debt \/ Financing Context[\s\S]{0,2500}?<\/section>/i);
 assert.ok(currentDebtSectionMatch, "Missing debt / financing context section");
 assert.match(currentDebtSectionMatch[0], /Current Outstanding Balance/i);
@@ -562,7 +559,7 @@ const structuredFinalHtml = renderCompleteAcquisitionMemoV2Html({
     noi: 945000,
     expenseRatio: 0.37,
     noiMargin: 0.63,
-    breakEvenOccupancy: 0.37,
+    breakEvenOccupancy: 555000 / 1612800,
     purchasePrice: 13500000,
     goingInCapRate: 0.07,
   },
@@ -615,7 +612,7 @@ const capRateSevenFinalHtml = renderCompleteAcquisitionMemoV2Html({
     noi: 945000,
     expenseRatio: 0.37,
     noiMargin: 0.63,
-    breakEvenOccupancy: 0.37,
+    breakEvenOccupancy: 555000 / 1612800,
     purchasePrice: 13500000,
     goingInCapRate: 7,
   },

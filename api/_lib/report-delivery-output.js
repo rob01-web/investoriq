@@ -1,5 +1,6 @@
 import axios from "axios";
 import { sanitizeFinalCustomerHtml } from "./report-surface-contracts.js";
+import { assertFinalPdfPublicationQuality } from "./final-pdf-publication-quality-boss.js";
 
 export function sanitizeTypography(html) {
   return sanitizeFinalCustomerHtml(html);
@@ -7,19 +8,45 @@ export function sanitizeTypography(html) {
 
 export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState = null) {
   const state = deliveryDecisionState && typeof deliveryDecisionState === "object" ? deliveryDecisionState : {};
-  const rawDeliveryGateStatus = String(state.delivery_gate_status || "blocked");
-  const hasCanonicalCoreValidState =
+  const rawDeliveryGateStatus = String(state.delivery_gate_status || state.final_delivery_status || "blocked");
+  const hasCanonicalDeliveryGateState =
     state.source === "canonical_delivery_decision" &&
     state.core_valid_required_coverage === true;
+  const finalBossCompliance = state.finalBossCompliance && typeof state.finalBossCompliance === "object"
+    ? state.finalBossCompliance
+    : {};
+  const hasCanonicalAcquisitionFinalDecision =
+    state.version === "acq_memo_v2_final_delivery_decision_v1" &&
+    state.product === "acquisition_memo_v2" &&
+    state.final_delivery_authority === "final_boss_customer_surface_model_delivery_decision" &&
+    state.final_delivery_status === "deliverable" &&
+    state.coreGate?.publishAllowed === true &&
+    finalBossCompliance.ok === true &&
+    finalBossCompliance.bossOk === true &&
+    finalBossCompliance.customerSurfaceModelOk === true &&
+    finalBossCompliance.customerSurfaceHtmlOk === true &&
+    Number(finalBossCompliance.violationCount) === 0 &&
+    state.customer_delivery_ready === true &&
+    state.customer_publish_eligible === true &&
+    state.report_publishable === true &&
+    state.report_blocked === false &&
+    Array.isArray(state.blockingReasons) &&
+    state.blockingReasons.length === 0;
+  const hasCanonicalCoreValidState = hasCanonicalDeliveryGateState || hasCanonicalAcquisitionFinalDecision;
   const deliveryGateStatus = hasCanonicalCoreValidState ? rawDeliveryGateStatus : "blocked";
   const customerBlockers = Array.isArray(state.customer_blockers)
     ? state.customer_blockers
     : Array.isArray(state.customer_publish_blockers)
       ? state.customer_publish_blockers
-      : [];
+      : Array.isArray(state.blockingReasons)
+        ? state.blockingReasons
+        : [];
+  const canonicalCustomerDeliveryAllowed = hasCanonicalAcquisitionFinalDecision
+    ? state.customer_delivery_ready === true && state.customer_publish_eligible === true && state.report_publishable === true
+    : state.customer_delivery_allowed === true;
   const customerDeliveryAllowed =
     hasCanonicalCoreValidState &&
-    state.customer_delivery_allowed === true &&
+    canonicalCustomerDeliveryAllowed &&
     deliveryGateStatus === "deliverable" &&
     !Boolean(state.hold_delivery) &&
     customerBlockers.length === 0;
@@ -33,7 +60,9 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
         : "customer_deliverable_with_internal_advisory")
       : (deliveryGateStatus === "user_needs_documents" ? "user_needs_documents" : "customer_deliverable");
   const readinessHierarchy = {
-    final_delivery_authority: "delivery_gate",
+    final_delivery_authority: hasCanonicalAcquisitionFinalDecision
+      ? state.final_delivery_authority
+      : "delivery_gate",
     final_delivery_status: deliveryGateStatus,
     customer_delivery_ready: customerDeliveryAllowed,
     customer_publish_eligible: customerDeliveryAllowed,
@@ -247,6 +276,11 @@ export async function ensureReportDownloadArtifact({
   bucketName = "generated_reports",
   deliveryGateStatus = null,
   holdDelivery = false,
+  deterministicContractQaSeal = null,
+  sourceReconciliation = null,
+  requiredPdfTextAnchors = [],
+  publicationTarget = process.env.REPORT_PUBLICATION_TARGET || "",
+  runFinalPdfPublicationQualityBoss = assertFinalPdfPublicationQuality,
 } = {}) {
   if (deliveryGateStatus !== "deliverable" || holdDelivery === true) {
     const err = new Error("Report download artifact blocked before resolution");
@@ -282,14 +316,47 @@ export async function ensureReportDownloadArtifact({
     throw err;
   }
 
+  const artifactMode = resolveReportDownloadArtifactMode({
+    reportDownloadArtifactMode,
+    allowProductionPdf,
+    docraptorMode,
+  });
+  const resolvedPublicationTarget = String(publicationTarget || "").trim() ||
+    (artifactMode === "production_pdf" ? "external_customer" : "internal_test");
+  const certifyPdf = async (pdfBytes) => runFinalPdfPublicationQualityBoss({
+    pdfBytes,
+    approvedHtml: finalHtml,
+    deterministicContractQaSeal,
+    sourceReconciliation,
+    requiredTextAnchors: requiredPdfTextAnchors,
+    artifactMode,
+    publicationTarget: resolvedPublicationTarget,
+  });
+  const cleanupCreatedReportRecord = async (logContext) => {
+    if (!createdReportRecord || !reportId) return;
+    try {
+      await supabaseAdmin.from("reports").delete().eq("id", reportId);
+    } catch (cleanupErr) {
+      console.error(`Failed to cleanup report record after ${logContext}:`, cleanupErr);
+    }
+  };
+
   const existingCheck = await storageBucket.download(normalizedStoragePath);
   if (!existingCheck?.error && existingCheck?.data) {
+    let publicationQualityBoss;
+    try {
+      publicationQualityBoss = await certifyPdf(existingCheck.data);
+    } catch (error) {
+      await cleanupCreatedReportRecord("existing PDF publication quality failure");
+      throw error;
+    }
     return {
       reportId: reportId || null,
       storagePath: normalizedStoragePath,
       artifactSource: "existing_download",
       verifiedDownloadArtifact: true,
       createdDownloadArtifact: false,
+      publicationQualityBoss,
     };
   }
 
@@ -315,6 +382,14 @@ export async function ensureReportDownloadArtifact({
     propertyName,
     storagePath: normalizedStoragePath,
   });
+
+  let publicationQualityBoss;
+  try {
+    publicationQualityBoss = await certifyPdf(pdfBuffer);
+  } catch (error) {
+    await cleanupCreatedReportRecord("PDF publication quality failure");
+    throw error;
+  }
 
   const { error: uploadError } = await storageBucket.upload(normalizedStoragePath, pdfBuffer, {
     contentType: "application/pdf",
@@ -367,6 +442,7 @@ export async function ensureReportDownloadArtifact({
     artifactSource: "created_download",
     verifiedDownloadArtifact: true,
     createdDownloadArtifact: true,
+    publicationQualityBoss,
   };
 }
 

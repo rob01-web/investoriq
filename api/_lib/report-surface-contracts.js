@@ -1546,6 +1546,7 @@ function toRenderedSections(sourceReportCoverageQa = null) {
 }
 
 function normalizeReconciliationVariance(rrAnnual, gpr, sourceReportCoverageQa = null) {
+  const differenceAmount = Number.isFinite(rrAnnual) && Number.isFinite(gpr) ? rrAnnual - gpr : null;
   const variancePct = Number.isFinite(rrAnnual) && Number.isFinite(gpr) && gpr > 0 ? (rrAnnual - gpr) / gpr : null;
   const materialVariance = Number.isFinite(variancePct) && Math.abs(variancePct) >= 0.05;
   const flags = Array.isArray(sourceReportCoverageQa?.deterministic_flags) ? sourceReportCoverageQa.deterministic_flags : [];
@@ -1572,6 +1573,8 @@ function normalizeReconciliationVariance(rrAnnual, gpr, sourceReportCoverageQa =
   return {
     rr_annual_in_place: rrAnnual,
     t12_gpr: gpr,
+    difference_amount: differenceAmount,
+    absolute_difference_amount: Number.isFinite(differenceAmount) ? Math.abs(differenceAmount) : null,
     variance_pct: variancePct,
     status,
     customer_delivery_impact: customerDeliveryImpact,

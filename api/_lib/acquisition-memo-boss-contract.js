@@ -525,11 +525,11 @@ function promoteCurrentDebtSupportDoc(doc) {
     ...doc,
     canonicalRole: "current_debt_context",
     role: "current_debt_context",
-    canonicalLabel: "Existing Debt Context — Current Mortgage / Debt Statement",
-    roleLabel: "Existing Debt Context — Current Mortgage / Debt Statement",
+    canonicalLabel: "Existing Debt Context - Current Mortgage / Debt Statement",
+    roleLabel: "Existing Debt Context - Current Mortgage / Debt Statement",
     treatment: "Debt support received / contextual",
     use: "Uploaded existing/current debt context only; not proposed acquisition financing.",
-    category: "Existing Debt — Contextual",
+    category: "Existing Debt - Contextual",
     sourceKind: doc?.sourceKind || "support_doc",
     allowedUses: ["current_debt_context"],
     forbiddenUses: ["purchase_assumptions", "proposed_acquisition_financing_context"],
@@ -1119,6 +1119,31 @@ function buildAcquisitionMemoBossContract({
     "Core Quantitative Source - Rent Roll"
   );
   const supportDocs = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection);
+  const sourceReconciliationState = normalizeBossContractFact(
+    hasCanonicalSourceTruth
+      ? sourceTruthPackage?.source_reconciliation_state || null
+      : acquisitionMemoProjection?.sourceReconciliation?.state || null
+  );
+  const sourceReconciliationDisclosures = normalizeBossContractFact(
+    hasCanonicalSourceTruth
+      ? sourceTruthPackage?.disclosures || []
+      : acquisitionMemoProjection?.sourceReconciliation?.disclosures || []
+  );
+  const sourceReconciliationRequired = ["source_reconciliation_required", "parser_suspected"].includes(
+    String(sourceReconciliationState?.status || "").trim()
+  );
+  const sourceReconciliationAvailableFacts = [
+    ...(hasFiniteFact(sourceReconciliationState?.t12_gpr) ? ["t12_gpr"] : []),
+    ...(hasFiniteFact(sourceReconciliationState?.rr_annual_in_place) ? ["rr_annual_in_place"] : []),
+    ...(hasFiniteFact(sourceReconciliationState?.difference_amount) ? ["difference_amount"] : []),
+    ...(hasFiniteFact(sourceReconciliationState?.variance_pct) ? ["variance_pct"] : []),
+    ...(String(sourceReconciliationState?.source_reconciliation_disclosure || "").trim() ? ["source_reconciliation_disclosure"] : []),
+  ];
+  const sourceReconciliationRequiredFacts = sourceReconciliationRequired
+    ? ["t12_gpr", "rr_annual_in_place", "difference_amount", "variance_pct", "source_reconciliation_disclosure"]
+    : [];
+  const sourceReconciliationSourceBacked = sourceReconciliationRequired &&
+    sourceReconciliationRequiredFacts.every((fact) => sourceReconciliationAvailableFacts.includes(fact));
   const coreT12Source = findSupportDocByRole(supportDocs, "core_t12") || coreT12;
   const purchaseAssumptionsDoc = findSupportDocByRole(supportDocs, "purchase_assumptions") || acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions || null;
   const promotedCurrentDebtDoc = findSupportDocByRole(supportDocs, "current_debt_context") || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || null;
@@ -1297,9 +1322,15 @@ function buildAcquisitionMemoBossContract({
       sourceBindings: buildSectionBindings("core_rent_roll", ["annual_in_place_rent", "annual_market_rent", "unit_mix"]),
     }),
     primaryConstraintReviewDisclosure: buildSectionContract({
-      status: "required_if_source_present",
-      requiredFacts: ["source_reconciliation", "data_limitations"],
-      sourceBindings: buildSectionBindings("canonical_source_package", ["supportDocs", "coreT12", "coreRentRoll"]),
+      status: sourceReconciliationRequired ? "required" : "collapsed",
+      requiredFacts: sourceReconciliationRequiredFacts,
+      sourceBindings: buildSectionBindings("source_truth_package", ["source_reconciliation_state", "disclosures"]),
+      collapseInstructions: ["Collapse when canonical Source Truth does not require a reconciliation disclosure."],
+      factAvailability: factAvailability(
+        sourceReconciliationRequiredFacts,
+        sourceReconciliationAvailableFacts,
+        sourceReconciliationSourceBacked
+      ),
     }),
     acquisitionMemoSummary: buildSectionContract({
       status: "required_if_source_present",
@@ -1469,8 +1500,11 @@ function buildAcquisitionMemoBossContract({
     }),
     dataCoverageSourceLimitations: buildSectionContract({
       status: "required",
-      requiredFacts: ["core_t12", "core_rent_roll", "support_docs"],
-      sourceBindings: buildSectionBindings("canonical_source_package", ["coreT12", "coreRentRoll", "supportDocs"]),
+      requiredFacts: ["core_t12", "core_rent_roll", "support_docs", ...sourceReconciliationRequiredFacts],
+      sourceBindings: [
+        ...buildSectionBindings("canonical_source_package", ["coreT12", "coreRentRoll", "supportDocs"]),
+        ...buildSectionBindings("source_truth_package", ["source_reconciliation_state", "disclosures"]),
+      ],
     }),
     sourceContextSupportDocumentTreatment: buildSectionContract({
       status: "required",
@@ -1516,12 +1550,19 @@ function buildAcquisitionMemoBossContract({
     coreT12: coreT12SourceTruth,
     coreRentRoll,
     supportDocs: supportDocsWithSupplementedFacts,
+    sourceReconciliation: {
+      state: sourceReconciliationState,
+      disclosures: sourceReconciliationDisclosures,
+      sourceBacked: sourceReconciliationSourceBacked,
+    },
     authority: hasCanonicalSourceTruth ? {
       source: sourceTruthPackage.source,
       schema_version: sourceTruthPackage.schema_version,
       core_publishable: sourceTruthPackage.core_publishable,
       true_blockers: sourceTruthPackage.true_blockers,
       section_policy: sourceTruthPackage.section_policy,
+      disclosures: sourceTruthPackage.disclosures,
+      source_reconciliation_state: sourceTruthPackage.source_reconciliation_state,
     } : null,
   },
     reportContext: normalizeBossContractFact({

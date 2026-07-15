@@ -26,6 +26,8 @@ assert.match(
   workerSource,
   /createdReportRecord:\s*Boolean\(publicationResolution\?\.createdReportRecord\),/
 );
+assert.match(workerSource, /deterministicContractQaSeal:\s*reportData\?\.deterministic_contract_qa_seal \|\| null/);
+assert.match(workerSource, /sourceReconciliation:\s*reportData\?\.source_reconciliation \|\| null/);
 assert.match(dashboardSource, /supabase\.storage\.from\('generated_reports'\)\.createSignedUrl\(report\.storage_path, 300\)/);
 assert.match(generatorSource, /reportId,\s*storagePath:\s*validatedStoragePath,\s*report_type:\s*reportType,/);
 
@@ -34,6 +36,11 @@ const publishedRouteResponse = {
   storagePath: "user-123/job-live-contract-123.pdf",
   report_type: "underwriting",
 };
+const passPublicationQualityBoss = async () => ({
+  ok: true,
+  status: "certified",
+  customer_document_failure: false,
+});
 const publishedRouteResolution = await resolveOrCreateReportPublicationRecord({
   supabaseAdmin: {},
   job: {
@@ -103,6 +110,7 @@ const verifiedPublishedArtifact = await ensureReportDownloadArtifact({
   propertyName: "Generic Property",
   deliveryGateStatus: "deliverable",
   holdDelivery: false,
+  runFinalPdfPublicationQualityBoss: passPublicationQualityBoss,
 });
 assert.equal(verifiedPublishedArtifact.artifactSource, "existing_download");
 assert.equal(verifiedPublishedArtifact.verifiedDownloadArtifact, true);
@@ -171,6 +179,7 @@ const createdArtifact = await ensureReportDownloadArtifact({
   deliveryGateStatus: "deliverable",
   holdDelivery: false,
   renderPdfBuffer: async ({ finalHtml }) => Buffer.from(finalHtml, "utf8"),
+  runFinalPdfPublicationQualityBoss: passPublicationQualityBoss,
 });
 
 assert.equal(createdArtifact.reportId, "report-123");
@@ -339,6 +348,7 @@ try {
     propertyName: "Generic Property",
     deliveryGateStatus: "deliverable",
     holdDelivery: false,
+    runFinalPdfPublicationQualityBoss: passPublicationQualityBoss,
   });
 
   assert.equal(stubModeArtifact.artifactSource, "created_download");
@@ -437,6 +447,7 @@ await assert.rejects(
       deliveryGateStatus: "deliverable",
       holdDelivery: false,
       renderPdfBuffer: async () => Buffer.from("pdf", "utf8"),
+      runFinalPdfPublicationQualityBoss: passPublicationQualityBoss,
     }),
   /Failed to upload report to storage/
 );

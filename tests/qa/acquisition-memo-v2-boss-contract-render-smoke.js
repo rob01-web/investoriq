@@ -55,7 +55,7 @@ function buildRetest13SourcePackage() {
           effective_gross_income: 1500000,
           total_operating_expenses: 555000,
           net_operating_income: 945000,
-          gross_potential_rent: 1718400,
+          gross_potential_rent: 1612800,
         },
       },
     },
@@ -152,7 +152,7 @@ const coreMetrics = {
   noi: 945000,
   expenseRatio: 0.37,
   noiMargin: 0.63,
-  breakEvenOccupancy: 0.37,
+  breakEvenOccupancy: 555000 / 1612800,
   purchasePrice: 13500000,
   goingInCapRate: 7,
 };
@@ -205,7 +205,7 @@ assert.match(finalHtml, /Executive Summary/i);
 assert.match(finalHtml, /Acquisition Memo Summary/i);
 assert.match(finalHtml, /Operating Snapshot/i);
 assert.match(finalHtml, /Unit Mix and Rent Positioning/i);
-assert.match(finalHtml, /Rent Upside \/ Value Sensitivity/i);
+assert.match(finalHtml, /Rent Position \/ Whole-Property Value Context/i);
 assert.match(finalHtml, /Cap-Rate Value Indication/i);
 assert.match(finalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(finalHtml, /Debt \/ Financing Context/i);
@@ -225,7 +225,8 @@ assert.match(finalHtml, /<td>Operating Expenses<\/td><td style="font-weight:600;
 assert.match(finalHtml, /<td>NOI<\/td><td style="font-weight:600;">\$945,000<\/td>/i);
 assert.match(finalHtml, /<td>Expense Ratio<\/td><td style="font-weight:600;">37\.0%<\/td>/i);
 assert.match(finalHtml, /<td>NOI Margin<\/td><td style="font-weight:600;">63\.0%<\/td>/i);
-assert.match(finalHtml, /<td>Break-Even Occupancy<\/td><td style="font-weight:600;">37\.0%<\/td>/i);
+assert.match(finalHtml, /<td>Break-Even Occupancy<\/td><td style="font-weight:600;">34\.4%<\/td>/i);
+assert.equal(/Implied Value Sensitivity at Stabilization|\$5,712,000|\$4,760,000|\$4,080,000/i.test(finalHtml), false);
 assert.match(finalHtml, /<td>Purchase Price<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
 assert.match(finalHtml, /<td>Going-In Cap Rate<\/td><td style="font-weight:600;">7\.0%<\/td>/i);
 assert.match(finalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
@@ -247,10 +248,10 @@ assert.match(finalHtml, /<td>Amortization Remaining<\/td><td style="font-weight:
 assert.match(finalHtml, /<td>Monthly Payment<\/td><td style="font-weight:600;">\$39,250<\/td>/i);
 assert.match(finalHtml, /<td>Maturity Date<\/td><td style="font-weight:600;">2029-11-01<\/td>/i);
 
-assert.match(finalHtml, /<td>Proposed Acquisition Loan<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
-assert.match(finalHtml, /<td>Proposed LTV<\/td><td style="font-weight:600;">70\.0%<\/td>/i);
-assert.match(finalHtml, /<td>Proposed Rate<\/td><td style="font-weight:600;">5\.95%<\/td>/i);
-assert.match(finalHtml, /<td>Proposed Amortization<\/td><td style="font-weight:600;">30 years<\/td>/i);
+assert.match(finalHtml, /<td>Proposed Loan Amount<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
+assert.match(finalHtml, /<td>LTV<\/td><td style="font-weight:600;">70\.0%<\/td>/i);
+assert.match(finalHtml, /<td>Interest Rate<\/td><td style="font-weight:600;">5\.95%<\/td>/i);
+assert.match(finalHtml, /<td>Amortization<\/td><td style="font-weight:600;">30 years<\/td>/i);
 assert.match(finalHtml, /<td>Lender \/ Origination Fee<\/td><td style="font-weight:600;">0\.85%<\/td>/i);
 
 assert.match(finalHtml, /<td>Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);

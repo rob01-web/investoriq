@@ -8,6 +8,7 @@ export function runScreeningReportPipeline({
   deliveryGateDecisionResult = null,
   sourceTruthPackage = null,
   sourceTruthRequired = false,
+  deterministicContractQaSeal = null,
 } = {}) {
   if (sourceTruthRequired && !isCanonicalSourceTruthPackage(sourceTruthPackage)) {
     const error = new Error("CANONICAL_SOURCE_TRUTH_PACKAGE_REQUIRED");
@@ -29,6 +30,20 @@ export function runScreeningReportPipeline({
     };
     throw error;
   }
+  if (deterministicContractQaSeal?.ok !== true) {
+    const error = new Error("SCREENING_DETERMINISTIC_CONTRACT_QA_FAILED");
+    error.code = "REPORT_GENERATION_FAILED";
+    error.context = {
+      lane: "screening",
+      stage: "deterministic_contract_qa",
+      failure_class: "internal_render_contract_failure",
+      customer_document_failure: false,
+      issues: Array.isArray(deterministicContractQaSeal?.issues)
+        ? deterministicContractQaSeal.issues
+        : [],
+    };
+    throw error;
+  }
   const html =
     typeof finalHtml === "string" && finalHtml.length > 0
       ? finalHtml
@@ -43,5 +58,6 @@ export function runScreeningReportPipeline({
     sourceCoverageQa,
     deliveryGateDecisionResult,
     sourceTruthPackage,
+    deterministicContractQaSeal,
   };
 }

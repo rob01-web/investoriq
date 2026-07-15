@@ -221,13 +221,8 @@ function buildScreeningUpsidePathwayHtml({
     return "";
   }
   const annualGap = annualMarket - annualInPlace;
-  const capRates = [5.0, 6.0, 7.0];
-  const capRows = capRates.map((cap) => {
-    const impliedLift = annualGap / (cap / 100);
-    return `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">${cap.toFixed(1)}% cap rate</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(impliedLift)}</td></tr>`;
-  }).join("");
   const unitLabel = Number.isFinite(totalUnits) && totalUnits > 0 ? `${totalUnits.toLocaleString("en-CA")} units` : "current unit mix";
-  return `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;"><p class="subsection-title" style="margin-bottom:8px;">Rent Upside Pathway: Mark-to-Market Analysis</p><div class="grid-2"><div><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual In-Place Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualInPlace)}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr><tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Upside</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr></tbody></table><p class="small" style="margin-top:6px;">Source-bound summary for ${escapeHtml(unitLabel)} only. No debt sizing, refinance, or return recommendation is implied.</p></div><div><p class="subsection-title" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;margin-bottom:4px;">Implied Value Sensitivity at Stabilization</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody>${capRows}</tbody></table><p class="small" style="margin-top:6px;">Implied value sensitivity reflects annual rent gap capitalized at the selected cap-rate assumption and remains conditional on market-rent capture and occupancy.</p></div></div></div>`;
+  return `<div class="no-break" style="margin-top:20px;border-top:1px solid #E5E7EB;padding-top:16px;"><p class="subsection-title" style="margin-bottom:8px;">Documented Rent Position</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual In-Place Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualInPlace)}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Annual Market Rent</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;">${formatCurrency(annualMarket)}</td></tr><tr style="background:#FEFCE8;font-weight:700;"><td style="padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">Annual Gross Rent Difference</td><td style="text-align:right;padding:4px 8px;border:1px solid #E5E7EB;color:#B8860B;">${formatCurrency(annualGap)}</td></tr></tbody></table><p class="small" style="margin-top:6px;">Source-bound summary for ${escapeHtml(unitLabel)} only. The gross rent difference is not capitalized or treated as NOI without an authorized NOI conversion basis.</p></div>`;
 }
 
 export function resolveScreeningClassificationConsumerLabel({
@@ -435,6 +430,13 @@ export function buildScreeningDataCoverageSummary({
   const fieldCompletenessClarification = sourceReconciliationRequired
     ? `<p style="margin:8px 0 0 0;color:#374151;font-size:11px;">Field extraction completeness does not imply cross-source reconciliation. The T12 and rent roll fields were extracted, but the income scale variance remains unresolved.</p>`
     : "";
+  const reconciliationRenderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
+  const reconciliationDifference = reconciliationRenderState?.renderable
+    ? Number(reconciliationRenderState.rr_annual_in_place) - Number(reconciliationRenderState.t12_gpr)
+    : null;
+  const reconciliationFactBundleHtml = sourceReconciliationRequired && reconciliationRenderState?.renderable
+    ? `<div style="margin-top:10px;"><p class="subsection-title">Source Reconciliation</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Gross Potential Rent</td><td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(reconciliationRenderState.t12_gpr)}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll Annual In-Place Rent</td><td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(reconciliationRenderState.rr_annual_in_place)}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll less T12</td><td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${formatCurrency(reconciliationDifference)}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Variance</td><td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;">${escapeHtml(reconciliationRenderState.variance_display)}</td></tr></tbody></table><p style="margin:8px 0 0 0;color:#374151;font-size:11px;">${escapeHtml(reconciliationRenderState.source_reconciliation_disclosure)}</p></div>`
+    : "";
   const coverageTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Dataset</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Fields Present</th><th style="text-align:center;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Coverage</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Missing</th></tr></thead><tbody><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${t12PresentCount}/${t12Checks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${t12CoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(t12Missing.join(", ") || "None")}</td></tr><tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Rent Roll</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;">${rrPresentCount}/${rentRollChecks.length}</td><td style="text-align:center;padding:4px 8px;border:1px solid #E5E7EB;font-weight:600;color:#1e293b;">${rrCoveragePct}%</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">${escapeHtml(rrMissing.join(", ") || "None")}</td></tr></tbody></table>`;
   const sourceReliabilityRows = [
     `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">T12 Operating Statement</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Core quantitative source</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">EGI, OpEx, and NOI</td></tr>`,
@@ -449,7 +451,7 @@ export function buildScreeningDataCoverageSummary({
   const sourceReliabilityHtml = `<div style="margin-top:10px;"><p class="subsection-title">Data Coverage / Source Reliability</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceReliabilityRows}</tbody></table><p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(sourceReliabilityFooter)}</p></div>`;
   if (allPresent) {
     if (effectiveReportMode === "screening_v1") {
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : "All required screening inputs were fully extracted from uploaded documents.")}</p>${coverageTableHtml}${sourceReliabilityHtml}${fieldCompletenessClarification}</div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Fully Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : "All required screening inputs were fully extracted from uploaded documents.")}</p>${coverageTableHtml}${reconciliationFactBundleHtml}${sourceReliabilityHtml}${fieldCompletenessClarification}</div>`;
     }
     if (effectiveReportMode === "v1_core") {
       const memoCoverageCopy = sourceReconciliationRequired
@@ -465,7 +467,7 @@ export function buildScreeningDataCoverageSummary({
       ) > 0 || sourceConstrainedSectionCount > 0
         ? "Optional underwriting sections are source-constrained where supporting inputs were not verified."
         : "";
-      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : memoCoverageCopy)}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(optionalSupportCopy)}</p>${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}${sourceReliabilityHtml}${fieldCompletenessClarification}</div>`;
+      return `<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-left:3px solid #B8860B;border-radius:4px;padding:14px 16px;margin-top:8px;margin-bottom:12px;"><p style="font-weight:700;font-size:13px;color:#1e293b;margin:0 0 4px 0;">${suppressVerifiedCoverageCopy ? reconciliationCoverageHeadline : "CORE INPUT COVERAGE CONFIRMED: T12 and Rent Roll Verified"}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(suppressVerifiedCoverageCopy ? disclosureCoverageBody : memoCoverageCopy)}</p><p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(optionalSupportCopy)}</p>${sectionEligibilityCopy ? `<p style="margin:0 0 10px 0;color:#374151;font-size:11px;">${escapeHtml(sectionEligibilityCopy)}</p>` : ""}${coverageTableHtml}${reconciliationFactBundleHtml}${sourceReliabilityHtml}${fieldCompletenessClarification}</div>`;
     }
     const currentDebtCoverageCopy = "Structured T12, rent roll, and supporting documents are listed where available. Unsupported or unstructured uploads remain excluded from modeled outputs.";
     const reconciliationCopy = sourceReconciliationState?.source_reconciliation_disclosure;
@@ -629,10 +631,11 @@ export function buildScreeningNoiStabilityHtml({
   const egi = coerceNumber(t12Payload?.effective_gross_income);
   const opex = coerceNumber(t12Payload?.total_operating_expenses);
   const noi = coerceNumber(t12Payload?.net_operating_income);
+  const grossPotentialRent = resolveCanonicalT12GprValue(t12Payload);
   const rows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && egi > 0) rows.push(`<tr><td>NOI Margin</td><td>${formatPercent1(noi / egi)}</td></tr>`);
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) rows.push(`<tr><td>Expense Sensitivity</td><td>${formatPercent1(1 - opex / egi)}</td></tr>`);
-  if (Number.isFinite(opex) && Number.isFinite(egi) && egi > 0) rows.push(`<tr><td>Break-even Occupancy</td><td>${formatPercent1(opex / egi)}</td></tr>`);
+  if (Number.isFinite(opex) && Number.isFinite(grossPotentialRent) && grossPotentialRent > 0) rows.push(`<tr><td>Break-Even Occupancy</td><td>${formatPercent1(opex / grossPotentialRent)}</td></tr>`);
   const sourceReconciliationRenderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
   const rrVsGprDisplay = sourceReconciliationRenderState?.variance_display ?? null;
   if (sourceReconciliationRenderState?.renderable) rows.push(`<tr><td>Rent Roll vs T12 GPR Variance</td><td>${rrVsGprDisplay}</td></tr>`);
@@ -842,11 +845,14 @@ export function buildScreeningCustomerOutput({
     const pressureText = pressureLabel === "Primary Constraint"
       ? String(primaryPressurePoint || "").replace(/^Primary Constraint:\s*/i, "")
       : primaryPressurePoint;
-    const pressureAnchor = `<div class="verdict-pressure">Primary Pressure Point &mdash; ${escapeHtml(primaryPressurePoint)}</div>`;
+    const pressureAnchor = [
+      `<div class="verdict-pressure">Primary Pressure Point: ${escapeHtml(primaryPressurePoint)}</div>`,
+      `<div class="verdict-pressure">Primary Pressure Point &mdash; ${escapeHtml(primaryPressurePoint)}</div>`,
+    ].find((candidate) => html.includes(candidate));
     const pressureReplacement = `<div class="verdict-pressure">${pressureLabel}: ${escapeHtml(pressureText)}</div>${
       whyLine ? `<p class="exec-signal-line">${escapeHtml(whyLine)}</p>` : ""
     }${reconciliationDisclosureLine}${decisionContextHtml}${miniSensitivityHtml}`;
-    if (html.includes(pressureAnchor)) {
+    if (pressureAnchor) {
       html = html.replace(pressureAnchor, pressureReplacement);
     }
   }

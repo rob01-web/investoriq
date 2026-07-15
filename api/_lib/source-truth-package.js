@@ -530,6 +530,8 @@ export function constrainCanonicalSourcePackageToSourceTruth(
       core_publishable: sourceTruthPackage.core_publishable,
       true_blockers: sourceTruthPackage.true_blockers,
       section_policy: sourceTruthPackage.section_policy,
+      disclosures: sourceTruthPackage.disclosures,
+      source_reconciliation_state: sourceTruthPackage.source_reconciliation_state,
     },
   };
 }

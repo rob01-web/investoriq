@@ -68,6 +68,13 @@ function hasProvenanceRegressionSignal(finalization = {}) {
   return asArray(finalization?.compliance?.violations).some((violation) => normalizeCode(violation?.code) === "REPAIR_PROVENANCE_REGRESSION");
 }
 
+function hasInternalRenderContractFailureSignal(finalization = {}) {
+  if (finalization?.deterministicContractQaSeal?.ok === false) return true;
+  return asArray(finalization?.compliance?.violations).some((violation) =>
+    normalizeStatus(violation?.classification || violation?.category) === "internal_render_contract_failure"
+  );
+}
+
 export function buildAcquisitionMemoV2FinalDeliveryDecision({
   finalization = null,
   qaActionPlan = null,
@@ -90,6 +97,7 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const repairableOptional = hasRepairableOptionalSignal(repairPlan);
   const unsafeFinalHtml = hasUnsafeFinalHtmlSignal(final);
   const provenanceRegression = hasProvenanceRegressionSignal(final);
+  const internalRenderContractFailure = hasInternalRenderContractFailureSignal(final);
   const advisoryOnly =
     !coreFatal &&
     !unsafeFinalHtml &&
@@ -113,6 +121,8 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
       ? "true_core_fatal"
       : unsafeFinalHtml
         ? "true_unrepaired_unsafe_final_html"
+        : internalRenderContractFailure
+          ? "internal_render_contract_failure"
         : provenanceRegression
           ? "unresolved_provenance_regression"
         : repairableOptional
@@ -122,6 +132,7 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const blockingReasons = [];
   if (coreFatal) blockingReasons.push("true_core_fatal");
   if (unsafeFinalHtml) blockingReasons.push("true_unrepaired_unsafe_final_html");
+  if (!publishable && internalRenderContractFailure) blockingReasons.push("internal_render_contract_failure");
   if (!publishable && provenanceRegression) blockingReasons.push("unresolved_provenance_regression");
   if (!publishable && repairableOptional) blockingReasons.push("repairable_optional_support_unresolved_after_repair");
   if (!publishable && blockingReasons.length === 0) blockingReasons.push("final_compliance_unresolved");
@@ -141,6 +152,7 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
       trueCoreFatal: coreFatal,
       trueUnrepairedUnsafeFinalHtml: unsafeFinalHtml,
       runtimeStoragePdfFatal: false,
+      internalRenderContractFailure,
       repairableOptionalSupport: repairableOptional,
       advisoryWarningOnly: advisoryOnly,
     },
