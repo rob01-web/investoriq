@@ -1796,4 +1796,32 @@ if (canonicalSectionMissingHeadingConformanceResult.section_eligibility?.section
   process.exit(1);
 }
 
+const acquisitionMemoV2SurfaceResult = buildSourceReportCoverageQa({
+  jobId: "acquisition-memo-v2-surface-contract",
+  userId: "user-smoke",
+  propertyName: "Acquisition Memo V2 Surface",
+  reportType: "underwriting",
+  reportTier: 2,
+  surfaceContractVersion: "acquisition_memo_v2",
+  uploadedFiles: [],
+  artifacts: [],
+  html: [
+    "<h2>Acquisition Memo Summary</h2>",
+    "<h2>Operating Snapshot</h2>",
+    "<h2>Operating Statement / TTM Summary</h2>",
+    "<h2>Debt / Financing Context</h2>",
+    "<h2>Data Coverage &amp; Source Limitations</h2>",
+    "<h2>Methodology &amp; Data Transparency</h2>",
+  ].join(""),
+  sectionEligibility: canonicalSectionMissingHeadingConformanceResult.section_eligibility,
+});
+if (acquisitionMemoV2SurfaceResult.deterministic_flags.some((flag) => flag.code === "UNDERWRITING_RENDERED_DEPTH_CONFORMANCE_FAILURE")) {
+  console.error("Acquisition Memo V2 must not be judged by the legacy full-underwriting heading contract.");
+  process.exit(1);
+}
+if (acquisitionMemoV2SurfaceResult.rendered_sections?.has_debt_section !== true) {
+  console.error("Acquisition Memo V2 Debt / Financing Context heading must be recognized.");
+  process.exit(1);
+}
+
 console.log("source-report-coverage-qa smoke PASS");

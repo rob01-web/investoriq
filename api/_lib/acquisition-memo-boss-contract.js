@@ -1,4 +1,8 @@
 import { isCanonicalSourceTruthPackage } from "./source-truth-package.js";
+import {
+  ACQUISITION_FINANCING_DISPLAY_LABELS,
+  requiredAcquisitionFinancingDisplayLabels,
+} from "./acquisition-financing-display-contract.js";
 
 const CONTRACT_VERSION = "acq_memo_boss_contract_v1";
 
@@ -1796,11 +1800,8 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
 
   if (sourceBackedProposed || sourceBackedAcqRequest) {
     const requiredProposedLabels = [
-      "Proposed Acquisition Loan",
-      "Proposed LTV",
-      "Proposed Rate",
-      "Proposed Amortization",
-      "Lender / Origination Fee",
+      ...requiredAcquisitionFinancingDisplayLabels(),
+      ACQUISITION_FINANCING_DISPLAY_LABELS.lenderFee,
     ];
     for (const label of requiredProposedLabels) {
       if (!new RegExp(escapeRegExp(label), "i").test(htmlString)) {

@@ -1,4 +1,5 @@
 import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
+import { requiredAcquisitionFinancingDisplayLabels } from "./acquisition-financing-display-contract.js";
 
 import {
   buildCurrentDebtAssessmentState,
@@ -1268,7 +1269,7 @@ export function buildReportContractQa({
       legacy_compatibility_input_only: legacyCompatibilityInputOnly,
     });
   }
-  const renderedDebtSectionHeadingPresent = /Debt Structure|Current Debt Coverage/i.test(text);
+  const renderedDebtSectionHeadingPresent = /Debt Structure|Current Debt Coverage|Debt \/ Financing Context/i.test(text);
   if (
     !reportTypeIsScreeningReport &&
     debtStructureEligibility &&
@@ -2299,16 +2300,10 @@ export function buildReportContractQa({
           legacy_compatibility_input_only: legacyCompatibilityInputOnly,
         });
       }
-      const requiredPatterns = [
-        /Purchase Price/i,
-        /Proposed Loan Amount/i,
-        /(?:LTV|Documented LTV)/i,
-        /Interest Rate/i,
-        /Amortization/i,
-      ];
-      const missingLabels = requiredPatterns
-        .filter((pattern) => !pattern.test(acquisitionFinancingReadinessText))
-        .map((pattern) => pattern.source);
+      const requiredLabels = requiredAcquisitionFinancingDisplayLabels();
+      const missingLabels = requiredLabels.filter(
+        (label) => !new RegExp(escapeRegex(label), "i").test(acquisitionFinancingReadinessText)
+      );
       if (missingLabels.length > 0) {
         addViolation(violations, {
           code: "ACQUISITION_FINANCING_READINESS_INCOMPLETE",

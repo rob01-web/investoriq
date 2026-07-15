@@ -395,6 +395,17 @@ export async function resolveOrCreateReportPublicationRecord({
   const resolvedReportId = String(reportData?.reportId ?? existingReportId ?? "").trim() || null;
   const resolvedStoragePath = String(reportData?.storagePath ?? existingStoragePath ?? "").trim() || null;
 
+  if (reportData?.reportId && !resolvedStoragePath) {
+    const err = new Error("Generator response omitted authoritative storage path");
+    err.code = "REPORT_GENERATION_FAILED";
+    err.context = {
+      reportId: resolvedReportId,
+      reportType: reportType || null,
+      responseContract: "published_report_requires_reportId_and_storagePath",
+    };
+    throw err;
+  }
+
   if (resolvedReportId && resolvedStoragePath) {
     return {
       reportId: resolvedReportId,

@@ -450,14 +450,28 @@ function buildGenericFinalHandoffPayload() {
   return payload;
 }
 
+async function buildLocalCanonicalSourcePackage(requestBody) {
+  const {
+    buildCanonicalSourceTruthPackage,
+    constrainCanonicalSourcePackageToSourceTruth,
+  } = await import("../../api/_lib/source-truth-package.js");
+  const uploadedFiles = structuredClone(requestBody.__test_payloads.documentSources).map((file) => ({
+    id: file.id || file.file_id || null,
+    file_id: file.file_id || file.id || null,
+    original_filename: file.original_filename || file.name || null,
+    parse_status: file.parse_status || "parsed",
+  }));
+  const sourceTruthPackage = buildCanonicalSourceTruthPackage({
+    uploadedFiles,
+    artifacts: structuredClone(requestBody.__test_payloads.coverageArtifacts),
+  });
+  return constrainCanonicalSourcePackageToSourceTruth(null, sourceTruthPackage);
+}
+
 async function buildLocalBossContract(requestBody, overrides = {}) {
-  const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
   const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
   const { buildAcquisitionMemoBossContract } = await import("../../api/_lib/acquisition-memo-boss-contract.js");
-  const sourcePackage = buildCanonicalSourcePackage(
-    structuredClone(requestBody.__test_payloads.documentSources),
-    structuredClone(requestBody.__test_payloads.coverageArtifacts)
-  );
+  const sourcePackage = await buildLocalCanonicalSourcePackage(requestBody);
   const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage);
   const scenario = buildScenarioInputs(requestBody, overrides);
   return buildAcquisitionMemoBossContract({
@@ -472,12 +486,8 @@ async function buildLocalBossContract(requestBody, overrides = {}) {
 }
 
 async function buildLocalCustomerSurfaceModel(requestBody, localBossContract, overrides = {}) {
-  const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
   const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
-  const sourcePackage = buildCanonicalSourcePackage(
-    structuredClone(requestBody.__test_payloads.documentSources),
-    structuredClone(requestBody.__test_payloads.coverageArtifacts)
-  );
+  const sourcePackage = await buildLocalCanonicalSourcePackage(requestBody);
   const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage);
   const scenario = buildScenarioInputs(requestBody, overrides);
   return buildAcquisitionMemoV2CustomerSurfaceModel({
@@ -630,7 +640,7 @@ if (!localBossRenderValidation.ok) {
 }
 assert.equal(localBossValidation.ok, true);
 assert.equal(localBossRenderValidation.ok, true);
-assert.equal(localCustomerSurfaceHtmlValidation.ok, true);
+assert.equal(localCustomerSurfaceHtmlValidation.ok, true, JSON.stringify(finalHandoffDiagnostics, null, 2));
 
 assert.equal(finalPdfHandoffHtml.includes("1BR"), true);
 assert.equal(finalPdfHandoffHtml.includes("2BR"), true);
@@ -643,13 +653,13 @@ assert.equal(finalPdfHandoffHtml.includes("Monthly Payment"), true);
 assert.equal(finalPdfHandoffHtml.includes("$39,250"), true);
 assert.equal(finalPdfHandoffHtml.includes("Maturity Date"), true);
 assert.equal(finalPdfHandoffHtml.includes("2029-11-01"), true);
-assert.equal(finalPdfHandoffHtml.includes("Proposed Acquisition Loan"), true);
+assert.equal(finalPdfHandoffHtml.includes("Proposed Loan Amount"), true);
 assert.equal(finalPdfHandoffHtml.includes("$9,450,000"), true);
-assert.equal(finalPdfHandoffHtml.includes("Proposed LTV"), true);
+assert.equal(finalPdfHandoffHtml.includes("LTV"), true);
 assert.equal(finalPdfHandoffHtml.includes("70.0%"), true);
-assert.equal(finalPdfHandoffHtml.includes("Proposed Rate"), true);
+assert.equal(finalPdfHandoffHtml.includes("Interest Rate"), true);
 assert.equal(finalPdfHandoffHtml.includes("5.95%"), true);
-assert.equal(finalPdfHandoffHtml.includes("Proposed Amortization"), true);
+assert.equal(finalPdfHandoffHtml.includes("Amortization"), true);
 assert.equal(finalPdfHandoffHtml.includes("30 years"), true);
 assert.equal(finalPdfHandoffHtml.includes("Lender / Origination Fee"), true);
 assert.equal(finalPdfHandoffHtml.includes("0.85%"), true);

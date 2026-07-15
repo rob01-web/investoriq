@@ -256,13 +256,13 @@ function buildRenderedSections(html) {
   const text = typeof html === "string" ? html : "";
   const has = (pattern) => pattern.test(text);
   const sections = {
-    has_executive_summary_section: has(/Executive Summary|Operating Profile Summary|Capital Risk Profile|SECTION_1_EXEC/i),
-    has_operating_profile_section: has(/Operating Profile|Capital Risk Profile|Operating Profile Summary/i),
+    has_executive_summary_section: has(/Executive Summary|Operating Profile Summary|Capital Risk Profile|Acquisition Memo Summary|SECTION_1_EXEC/i),
+    has_operating_profile_section: has(/Operating Profile|Capital Risk Profile|Operating Profile Summary|Operating Snapshot|Key Metrics Snapshot/i),
     has_expense_structure_section: has(/Expense Structure|Expense Ratio Sensitivity|SECTION_3_EXPENSE/i),
     has_noi_stability_section: has(/NOI Stability|Variance Flags \(Deterministic\)|SECTION_4_NOI/i),
-    has_data_coverage_section: has(/Data Coverage|Underwriting Gaps|Screening Notes/i),
+    has_data_coverage_section: has(/Data Coverage|Source Limitations|Underwriting Gaps|Screening Notes/i),
     has_refi_stability_section: has(/Refinance Stress Test|SECTION_7_REFI_STABILITY/i),
-    has_debt_section: has(/Debt Structure|Current Debt Coverage|SECTION_7_DEBT/i),
+    has_debt_section: has(/Debt Structure|Current Debt Coverage|Debt \/ Financing Context|SECTION_7_DEBT/i),
     has_operating_statement_section: has(/Operating Statement|Income Reconstruction|T12/i),
     has_scenario_section: has(/Scenario|Stress Summary|SECTION_3_SCENARIO/i),
     has_risk_section: has(/Risk Matrix|Risk Register|SECTION_5_RISK/i),
@@ -590,10 +590,12 @@ export function buildSourceReportCoverageQa({
   dataCoverageState: canonicalDataCoverageState = null,
   underwritingState = null,
   sourceTruthPackage = null,
+  surfaceContractVersion = null,
 } = {}) {
   const canonicalSourceTruthPackage = isCanonicalSourceTruthPackage(sourceTruthPackage)
     ? sourceTruthPackage
     : null;
+  const usesAcquisitionMemoV2Surface = surfaceContractVersion === "acquisition_memo_v2";
   const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
   const files = uploadedFiles.map((row) => normalizeFile(row, taxonomyLookup));
@@ -992,6 +994,7 @@ export function buildSourceReportCoverageQa({
     !renderedDebtLimitationCopyPresent;
   if (
     isFullUnderwriting &&
+    !usesAcquisitionMemoV2Surface &&
     canonicalSectionAuthorityPresent &&
     hasBroadCanonicalUnderwritingEligibility &&
     (
@@ -1019,6 +1022,7 @@ export function buildSourceReportCoverageQa({
   }
   if (
     isFullUnderwriting &&
+    !usesAcquisitionMemoV2Surface &&
     !canonicalSectionAuthorityPresent &&
     supportPackageLooksBroad &&
     eligibleSections.length >= 5 &&
@@ -1066,6 +1070,7 @@ export function buildSourceReportCoverageQa({
     artifactInventory.property_tax_parsed.present;
   if (
     isFullUnderwriting &&
+    !usesAcquisitionMemoV2Surface &&
     !canonicalSectionAuthorityPresent &&
     materialSupportFiles.length >= 2 &&
     supportPackageLooksBroad &&

@@ -16,6 +16,14 @@ function selectAdjudicatedPrimaryByRole(entries, role) {
   return entries.find((entry) => entry?.primaryForRole === true && isSupportRole(entry, role)) || null;
 }
 
+function selectAdjudicatedPrimaryByAcceptedRoles(entries, roles) {
+  for (const role of roles) {
+    const accepted = selectAdjudicatedPrimaryByRole(entries, role);
+    if (accepted) return accepted;
+  }
+  return null;
+}
+
 function cloneEntry(entry) {
   return entry && typeof entry === "object" ? { ...entry } : null;
 }
@@ -82,7 +90,10 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
   const allSupportDocs = Array.from(supportDocsMap.values()).filter(isCanonicalSupportDocEntry);
   const purchaseAssumptions = selectAdjudicatedPrimaryByRole(allSupportDocs, "purchase_assumptions");
   const currentDebtContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "current_debt_context");
-  const structuredRenovation = selectAdjudicatedPrimaryByRole(allSupportDocs, "structured_renovation_capex_plan");
+  const structuredRenovation = selectAdjudicatedPrimaryByAcceptedRoles(allSupportDocs, [
+    "renovation_capex_context",
+    "structured_renovation_capex_plan",
+  ]);
   const appraisalContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "appraisal_context");
   const marketSurveyContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "market_survey_context");
   const environmentalContext = selectAdjudicatedPrimaryByRole(allSupportDocs, "environmental_context");
@@ -90,6 +101,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
     (entry) =>
       !isSupportRole(entry, "purchase_assumptions") &&
       !isSupportRole(entry, "current_debt_context") &&
+      !isSupportRole(entry, "renovation_capex_context") &&
       !isSupportRole(entry, "structured_renovation_capex_plan") &&
       !isSupportRole(entry, "appraisal_context") &&
       !isSupportRole(entry, "market_survey_context") &&

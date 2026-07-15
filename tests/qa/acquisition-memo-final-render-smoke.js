@@ -75,9 +75,9 @@ describe("acquisition memo final render smoke", () => {
     assert.match(assumptionsRow[0], /Purchase Price: \$13,500,000/);
     assert.match(assumptionsRow[0], /NOI Basis: \$945,000/);
     assert.match(assumptionsRow[0], /Going-In Cap Rate: 7\.0%/);
-    assert.match(assumptionsRow[0], /Proposed Acquisition Loan: \$9,450,000/);
-    assert.match(assumptionsRow[0], /Proposed Rate: 5\.95%/);
-    assert.match(assumptionsRow[0], /Proposed Amortization: 30 years/);
+    assert.match(assumptionsRow[0], /Proposed Loan Amount: \$9,450,000/);
+    assert.match(assumptionsRow[0], /Interest Rate: 5\.95%/);
+    assert.match(assumptionsRow[0], /Amortization: 30 years/);
     assert.match(assumptionsRow[0], /LTV: 70\.0%/);
     assert.match(assumptionsRow[0], /Lender \/ Origination Fee: 0\.85%/);
   });
@@ -130,5 +130,23 @@ describe("acquisition memo final render smoke", () => {
     assert.ok(!/Purchase Assumptions/.test(currentDebtRow[0]));
     assert.match(assumptionsRow[0], /Purchase Assumptions/);
     assert.ok(!/Existing Debt Context/.test(assumptionsRow[0]));
+  });
+
+  it("never promotes raw source text into display-ready financing facts", () => {
+    const rendered = renderAcquisitionMemo({
+      documentTreatmentRows: [{
+        originalFilename: "Unaccepted_Assumptions.pdf",
+        canonicalRole: "purchase_assumptions",
+        roleLabel: "Purchase Assumptions / Proposed Acquisition Financing Context",
+        treatment: "Source present / facts not accepted",
+        use: "Collapse unsupported financing facts.",
+        extractedFacts: {},
+        sourceEvidence: {
+          textSnippet: "Purchase Price $99,000,000 Proposed Loan Amount $77,000,000 LTV 77%",
+        },
+      }],
+    });
+
+    assert.doesNotMatch(rendered.documentTreatmentSummaryHtml, /\$99,000,000|\$77,000,000|LTV: 77\.0%/);
   });
 });

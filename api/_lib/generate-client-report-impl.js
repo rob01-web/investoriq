@@ -7761,6 +7761,7 @@ try {
       acquisitionAssumptionState ||
       null,
     sourceTruthPackage: sourceTruthPackageResult,
+    surfaceContractVersion: acquisitionMemoV2Finalization ? "acquisition_memo_v2" : null,
     sectionEligibility:
       underwritingState?.core?.sections?.eligibilityState ||
       sectionEligibility ||
@@ -8612,6 +8613,14 @@ try {
       report_blocked: harnessDeliveryAliases.report_blocked,
       customer_delivery_ready: harnessDeliveryAliases.customer_delivery_ready,
       customer_publish_eligible: harnessDeliveryAliases.customer_publish_eligible,
+      customer_surface_model_validation:
+        acquisitionMemoV2Finalization?.customerSurfaceModelValidation ||
+        acquisitionMemoV2Finalization?.metadata?.customerSurfaceModelValidation ||
+        null,
+      customer_surface_html_validation:
+        acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation ||
+        acquisitionMemoV2Finalization?.metadata?.customerSurfaceHtmlValidation ||
+        null,
       test_harness: true,
     });
   }
@@ -8726,6 +8735,8 @@ try {
     res.status(200).json({
       success: true,
       reportId,
+      storagePath: validatedStoragePath,
+      report_type: reportType,
       url: signedData.signedUrl,
       deliveryDecisionState: canonicalDeliveryDecisionState,
     delivery_gate_status: deliveryAliases.delivery_gate_status,

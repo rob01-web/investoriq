@@ -7,7 +7,7 @@ const { applyAcquisitionMemoV2BossRepairPlan } = await import("../../api/_lib/ac
 
 const sourceModel = {
   sections: {
-    sampleSection: {
+    unitMix: {
       status: "required",
       factAvailability: {
         required: ["alpha", "beta"],
@@ -19,13 +19,13 @@ const sourceModel = {
   },
 };
 
-const repairPlan = { repairableSectionKeys: ["sampleSection"] };
+const repairPlan = { repairableSectionKeys: ["unitMix"] };
 const repairedModel = applyAcquisitionMemoV2BossRepairPlan(sourceModel, repairPlan);
 
-assert.equal(repairedModel.sections.sampleSection.status, "collapsed");
-assert.equal(repairedModel.sections.sampleSection.factAvailability.sourceBacked, true);
-assert.deepEqual(repairedModel.sections.sampleSection.factAvailability.required, ["alpha", "beta"]);
-assert.deepEqual(repairedModel.sections.sampleSection.factAvailability.available, ["alpha"]);
-assert.deepEqual(repairedModel.sections.sampleSection.factAvailability.missing, ["beta"]);
+assert.equal(repairedModel.sections.unitMix.status, "required");
+assert.equal(repairedModel.sections.unitMix.factAvailability.sourceBacked, true);
+assert.deepEqual(repairedModel.sections.unitMix.factAvailability.required, ["alpha", "beta"]);
+assert.deepEqual(repairedModel.sections.unitMix.factAvailability.available, ["alpha"]);
+assert.deepEqual(repairedModel.sections.unitMix.factAvailability.missing, ["beta"]);
 
 console.log("acquisition-memo-v2 boss-repair provenance smoke PASS");

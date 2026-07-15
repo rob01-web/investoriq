@@ -516,10 +516,10 @@ const assumptionsSectionMatch = retest6FinalHtml.match(/Acquisition Request Cont
 assert.ok(assumptionsSectionMatch, "Missing acquisition request context section");
 assert.match(assumptionsSectionMatch[0], /Purchase Price<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
 assert.match(assumptionsSectionMatch[0], /NOI Basis<\/td><td style="font-weight:600;">\$945,000<\/td>/i);
-assert.match(assumptionsSectionMatch[0], /Proposed Acquisition Loan<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
-assert.match(assumptionsSectionMatch[0], /Proposed LTV<\/td><td style="font-weight:600;">70\.0%<\/td>/i);
-assert.match(assumptionsSectionMatch[0], /Proposed Rate<\/td><td style="font-weight:600;">5\.95%<\/td>/i);
-assert.match(assumptionsSectionMatch[0], /Proposed Amortization<\/td><td style="font-weight:600;">30 years<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Proposed Loan Amount<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /LTV<\/td><td style="font-weight:600;">70\.0%<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Interest Rate<\/td><td style="font-weight:600;">5\.95%<\/td>/i);
+assert.match(assumptionsSectionMatch[0], /Amortization<\/td><td style="font-weight:600;">30 years<\/td>/i);
 assert.match(assumptionsSectionMatch[0], /Lender \/ Origination Fee<\/td><td style="font-weight:600;">0\.85%<\/td>/i);
 assert.match(retest6FinalHtml, /Stonebridge_Appraisal_Summary\.pdf[\s\S]{0,2000}Appraisal \/ Valuation Context/i);
 assert.match(retest6FinalHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,2000}Market Rent Survey Context/i);

@@ -600,7 +600,7 @@ const genericHtml = `
     <div>Proposed LTV 66.5%</div>
     <div>Proposed Rate 5.75%</div>
     <div>Proposed Amortization 28 years</div>
-    <div>Lender / Origination Fee 1.0%</div>
+    <div>Lender / Origination Fee 1.00%</div>
     <div>Studio 12 $1,425 $1,575 $150</div>
     <div>3BR 8 $2,195 $2,495 $300</div>
     <div>Insurance $42,000</div>

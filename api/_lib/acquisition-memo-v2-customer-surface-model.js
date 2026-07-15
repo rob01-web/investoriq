@@ -1,3 +1,5 @@
+import { formatInterestRatePercent } from "./report-formatting-helpers.js";
+
 const MODEL_VERSION = "acq_memo_v2_customer_surface_model_v1";
 
 const ALLOWED_SECTION_STATUSES = new Set([
@@ -113,7 +115,7 @@ function expectedSurfaceValuesFromModel(model) {
     environmentalLabel: String(model?.sections?.environmentalContext?.visibleLabel || "").trim(),
     currentDebt: {
       balance: formatMoneyForSurface(currentDebtFacts.current_outstanding_balance),
-      rate: formatPercentForSurface(currentDebtFacts.interest_rate),
+      rate: formatInterestRatePercent(currentDebtFacts.interest_rate),
       amortization: formatYearsForSurface(currentDebtFacts.amortization_remaining_years),
       payment: formatMoneyForSurface(currentDebtFacts.monthly_payment),
       maturityDate: String(currentDebtFacts.maturity_date || "").trim(),
@@ -121,9 +123,9 @@ function expectedSurfaceValuesFromModel(model) {
     proposedFinancing: {
       loan: formatMoneyForSurface(acquisitionFacts.proposed_loan_amount),
       ltv: formatPercentForSurface(acquisitionFacts.ltv),
-      rate: formatPercentForSurface(acquisitionFacts.interest_rate),
+      rate: formatInterestRatePercent(acquisitionFacts.interest_rate),
       amortization: formatYearsForSurface(acquisitionFacts.amortization_years),
-      lenderFee: formatPercentForSurface(acquisitionFacts.lender_fee_percent),
+      lenderFee: formatInterestRatePercent(acquisitionFacts.lender_fee_percent),
     },
     unitMixRows: Array.isArray(unitMixFacts.unit_mix)
       ? unitMixFacts.unit_mix.map((row) => ({
@@ -1718,6 +1720,8 @@ function normalizeHtmlText(html) {
     .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
+    .replace(/&mdash;|&#8212;|&#x2014;/gi, "—")
+    .replace(/&ndash;|&#8211;|&#x2013;/gi, "–")
     .replace(/&#39;/gi, "'")
     .replace(/&quot;/gi, "\"")
     .replace(/\s+/g, " ")

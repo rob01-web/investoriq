@@ -155,7 +155,7 @@ function finitePositive(value) {
 
 function numericValues(value) {
   const values = [];
-  const pattern = /(?:[$]\s*)?(-?\d[\d,]*(?:\.\d+)?)\s*([kKmMbB])?/g;
+  const pattern = /(?:[$]\s*)?(-?\d[\d,]*(?:\.\d+)?)\s*([kKmMbB](?![A-Za-z]))?/g;
   for (const match of String(value || "").matchAll(pattern)) {
     const parsed = Number(String(match[1] || "").replace(/,/g, ""));
     if (!Number.isFinite(parsed)) continue;

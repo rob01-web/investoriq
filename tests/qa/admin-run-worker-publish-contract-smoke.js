@@ -5,9 +5,11 @@ import {
   buildReportStoragePath,
   ensureReportDownloadArtifact,
   renderReportPdfBuffer,
+  resolveOrCreateReportPublicationRecord,
 } from "../../api/_lib/report-delivery-output.js";
 
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
+const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const dashboardSource = fs.readFileSync("src/pages/Dashboard.jsx", "utf8");
 
 assert.match(
@@ -25,6 +27,87 @@ assert.match(
   /createdReportRecord:\s*Boolean\(publicationResolution\?\.createdReportRecord\),/
 );
 assert.match(dashboardSource, /supabase\.storage\.from\('generated_reports'\)\.createSignedUrl\(report\.storage_path, 300\)/);
+assert.match(generatorSource, /reportId,\s*storagePath:\s*validatedStoragePath,\s*report_type:\s*reportType,/);
+
+const publishedRouteResponse = {
+  reportId: "report-live-contract-123",
+  storagePath: "user-123/job-live-contract-123.pdf",
+  report_type: "underwriting",
+};
+const publishedRouteResolution = await resolveOrCreateReportPublicationRecord({
+  supabaseAdmin: {},
+  job: {
+    id: "job-live-contract-123",
+    user_id: "user-123",
+    report_type: "underwriting",
+  },
+  reportData: publishedRouteResponse,
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
+});
+assert.deepEqual(publishedRouteResolution, {
+  reportId: "report-live-contract-123",
+  storagePath: "user-123/job-live-contract-123.pdf",
+  publicationSource: "route_response",
+  createdReportRecord: false,
+});
+
+await assert.rejects(
+  () =>
+    resolveOrCreateReportPublicationRecord({
+      supabaseAdmin: {},
+      job: {
+        id: "job-live-contract-123",
+        user_id: "user-123",
+        report_type: "underwriting",
+      },
+      reportData: {
+        reportId: "report-live-contract-123",
+        report_type: "underwriting",
+      },
+      deliveryGateStatus: "deliverable",
+      holdDelivery: false,
+    }),
+  /omitted authoritative storage path/
+);
+
+let publishedArtifactUploadAttempted = false;
+const verifiedPublishedArtifact = await ensureReportDownloadArtifact({
+  supabaseAdmin: {
+    storage: {
+      from(bucketName) {
+        assert.equal(bucketName, "generated_reports");
+        return {
+          async download(storagePath) {
+            assert.equal(storagePath, publishedRouteResponse.storagePath);
+            return { data: { size: 1024, storagePath }, error: null };
+          },
+          async upload() {
+            publishedArtifactUploadAttempted = true;
+            return { data: null, error: null };
+          },
+        };
+      },
+    },
+  },
+  job: {
+    id: "job-live-contract-123",
+    user_id: "user-123",
+    report_type: "underwriting",
+  },
+  reportId: publishedRouteResponse.reportId,
+  storagePath: publishedRouteResponse.storagePath,
+  finalHtml: "",
+  reportType: publishedRouteResponse.report_type,
+  reportSeed: "job-live-contract-123",
+  propertyName: "Generic Property",
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
+});
+assert.equal(verifiedPublishedArtifact.artifactSource, "existing_download");
+assert.equal(verifiedPublishedArtifact.verifiedDownloadArtifact, true);
+assert.equal(verifiedPublishedArtifact.createdDownloadArtifact, false);
+assert.equal(publishedArtifactUploadAttempted, false);
 
 const uploadAttempts = [];
 let downloadCalls = 0;
@@ -85,6 +168,8 @@ const createdArtifact = await ensureReportDownloadArtifact({
   reportType: "screening",
   reportSeed: "report-123",
   propertyName: "Generic Property",
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
   renderPdfBuffer: async ({ finalHtml }) => Buffer.from(finalHtml, "utf8"),
 });
 
@@ -252,6 +337,8 @@ try {
     reportType: "screening",
     reportSeed: "report-prelaunch-123",
     propertyName: "Generic Property",
+    deliveryGateStatus: "deliverable",
+    holdDelivery: false,
   });
 
   assert.equal(stubModeArtifact.artifactSource, "created_download");
@@ -347,6 +434,8 @@ await assert.rejects(
       reportSeed: "report-123",
       propertyName: "Generic Property",
       createdReportRecord: true,
+      deliveryGateStatus: "deliverable",
+      holdDelivery: false,
       renderPdfBuffer: async () => Buffer.from("pdf", "utf8"),
     }),
   /Failed to upload report to storage/

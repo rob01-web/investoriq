@@ -542,8 +542,8 @@ if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
   );
   assert.match(fullRenderHtml, /Operating (Support|Snapshot)/i);
   assert.match(fullRenderHtml, /Lender Diligence Checklist/i);
-  assert.match(fullRenderHtml, /Proposed Acquisition Loan/i);
-  assert.match(fullRenderHtml, /Proposed LTV/i);
+  assert.match(fullRenderHtml, /Proposed Loan Amount/i);
+  assert.match(fullRenderHtml, /LTV/i);
   assert.match(fullRenderHtml, /Lender \/ Origination Fee/i);
   assert.match(fullRenderHtml, /Outstanding Balance/i);
   assert.match(fullRenderHtml, /Interest Rate/i);

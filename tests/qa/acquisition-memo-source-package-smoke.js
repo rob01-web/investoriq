@@ -34,7 +34,7 @@ describe("acquisition memo source package smoke", () => {
   it("resolves the RETEST 5 golden mappings", () => {
     const sourcePackage = buildStonebridgeSourcePackage();
 
-    assert.strictEqual(sourcePackage.authorityVersion, "v2");
+    assert.strictEqual(sourcePackage.authorityVersion, "legacy_fixture_v2");
     assert.ok(sourcePackage.coreT12);
     assert.strictEqual(sourcePackage.coreT12.role, "core_t12");
     assert.ok(sourcePackage.coreRentRoll);
@@ -149,6 +149,37 @@ describe("acquisition memo source package smoke", () => {
       assert.strictEqual(projection.financingReadinessSignals.hasAppraisalContext, true);
       assert.strictEqual(projection.financingReadinessSignals.hasMarketSurveyContext, true);
       assert.strictEqual(projection.financingReadinessSignals.hasEnvironmentalContext, true);
+    });
+
+    it("projection consumes the current Source Truth renovation role without false absence messaging", () => {
+      const sourcePackage = {
+        authorityVersion: "v2",
+        coreT12: { fileId: "t12-file", originalFilename: "T12.xlsx", role: "core_t12" },
+        coreRentRoll: { fileId: "rent-roll-file", originalFilename: "Rent Roll.xlsx", role: "core_rent_roll" },
+        supportDocs: new Map([
+          [
+            "reno-file",
+            {
+              fileId: "reno-file",
+              originalFilename: "Renovation Plan.pdf",
+              canonicalRole: "renovation_capex_context",
+              primaryForRole: true,
+              extractedFacts: { total_renovation_budget: 1280000 },
+              sectionEligibility: { renovation: true },
+            },
+          ],
+        ]),
+        supportAuthorityDecisions: [],
+      };
+
+      const projection = buildAcquisitionMemoProjection(sourcePackage);
+
+      assert.strictEqual(projection.supportDocProjection.structuredRenovation?.canonicalRole, "renovation_capex_context");
+      assert.strictEqual(projection.financingReadinessSignals.hasStructuredRenovation, true);
+      assert.strictEqual(
+        projection.lenderDiligenceChecklist.find((row) => row.label === "Structured renovation / CapEx plan")?.value,
+        true
+      );
     });
 
     it("projection documentTreatmentRows contains all 6 support docs", () => {

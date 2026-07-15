@@ -161,6 +161,11 @@ for (const scenario of scenarios) {
   assert.equal(scenario.result.sourceBacked, scenario.sourceBacked, `${scenario.name}: source backed`);
   assert.equal(scenario.result.ambiguity.present, scenario.ambiguity, `${scenario.name}: ambiguity`);
 }
+assert.equal(
+  scenarios.find((scenario) => scenario.name === "affirmative_current_debt_complete")?.result?.acceptedFacts?.monthly_payment,
+  39250,
+  "magnitude suffix detection must not consume the M in the following Maturity label"
+);
 
 function packageForTexts(entries) {
   const uploadedFiles = entries.map((entry) => ({ id: entry.id, original_filename: entry.filename, parse_status: "parsed" }));

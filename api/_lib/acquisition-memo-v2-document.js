@@ -1,5 +1,7 @@
 import { toCapRatio, toRateRatio } from "./report-number-helpers.js";
 import { buildDocumentTreatmentSummaryHtml } from "./document-treatment-authority.js";
+import { formatInterestRatePercent } from "./report-formatting-helpers.js";
+import { ACQUISITION_FINANCING_DISPLAY_LABELS } from "./acquisition-financing-display-contract.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -823,17 +825,17 @@ function renderAcquisitionRequestContextSection({
   const interestRate = normalizePercentFraction(canonicalMode ? acquisitionFacts?.interest_rate : acquisitionFacts?.interest_rate ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.interest_rate ?? acquisitionTermsPayload?.interest_rate ?? acquisitionTermsPayload?.interestRate ?? acquisitionTermsPayload?.rate);
   const amortization = toFiniteNumber(canonicalMode ? acquisitionFacts?.amortization_years : acquisitionFacts?.amortization_years ?? acquisitionFacts?.amortization_remaining_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_years ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.amortization_remaining_years ?? acquisitionTermsPayload?.amortization_years ?? acquisitionTermsPayload?.amortizationYears ?? NaN);
   const lenderFee = normalizePercentFraction(canonicalMode ? acquisitionFacts?.lender_fee_percent : acquisitionFacts?.lender_fee_percent ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.lender_fee_percent ?? acquisitionTermsPayload?.lender_fee_percent ?? acquisitionTermsPayload?.lenderFeePercent ?? acquisitionTermsPayload?.origination_fee_percent);
-  const interestRateDisplay = Number.isFinite(interestRate) ? formatPercentDisplay(interestRate) : null;
-  const lenderFeeDisplay = Number.isFinite(lenderFee) ? formatPercentDisplay(lenderFee) : null;
+  const interestRateDisplay = Number.isFinite(interestRate) ? formatInterestRatePercent(interestRate) : null;
+  const lenderFeeDisplay = Number.isFinite(lenderFee) ? formatInterestRatePercent(lenderFee) : null;
   const rows = [
-    Number.isFinite(purchasePrice) ? `<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(purchasePrice)}</td></tr>` : "",
-    Number.isFinite(noiBasis) ? `<tr><td>NOI Basis</td><td style="font-weight:600;">${formatMoney(noiBasis)}</td></tr>` : "",
-    Number.isFinite(goingInCapRate) ? `<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercentDisplay(goingInCapRate)}</td></tr>` : "",
-    Number.isFinite(proposedLoan) ? `<tr><td>Proposed Acquisition Loan</td><td style="font-weight:600;">${formatMoney(proposedLoan)}</td></tr>` : "",
-    Number.isFinite(ltv) ? `<tr><td>Proposed LTV</td><td style="font-weight:600;">${formatPercentDisplay(ltv)}</td></tr>` : "",
-    interestRateDisplay ? `<tr><td>Proposed Rate</td><td style="font-weight:600;">${interestRateDisplay}</td></tr>` : "",
-    Number.isFinite(amortization) ? `<tr><td>Proposed Amortization</td><td style="font-weight:600;">${Math.round(amortization)} years</td></tr>` : "",
-    lenderFeeDisplay ? `<tr><td>Lender / Origination Fee</td><td style="font-weight:600;">${lenderFeeDisplay}</td></tr>` : "",
+    Number.isFinite(purchasePrice) ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.purchasePrice}</td><td style="font-weight:600;">${formatMoney(purchasePrice)}</td></tr>` : "",
+    Number.isFinite(noiBasis) ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.noiBasis}</td><td style="font-weight:600;">${formatMoney(noiBasis)}</td></tr>` : "",
+    Number.isFinite(goingInCapRate) ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.goingInCapRate}</td><td style="font-weight:600;">${formatPercentDisplay(goingInCapRate)}</td></tr>` : "",
+    Number.isFinite(proposedLoan) ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.proposedLoanAmount}</td><td style="font-weight:600;">${formatMoney(proposedLoan)}</td></tr>` : "",
+    Number.isFinite(ltv) ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.ltv}</td><td style="font-weight:600;">${formatPercentDisplay(ltv)}</td></tr>` : "",
+    interestRateDisplay ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.interestRate}</td><td style="font-weight:600;">${interestRateDisplay}</td></tr>` : "",
+    Number.isFinite(amortization) ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.amortization}</td><td style="font-weight:600;">${Math.round(amortization)} years</td></tr>` : "",
+    lenderFeeDisplay ? `<tr><td>${ACQUISITION_FINANCING_DISPLAY_LABELS.lenderFee}</td><td style="font-weight:600;">${lenderFeeDisplay}</td></tr>` : "",
   ].filter(Boolean).join("");
   if (!rows) return renderSection("Acquisition Request Context", renderSectionCollapseHtml(), { pageBreakBefore: true });
   const acceptedContextLabels = [
