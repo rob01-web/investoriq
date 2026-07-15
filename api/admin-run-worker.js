@@ -818,6 +818,78 @@ export default async function handler(req, res) {
       }
     };
 
+    const preserveVerifiedPublicationAfterLateWorkerError = async (job, checkpoint, err) => {
+      if (
+        checkpoint?.verifiedDownloadArtifact !== true ||
+        checkpoint?.publicationQualityBoss?.ok !== true ||
+        checkpoint?.publicationQualityBoss?.status !== 'certified' ||
+        !checkpoint?.reportId ||
+        !checkpoint?.storagePath
+      ) {
+        return { preserved: false };
+      }
+
+      const completeUpdate = { status: 'published' };
+      if (supportsCompletedAt) {
+        completeUpdate.completed_at = nowIso;
+      }
+
+      const { error: publishErr } = await supabaseAdmin
+        .from('analysis_jobs')
+        .update(completeUpdate)
+        .eq('id', job.id);
+
+      let creditReconciliationError = null;
+      if (!publishErr) {
+        const creditResult = await consumeCreditOnce(job);
+        creditReconciliationError = creditResult.error || null;
+      }
+
+      const preservationEventErr = await writeWorkerEventArtifact(
+        job.id,
+        job.user_id,
+        'verified_publication_preserved_after_late_worker_error',
+        {
+          code: 'POST_VERIFIED_PUBLICATION_WORKER_ERROR',
+          report_id: checkpoint.reportId,
+          storage_path: checkpoint.storagePath,
+          verified_download_artifact: true,
+          final_pdf_publication_quality_boss: checkpoint.publicationQualityBoss,
+          job_status_updated: !publishErr,
+          status_update_error: publishErr?.message || null,
+          credit_reconciliation_required: Boolean(creditReconciliationError),
+          credit_reconciliation_error: creditReconciliationError?.message || null,
+          internal_error: String(err?.stack || err?.message || err || ''),
+          timestamp: nowIso,
+        }
+      );
+
+      if (publishErr) {
+        console.error(
+          `[worker] Verified report ${checkpoint.reportId} survived, but job ${job.id} could not be reconciled to published:`,
+          publishErr.message
+        );
+      }
+      if (creditReconciliationError) {
+        console.error(
+          `[worker] Published job ${job.id} requires credit reconciliation:`,
+          creditReconciliationError.message
+        );
+      }
+      if (preservationEventErr) {
+        console.error(
+          `[worker] Failed to write verified-publication preservation event for job ${job.id}:`,
+          preservationEventErr.message
+        );
+      }
+
+      return {
+        preserved: true,
+        jobStatusUpdated: !publishErr,
+        creditReconciliationRequired: Boolean(creditReconciliationError),
+      };
+    };
+
     const controlledAction = String(req.body?.action || '').trim();
     const controlledJobId = String(req.body?.job_id || '').trim();
     const controlledNote = String(req.body?.note || req.body?.message || '').trim().slice(0, 240);
@@ -2257,6 +2329,8 @@ export default async function handler(req, res) {
           let generatorError = null;
           let generatorErrorCode = 'REPORT_RENDER_FAILED';
           let generatorFailurePayload = null;
+          let artifactResolution = null;
+          let verifiedPublicationCheckpoint = null;
 
           if (!job.user_id) {
             generatorError = 'Missing user_id for report generation.';
@@ -2404,7 +2478,6 @@ export default async function handler(req, res) {
                 } else if (!resolvedReportId) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 } else {
-                  let artifactResolution = null;
                   try {
                     artifactResolution = await ensureReportDownloadArtifact({
                       supabaseAdmin,
@@ -2446,6 +2519,24 @@ export default async function handler(req, res) {
                       artifactResolution?.artifactSource ||
                       publicationResolution?.publicationSource ||
                       generatorSource;
+                    const publicationQualityBoss = artifactResolution?.publicationQualityBoss || null;
+                    if (
+                      resolvedDeliveryDecision.deliveryGateStatus === 'deliverable' &&
+                      resolvedDeliveryDecision.holdDelivery !== true &&
+                      resolvedDeliveryDecision.customerDeliveryAllowed === true &&
+                      artifactResolution?.verifiedDownloadArtifact === true &&
+                      publicationQualityBoss?.ok === true &&
+                      publicationQualityBoss?.status === 'certified' &&
+                      reportId &&
+                      storagePath
+                    ) {
+                      verifiedPublicationCheckpoint = Object.freeze({
+                        reportId,
+                        storagePath,
+                        verifiedDownloadArtifact: true,
+                        publicationQualityBoss,
+                      });
+                    }
                   }
                 }
               }
@@ -2791,6 +2882,29 @@ export default async function handler(req, res) {
           await writeValidatorDiagnosticsRollup({ jobId: job.id, userIdHint: job.user_id });
           rollupWrittenJobIds.add(job.id);
           } catch (err) {
+            if (verifiedPublicationCheckpoint) {
+              const preservationResult = await preserveVerifiedPublicationAfterLateWorkerError(
+                job,
+                verifiedPublicationCheckpoint,
+                err
+              );
+              if (preservationResult.preserved) {
+                if (
+                  preservationResult.jobStatusUpdated &&
+                  !transitions.some(
+                    (transition) => transition.job_id === job.id && transition.to_status === 'published'
+                  )
+                ) {
+                  transitions.push({
+                    job_id: job.id,
+                    from_status: 'verified_publication_checkpoint',
+                    to_status: 'published',
+                  });
+                  passTransitions += 1;
+                }
+                continue;
+              }
+            }
             await recordJobFailure(job, 'rendering', err);
             if (!failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);

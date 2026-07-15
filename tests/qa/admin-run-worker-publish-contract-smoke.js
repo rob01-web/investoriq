@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import axios from "axios";
+import { parse } from "@babel/parser";
+import traverseModule from "@babel/traverse";
 import fs from "fs";
 import {
   buildReportStoragePath,
@@ -11,6 +13,22 @@ import {
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const dashboardSource = fs.readFileSync("src/pages/Dashboard.jsx", "utf8");
+const traverse = traverseModule.default || traverseModule;
+
+const workerAst = parse(workerSource, { sourceType: "module" });
+const unboundArtifactResolutionReferences = [];
+traverse(workerAst, {
+  ReferencedIdentifier(path) {
+    if (path.node.name === "artifactResolution" && !path.scope.hasBinding("artifactResolution")) {
+      unboundArtifactResolutionReferences.push(path.node.loc?.start || null);
+    }
+  },
+});
+assert.deepEqual(
+  unboundArtifactResolutionReferences,
+  [],
+  "artifactResolution must remain bound across artifact verification and report-event publication"
+);
 
 assert.match(
   workerSource,
@@ -28,8 +46,39 @@ assert.match(
 );
 assert.match(workerSource, /deterministicContractQaSeal:\s*reportData\?\.deterministic_contract_qa_seal \|\| null/);
 assert.match(workerSource, /sourceReconciliation:\s*reportData\?\.source_reconciliation \|\| null/);
+assert.match(workerSource, /let artifactResolution = null;\s*let verifiedPublicationCheckpoint = null;/);
+assert.match(
+  workerSource,
+  /resolvedDeliveryDecision\.deliveryGateStatus === 'deliverable'[\s\S]*?resolvedDeliveryDecision\.customerDeliveryAllowed === true[\s\S]*?artifactResolution\?\.verifiedDownloadArtifact === true[\s\S]*?publicationQualityBoss\?\.ok === true[\s\S]*?publicationQualityBoss\?\.status === 'certified'/
+);
+assert.match(
+  workerSource,
+  /if \(verifiedPublicationCheckpoint\) \{[\s\S]*?preserveVerifiedPublicationAfterLateWorkerError\([\s\S]*?continue;[\s\S]*?\}\s*await recordJobFailure\(job, 'rendering', err\);/
+);
+const preservationStart = workerSource.indexOf("const preserveVerifiedPublicationAfterLateWorkerError");
+const preservationEnd = workerSource.indexOf("const controlledAction", preservationStart);
+assert.notEqual(preservationStart, -1);
+assert.notEqual(preservationEnd, -1);
+const preservationSource = workerSource.slice(preservationStart, preservationEnd);
+assert.match(preservationSource, /checkpoint\?\.verifiedDownloadArtifact !== true/);
+assert.match(preservationSource, /checkpoint\?\.publicationQualityBoss\?\.status !== 'certified'/);
+assert.match(preservationSource, /const completeUpdate = \{ status: 'published' \};/);
+assert.match(preservationSource, /POST_VERIFIED_PUBLICATION_WORKER_ERROR/);
+assert.equal(/applyTerminalFailureOutcome|restoreEntitlementForFailedJob/.test(preservationSource), false);
 assert.match(dashboardSource, /supabase\.storage\.from\('generated_reports'\)\.createSignedUrl\(report\.storage_path, 300\)/);
 assert.match(generatorSource, /reportId,\s*storagePath:\s*validatedStoragePath,\s*report_type:\s*reportType,/);
+const gateArtifactDeclaration = generatorSource.indexOf(
+  "const deliveryGateArtifactDecision = deliveryGateDecisionResult"
+);
+const gateArtifactUse = generatorSource.indexOf(
+  "...(deliveryGateArtifactDecision || deliveryGateDecision)"
+);
+assert.notEqual(gateArtifactDeclaration, -1);
+assert.notEqual(gateArtifactUse, -1);
+assert.ok(
+  gateArtifactDeclaration < gateArtifactUse,
+  "canonical delivery-gate audit payload must be initialized before artifact persistence"
+);
 
 const publishedRouteResponse = {
   reportId: "report-live-contract-123",

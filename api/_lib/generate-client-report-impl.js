@@ -8340,6 +8340,16 @@ try {
   });
   deliveryGateDecisionResult = deliveryGateDecision;
   deliveryDecisionStateResult = buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
+  const deliveryGateArtifactAliases = buildDeliveryResponseCompatibilityAliases(deliveryDecisionStateResult);
+  const deliveryGateArtifactDecision = deliveryGateDecisionResult
+    ? {
+        ...deliveryGateDecisionResult,
+        ...deliveryGateArtifactAliases,
+        legacy_compatibility: deliveryGateArtifactAliases.legacy_compatibility,
+        readiness_hierarchy: deliveryGateArtifactAliases.readiness_hierarchy,
+        deliveryDecisionState: deliveryDecisionStateResult,
+      }
+    : null;
   const gateTimestamp = new Date().toISOString().replace(/:/g, "-");
   if (jobId) {
     const { error: deliveryGateErr } = await supabase.from("analysis_artifacts").insert([
@@ -8350,7 +8360,7 @@ try {
         bucket: "internal",
         object_path: `analysis_jobs/${jobId || "unknown"}/delivery_gate_decision/${gateTimestamp}.json`,
         payload: {
-          ...(normalizedDeliveryGateDecision || deliveryGateDecision),
+          ...(deliveryGateArtifactDecision || deliveryGateDecision),
         },
       },
     ]);
