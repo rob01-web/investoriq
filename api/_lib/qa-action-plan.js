@@ -2420,13 +2420,13 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
     deliveryGateStatus === "deliverable" && customerDeliveryAllowed
       ? "ready"
       : deliveryGateStatus === "user_needs_documents"
-          ? "needs_documents"
+          ? "failed"
           : null;
   const customerMessage =
     customerStatusLabel === "ready"
       ? "This report is eligible for customer delivery."
-      : customerStatusLabel === "needs_documents"
-          ? "Additional required documents are needed before this report can be delivered."
+      : customerStatusLabel === "failed"
+          ? "Required core evidence was unusable, so this report could not be delivered."
           : "This report is currently held and cannot be delivered.";
 
   return {

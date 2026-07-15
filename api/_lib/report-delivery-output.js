@@ -34,6 +34,10 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
     state.blockingReasons.length === 0;
   const hasCanonicalCoreValidState = hasCanonicalDeliveryGateState || hasCanonicalAcquisitionFinalDecision;
   const deliveryGateStatus = hasCanonicalCoreValidState ? rawDeliveryGateStatus : "blocked";
+  const customerDeliveryGateStatus =
+    rawDeliveryGateStatus === "user_needs_documents"
+      ? "replacement_source_required"
+      : deliveryGateStatus;
   const customerBlockers = Array.isArray(state.customer_blockers)
     ? state.customer_blockers
     : Array.isArray(state.customer_publish_blockers)
@@ -58,12 +62,12 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
       ? (publicSampleReady && highValueOutreachReady
         ? "customer_deliverable"
         : "customer_deliverable_with_internal_advisory")
-      : (deliveryGateStatus === "user_needs_documents" ? "user_needs_documents" : "customer_deliverable");
+      : (rawDeliveryGateStatus === "user_needs_documents" ? "replacement_source_required" : "customer_deliverable");
   const readinessHierarchy = {
     final_delivery_authority: hasCanonicalAcquisitionFinalDecision
       ? state.final_delivery_authority
       : "delivery_gate",
-    final_delivery_status: deliveryGateStatus,
+    final_delivery_status: customerDeliveryGateStatus,
     customer_delivery_ready: customerDeliveryAllowed,
     customer_publish_eligible: customerDeliveryAllowed,
     report_publishable: customerDeliveryAllowed,
@@ -73,7 +77,7 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
     advisory_only_findings: Array.isArray(state.advisory_only_findings) ? state.advisory_only_findings.length : 0,
   };
   return {
-    delivery_gate_status: deliveryGateStatus,
+    delivery_gate_status: customerDeliveryGateStatus,
     customer_delivery_allowed: customerDeliveryAllowed,
     hold_delivery: holdDelivery,
     holdDelivery,
@@ -84,7 +88,7 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
     launch_path_recommendation: launchPathRecommendation,
     readiness_hierarchy: readinessHierarchy,
     legacy_compatibility: {
-      delivery_gate_status: deliveryGateStatus,
+      delivery_gate_status: customerDeliveryGateStatus,
       customer_delivery_ready: customerDeliveryAllowed,
       customer_publish_eligible: customerDeliveryAllowed,
       report_publishable: customerDeliveryAllowed,

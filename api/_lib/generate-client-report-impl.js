@@ -8427,9 +8427,9 @@ try {
     const blockedDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
     const failClosedDecisionState = {
       ...blockedDecisionState,
-      customer_status_label: "needs_documents",
+      customer_status_label: "failed",
       customer_message:
-        "Report could not be generated. InvestorIQ could not produce a defensible report from the required uploaded documents. Your report credit has been restored, and you may start a new report with corrected source documents.",
+        "Report could not be generated because the required core evidence was unusable. Your report credit has been restored. Please contact InvestorIQ support if you require assistance.",
     };
     const deliveryAliases = buildDeliveryResponseCompatibilityAliases(blockedDecisionState);
     return res.status(200).json({
@@ -8453,7 +8453,7 @@ try {
     delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
     delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
     delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
-      delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
+      delivery_gate_recommended_next_step: "Contact InvestorIQ support for assistance.",
       customer_publish_blockers: deliveryGateDecisionResult?.customer_publish_blockers || [],
       public_sample_blockers: deliveryGateDecisionResult?.public_sample_blockers || [],
       high_value_outreach_blockers: deliveryGateDecisionResult?.high_value_outreach_blockers || [],
@@ -8463,10 +8463,11 @@ try {
       regeneration_required_for_public_sample: deliveryGateDecisionResult?.regeneration_required_for_public_sample ?? false,
       regeneration_required: deliveryGateDecisionResult?.regeneration_required ?? false,
       admin_review_required: false,
-      user_needs_documents:
+      replacement_source_required:
         deliveryGateDecisionResult?.user_needs_documents ??
-        deliveryAliases.delivery_gate_status === "user_needs_documents",
-      publish_decision_reason: deliveryGateDecisionResult?.publish_decision_reason || null,
+        deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents",
+      publish_decision_reason: String(deliveryGateDecisionResult?.publish_decision_reason || "")
+        .replace(/^user_needs_documents(?=:|$)/, "replacement_source_required") || null,
     });
   }
 if (docraptorMode === "production" && !allowProductionPdf) {
@@ -8802,7 +8803,10 @@ try {
       delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
       delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
       delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
-      delivery_gate_recommended_next_step: deliveryGateDecisionResult?.recommended_next_step || null,
+      delivery_gate_recommended_next_step:
+        deliveryGateDecisionResult?.delivery_gate_status === "user_needs_documents"
+          ? "Contact InvestorIQ support for assistance."
+          : deliveryGateDecisionResult?.recommended_next_step || null,
       customer_publish_blockers: deliveryGateDecisionResult?.customer_publish_blockers || [],
       public_sample_blockers: deliveryGateDecisionResult?.public_sample_blockers || [],
       high_value_outreach_blockers: deliveryGateDecisionResult?.high_value_outreach_blockers || [],
@@ -8812,8 +8816,9 @@ try {
       regeneration_required_for_public_sample: deliveryGateDecisionResult?.regeneration_required_for_public_sample ?? false,
       regeneration_required: deliveryGateDecisionResult?.regeneration_required ?? false,
       admin_review_required: deliveryGateDecisionResult?.admin_review_required ?? false,
-      user_needs_documents: deliveryGateDecisionResult?.user_needs_documents ?? false,
-      publish_decision_reason: deliveryGateDecisionResult?.publish_decision_reason || null,
+      replacement_source_required: deliveryGateDecisionResult?.user_needs_documents ?? false,
+      publish_decision_reason: String(deliveryGateDecisionResult?.publish_decision_reason || "")
+        .replace(/^user_needs_documents(?=:|$)/, "replacement_source_required") || null,
     });
   } catch (err) {
     console.error("Error generating report:", err);

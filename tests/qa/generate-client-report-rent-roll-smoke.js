@@ -754,6 +754,31 @@ assert.equal(normalizedDeliverableAliases.report_publishable, true);
 assert.equal(normalizedDeliverableAliases.customer_delivery_ready, true);
 assert.equal(normalizedDeliverableAliases.customer_publish_eligible, true);
 assert.match(normalizedDeliverableAliases.launch_path_recommendation, /^customer_deliverable/);
+const internalReplacementSourceDecision = buildCanonicalDeliveryDecisionState({
+  delivery_gate_status: "user_needs_documents",
+  core_valid_required_coverage: false,
+  customer_delivery_allowed: false,
+  hold_delivery: true,
+  customer_publish_blockers: ["CORE_T12_NOT_VALIDATED"],
+});
+const customerSafeReplacementSourceAliases = buildDeliveryResponseCompatibilityAliases(
+  internalReplacementSourceDecision
+);
+assert.equal(internalReplacementSourceDecision.delivery_gate_status, "user_needs_documents");
+assert.equal(internalReplacementSourceDecision.customer_status_label, "failed");
+assert.match(internalReplacementSourceDecision.customer_message, /required core evidence was unusable/i);
+assert.doesNotMatch(internalReplacementSourceDecision.customer_message, /upload|additional|required documents are needed/i);
+assert.equal(customerSafeReplacementSourceAliases.delivery_gate_status, "replacement_source_required");
+assert.equal(customerSafeReplacementSourceAliases.launch_path_recommendation, "replacement_source_required");
+assert.equal(
+  customerSafeReplacementSourceAliases.readiness_hierarchy.final_delivery_status,
+  "replacement_source_required"
+);
+assert.equal(
+  customerSafeReplacementSourceAliases.legacy_compatibility.delivery_gate_status,
+  "replacement_source_required"
+);
+assert.doesNotMatch(JSON.stringify(customerSafeReplacementSourceAliases), /user_needs_documents/);
 const unresolvedTokens = fullRenderHtml.match(/\{\{[A-Z0-9_]+\}\}/g) || [];
 if (unresolvedTokens.length > 0) {
   throw new Error(`Unresolved tokens: ${unresolvedTokens.slice(0, 10).join(", ")}`);
@@ -1772,6 +1797,13 @@ assert.match(
   reportSource,
   /delivery_gate_status === "user_needs_documents"/
 );
+assert.match(
+  reportSource,
+  /customer_status_label:\s*"failed",[\s\S]{0,240}required core evidence was unusable[\s\S]{0,180}report credit has been restored[\s\S]{0,180}contact InvestorIQ support/i
+);
+assert.equal(/customer_status_label:\s*"needs_documents"/.test(reportSource), false);
+assert.equal(/\n\s+user_needs_documents:/.test(reportSource), false);
+assert.equal(/start a new report with corrected source documents/i.test(reportSource), false);
 assert.match(
   reportSource,
   /finalHtml = stripMarkedSection\(finalHtml, "SECTION_7_REFI_STABILITY"\);/
