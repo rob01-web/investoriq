@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 import DiagnosticsIntelligence from "@/components/Admin/DiagnosticsIntelligence.jsx";
+import QualityIncidentDashboard from "@/components/Admin/QualityIncidentDashboard.jsx";
 
 // DESIGN TOKENS
 const T = {
@@ -822,6 +823,8 @@ export default function AdminDashboard() {
           </div>
 
           <SystemHealthBanner snapshot={systemHealthSnapshot} />
+
+          <QualityIncidentDashboard adminRunKey={adminRunKey} />
 
           {/*  ZONE 2: STUCK JOBS ALERT  */}
           <AnimatePresence>

@@ -8494,6 +8494,52 @@ try {
     deliveryDecisionStateResult?.core_valid_required_coverage !== true
   ) {
     const blockedDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
+    let reportQualityManifestCandidate = null;
+    if (jobId && isCanonicalSourceTruthPackage(sourceTruthPackageResult)) {
+      try {
+        reportQualityManifestCandidate = buildReportQualityManifestCandidate({
+          jobId,
+          userId: effectiveUserId || null,
+          reportFamily: "acquisition_memo",
+          reportType,
+          reportMode: effectiveReportMode,
+          propertyName: propertyNameDisplay || property_name || jobPropertyName || null,
+          sourceTruthPackage: sourceTruthPackageResult,
+          customerSurfaceModel: acquisitionMemoV2Finalization?.customerSurfaceModel || null,
+          customerSurfaceModelValidation:
+            acquisitionMemoV2Finalization?.customerSurfaceModelValidation ||
+            acquisitionMemoV2Finalization?.metadata?.customerSurfaceModelValidation ||
+            null,
+          customerSurfaceHtmlValidation:
+            acquisitionMemoV2Finalization?.customerSurfaceHtmlValidation ||
+            acquisitionMemoV2Finalization?.metadata?.customerSurfaceHtmlValidation ||
+            null,
+          deterministicContractQaSeal:
+            acquisitionMemoV2Finalization?.deterministicContractQaSeal ||
+            reportContractQaResult?.deterministic_contract_qa_seal ||
+            null,
+          bossCompliance:
+            acquisitionMemoV2Finalization?.bossCompliance ||
+            acquisitionMemoV2Finalization?.compliance ||
+            null,
+          deliveryDecision: blockedDecisionState,
+          sourceCoverageQa: sourceCoverageQaResult,
+          renderedQaStatus,
+          sourcePackageQa: sourcePackageQaResult,
+          qaManagerReview: qaManagerReviewResult,
+        });
+        await persistReportQualityManifestCandidate({
+          jobId,
+          userId: effectiveUserId || null,
+          candidate: reportQualityManifestCandidate,
+        });
+      } catch (manifestErr) {
+        console.error(
+          "Failed to build blocked Acquisition Memo Report Quality Manifest candidate:",
+          manifestErr?.context || manifestErr?.message || manifestErr
+        );
+      }
+    }
     const failClosedDecisionState = {
       ...blockedDecisionState,
       customer_status_label: "failed",
@@ -8505,23 +8551,24 @@ try {
       ok: true,
       success: true,
       reportId: null,
-    storagePath: null,
-    url: null,
-    deliveryDecisionState: failClosedDecisionState,
-    delivery_gate_status: deliveryAliases.delivery_gate_status,
-    customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
-    hold_delivery: deliveryAliases.hold_delivery,
-    holdDelivery: deliveryAliases.holdDelivery,
-    report_publishable: deliveryAliases.report_publishable,
-    report_blocked: deliveryAliases.report_blocked,
-    customer_delivery_ready: deliveryAliases.customer_delivery_ready,
-    customer_publish_eligible: deliveryAliases.customer_publish_eligible,
-    launch_path_recommendation: deliveryAliases.launch_path_recommendation,
-    readiness_hierarchy: deliveryAliases.readiness_hierarchy,
-    legacy_compatibility: deliveryAliases.legacy_compatibility,
-    delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
-    delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
-    delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
+      storagePath: null,
+      url: null,
+      report_quality_manifest_candidate: reportQualityManifestCandidate,
+      deliveryDecisionState: failClosedDecisionState,
+      delivery_gate_status: deliveryAliases.delivery_gate_status,
+      customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
+      hold_delivery: deliveryAliases.hold_delivery,
+      holdDelivery: deliveryAliases.holdDelivery,
+      report_publishable: deliveryAliases.report_publishable,
+      report_blocked: deliveryAliases.report_blocked,
+      customer_delivery_ready: deliveryAliases.customer_delivery_ready,
+      customer_publish_eligible: deliveryAliases.customer_publish_eligible,
+      launch_path_recommendation: deliveryAliases.launch_path_recommendation,
+      readiness_hierarchy: deliveryAliases.readiness_hierarchy,
+      legacy_compatibility: deliveryAliases.legacy_compatibility,
+      delivery_gate_reason_code: deliveryGateDecisionResult?.reason_code || null,
+      delivery_gate_top_action_code: deliveryGateDecisionResult?.top_action_code || null,
+      delivery_gate_owner_area: deliveryGateDecisionResult?.owner_area || null,
       delivery_gate_recommended_next_step: "Contact InvestorIQ support for assistance.",
       customer_publish_blockers: deliveryGateDecisionResult?.customer_publish_blockers || [],
       public_sample_blockers: deliveryGateDecisionResult?.public_sample_blockers || [],

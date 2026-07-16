@@ -4,6 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   buildReportQualityManifestCandidate,
+  buildUnavailableReportQualityManifestCandidate,
+  finalizeBlockedReportQualityManifest,
   finalizeReportQualityManifest,
   REPORT_QUALITY_MANIFEST_CONTRACT,
   validateReportQualityManifest,
@@ -238,6 +240,7 @@ const customerSurfaceModel = {
 };
 
 const deliverableDecision = {
+  source: "canonical_delivery_decision",
   delivery_gate_status: "deliverable",
   customer_delivery_allowed: true,
   hold_delivery: false,
@@ -339,6 +342,60 @@ assert.equal(finalManifest.publication.pdfCertified, true);
 assert.equal(finalManifest.qualityState.confidence, "verified_publication");
 assert.equal(validateReportQualityManifest(finalManifest, { requireFinal: true }).ok, true);
 
+const unavailableCandidate = buildUnavailableReportQualityManifestCandidate({
+  jobId: "blocked-manifest-job",
+  userId: "manifest-user",
+  reportFamily: "acquisition_memo",
+  reportType: "underwriting",
+  reportMode: "v1_core",
+  propertyName: "Blocked Manifest Property",
+  blockerCode: "REPORT_RENDER_FAILED",
+  generatedAt: "2026-07-15T20:01:30.000Z",
+});
+const blockedDecision = {
+  source: "canonical_delivery_decision",
+  delivery_gate_status: "blocked",
+  customer_delivery_allowed: false,
+  hold_delivery: true,
+  core_valid_required_coverage: true,
+  customer_status_reason_code: "REPORT_CONTRACT_FAILED",
+};
+const blockedManifest = finalizeBlockedReportQualityManifest({
+  candidate: unavailableCandidate,
+  deliveryDecision: blockedDecision,
+  terminalOutcome: {
+    code: "REPORT_RENDER_FAILED",
+    failureClass: "internal_system_failure",
+    customerDocumentReplacementRequired: false,
+    retrySafe: true,
+  },
+  creditState: { state: "restored" },
+  remedyState: { state: "internal_review_required" },
+  finalizedAt: "2026-07-15T20:01:45.000Z",
+});
+assert.equal(blockedManifest.publication.state, "blocked");
+assert.equal(blockedManifest.publication.pdfCertified, false);
+assert.equal(blockedManifest.qualityState.confidence, "verified_terminal_block");
+assert.equal(blockedManifest.terminalOutcome.code, "REPORT_RENDER_FAILED");
+assert.equal(validateReportQualityManifest(blockedManifest, { requireFinal: true }).ok, true);
+
+const postGatePlatformBlock = finalizeBlockedReportQualityManifest({
+  candidate: unavailableCandidate,
+  deliveryDecision: deliverableDecision,
+  terminalOutcome: {
+    code: "STORAGE_PUBLICATION_FAILED",
+    failureClass: "internal_system_failure",
+    customerDocumentReplacementRequired: false,
+    retrySafe: true,
+  },
+  creditState: { state: "restored" },
+  remedyState: { state: "internal_review_required" },
+});
+assert.equal(postGatePlatformBlock.publication.state, "blocked");
+assert.equal(postGatePlatformBlock.receipts.deliveryGate.delivery_gate_status, "deliverable");
+assert.equal(postGatePlatformBlock.terminalOutcome.code, "STORAGE_PUBLICATION_FAILED");
+assert.equal(validateReportQualityManifest(postGatePlatformBlock, { requireFinal: true }).ok, true);
+
 const screeningCandidate = buildReportQualityManifestCandidate({
   jobId: "screening-manifest-job",
   userId: "manifest-user",
@@ -377,10 +434,11 @@ assert.match(generatorSource, /buildReportQualityManifestCandidate/);
 assert.match(generatorSource, /type:\s*"report_quality_manifest_candidate"/);
 assert.equal(
   (generatorSource.match(/report_quality_manifest_candidate:\s*reportQualityManifestCandidate/g) || []).length,
-  2,
-  "Screening and Acquisition responses must both carry the canonical Manifest candidate"
+  3,
+  "Screening, blocked Acquisition, and published Acquisition responses must carry the Manifest candidate"
 );
 assert.match(workerSource, /finalizeReportQualityManifest/);
+assert.match(workerSource, /finalizeBlockedReportQualityManifest/);
 assert.match(workerSource, /type:\s*'report_quality_manifest'/);
 assert.match(workerSource, /customer_delivery_unchanged:\s*true/);
 assert.ok(

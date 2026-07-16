@@ -2,6 +2,7 @@ const MANIFEST_SCHEMA_VERSION = 1;
 const MANIFEST_CANDIDATE_SOURCE = "report_quality_manifest_candidate";
 const MANIFEST_FINAL_SOURCE = "canonical_report_quality_manifest";
 const SOURCE_TRUTH_SOURCE = "canonical_source_truth_package";
+const DELIVERY_DECISION_SOURCE = "canonical_delivery_decision";
 
 const CORE_SECTION_KEYS = new Set([
   "operating_statement",
@@ -471,18 +472,45 @@ export function validateReportQualityManifest(manifest, { requireFinal = false }
   }
 
   if (requireFinal || source === MANIFEST_FINAL_SOURCE) {
-    const delivery = explicitDeliveryState(manifest?.receipts?.deliveryGate);
-    if (text(manifest?.publication?.state) !== "published") {
-      push("MANIFEST_FINAL_PUBLICATION_STATE_INVALID", "publication.state", "Final manifest requires published state.");
+    const publicationState = text(manifest?.publication?.state);
+    const deliveryReceipt = asObject(manifest?.receipts?.deliveryGate);
+    const delivery = explicitDeliveryState(deliveryReceipt);
+    const hasCanonicalDelivery = deliveryReceipt.source === DELIVERY_DECISION_SOURCE;
+    if (!["published", "blocked"].includes(publicationState)) {
+      push("MANIFEST_FINAL_PUBLICATION_STATE_INVALID", "publication.state", "Final manifest requires a published or blocked terminal state.");
     }
-    if (!text(manifest?.report?.reportId) || !text(manifest?.publication?.storagePath)) {
-      push("MANIFEST_FINAL_PUBLICATION_IDENTITY_MISSING", "publication", "Final manifest requires report and storage identity.");
+    if (publicationState === "published") {
+      if (!hasCanonicalDelivery) {
+        push("MANIFEST_FINAL_CANONICAL_DELIVERY_REQUIRED", "receipts.deliveryGate", "Published manifest requires the canonical delivery decision receipt.");
+      }
+      if (!text(manifest?.report?.reportId) || !text(manifest?.publication?.storagePath)) {
+        push("MANIFEST_FINAL_PUBLICATION_IDENTITY_MISSING", "publication", "Published manifest requires report and storage identity.");
+      }
+      if (delivery.status !== "deliverable" || delivery.customerDeliveryAllowed !== true || delivery.holdDelivery === true) {
+        push("MANIFEST_FINAL_DELIVERY_NOT_ALLOWED", "receipts.deliveryGate", "Published manifest requires explicit deliverable authority.");
+      }
+      if (manifest?.receipts?.finalPdfPublicationQualityBoss?.ok !== true || manifest?.receipts?.finalPdfPublicationQualityBoss?.status !== "certified") {
+        push("MANIFEST_FINAL_PDF_NOT_CERTIFIED", "receipts.finalPdfPublicationQualityBoss", "Published manifest requires a certified PDF Boss receipt.");
+      }
     }
-    if (delivery.status !== "deliverable" || delivery.customerDeliveryAllowed !== true || delivery.holdDelivery === true) {
-      push("MANIFEST_FINAL_DELIVERY_NOT_ALLOWED", "receipts.deliveryGate", "Final manifest requires explicit deliverable authority.");
-    }
-    if (manifest?.receipts?.finalPdfPublicationQualityBoss?.ok !== true || manifest?.receipts?.finalPdfPublicationQualityBoss?.status !== "certified") {
-      push("MANIFEST_FINAL_PDF_NOT_CERTIFIED", "receipts.finalPdfPublicationQualityBoss", "Final manifest requires a certified PDF Boss receipt.");
+    if (publicationState === "blocked") {
+      if (!text(manifest?.terminalOutcome?.code) || !text(manifest?.terminalOutcome?.failureClass)) {
+        push("MANIFEST_BLOCKED_TERMINAL_OUTCOME_MISSING", "terminalOutcome", "Blocked manifest requires an explicit terminal outcome receipt.");
+      }
+      if (Object.keys(deliveryReceipt).length > 0 && !hasCanonicalDelivery) {
+        push("MANIFEST_BLOCKED_DELIVERY_RECEIPT_NONCANONICAL", "receipts.deliveryGate", "A blocked delivery receipt must be canonical when present.");
+      }
+      if (
+        hasCanonicalDelivery &&
+        delivery.customerDeliveryAllowed === true &&
+        delivery.holdDelivery !== true &&
+        text(manifest?.terminalOutcome?.failureClass) === "customer_document_failure"
+      ) {
+        push("MANIFEST_BLOCKED_CORE_FAILURE_WITH_DELIVERABLE_AUTHORITY", "receipts.deliveryGate", "A catastrophic core-evidence block cannot carry deliverable customer authority.");
+      }
+      if (manifest?.publication?.pdfCertified === true) {
+        push("MANIFEST_BLOCKED_PDF_CERTIFIED", "publication.pdfCertified", "Blocked manifest cannot represent a certified customer publication.");
+      }
     }
   }
 
@@ -621,6 +649,82 @@ export function buildReportQualityManifestCandidate({
   return deepFreeze(candidate);
 }
 
+export function buildUnavailableReportQualityManifestCandidate({
+  jobId,
+  userId = null,
+  reportFamily,
+  reportType = null,
+  reportMode = null,
+  propertyName = null,
+  blockerCode,
+  generatedAt = new Date().toISOString(),
+} = {}) {
+  const candidate = {
+    source: MANIFEST_CANDIDATE_SOURCE,
+    schemaVersion: MANIFEST_SCHEMA_VERSION,
+    generatedAt,
+    finalizedAt: null,
+    authority: {
+      source: "canonical_receipts_only",
+      authorityCreating: false,
+      receiptOnly: true,
+      downstreamConsumeOnly: true,
+      legacyUnderwritingReuseAllowed: false,
+    },
+    report: {
+      jobId: text(jobId) || null,
+      userId: text(userId) || null,
+      reportId: null,
+      reportFamily: text(reportFamily) || null,
+      reportType: text(reportType) || null,
+      reportMode: text(reportMode) || null,
+      propertyName: text(propertyName) || null,
+    },
+    qualityState: {
+      corePublishable: false,
+      trueBlockers: unique([blockerCode]),
+      confidence: "canonical_evidence_unavailable",
+      optionalSupport: {
+        sourcePresentCount: 0,
+        roleAcceptedCount: 0,
+        factAcceptedCount: 0,
+        sourceBackedCount: 0,
+        ambiguousOrConflictingCount: 0,
+      },
+      delivery: explicitDeliveryState(null),
+    },
+    documents: [],
+    calculations: [],
+    sections: [],
+    conflicts: [],
+    duplicates: [],
+    disclosures: [],
+    receipts: {
+      sourceTruth: null,
+      customerSurfaceModel: null,
+      deterministicContractQaSeal: null,
+      boss: null,
+      deliveryGate: null,
+      finalPdfPublicationQualityBoss: null,
+      advisoryQa: null,
+    },
+    publication: {
+      state: "candidate",
+      storagePath: null,
+      pdfCertified: false,
+    },
+    credit: { state: "not_finalized" },
+    remedy: { state: "not_required_for_candidate" },
+  };
+  const validation = validateReportQualityManifest(candidate);
+  if (!validation.ok) {
+    const error = new Error("REPORT_QUALITY_MANIFEST_UNAVAILABLE_CANDIDATE_INVALID");
+    error.context = { validation };
+    throw error;
+  }
+  return deepFreeze(candidate);
+}
+
 export function finalizeReportQualityManifest({
   candidate,
   reportId,
@@ -675,6 +779,67 @@ export function finalizeReportQualityManifest({
   return deepFreeze(finalManifest);
 }
 
+export function finalizeBlockedReportQualityManifest({
+  candidate,
+  reportId = null,
+  storagePath = null,
+  deliveryDecision = null,
+  terminalOutcome,
+  creditState = null,
+  remedyState = null,
+  finalizedAt = new Date().toISOString(),
+} = {}) {
+  const candidateValidation = validateReportQualityManifest(candidate);
+  if (!candidateValidation.ok || candidate?.source !== MANIFEST_CANDIDATE_SOURCE) {
+    const error = new Error("REPORT_QUALITY_MANIFEST_VALID_CANDIDATE_REQUIRED");
+    error.context = { validation: candidateValidation };
+    throw error;
+  }
+  const terminal = asObject(terminalOutcome);
+  const finalManifest = {
+    ...clone(candidate),
+    source: MANIFEST_FINAL_SOURCE,
+    finalizedAt,
+    report: {
+      ...clone(candidate.report),
+      reportId: text(reportId) || null,
+    },
+    qualityState: {
+      ...clone(candidate.qualityState),
+      confidence: "verified_terminal_block",
+      delivery: explicitDeliveryState(deliveryDecision),
+    },
+    receipts: {
+      ...clone(candidate.receipts),
+      deliveryGate: deliveryDecision ? clone(asObject(deliveryDecision)) : null,
+      finalPdfPublicationQualityBoss: null,
+    },
+    publication: {
+      state: "blocked",
+      storagePath: text(storagePath) || null,
+      pdfCertified: false,
+    },
+    terminalOutcome: {
+      code: text(terminal.code) || null,
+      failureClass: text(terminal.failureClass || terminal.failure_class) || null,
+      customerDocumentReplacementRequired:
+        terminal.customerDocumentReplacementRequired === true ||
+        terminal.customer_document_replacement_required === true,
+      retrySafe: terminal.retrySafe === true || terminal.retry_safe === true,
+      message: text(terminal.message) || null,
+    },
+    credit: clone(creditState || { state: "restoration_status_unknown" }),
+    remedy: clone(remedyState || { state: "review_required" }),
+  };
+  const validation = validateReportQualityManifest(finalManifest, { requireFinal: true });
+  if (!validation.ok) {
+    const error = new Error("REPORT_QUALITY_MANIFEST_BLOCKED_FINAL_INVALID");
+    error.context = { validation };
+    throw error;
+  }
+  return deepFreeze(finalManifest);
+}
+
 export const REPORT_QUALITY_MANIFEST_CONTRACT = deepFreeze({
   schemaVersion: MANIFEST_SCHEMA_VERSION,
   candidateSource: MANIFEST_CANDIDATE_SOURCE,
@@ -682,4 +847,5 @@ export const REPORT_QUALITY_MANIFEST_CONTRACT = deepFreeze({
   authorityCreating: false,
   receiptOnly: true,
   legacyUnderwritingReuseAllowed: false,
+  terminalStates: ["published", "blocked"],
 });

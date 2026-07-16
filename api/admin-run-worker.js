@@ -7,7 +7,12 @@ import {
   ensureReportDownloadArtifact,
   resolveOrCreateReportPublicationRecord,
 } from './_lib/report-delivery-output.js';
-import { finalizeReportQualityManifest } from './_lib/report-quality-manifest.js';
+import {
+  buildReportQualityManifestCandidate,
+  buildUnavailableReportQualityManifestCandidate,
+  finalizeBlockedReportQualityManifest,
+  finalizeReportQualityManifest,
+} from './_lib/report-quality-manifest.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 const normalizeAuditText = (value) => String(value || '').toLowerCase();
@@ -275,6 +280,135 @@ export default async function handler(req, res) {
         coreValidRequiredCoverage,
         legacyAliasConflicts,
       };
+    };
+
+    const extractCanonicalDeliveryDecision = (payload = null) => {
+      const source = payload && typeof payload === 'object' ? payload : {};
+      const candidates = [
+        source,
+        source.deliveryDecisionState,
+        source.delivery_decision_state,
+        source.canonical_delivery_decision,
+      ];
+      return candidates.find(
+        (candidate) => candidate && typeof candidate === 'object' && candidate.source === 'canonical_delivery_decision'
+      ) || null;
+    };
+
+    const loadLatestArtifactPayload = async (jobId, type) => {
+      const { data, error } = await supabaseAdmin
+        .from('analysis_artifacts')
+        .select('payload')
+        .eq('job_id', jobId)
+        .eq('type', type)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.payload || null;
+    };
+
+    const finalizeAndPersistBlockedManifest = async ({
+      job,
+      reportData = null,
+      reportId = null,
+      storagePath = null,
+      terminalCode,
+      terminalMessage = null,
+      creditState = null,
+      remedyState = null,
+    }) => {
+      try {
+        let deliveryDecision = extractCanonicalDeliveryDecision(reportData?.deliveryDecisionState || reportData);
+        if (!deliveryDecision) {
+          const deliveryArtifact = await loadLatestArtifactPayload(job.id, 'delivery_gate_decision');
+          deliveryDecision = extractCanonicalDeliveryDecision(deliveryArtifact);
+        }
+
+        let candidate = reportData?.report_quality_manifest_candidate || null;
+        if (!candidate) {
+          candidate = await loadLatestArtifactPayload(job.id, 'report_quality_manifest_candidate');
+        }
+        if (!candidate) {
+          const sourceTruthPackage = await loadLatestArtifactPayload(job.id, 'source_truth_package');
+          if (sourceTruthPackage?.source === 'canonical_source_truth_package') {
+            candidate = buildReportQualityManifestCandidate({
+              jobId: job.id,
+              userId: job.user_id || null,
+              reportFamily: String(job.report_type || '').toLowerCase() === 'screening'
+                ? 'screening'
+                : 'acquisition_memo',
+              reportType: job.report_type || null,
+              reportMode: String(job.report_type || '').toLowerCase() === 'screening'
+                ? 'screening_v1'
+                : 'v1_core',
+              propertyName: job.property_name || null,
+              sourceTruthPackage,
+              deliveryDecision,
+            });
+          }
+        }
+        if (!candidate) {
+          candidate = buildUnavailableReportQualityManifestCandidate({
+            jobId: job.id,
+            userId: job.user_id || null,
+            reportFamily: String(job.report_type || '').toLowerCase() === 'screening'
+              ? 'screening'
+              : 'acquisition_memo',
+            reportType: job.report_type || null,
+            reportMode: String(job.report_type || '').toLowerCase() === 'screening'
+              ? 'screening_v1'
+              : 'v1_core',
+            propertyName: job.property_name || null,
+            blockerCode: terminalCode,
+            generatedAt: nowIso,
+          });
+        }
+
+        const terminalClassification = classifyTerminalFailureCode(terminalCode);
+        const manifest = finalizeBlockedReportQualityManifest({
+          candidate,
+          reportId,
+          storagePath,
+          deliveryDecision,
+          terminalOutcome: {
+            code: terminalClassification.code,
+            failureClass: terminalClassification.failure_class,
+            customerDocumentReplacementRequired:
+              terminalClassification.customer_document_replacement_required,
+            retrySafe: terminalClassification.retry_safe,
+            message: terminalMessage,
+          },
+          creditState: creditState || { state: 'restoration_status_unknown' },
+          remedyState: remedyState || { state: 'review_required' },
+          finalizedAt: nowIso,
+        });
+        const { error } = await supabaseAdmin.from('analysis_artifacts').insert([{
+          job_id: job.id,
+          user_id: job.user_id || null,
+          type: 'report_quality_manifest',
+          bucket: 'internal',
+          object_path: `analysis_jobs/${job.id}/report_quality_manifest/${safeTimestamp(nowIso)}.json`,
+          payload: manifest,
+        }]);
+        if (error) throw error;
+        return { ok: true, manifest };
+      } catch (manifestErr) {
+        console.error(
+          `[worker] Blocked Report Quality Manifest finalization failed for job ${job.id}:`,
+          manifestErr?.context || manifestErr?.message || manifestErr
+        );
+        await writeWorkerEventArtifact(job.id, job.user_id, 'report_quality_manifest_finalize_failed', {
+          code: 'REPORT_QUALITY_MANIFEST_BLOCKED_FINALIZE_FAILED',
+          internal_only: true,
+          customer_delivery_unchanged: true,
+          terminal_code: terminalCode,
+          error: String(manifestErr?.message || manifestErr || ''),
+          validation: manifestErr?.context?.validation || null,
+          timestamp: nowIso,
+        });
+        return { ok: false, error: manifestErr };
+      }
     };
 
     const resolveHeldDeliveryTerminalCode = (resolvedDeliveryDecision = null) => {
@@ -800,14 +934,25 @@ export default async function handler(req, res) {
         }
       }
 
+      const creditRestoration = {
+        state: restore?.enabled ? 'restoration_attempted' : 'not_required',
+        restored: false,
+        skipped: false,
+        error: null,
+      };
       if (restore?.enabled) {
         try {
-          await restoreEntitlementForFailedJob(
+          const restoreResult = await restoreEntitlementForFailedJob(
             job,
             restore.reason || 'terminal_failure',
             restore.errorCode || errorCode || 'WORKER_ERROR'
           );
+          creditRestoration.state = restoreResult?.skipped ? 'already_restored' : 'restored';
+          creditRestoration.restored = restoreResult?.skipped !== true;
+          creditRestoration.skipped = restoreResult?.skipped === true;
         } catch (restoreErr) {
+          creditRestoration.state = 'restoration_failed';
+          creditRestoration.error = restoreErr?.message || String(restoreErr);
           if (restore.strict) {
             throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
           }
@@ -817,6 +962,7 @@ export default async function handler(req, res) {
           );
         }
       }
+      return { creditRestoration };
     };
 
     const preserveVerifiedPublicationAfterLateWorkerError = async (job, checkpoint, err) => {
@@ -2545,7 +2691,7 @@ export default async function handler(req, res) {
           }
 
           if (generatorError) {
-            await applyTerminalFailureOutcome(job, {
+            const terminalFailureResult = await applyTerminalFailureOutcome(job, {
               fromStatus: 'rendering',
               errorCode: generatorErrorCode,
               errorMessage: generatorError,
@@ -2557,6 +2703,16 @@ export default async function handler(req, res) {
                 strict: false,
                 logContext: 'report_generation_failed',
               },
+            });
+            await finalizeAndPersistBlockedManifest({
+              job,
+              reportData,
+              reportId,
+              storagePath,
+              terminalCode: generatorErrorCode,
+              terminalMessage: generatorError,
+              creditState: terminalFailureResult?.creditRestoration || null,
+              remedyState: { state: 'internal_review_required' },
             });
 
             transitions.push({
@@ -2599,7 +2755,7 @@ export default async function handler(req, res) {
             const terminalErrorCode = resolveHeldDeliveryTerminalCode(resolvedDeliveryDecision);
             const terminalClassification = classifyTerminalFailureCode(terminalErrorCode);
             const customerDocumentFailure = terminalClassification.customer_document_replacement_required === true;
-            await applyTerminalFailureOutcome(job, {
+            const terminalFailureResult = await applyTerminalFailureOutcome(job, {
               fromStatus: 'rendering',
               errorCode: terminalErrorCode,
               errorMessage: customerDocumentFailure
@@ -2623,6 +2779,22 @@ export default async function handler(req, res) {
                 errorCode: terminalErrorCode,
                 strict: false,
                 logContext: 'needs-documents',
+              },
+            });
+            await finalizeAndPersistBlockedManifest({
+              job,
+              reportData,
+              reportId,
+              storagePath,
+              terminalCode: terminalErrorCode,
+              terminalMessage: customerDocumentFailure
+                ? 'Required core operating evidence was catastrophically unusable.'
+                : 'An internal report or delivery contract blocked publication.',
+              creditState: terminalFailureResult?.creditRestoration || null,
+              remedyState: {
+                state: customerDocumentFailure
+                  ? 'replacement_source_required'
+                  : 'internal_review_required',
               },
             });
             transitions.push({
@@ -2653,7 +2825,7 @@ export default async function handler(req, res) {
           if (!reportId || !storagePath) {
             const missingDeliverableArtifact = !reportId ? 'reportId' : 'storagePath';
             generatorError = `Report generation failed (${missingDeliverableArtifact} missing for deliverable path)`;
-            await applyTerminalFailureOutcome(job, {
+            const terminalFailureResult = await applyTerminalFailureOutcome(job, {
               fromStatus: 'rendering',
               errorCode: 'PDF_ARTIFACT_FAILED',
               errorMessage: generatorError,
@@ -2665,6 +2837,16 @@ export default async function handler(req, res) {
                 strict: false,
                 logContext: 'deliverable-missing-artifact',
               },
+            });
+            await finalizeAndPersistBlockedManifest({
+              job,
+              reportData,
+              reportId,
+              storagePath,
+              terminalCode: 'PDF_ARTIFACT_FAILED',
+              terminalMessage: generatorError,
+              creditState: terminalFailureResult?.creditRestoration || null,
+              remedyState: { state: 'internal_review_required' },
             });
             transitions.push({
               job_id: job.id,
@@ -2822,13 +3004,7 @@ export default async function handler(req, res) {
                 candidate: manifestCandidate,
                 reportId,
                 storagePath,
-                deliveryDecision: {
-                  deliveryGateStatus: resolvedDeliveryDecision.deliveryGateStatus,
-                  customerDeliveryAllowed: resolvedDeliveryDecision.customerDeliveryAllowed,
-                  holdDelivery: resolvedDeliveryDecision.holdDelivery,
-                  customerStatusReasonCode: resolvedDeliveryDecision.customerStatusReasonCode,
-                  failClosedReasonCode: resolvedDeliveryDecision.failClosedReasonCode,
-                },
+                deliveryDecision: resolvedDeliveryDecision.deliveryDecisionState,
                 finalPdfPublicationQualityBoss: publicationQualityBoss,
                 publicationState: 'published',
                 creditState: {
@@ -3002,6 +3178,13 @@ export default async function handler(req, res) {
               }
             }
             await recordJobFailure(job, 'rendering', err);
+            await finalizeAndPersistBlockedManifest({
+              job,
+              terminalCode: String(err?.code || 'REPORT_RENDER_FAILED').toUpperCase(),
+              terminalMessage: err?.message || 'Unhandled worker failure before publication.',
+              creditState: { state: 'restoration_status_unknown' },
+              remedyState: { state: 'internal_review_required' },
+            });
             if (!failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
