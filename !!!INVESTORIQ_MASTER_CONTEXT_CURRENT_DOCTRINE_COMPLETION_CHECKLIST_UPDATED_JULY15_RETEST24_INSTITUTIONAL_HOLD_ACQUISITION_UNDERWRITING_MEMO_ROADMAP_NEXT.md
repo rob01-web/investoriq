@@ -2016,5 +2016,116 @@ npm.cmd run build: PASS through qa:full
 Vercel function budget: PASS, 12 / 12
 ```
 
+## July 16 Gate 4F status
+
+```text
+GATE 4E PRODUCTION COMMIT: b3ac12b
+GATE 4F CAPITAL INTELLIGENCE: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+GATE 4F ANALYSIS COPY RENDERED: NO
+RENDERER IMPLEMENTATION CHANGED: NO
+CANONICAL DOCUMENT-TREATMENT LABELS ADDED: YES
+CORE PUBLICATION BEHAVIOR CHANGED: NO
+NEXT: 4G atomic downstream integration
+```
+
+New canonical owners:
+
+```text
+api/_lib/capital-plan-input-contract.js
+api/_lib/deterministic-capital-plan-analysis.js
+```
+
+Extended constitutional owners:
+
+```text
+api/_lib/support-doc-semantic-evidence.js
+api/_lib/support-document-authority-adjudicator.js
+api/_lib/source-truth-package.js
+```
+
+Gate 4F establishes these new exact-evidence semantic families and roles:
+
+```text
+property condition, physical needs, capital needs, building condition, and reserve studies
+-> property_condition_context
+
+completed or historical capital evidence without a forward plan
+-> historical_capital_context
+```
+
+Historical capital evidence cannot become a future renovation budget, capital schedule, reserve requirement, or deferred-maintenance model. Filename, candidate route, and artifact type remain non-authoritative.
+
+The Source Truth compatibility view supplies exact institutional document-treatment labels for `property_condition_context` and `historical_capital_context`. This prevents newly accepted evidence from appearing under a vague generic support label. It does not render any Gate 4F calculation, conclusion, adequacy label, severity label, or recommendation.
+
+Accepted Gate 4F fact families are deliberately bounded:
+
+```text
+total renovation budget
+total capital plan amount
+capital reserve balance
+annual reserve contribution
+deferred-maintenance amount and explicit source status
+source-labeled immediate, near-term, and long-term capital amounts
+explicit relative capital-plan start month, end month, and duration
+```
+
+Each accepted fact requires a canonical support role plus an exact source excerpt whose value matches the accepted normalized fact. Missing currency symbols and split label/value lines are handled only when the value remains locally bound to the label. Unrelated later amounts cannot satisfy the fact.
+
+The permanent reference proof is:
+
+```text
+Total capital plan: $1,200,000.00
+Immediate capital: $200,000.00
+Near-term capital: $600,000.00
+Long-term capital: $400,000.00
+Timing buckets accounted: $1,200,000.00
+Explicit schedule duration: 24 months
+
+Capital reserve balance: $350,000.00
+Reserve less stated capital plan: -$850,000.00
+Reserve coverage of stated plan: 0.291667
+
+Annual reserve contribution: $64,000.00
+64-unit annual contribution: $1,000.00 per unit
+64-unit monthly contribution: $83.33 per unit
+
+Deferred maintenance: identified by accepted source
+Deferred-maintenance amount: $180,000.00
+Reserve less deferred-maintenance amount: $170,000.00
+Reserve coverage of deferred-maintenance amount: 1.944444
+```
+
+These are objective source comparisons, not adequacy or severity conclusions. Reserve adequacy remains `not_classified` with `CANONICAL_RESERVE_ADEQUACY_POLICY_NOT_AVAILABLE`. Deferred-maintenance severity remains null with `CANONICAL_DEFERRED_MAINTENANCE_SEVERITY_POLICY_NOT_AVAILABLE`.
+
+Gate 4F does not convert month ranges into invented timing buckets, treat missing buckets as zero, assume even spending, calculate a burn rate, infer repair causes, or create an unsupported capital recommendation.
+
+Same-role conflicts in optional reserve, contribution, deferred-maintenance, timing, and timing-bucket facts reject only the disputed fact while preserving uncontested capital authority. Cross-role disagreement is detected again by the consume-only input contract and collapses only the affected comparison. Material plan-total contradictions retain document-level fail-closed conflict treatment.
+
+Missing or conflicting optional capital facts collapse or qualify only Gate 4F analysis. They cannot block canonically valid T12 and Rent Roll publication.
+
+Permanent proof owners:
+
+```text
+tests/qa/deterministic-capital-plan-analysis-smoke.js
+tests/qa/support-document-authority-adversarial-matrix-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+Exact verification after Gate 4F:
+
+```text
+npm.cmd run qa:financial-intelligence: PASS
+npm.cmd run qa:support-authority: PASS, 37 scenarios
+npm.cmd run qa:source-truth-pipelines: PASS
+npm.cmd run qa:source-truth-phase7-8: PASS
+npm.cmd run qa:source-truth-matrix: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS
+```
+
 ---
 # End of Active Master Context

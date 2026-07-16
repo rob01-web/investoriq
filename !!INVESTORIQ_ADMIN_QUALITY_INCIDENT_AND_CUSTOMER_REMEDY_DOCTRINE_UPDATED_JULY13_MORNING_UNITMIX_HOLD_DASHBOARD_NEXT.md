@@ -757,3 +757,26 @@ The future Admin incident projection may display a reconciliation limitation onl
 The legacy 5% materiality rule is not carried forward. Until an approved canonical materiality policy exists, classification remains null. This prevents the Dashboard or report from presenting an invented threshold as institutional doctrine.
 
 Gate 4E verification: Financial Intelligence `PASS`; Source Truth pipelines and constitutional matrix `PASS`; full QA and production build `PASS`; diff integrity `PASS`; Vercel budget `PASS 12 / 12`.
+
+## July 16 Gate 4F checkpoint
+
+```text
+Gate 3: PASS / deployed / production route verified
+Gate 4A: PASS / committed and deployed
+Gate 4B: PASS / committed and deployed
+Gate 4C: PASS / committed and deployed
+Gate 4D: PASS / committed and deployed
+Gate 4E: PASS / committed at b3ac12b
+Gate 4F: PASS locally / capital timing, reserves, and deferred maintenance
+Gate 4G: NEXT / atomic downstream integration
+```
+
+Gate 4F financial analysis remains disconnected from the Admin Dashboard and customer report. It introduces no incident, remedy, credit action, billing action, customer contact state, Delivery Gate change, terminal-code change, renderer implementation, or analysis conclusion. The Source Truth compatibility view adds only exact document-treatment labels for accepted property-condition and historical-capital evidence.
+
+The future Quality Manifest can record accepted capital facts, exact evidence and source identity, historical-capital quarantine, timing source status, timing-bucket reconciliation, reserve comparison eligibility, per-unit contribution math, deferred-maintenance source status, conflicts, missing inputs, and the deliberate absence of adequacy and severity classifications.
+
+The future Admin projection may surface a capital limitation only after Gate 4G defines the canonical mapping. It must distinguish source limitations from platform defects and must never imply that optional capital ambiguity blocked a report with valid core evidence.
+
+Narrow optional capital fact conflicts preserve uncontested authority. Material plan-total conflicts remain fail-closed at the document role. Cross-role conflicts select no winner and collapse only the affected comparison.
+
+Gate 4F verification: Financial Intelligence `PASS`; support authority `PASS` with 37 scenarios; Source Truth pipeline and constitutional suites `PASS`; full QA and production build `PASS`; diff integrity `PASS`; Vercel budget `PASS 12 / 12`.

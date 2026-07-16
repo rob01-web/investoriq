@@ -138,6 +138,26 @@ const scenarios = [
     role: "renovation_capex_context", roleAccepted: true, sourcePresent: true, sourceBacked: true, ambiguity: false,
   },
   {
+    name: "property_condition_capital_bundle",
+    result: decision("property-condition", "Property Condition Assessment / Capital Needs Assessment\nTotal Capital Plan $1,200,000\nCapital Reserve Balance $350,000\nDeferred Maintenance Identified $180,000"),
+    role: "property_condition_context", roleAccepted: true, sourcePresent: true, sourceBacked: true, ambiguity: false,
+  },
+  {
+    name: "property_condition_text_overrides_appraisal_candidate",
+    result: decision("property-condition-parser", "Property Condition Assessment\nTotal Capital Plan $1,200,000", { parserType: "appraisal_parsed", parserRole: "appraisal" }),
+    role: "property_condition_context", roleAccepted: true, sourcePresent: true, sourceBacked: true, ambiguity: false,
+  },
+  {
+    name: "negated_property_condition_reference",
+    result: decision("negated-property-condition", "This is not a property condition assessment and no capital needs assessment was performed."),
+    role: null, roleAccepted: false, sourcePresent: true, sourceBacked: false, ambiguity: false,
+  },
+  {
+    name: "historical_capital_does_not_become_forward_plan",
+    result: decision("historical-capital", "Historical CapEx Summary\nCompleted capital improvements and completed repairs from 2022 to 2025.\nTotal Renovation Budget $800,000"),
+    role: "historical_capital_context", roleAccepted: true, sourcePresent: true, sourceBacked: true, ambiguity: false,
+  },
+  {
     name: "property_tax_support_bundle",
     result: decision("property-tax", "Property Tax Bill\nAnnual Tax $185,000\nAssessment roll 2026."),
     role: "property_tax_support", roleAccepted: true, sourcePresent: true, sourceBacked: true, ambiguity: false,

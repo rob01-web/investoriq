@@ -255,7 +255,21 @@ function buildSupportAuthority(artifacts, coreFileIds) {
   }
 
   const conflictingFileIds = new Set();
-  const narrowFactConflictFields = new Set(["rate_structure", "loan_term_years", "maturity_date"]);
+  const narrowFactConflictFields = new Set([
+    "rate_structure",
+    "loan_term_years",
+    "maturity_date",
+    "capital_reserve_balance",
+    "annual_reserve_contribution",
+    "deferred_maintenance_amount",
+    "deferred_maintenance_status",
+    "immediate_capital_amount",
+    "near_term_capital_amount",
+    "long_term_capital_amount",
+    "capital_plan_start_month",
+    "capital_plan_end_month",
+    "capital_plan_duration_months",
+  ]);
   const narrowFactConflictsByRole = new Map();
   const acceptedByRole = new Map();
   for (const decision of decisions) {
@@ -301,6 +315,8 @@ function buildSupportAuthority(artifacts, coreFileIds) {
     purchase_assumptions: "loan_term_sheet",
     current_debt_context: "mortgage_statement",
     appraisal_context: "appraisal",
+    property_condition_context: "property_condition",
+    historical_capital_context: "historical_capital",
     renovation_capex_context: "renovation",
     market_survey_context: "market_survey",
     environmental_context: "environmental",
@@ -462,6 +478,8 @@ export function constrainCanonicalSourcePackageToSourceTruth(
     purchase_assumptions: "Purchase Assumptions / Proposed Acquisition Financing Context",
     current_debt_context: "Existing Debt Context / Current Mortgage / Debt Statement",
     appraisal_context: "Appraisal / Valuation Context",
+    property_condition_context: "Property Condition / Capital Needs Context",
+    historical_capital_context: "Historical Capital Context",
     renovation_capex_context: "Renovation / CapEx Context",
     market_survey_context: "Market Rent Survey Context",
     environmental_context: "Environmental Due Diligence Context",

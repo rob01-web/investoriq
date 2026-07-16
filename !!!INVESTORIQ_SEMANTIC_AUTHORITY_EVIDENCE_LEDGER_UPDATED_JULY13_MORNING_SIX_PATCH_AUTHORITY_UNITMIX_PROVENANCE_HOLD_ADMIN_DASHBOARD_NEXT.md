@@ -8377,3 +8377,61 @@ The legacy 5% threshold is rejected. Objective dollar, ratio, and per-unit measu
 Gate 4E verification: Financial Intelligence `PASS`; Source Truth pipelines and constitutional matrix `PASS`; diff check `PASS`; full QA and build `PASS`; Vercel budget `PASS 12 / 12`. Public terminology guards remain active. No renderer or customer copy changed.
 
 NEXT: Gate 4F CapEx timing, reserve adequacy, and deferred maintenance.
+
+## July 16 Gate 4F capital authority receipt
+
+Gate 4E is committed at `b3ac12b`. Gate 4F extends the protected chain:
+
+```text
+raw extracted support text
+-> deterministic support semantic family evidence
+-> canonical support role and exact fact adjudication
+-> canonical Source Truth capital facts or narrow fact conflicts
+-> canonical capital-plan input contract
+-> deterministic timing, reserve, and deferred-maintenance receipt
+```
+
+New semantic roles remain distinct:
+
+```text
+property_condition_context
+renovation_capex_context
+historical_capital_context
+appraisal_context with accepted capital facts only
+```
+
+Completed capital work is contextual evidence only. It is not a forward capital plan. Property condition, renovation, and appraisal facts do not cross-promote into each other's roles merely because they share a reserve or deferred-maintenance reference.
+
+Accepted capital facts require exact source binding. Semantic evidence may establish a candidate family, but it cannot create a fact. Missing currency symbols remain eligible only when a locally bound amount is clear. Split label/value evidence is accepted only when the immediate continuation begins with the value. Later unrelated amounts remain ineligible.
+
+The canonical contract preserves source identity, file identity, canonical role, exact excerpt, evidence method, source value, normalized value, and fact path for every accepted fact. It consumes primary accepted sources only and independently detects cross-role disagreement.
+
+Deterministic timing meaning is limited to:
+
+```text
+source-labeled immediate amount
+source-labeled near-term amount
+source-labeled long-term amount
+explicit relative start month
+explicit relative end month
+explicit or deterministically bounded duration
+```
+
+Relative month ranges are not reclassified into timing buckets. A complete source-labeled bucket set may reconcile to the accepted plan total. A partial bucket set records only the accounted amount and leaves unallocated capital null.
+
+Reserve intelligence is limited to objective arithmetic:
+
+```text
+reserve balance minus accepted stated requirement
+reserve balance divided by accepted stated requirement
+annual reserve contribution divided by accepted units
+monthly reserve contribution divided by accepted units and 12
+```
+
+Deferred-maintenance intelligence preserves only an explicit source status of `identified` or `none_identified` and an exact accepted amount when stated. `not assessed`, `unknown`, and contradictory status language create no accepted status. Severity and cause remain unclassified.
+
+Same-role optional fact conflicts are removed from accepted truth while uncontested plan facts remain. Cross-role conflicts collapse only the disputed consolidated fact. All capital conflicts and limitations remain non-blocking to accepted core publication.
+
+Gate 4F verification: Financial Intelligence `PASS`; support authority `PASS` with 37 scenarios; Source Truth pipelines and constitutional matrix `PASS`; full QA and build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`. No renderer implementation or Gate 4F financial output changed. Canonical document-treatment labels were added for the two new accepted roles.
+
+NEXT: Gate 4G atomic downstream integration.

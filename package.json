@@ -22,7 +22,7 @@
     "qa:renovation": "node tests/qa/renovation-rendering-smoke.js && node tests/qa/supporting-doc-recovery-smoke.js",
     "qa:messaging": "node tests/qa/job-failure-messaging-smoke.js",
     "qa:quality-ops": "node tests/qa/report-quality-manifest-smoke.js && node tests/qa/report-quality-incident-projection-smoke.js && node tests/qa/admin-quality-incidents-smoke.js && node tests/qa/vercel-function-budget-smoke.js",
-    "qa:financial-intelligence": "node tests/qa/debt-service-input-contract-smoke.js && node tests/qa/deterministic-debt-service-calculation-smoke.js && node tests/qa/deterministic-dscr-analysis-smoke.js && node tests/qa/deterministic-debt-risk-analysis-smoke.js && node tests/qa/deterministic-core-reconciliation-analysis-smoke.js",
+    "qa:financial-intelligence": "node tests/qa/debt-service-input-contract-smoke.js && node tests/qa/deterministic-debt-service-calculation-smoke.js && node tests/qa/deterministic-dscr-analysis-smoke.js && node tests/qa/deterministic-debt-risk-analysis-smoke.js && node tests/qa/deterministic-core-reconciliation-analysis-smoke.js && node tests/qa/deterministic-capital-plan-analysis-smoke.js",
     "qa:diff-check": "git diff --check",
     "qa:parsers": "node tests/qa/rent-roll-alias-smoke.js && node tests/qa/t12-core-summary-smoke.js && node tests/qa/t12-line-items-smoke.js && node tests/qa/property-tax-parser-smoke.js",
     "qa:recovery": "node tests/qa/appraisal-support-recovery-smoke.js && node tests/qa/supporting-doc-recovery-smoke.js",

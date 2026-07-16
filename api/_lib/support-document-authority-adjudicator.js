@@ -7,6 +7,8 @@ const FAMILY_ROLE_MAP = Object.freeze({
   current_debt: "current_debt_context",
   appraisal: "appraisal_context",
   market_survey: "market_survey_context",
+  property_condition: "property_condition_context",
+  historical_capital: "historical_capital_context",
   renovation: "renovation_capex_context",
   environmental: "environmental_context",
   property_tax: "property_tax_support",
@@ -18,6 +20,14 @@ const FAMILY_ANCHORS = Object.freeze({
   current_debt: [/existing current debt/i, /current mortgage statement/i, /current debt context/i],
   appraisal: [/appraisal(?: summary| report)/i, /valuation report/i, /opinion of value/i],
   market_survey: [/market rent survey/i, /market survey/i, /rent comparables/i],
+  property_condition: [
+    /property condition assessment/i,
+    /physical needs assessment/i,
+    /capital needs assessment/i,
+    /building condition (?:assessment|report)/i,
+    /(?:replacement|capital) reserve study/i,
+  ],
+  historical_capital: [/historical capex/i, /historical capital expenditures?/i, /completed capital improvements?/i],
   renovation: [/renovation(?: plan| budget| scope)/i, /capital expenditure plan/i, /capex plan/i],
   environmental: [/phase\s*(?:i|1)\s*(?:esa|environmental site assessment)?/i, /environmental due diligence/i],
   property_tax: [/property tax (?:bill|notice|statement)/i, /assessment roll/i],
@@ -99,6 +109,12 @@ function normalizeRole(role) {
   if (["loan_term_sheet", "proposed_acquisition_financing"].includes(normalized)) return "purchase_assumptions";
   if (["appraisal", "appraisal_valuation_context"].includes(normalized)) return "appraisal_context";
   if (["market_survey"].includes(normalized)) return "market_survey_context";
+  if (["property_condition", "property_condition_assessment", "physical_needs_assessment", "capital_needs_assessment"].includes(normalized)) {
+    return "property_condition_context";
+  }
+  if (["historical_capex_only", "historical_capital", "historical_capital_context"].includes(normalized)) {
+    return "historical_capital_context";
+  }
   if (["structured_renovation", "structured_renovation_capex_plan"].includes(normalized)) return "renovation_capex_context";
   if (["environmental_due_diligence", "environmental_due_diligence_context"].includes(normalized)) return "environmental_context";
   if (["property_tax"].includes(normalized)) return "property_tax_support";
@@ -141,6 +157,14 @@ function hasNonAuthoritativeFinancingDisclaimer(source) {
   return /\b(?:illustrative|example only|for discussion purposes|non[-\s]?binding|indicative only|not (?:a )?(?:commitment|credit approval|loan offer)|subject to lender approval|superseded|void)\b/i.test(source);
 }
 
+function hasHistoricalCapitalOnlyEvidence(source) {
+  const normalized = String(source || "").toLowerCase();
+  const historical = /\b(?:historical capex|historical capital|completed capital improvements?|completed repairs?|prior capital improvements?|past renovations?)\b/.test(normalized);
+  const capital = /\b(?:capex|capital expenditures?|capital improvements?|repairs?|renovations?)\b/.test(normalized);
+  const forward = /\b(?:forward[-\s]*looking|proposed|planned|future scope|to be completed|implementation schedule|expected rent lift|months?\s*\d+\s*(?:-|to|through)\s*\d+)\b/.test(normalized);
+  return historical && capital && !forward;
+}
+
 function payloadOf(artifact = {}) {
   return artifact?.payload && typeof artifact.payload === "object" && !Array.isArray(artifact.payload)
     ? artifact.payload
@@ -151,6 +175,12 @@ function finitePositive(value) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(String(value).replace(/[$,\s]/g, ""));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function finiteNonNegative(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(String(value).replace(/[$,\s]/g, ""));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function numericValues(value) {
@@ -164,6 +194,26 @@ function numericValues(value) {
     values.push(parsed * multiplier);
   }
   return values;
+}
+
+function monetaryValues(value) {
+  const values = [];
+  const pattern = /[$]\s*(-?\d[\d,]*(?:\.\d+)?)\s*([kKmMbB](?![A-Za-z]))?/g;
+  for (const match of String(value || "").matchAll(pattern)) {
+    const parsed = Number(String(match[1] || "").replace(/,/g, ""));
+    if (!Number.isFinite(parsed)) continue;
+    const suffix = String(match[2] || "").toLowerCase();
+    const multiplier = suffix === "k" ? 1000 : suffix === "m" ? 1000000 : suffix === "b" ? 1000000000 : 1;
+    values.push(parsed * multiplier);
+  }
+  return values;
+}
+
+function factNumericValues(value, spec) {
+  if (!spec?.money) return numericValues(value);
+  const explicitMoney = monetaryValues(value);
+  if (explicitMoney.length > 0) return explicitMoney;
+  return numericValues(value).filter((numeric) => numeric === 0 || Math.abs(numeric) >= 1000);
 }
 
 function numericMatches(candidate, sourceValue, percent = false) {
@@ -190,9 +240,73 @@ const FACT_SPECS = Object.freeze({
   appraised_value: { labels: [/appraised value/i, /as[-\s]*is value/i, /opinion of value/i, /value conclusion/i] },
   appraisal_cap_rate: { labels: [/appraisal cap rate/i, /stabilized cap rate/i, /capitalization rate/i], percent: true },
   appraisal_noi: { labels: [/stabilized noi/i, /appraisal noi/i] },
-  total_renovation_budget: { labels: [/total renovation budget/i, /renovation budget/i, /capex budget/i, /capital budget/i] },
+  total_renovation_budget: { labels: [/total renovation budget/i, /renovation budget/i, /capex budget/i, /capital budget/i], money: true, sameLine: true },
+  total_capital_plan_amount: {
+    labels: [
+      /total capital (?:plan|needs?|requirements?|budget)/i,
+      /total (?:repair|replacement) (?:needs?|requirements?|budget)/i,
+      /total recommended (?:repairs?|capital)/i,
+      /capital plan total/i,
+    ],
+    money: true,
+    allowZero: true,
+    sameLine: true,
+  },
+  capital_reserve_balance: {
+    labels: [
+      /capital reserve balance/i,
+      /replacement reserve balance/i,
+      /reserve account balance/i,
+      /available capital reserves?/i,
+      /capital reserves? available/i,
+    ],
+    money: true,
+    allowZero: true,
+    sameLine: true,
+  },
+  annual_reserve_contribution: {
+    labels: [
+      /annual reserve contribution/i,
+      /annual replacement reserve/i,
+      /replacement reserve contribution/i,
+      /annual capital reserve/i,
+    ],
+    money: true,
+    allowZero: true,
+    sameLine: true,
+  },
+  deferred_maintenance_amount: { labels: [/deferred maintenance/i], money: true, allowZero: true, sameLine: true },
+  immediate_capital_amount: {
+    labels: [/immediate capital needs?/i, /immediate repairs?/i, /year\s*0 capital/i, /capital required at acquisition/i],
+    money: true,
+    allowZero: true,
+    sameLine: true,
+  },
+  near_term_capital_amount: {
+    labels: [/near[-\s]*term capital needs?/i, /near[-\s]*term repairs?/i, /short[-\s]*term capital needs?/i, /short[-\s]*term repairs?/i],
+    money: true,
+    allowZero: true,
+    sameLine: true,
+  },
+  long_term_capital_amount: {
+    labels: [/long[-\s]*term capital needs?/i, /long[-\s]*term repairs?/i, /future capital needs?/i],
+    money: true,
+    allowZero: true,
+    sameLine: true,
+  },
   annual_tax: { labels: [/annual tax/i, /property tax/i, /tax amount/i, /total taxes/i] },
 });
+
+function labeledValueWindow(rawSourceText, labelIndex, labelLength, spec) {
+  const afterLabel = rawSourceText.slice(labelIndex + labelLength, Math.min(rawSourceText.length, labelIndex + labelLength + 160));
+  if (!spec?.sameLine) return afterLabel;
+  const lines = afterLabel.split(/\r?\n/);
+  const firstLine = lines[0] || "";
+  if (factNumericValues(firstLine, spec).length > 0) return firstLine;
+  const secondLine = lines[1] || "";
+  if (/^\s*(?:[$]|-?\d)/.test(secondLine)) return `${firstLine}\n${secondLine}`;
+  return firstLine;
+}
 
 function evidenceFromCandidate(payload, field, candidate, rawSourceText, spec) {
   const evidenceObject = payload?.candidate_evidence || payload?.ai_recovery_evidence || {};
@@ -208,8 +322,10 @@ function evidenceFromCandidate(payload, field, candidate, rawSourceText, spec) {
     const matcher = new RegExp(label.source, flags);
     for (const match of rawSourceText.matchAll(matcher)) {
       const index = match.index || 0;
-      const excerpt = rawSourceText.slice(Math.max(0, index - 40), Math.min(rawSourceText.length, index + match[0].length + 140));
-      if (numericValues(excerpt).some((sourceValue) => numericMatches(candidate, sourceValue, spec.percent))) {
+      const valueWindow = labeledValueWindow(rawSourceText, index, match[0].length, spec);
+      const excerpt = rawSourceText.slice(Math.max(0, index - 40), index + match[0].length) + valueWindow;
+      const evidenceValues = factNumericValues(valueWindow, spec);
+      if (evidenceValues.some((sourceValue) => numericMatches(candidate, sourceValue, spec.percent))) {
         return { excerpt: text(excerpt), method: "deterministic_label_value_binding" };
       }
     }
@@ -223,11 +339,12 @@ function candidateFromLabeledSource(rawSourceText, spec) {
     const matcher = new RegExp(label.source, flags);
     for (const match of rawSourceText.matchAll(matcher)) {
       const index = match.index || 0;
-      const afterLabel = rawSourceText.slice(index + match[0].length, Math.min(rawSourceText.length, index + match[0].length + 120));
-      const values = numericValues(afterLabel);
-      if (values.length > 0 && values[0] > 0) {
+      const afterLabel = labeledValueWindow(rawSourceText, index, match[0].length, spec);
+      const values = factNumericValues(afterLabel, spec);
+      const acceptedValue = values.find((value) => spec.allowZero ? value >= 0 : value > 0);
+      if (Number.isFinite(acceptedValue)) {
         return {
-          value: values[0],
+          value: acceptedValue,
           excerpt: text(rawSourceText.slice(Math.max(0, index - 20), Math.min(rawSourceText.length, index + match[0].length + 120))),
         };
       }
@@ -248,10 +365,18 @@ function candidateValueForField(payload, field) {
     appraisal_cap_rate: ["stabilized_cap_rate", "cap_rate"],
     appraisal_noi: ["stabilized_noi", "noi"],
     total_renovation_budget: ["total_renovation_budget", "total_budget", "renovation_budget"],
+    total_capital_plan_amount: ["total_capital_plan_amount", "total_capital_needs", "total_repair_requirements"],
+    capital_reserve_balance: ["capital_reserve_balance", "replacement_reserve_balance", "reserve_balance"],
+    annual_reserve_contribution: ["annual_reserve_contribution", "replacement_reserve_contribution"],
+    deferred_maintenance_amount: ["deferred_maintenance_amount", "deferred_maintenance_cost"],
+    immediate_capital_amount: ["immediate_capital_amount", "immediate_repairs_amount"],
+    near_term_capital_amount: ["near_term_capital_amount", "short_term_capital_amount"],
+    long_term_capital_amount: ["long_term_capital_amount", "future_capital_amount"],
   };
+  const spec = FACT_SPECS[field] || {};
   for (const source of candidates) {
     for (const key of aliases[field] || [field]) {
-      const value = finitePositive(source?.[key]);
+      const value = spec.allowZero ? finiteNonNegative(source?.[key]) : finitePositive(source?.[key]);
       if (value != null) return value;
     }
   }
@@ -349,12 +474,177 @@ function rateStructureFromSource(rawSourceText) {
   };
 }
 
+function sourceExcerpt(source, index, length, before = 40, after = 100) {
+  return text(source.slice(Math.max(0, index - before), Math.min(source.length, index + length + after)));
+}
+
+function capitalPlanTimingFromSource(rawSourceText) {
+  const source = String(rawSourceText || "").replace(/[\u2013\u2014]/g, "-");
+  const ranges = [];
+  const rangePattern = /\bmonths?\s*(\d{1,3})\s*(?:-|to|through)\s*(?:months?\s*)?(\d{1,3})\b/gi;
+  for (const match of source.matchAll(rangePattern)) {
+    const startMonth = Number(match[1]);
+    const endMonth = Number(match[2]);
+    if (!Number.isInteger(startMonth) || !Number.isInteger(endMonth) || startMonth < 0 || endMonth < startMonth || endMonth > 600) continue;
+    ranges.push({
+      startMonth,
+      endMonth,
+      excerpt: sourceExcerpt(source, match.index || 0, match[0].length),
+    });
+  }
+
+  const explicitDurations = [];
+  const durationPatterns = [
+    /\b(\d{1,3})\s*[- ]\s*months?\s+(?:renovation|capital|capex|work|program|plan|schedule)\b/gi,
+    /\b(?:duration|schedule|phasing|implementation(?: period)?)\s*[:\-]?\s*(\d{1,3})\s*months?\b/gi,
+    /\bover\s+(?:a\s+)?(\d{1,3})\s*months?\b/gi,
+  ];
+  for (const pattern of durationPatterns) {
+    for (const match of source.matchAll(pattern)) {
+      const duration = Number(match[1]);
+      if (!Number.isInteger(duration) || duration <= 0 || duration > 600) continue;
+      explicitDurations.push({
+        duration,
+        excerpt: sourceExcerpt(source, match.index || 0, match[0].length),
+      });
+    }
+  }
+
+  const startMonth = ranges.length > 0 ? Math.min(...ranges.map((entry) => entry.startMonth)) : null;
+  const endMonth = ranges.length > 0 ? Math.max(...ranges.map((entry) => entry.endMonth)) : null;
+  const rangeDuration = Number.isInteger(startMonth) && startMonth <= 1 ? endMonth : null;
+  const distinctExplicitDurations = [...new Set(explicitDurations.map((entry) => entry.duration))];
+  const timingValues = [...new Set([
+    Number.isInteger(rangeDuration) ? rangeDuration : null,
+    ...distinctExplicitDurations,
+  ].filter(Number.isInteger))];
+
+  if (timingValues.length > 1) {
+    return {
+      acceptedFacts: {},
+      factEvidence: {},
+      ambiguity: {
+        reason: "conflicting_capital_plan_timing_horizons",
+        excerpts: [...ranges.map((entry) => entry.excerpt), ...explicitDurations.map((entry) => entry.excerpt)],
+      },
+    };
+  }
+
+  const durationMonths = timingValues[0] || null;
+  const startEvidence = ranges.find((entry) => entry.startMonth === startMonth)?.excerpt || null;
+  const endEvidence = ranges.find((entry) => entry.endMonth === endMonth)?.excerpt || null;
+  const durationEvidence = explicitDurations.find((entry) => entry.duration === durationMonths)?.excerpt || endEvidence;
+  const acceptedFacts = {};
+  const factEvidence = {};
+  if (Number.isInteger(startMonth)) {
+    acceptedFacts.capital_plan_start_month = startMonth;
+    factEvidence.capital_plan_start_month = {
+      excerpt: startEvidence,
+      method: "deterministic_relative_month_range_binding",
+      sourceValue: startMonth,
+      normalizedValue: startMonth,
+    };
+  }
+  if (Number.isInteger(endMonth)) {
+    acceptedFacts.capital_plan_end_month = endMonth;
+    factEvidence.capital_plan_end_month = {
+      excerpt: endEvidence,
+      method: "deterministic_relative_month_range_binding",
+      sourceValue: endMonth,
+      normalizedValue: endMonth,
+    };
+  }
+  if (Number.isInteger(durationMonths)) {
+    acceptedFacts.capital_plan_duration_months = durationMonths;
+    factEvidence.capital_plan_duration_months = {
+      excerpt: durationEvidence,
+      method: explicitDurations.length > 0
+        ? "deterministic_explicit_duration_binding"
+        : "deterministic_relative_plan_horizon_derivation",
+      sourceValue: durationMonths,
+      normalizedValue: durationMonths,
+    };
+  }
+  return { acceptedFacts, factEvidence, ambiguity: null };
+}
+
+function collectPatternExcerpts(source, patterns) {
+  const excerpts = [];
+  for (const pattern of patterns) {
+    const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+    const matcher = new RegExp(pattern.source, flags);
+    for (const match of source.matchAll(matcher)) {
+      excerpts.push(sourceExcerpt(source, match.index || 0, match[0].length));
+    }
+  }
+  return excerpts;
+}
+
+function deferredMaintenanceStatusFromSource(rawSourceText, acceptedAmount, amountEvidenceExcerpt = null) {
+  const source = String(rawSourceText || "");
+  const notAssessed = collectPatternExcerpts(source, [
+    /deferred maintenance\s+(?:was\s+)?not assessed/i,
+    /deferred maintenance\s*[:\-]?\s*(?:not assessed|not reviewed|unknown|not provided)/i,
+  ]);
+  const noneIdentified = collectPatternExcerpts(source, [
+    /\bno(?:\s+material)?\s+deferred maintenance\b/i,
+    /deferred maintenance\s*[:\-]?\s*(?:none|nil|zero)\b/i,
+    /deferred maintenance\s+(?:was\s+)?not identified\b/i,
+  ]);
+  const identified = categoricalMatches(source, [
+    /deferred maintenance\s+(?:was\s+)?(?:identified|noted|observed|reported|present|required)\b/i,
+    /deferred maintenance\s*[:\-]\s*(?!none\b|nil\b|zero\b|not assessed\b|not reviewed\b|unknown\b|not provided\b)[^\r\n]{1,120}/i,
+  ]).map((entry) => entry.excerpt);
+  if (Number.isFinite(acceptedAmount) && text(amountEvidenceExcerpt)) {
+    if (acceptedAmount > 0) identified.push(text(amountEvidenceExcerpt));
+    if (acceptedAmount === 0) noneIdentified.push(text(amountEvidenceExcerpt));
+  }
+  if (notAssessed.length > 0 && noneIdentified.length === 0 && identified.length === 0) {
+    return { accepted: false, value: null, evidence: null, ambiguity: null };
+  }
+  if (noneIdentified.length > 0 && identified.length > 0) {
+    return {
+      accepted: false,
+      value: null,
+      evidence: null,
+      ambiguity: {
+        reason: "conflicting_deferred_maintenance_status",
+        excerpts: [noneIdentified[0], identified[0]],
+      },
+    };
+  }
+  const value = noneIdentified.length > 0 ? "none_identified" : identified.length > 0 ? "identified" : null;
+  const excerpt = noneIdentified[0] || identified[0] || null;
+  return {
+    accepted: Boolean(value && excerpt),
+    value,
+    evidence: value && excerpt
+      ? {
+          excerpt,
+          method: "deterministic_categorical_source_binding",
+          sourceValue: value,
+          normalizedValue: value,
+        }
+      : null,
+    ambiguity: null,
+  };
+}
+
 function acceptedFactsForRole(role, artifacts, rawSourceText) {
+  const capitalConditionFacts = [
+    "capital_reserve_balance",
+    "annual_reserve_contribution",
+    "deferred_maintenance_amount",
+    "immediate_capital_amount",
+    "near_term_capital_amount",
+    "long_term_capital_amount",
+  ];
   const fieldsByRole = {
     purchase_assumptions: ["purchase_price", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "loan_term_years", "lender_fee_percent", "going_in_cap_rate", "noi_basis"],
     current_debt_context: ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment"],
-    appraisal_context: ["appraised_value", "appraisal_cap_rate", "appraisal_noi"],
-    renovation_capex_context: ["total_renovation_budget"],
+    appraisal_context: ["appraised_value", "appraisal_cap_rate", "appraisal_noi", "capital_reserve_balance", "annual_reserve_contribution", "deferred_maintenance_amount"],
+    property_condition_context: ["total_capital_plan_amount", ...capitalConditionFacts],
+    renovation_capex_context: ["total_renovation_budget", ...capitalConditionFacts],
     property_tax_support: ["annual_tax"],
   };
   const acceptedFacts = {};
@@ -418,6 +708,27 @@ function acceptedFactsForRole(role, artifacts, rawSourceText) {
       factAmbiguities.rate_structure = rateStructure.ambiguity;
     }
   }
+  if (["property_condition_context", "renovation_capex_context"].includes(role)) {
+    const timing = capitalPlanTimingFromSource(rawSourceText);
+    Object.assign(acceptedFacts, timing.acceptedFacts);
+    Object.assign(factEvidence, timing.factEvidence);
+    if (timing.ambiguity) factAmbiguities.capital_plan_timing = timing.ambiguity;
+  }
+  if (["appraisal_context", "property_condition_context", "renovation_capex_context"].includes(role)) {
+    const deferredStatus = deferredMaintenanceStatusFromSource(
+      rawSourceText,
+      Number.isFinite(acceptedFacts.deferred_maintenance_amount)
+        ? acceptedFacts.deferred_maintenance_amount
+        : null,
+      factEvidence.deferred_maintenance_amount?.excerpt || null
+    );
+    if (deferredStatus.accepted) {
+      acceptedFacts.deferred_maintenance_status = deferredStatus.value;
+      factEvidence.deferred_maintenance_status = deferredStatus.evidence;
+    } else if (deferredStatus.ambiguity) {
+      factAmbiguities.deferred_maintenance_status = deferredStatus.ambiguity;
+    }
+  }
   return { acceptedFacts, factEvidence, factAmbiguities };
 }
 
@@ -428,6 +739,8 @@ function sectionEligibilityFor(role, acceptedFacts, roleAccepted) {
     proposedFinancing: role === "purchase_assumptions" && roleAccepted && ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"].every(has),
     currentDebt: role === "current_debt_context" && roleAccepted && ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment", "maturity_date"].every(has),
     appraisal: role === "appraisal_context" && roleAccepted && Object.keys(acceptedFacts).length > 0,
+    propertyCondition: role === "property_condition_context" && roleAccepted && Object.keys(acceptedFacts).length > 0,
+    historicalCapital: role === "historical_capital_context" && roleAccepted,
     renovation: role === "renovation_capex_context" && roleAccepted && Object.keys(acceptedFacts).length > 0,
     marketSurvey: role === "market_survey_context" && roleAccepted,
     environmental: role === "environmental_context" && roleAccepted,
@@ -457,8 +770,14 @@ export function buildSupportDocumentAuthorityDecision({ file = {}, artifacts = [
   const mixedFinancing = Boolean(
     acquisitionCoherent && currentDebtCoherent
   );
-  const ambiguous = tied || mixedFinancing;
-  const canonicalFamily = !ambiguous ? top?.family || null : null;
+  const historicalCapitalOnly = Boolean(
+    hasHistoricalCapitalOnlyEvidence(rawSourceText) &&
+    !acquisitionCoherent &&
+    !currentDebtCoherent &&
+    ["historical_capital", "renovation", "property_condition"].includes(top?.family)
+  );
+  const ambiguous = historicalCapitalOnly ? false : tied || mixedFinancing;
+  const canonicalFamily = historicalCapitalOnly ? "historical_capital" : !ambiguous ? top?.family || null : null;
   const canonicalRole = canonicalFamily ? FAMILY_ROLE_MAP[canonicalFamily] || null : null;
   const sourcePresent = Boolean(fileId || originalFilename || rawSourceText);
   const candidateState = !sourcePresent
@@ -471,7 +790,7 @@ export function buildSupportDocumentAuthorityDecision({ file = {}, artifacts = [
           ? "candidate_supported"
           : "unclassified";
   const { acceptedFacts, factEvidence, factAmbiguities } = acceptedFactsForRole(canonicalRole, artifacts, rawSourceText);
-  const contextualRole = ["market_survey_context", "environmental_context", "historical_debt_context"].includes(canonicalRole);
+  const contextualRole = ["market_survey_context", "environmental_context", "historical_debt_context", "historical_capital_context"].includes(canonicalRole);
   const financingDisclaimed = canonicalRole === "purchase_assumptions" && hasNonAuthoritativeFinancingDisclaimer(rawSourceText);
   const roleAccepted = mode === "active" && Boolean(canonicalRole) && !ambiguous && !financingDisclaimed && (contextualRole || Object.keys(acceptedFacts).length > 0);
   const sectionEligibility = sectionEligibilityFor(canonicalRole, acceptedFacts, roleAccepted);

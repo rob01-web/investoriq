@@ -19296,3 +19296,42 @@ Gate 4E creates no renderer output, Boss mutation, CustomerSurfaceModel mutation
 Verification: Financial Intelligence `PASS`; Source Truth pipelines and constitutional matrix `PASS`; diff integrity `PASS`; full QA and production build `PASS`; Vercel budget `PASS 12 / 12`.
 
 Status: Gate 4E `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4F CapEx timing, reserve adequacy, and deferred maintenance.
+
+## July 16 Gate 4F CVF closure
+
+Gate 4E is committed at `b3ac12b`. Gate 4F adds `api/_lib/capital-plan-input-contract.js` as the canonical capital input owner and `api/_lib/deterministic-capital-plan-analysis.js` as the deterministic timing, reserve, and deferred-maintenance owner.
+
+Closed Gate 4F failure families:
+
+```text
+property condition assessment is routed only by filename or candidate type -> prohibited
+historical CapEx becomes a forward capital plan -> prohibited
+capital amount lacks exact local source evidence -> fact not accepted
+unrelated later dollar amount satisfies a prior capital label -> prohibited
+missing currency symbol destroys an otherwise locally bound institutional amount -> supported safely
+split capital label and immediate value are lost -> supported safely
+conflicting timing horizons are guessed -> timing facts rejected
+month range is converted into an invented timing bucket -> prohibited
+missing timing bucket becomes zero -> prohibited
+partial timing buckets produce a false unallocated amount -> prohibited
+missing reserve balance becomes zero -> prohibited
+accepted zero reserve or capital requirement becomes missing -> prohibited
+same-role optional reserve conflict destroys uncontested plan authority -> prohibited
+cross-role reserve disagreement selects an arbitrary winner -> prohibited
+reserve comparison becomes an adequacy conclusion without policy -> prohibited
+deferred-maintenance amount becomes a severity conclusion -> prohibited
+deferred-maintenance cause is inferred -> prohibited
+optional capital limitation blocks valid core publication -> prohibited
+```
+
+Source Truth now recognizes `property_condition_context` and quarantines completed or historical work as `historical_capital_context`. Optional capital fact conflicts are resolved at the narrowest fact boundary. Material total-plan contradictions retain full document-level conflict treatment.
+
+Gate 4F calculates source-labeled timing-bucket reconciliation, explicit relative schedule duration, reserve less stated capital requirement, reserve coverage ratio, annual and monthly reserve contribution per accepted unit, and reserve coverage against accepted deferred maintenance. It does not assign adequacy, severity, cause, execution, or recommendation labels.
+
+The permanent reference proof produces a fully reconciled `$1,200,000.00` capital plan, a 24-month source horizon, `-$850,000.00` reserve less plan position, `0.291667` plan coverage ratio, `$1,000.00` annual reserve contribution per unit, `$83.33` monthly reserve contribution per unit, and `1.944444` reserve coverage of the accepted `$180,000.00` deferred-maintenance amount.
+
+Gate 4F financial results create no renderer output, Boss mutation, CustomerSurfaceModel mutation, Delivery Gate change, Screening change, credit change, billing change, or publication mutation. The Source Truth compatibility view adds exact customer-safe document-treatment labels for the two new roles so accepted property-condition and historical-capital evidence cannot appear under a vague generic label.
+
+Verification: Financial Intelligence `PASS`; support authority `PASS` with 37 scenarios; Source Truth pipeline, phase, and constitutional matrix `PASS`; full QA and production build `PASS`; Vercel budget `PASS 12 / 12`; diff integrity `PASS`.
+
+Status: Gate 4F `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4G atomic CustomerSurfaceModel, Boss, Contract QA, PDF Boss, Manifest, and Dashboard integration.

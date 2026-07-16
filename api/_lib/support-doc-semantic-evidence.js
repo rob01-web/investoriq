@@ -95,6 +95,22 @@ const SUPPORT_FAMILY_PATTERNS = Object.freeze({
     /rent survey/i,
     /rent comparables?/i,
   ],
+  property_condition: [
+    /property condition assessment/i,
+    /physical needs assessment/i,
+    /capital needs assessment/i,
+    /building condition assessment/i,
+    /building condition report/i,
+    /replacement reserve study/i,
+    /capital reserve study/i,
+  ],
+  historical_capital: [
+    /historical capex/i,
+    /historical capital expenditures?/i,
+    /completed capital improvements?/i,
+    /completed repairs?/i,
+    /prior capital improvements?/i,
+  ],
   renovation: [
     /renovation(?: plan| budget| scope)?/i,
     /\bcapex\b/i,
