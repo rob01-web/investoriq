@@ -700,3 +700,19 @@ Gate 4C: NEXT / DSCR eligibility and deterministic coverage calculation
 Gate 4B is not yet connected to the Admin Dashboard or customer report. It creates immutable calculation receipts only. Modeled results require qualification and cannot be presented as source-stated payments. Collapsed calculations remain null and non-blocking.
 
 The permanent Gate 4B proof includes source-stated annualization, modeled current debt, modeled proposed financing, zero and near-zero rates, incomplete inputs, evidence gaps, conflicts, unsafe payment periods, deterministic rounding, immutability, no em dash characters, and no customer-visible implementation terminology.
+
+## July 16 Gate 4C checkpoint
+
+```text
+Gate 3: PASS / deployed / production route verified
+Gate 4A: PASS / committed and deployed at e3e080e
+Gate 4B: PASS / committed and deployed at e3e080e
+Gate 4C: PASS locally / deterministic current and proposed coverage
+Gate 4D: NEXT / maturity, fixed/floating, refinancing, and lender-fee risk
+```
+
+Gate 4C is not yet connected to the Admin Dashboard or customer report. It creates immutable current and proposed coverage receipts only. Bridge, exit, and stress remain not calculated until canonical scenario inputs exist.
+
+The future Quality Manifest can distinguish calculated coverage, collapsed coverage, missing numerator, missing denominator, evidence gap, authority conflict, modeled-denominator qualification, and scenario-contract absence without reconstructing facts from raw artifacts.
+
+Gate 4C does not infer covenant thresholds, pass/fail labels, risk tiers, scenarios, or customer recommendations. It does not mutate Source Truth, delivery, publication, credits, billing, or customer lifecycle.

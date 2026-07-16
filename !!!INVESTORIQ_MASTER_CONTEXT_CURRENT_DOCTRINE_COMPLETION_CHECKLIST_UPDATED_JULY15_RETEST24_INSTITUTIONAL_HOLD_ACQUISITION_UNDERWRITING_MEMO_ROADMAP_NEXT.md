@@ -1811,5 +1811,59 @@ Vercel function budget: PASS, 12 / 12
 git diff --check: PASS
 ```
 
+## Gate 4C status
+
+```text
+GATES 4A AND 4B PRODUCTION COMMIT: e3e080e
+GATES 4A AND 4B DEPLOYMENT: PASS
+DOCUMENTATION CHECKPOINT: 535dc17
+GATE 4C DETERMINISTIC DSCR INTELLIGENCE: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+CUSTOMER-FACING COPY PRODUCED: NO
+RENDERER BEHAVIOR CHANGED: NO
+NEXT: 4D maturity, fixed/floating, refinancing, and lender-fee risk
+```
+
+New canonical analysis owner:
+
+```text
+api/_lib/deterministic-dscr-analysis.js
+```
+
+Permanent proof owner:
+
+```text
+tests/qa/deterministic-dscr-analysis-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+Gate 4C consumes only the canonical Gate 4A contract and calls the Gate 4B calculation owner. It calculates current and proposed coverage using accepted annual T12 NOI divided by deterministic annual debt service.
+
+Reference proof values:
+
+```text
+$600,000 NOI / $70,200 current annual debt service -> 8.547009x analysis / 8.55x display
+$600,000 NOI / $676,249.20 proposed annual debt service -> 0.887247x analysis / 0.89x display
+```
+
+No minimum requirement, pass/fail status, covenant result, or risk tier is inferred. `minimumRequirement`, `thresholdClassification`, and covenant comparison remain null or false without accepted authority.
+
+Bridge, exit, and stress coverage remain explicitly not calculated. They require a future canonical scenario-input contract. Arbitrary caller-supplied scenarios are ignored, and base-case values cannot be silently reused as scenario values.
+
+Accepted zero or negative NOI remains a real deterministic numerator. Missing NOI remains null. Incomplete debt facts, evidence gaps, conflicts, or unavailable debt service collapse only the affected coverage result and never block valid core publication. Collapsed receipts retain any valid numerator or denominator component and record the exact missing inputs or evidence gaps without manufacturing a ratio.
+
+Gate 4C produces no renderer output or customer copy. Its permanent smoke prohibits em dash characters and public wording that exposes implementation machinery.
+
+Exact verification after Gate 4C:
+
+```text
+npm.cmd run qa:financial-intelligence: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS
+```
+
 ---
 # End of Active Master Context

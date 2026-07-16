@@ -19203,3 +19203,31 @@ optional debt calculation failure -> never a core publication blocker
 Gate 4B performs no DSCR, stress, rendering, Boss, CustomerSurfaceModel, Delivery Gate, Screening, credit, billing, or publication mutation. Focused QA, full QA, build, diff integrity, terminology guards, and the 12 / 12 Vercel budget all pass.
 
 Status: Gate 4B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4C DSCR eligibility and calculation.
+
+## July 16 Gate 4C CVF closure
+
+Gates 4A and 4B are committed and deployed at `e3e080e`. Gate 4C adds `api/_lib/deterministic-dscr-analysis.js` as the sole new deterministic coverage owner.
+
+Closed Gate 4C failure families:
+
+```text
+missing canonical T12 NOI -> ratio null
+accepted zero NOI -> ratio zero, not missing
+accepted negative NOI -> negative ratio preserved
+missing or evidence-gapped debt inputs -> affected ratio null
+conflicting debt authority -> affected ratio null
+unavailable annual debt service -> affected ratio null
+non-finite division result -> affected ratio null
+modeled debt service -> coverage result requires modeled qualification
+missing covenant threshold -> no pass/fail or risk classification
+arbitrary bridge/exit/stress inputs -> ignored
+base-case reuse as scenario -> prohibited
+bridge/exit/stress without canonical scenario contract -> not calculated
+optional DSCR failure -> never a core publication blocker
+```
+
+Collapsed coverage receipts retain valid accepted numerator or denominator components and the exact missing-input/evidence-gap state. They do not fabricate a ratio or discard valid provenance.
+
+Gate 4C performs no rendering, Boss, CustomerSurfaceModel, Delivery Gate, Screening, credit, billing, or publication mutation. Focused QA, full QA, build, terminology guards, diff integrity, and the 12 / 12 Vercel budget pass.
+
+Status: Gate 4C `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4D maturity, rate structure, refinancing, and lender-fee risk.

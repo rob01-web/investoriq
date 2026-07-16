@@ -8250,3 +8250,32 @@ A modeled debt-service result is never promoted to a lender-stated fact. Its rec
 No DSCR, stress, maturity risk, refinancing risk, lender-fee analysis, renderer output, or customer copy is produced in Gate 4B. Public terminology guards prohibit em dash characters and wording that reveals implementation machinery. Missing values remain null and optional calculation limitations remain non-blocking.
 
 Gate 4B verification: focused Gate 4A and 4B smokes `PASS`; full QA `PASS`; build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`.
+
+## July 16 Gate 4C deterministic coverage receipt
+
+Gates 4A and 4B are committed and deployed at `e3e080e`. Gate 4C extends the consume-only chain:
+
+```text
+canonical debt-service input contract
+-> canonical deterministic annual debt service
++ canonical accepted T12 NOI
+-> deterministic current or proposed coverage ratio
+-> immutable coverage receipt
+```
+
+Semantic result classes remain distinct:
+
+```text
+current coverage using annualized source-stated monthly payment
+current coverage using modeled debt service
+proposed coverage using modeled debt service
+coverage collapsed with accepted numerator retained
+coverage collapsed with accepted denominator retained
+scenario coverage not calculated without canonical scenario inputs
+```
+
+No threshold is inferred. No calculated ratio becomes a source fact. No modeled denominator becomes a lender-stated payment. Each calculated ratio carries separate numerator provenance, denominator provenance, calculation methodology, analysis precision, display precision, and qualification state.
+
+Bridge, exit, and stress remain null until a canonical scenario contract exists. Arbitrary input objects cannot activate them. Accepted zero and negative NOI values are preserved; missing values remain null.
+
+Gate 4C verification: focused Gate 4A through 4C smokes `PASS`; full QA `PASS`; build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`. Public terminology guards remain active.
