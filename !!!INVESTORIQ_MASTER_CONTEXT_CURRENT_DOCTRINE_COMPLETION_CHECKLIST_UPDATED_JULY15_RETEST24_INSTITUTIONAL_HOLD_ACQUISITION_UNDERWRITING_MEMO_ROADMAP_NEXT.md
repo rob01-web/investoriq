@@ -2178,5 +2178,73 @@ Gate 4G verification includes the atomic integration smoke, every Boss-family sm
 
 Gate 4 is now functionally complete locally. Gate 5 must begin with a new canonical institutional-underwriting input and scenario-policy contract. It may calculate LTV-constrained proceeds, DSCR-constrained proceeds, binding constraints, base and stressed value, and refinance classifications only after every source input, policy threshold, scenario, and formula has explicit authority. Legacy underwriting files remain reference-only and may not be imported into production authority or customer-output paths.
 
+## July 16 Gate 5A status
+
+```text
+GATE 4G: COMMITTED AT d332c68 / VERCEL PASS REPORTED BY USER
+GATE 5A CANONICAL INPUT AND SCENARIO-POLICY AUTHORITY: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+CALCULATIONS ADDED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION CHANGED: NO
+NEXT: Gate 5B deterministic source-case operating underwriting and rent/vacancy bridge
+```
+
+Gate 5A creates exactly two new constitutional owners:
+
+```text
+api/_lib/institutional-underwriting-scenario-policy-contract.js
+api/_lib/institutional-underwriting-input-contract.js
+```
+
+The scenario-policy contract establishes the current authorized policy state. The accepted-source case is authorized without adjustment. Maximum LTV, minimum DSCR, capitalization-rate authority, refinancing rate, refinancing amortization, refinancing term, expense-normalization policy, bridge assumptions, exit assumptions, stress assumptions, refinance classifications, and investment-risk classifications remain null and unauthorized until an approved source or policy receipt exists. Caller overrides cannot create them.
+
+The input contract requires a complete canonical Source Truth structure, a fully valid Gate 4 institutional financial-intelligence receipt, exact matching job and core authority identity, and the canonical scenario-policy contract. Marker-only objects, mismatched jobs, substituted sections, conflicting roles, duplicate primaries, narrow fact conflicts, adjudication rejection, accepted-fact disagreement, and evidence mismatch fail closed.
+
+Canonical underwriting inputs now have immutable receipts for:
+
+```text
+T12 operating facts and line items
+Rent Roll units, occupancy, in-place rent, market rent, unit mix, and unit rows
+purchase price, source NOI basis, and source going-in cap rate
+appraised value, appraisal cap rate, and appraisal NOI
+Gate 4 current debt and proposed acquisition financing inputs
+Gate 4 core reconciliation inputs
+Gate 4 capital-plan inputs
+```
+
+Core facts require accepted canonical core validation. Support facts additionally require one accepted primary role, no applicable conflict or duplicate state, canonical adjudication acceptance, agreement between the canonical accepted entry and adjudication decision, and exact matching source evidence. A support value with an evidence gap remains null in the Gate 5 input contract.
+
+The contract separates input eligibility from policy eligibility. Source-case operating position, objective rent bridge, physical vacancy position, acquisition reference, appraisal reference, accepted debt inputs, reconciliation, and capital inputs may become eligible when their exact facts exist and core publication authority is valid. Expense normalization, refinance constraints, returns, bridge, exit, and stress remain ineligible because their required policy authority is not established.
+
+Accepted acquisition LTV, interest rate, and amortization remain acquisition terms. They cannot silently become maximum refinance LTV, future refinance rate, or future refinance amortization. Current debt cannot become future debt. Missing values remain null, accepted zero values remain zero, and optional underwriting limitations never block canonically valid T12 and Rent Roll publication.
+
+Permanent proof owner:
+
+```text
+tests/qa/institutional-underwriting-input-contract-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+The adversarial proof covers complete authority, marker-only forgery, job mismatch, exact-evidence mismatch, adjudication rejection, accepted-entry versus decision mismatch, narrow fact conflict, role conflict, duplicate primary, source-present but unaccepted support, core-only support collapse, missing-value null preservation, accepted-zero preservation, invalid-core ineligibility, caller-override rejection, legacy firewall, and deep immutability.
+
+Exact Gate 5A verification:
+
+```text
+node tests/qa/institutional-underwriting-input-contract-smoke.js: PASS
+npm.cmd run qa:financial-intelligence: PASS, 8 smokes
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+support-document authority adversarial matrix: PASS, 37 scenarios
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS
+```
+
+Gate 5B is bounded to deterministic source-case operating underwriting and the objective rent/vacancy bridge. It may calculate only from Gate 5A eligible inputs. It must not normalize expenses without an approved normalization policy, invent economic vacancy, infer rent growth, create bridge or exit cases, calculate refinance proceeds, classify risk, issue a recommendation, or connect customer output until its own receipt and atomic downstream gate pass.
+
 ---
 # End of Active Master Context

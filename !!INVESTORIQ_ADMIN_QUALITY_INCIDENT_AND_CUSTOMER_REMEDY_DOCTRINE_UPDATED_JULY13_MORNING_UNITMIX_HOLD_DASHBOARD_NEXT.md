@@ -800,3 +800,36 @@ The integration changes no customer remedy authority, credit restoration logic, 
 Customer output now includes source-backed Debt Service and Coverage, Debt Term and Maturity Analysis, Core Source Reconciliation, and Capital Plan and Reserve Position only when the corresponding receipt is display-ready. The report never exposes internal receipt names or implementation machinery.
 
 Gate 5A must first define the accepted inputs, policy thresholds, scenario authority, and deterministic formulas for institutional underwriting. The Admin Dashboard may display Gate 5 results only from a future finalized canonical receipt. It must not infer a refinance classification, risk tier, stress result, or recommendation from Gate 4 facts alone.
+
+## July 16 Gate 5A checkpoint
+
+```text
+Gate 4G: COMMITTED AT d332c68 / VERCEL PASS REPORTED BY USER
+Gate 5A: PASS locally / canonical underwriting inputs and scenario-policy authority
+Gate 5B: NEXT / deterministic source-case operating underwriting and rent/vacancy bridge
+ADMIN DASHBOARD CHANGE: NONE
+CUSTOMER REMEDY CHANGE: NONE
+DELIVERY OR PUBLICATION CHANGE: NONE
+```
+
+Gate 5A creates no Admin row, quality incident, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, or Screening behavior.
+
+The future Quality Manifest may consume Gate 5 only after a finalized canonical institutional-underwriting receipt exists. Gate 5A alone is an input and policy boundary, not a result receipt. The Admin Dashboard must not read its raw inputs and independently calculate, classify, summarize, or recommend.
+
+The future Admin projection may distinguish:
+
+```text
+canonical input unavailable
+canonical input conflict
+exact evidence gap
+policy authority not established
+scenario not authorized
+calculation collapsed
+calculation completed from canonical inputs and approved policy
+```
+
+These states remain analysis limitations unless a separate true platform or core failure exists. Missing optional underwriting evidence or policy cannot become a catastrophic report blocker, customer upload workflow, automatic credit remedy, or platform defect.
+
+Maximum LTV, minimum DSCR, refinance terms, normalization rules, bridge assumptions, exit assumptions, stress shocks, and risk classifications remain unavailable. The dashboard may not infer them from purchase assumptions, current debt, prior reports, old underwriting fields, or its own thresholds.
+
+Gate 5A verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 8 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS`. Next is Gate 5B, still analysis-only until a later atomic customer-surface gate is separately proven.

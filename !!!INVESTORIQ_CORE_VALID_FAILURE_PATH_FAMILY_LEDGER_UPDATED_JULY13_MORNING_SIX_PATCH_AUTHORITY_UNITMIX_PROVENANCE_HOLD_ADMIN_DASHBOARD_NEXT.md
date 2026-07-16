@@ -19366,3 +19366,43 @@ The Gate 4G validator requires the complete consume-only policy plus section and
 All Gate 4 outputs remain optional to report-level publication. Missing, unreadable, conflicting, ambiguous, or incomplete support evidence collapses only the affected debt, reconciliation, or capital section. Valid canonical T12 and Rent Roll remain sovereign.
 
 Status: Gate 4G `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gate 4 is complete locally. Next bounded CVF slice is Gate 5A canonical institutional-underwriting input and scenario-policy authority.
+
+## July 16 Gate 5A CVF closure
+
+Gate 4G is committed at `d332c68`, with a Vercel pass reported by the user. Gate 5A adds the canonical institutional-underwriting scenario-policy contract and input contract without connecting any calculation or customer surface.
+
+Closed Gate 5A failure families:
+
+```text
+Source Truth marker alone unlocks underwriting inputs -> prohibited
+Gate 4 receipt marker alone unlocks underwriting inputs -> prohibited
+mismatched Source Truth and Gate 4 job identities are combined -> prohibited
+core-invalid evidence becomes underwriting-eligible -> prohibited
+support role without one canonical primary becomes accepted -> prohibited
+duplicate primary source becomes underwriting authority -> prohibited
+conflicting support role selects a winner -> prohibited
+narrow support-fact conflict leaves the disputed value eligible -> prohibited
+accepted entry and adjudication decision disagree but the fact survives -> prohibited
+adjudication rejects source backing but local evidence revives the fact -> prohibited
+evidence excerpt disagrees with the accepted value but the value survives -> prohibited
+missing numeric input becomes zero -> prohibited
+accepted zero expense or occupancy becomes missing -> prohibited
+acquisition LTV becomes maximum refinance LTV -> prohibited
+acquisition interest rate becomes future refinance rate -> prohibited
+current debt becomes future refinance debt -> prohibited
+caller override creates a policy threshold or scenario -> prohibited
+expense normalization occurs without approved policy -> prohibited
+bridge, exit, or stress scenario is invented -> prohibited
+optional underwriting ambiguity blocks valid core publication -> prohibited
+legacy underwriting code becomes production authority -> prohibited
+```
+
+The scenario-policy contract authorizes only the accepted-source case without adjustment. Refinance constraints, normalization, scenarios, classifications, and return assumptions remain null and unauthorized. The formula registry records the future deterministic formula boundary but performs no calculation.
+
+The input contract binds T12, Rent Roll, purchase assumptions, appraisal, Gate 4 debt, Gate 4 reconciliation, and Gate 4 capital inputs to exact upstream receipts. Every eligible Gate 5 bundle also requires canonical core publication authority. Input eligibility and policy eligibility remain separate so a complete source bundle cannot silently create a missing policy.
+
+All support fact values fail closed to null unless canonical role acceptance, fact acceptance, exact accepted-entry and adjudication agreement, exact evidence binding, conflict state, duplicate state, and source identity all pass. Source-present but ambiguous evidence remains auditable without becoming source-backed.
+
+Verification: Gate 5A smoke `PASS`; Financial Intelligence `PASS` with 8 smokes; full QA, parser, recovery, routing, production build, 37-scenario authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
+
+Status: Gate 5A `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5B deterministic source-case operating underwriting and objective rent/vacancy bridge.

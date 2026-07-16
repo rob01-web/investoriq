@@ -8470,3 +8470,65 @@ The four consume-only customer surfaces are `debtServiceCoverage`, `debtTermAnal
 The generic unit-mix validator now derives its required labels from accepted Rent Roll Source Truth. Source-defined labels such as Studio, 0BR, 3BR, All Units, or another exact accepted label can be validated without hardcoded property or bedroom assumptions.
 
 Gate 4G is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5A must define canonical institutional-underwriting inputs, policy authority, and scenario authority before any constraint, stress, or classification calculation is connected to customer output.
+
+## July 16 Gate 5A underwriting authority receipt
+
+Gate 4G is committed at `d332c68`, with a Vercel pass reported by the user. Gate 5A extends the protected authority chain without changing customer behavior:
+
+```text
+raw uploaded evidence
+-> canonical support-document adjudication
+-> canonical Source Truth accepted core and support facts
+-> canonical Gate 4 institutional financial-intelligence receipt
+-> canonical Gate 5 scenario-policy authority state
+-> canonical Gate 5 institutional-underwriting input contract
+-> no calculation and no downstream consumer yet
+```
+
+`api/_lib/institutional-underwriting-scenario-policy-contract.js` is the sole Gate 5 scenario-policy owner. Its current approved state is intentionally constrained:
+
+```text
+accepted-source case: authorized without adjustment
+maximum LTV: not established
+minimum DSCR: not established
+capitalization-rate authority: not established
+refinancing rate and amortization: not established
+expense-normalization policy: not established
+bridge, exit, and stress scenarios: not established
+refinance and investment-risk classifications: not established
+```
+
+No caller, alias, acquisition term, current-debt term, legacy field, or formula result can create a policy. Every unavailable value remains null. The contract records required policy fields and deterministic formula definitions only so later gates cannot improvise their own meanings.
+
+`api/_lib/institutional-underwriting-input-contract.js` is the sole Gate 5 input owner. It accepts only a complete Source Truth structure, a complete Gate 4 receipt, matching job and core identity, and the canonical scenario-policy contract. Its validator requires the exact contract sections and exact eligibility bundles. A marker-only or same-sized substitute object is rejected.
+
+Core input authority is accepted core validation. Support input authority requires all of the following:
+
+```text
+sourcePresent
+one canonical primary role
+roleAccepted by canonical adjudication
+factAccepted by canonical adjudication
+accepted entry and adjudication decision agree on the fact
+exact evidence matches the accepted value
+no applicable fact conflict
+no role conflict
+no duplicate-primary state
+stable source identity and fact path
+```
+
+If any support condition fails, `sourceBacked` and `sectionDisplayReady` remain false and the Gate 5 value remains null. The source may remain `sourcePresent` for auditability. No local extraction, filename, artifact type, role alias, or Gate 4 calculation can revive the rejected fact.
+
+Eligibility meaning is now explicit:
+
+```text
+inputEligible = every canonical fact required by the bundle is available
+policyEligible = every approved policy field required by the bundle is available
+calculationEligible = inputEligible and policyEligible
+```
+
+This permits a future objective accepted-source operating receipt while keeping normalization, refinance constraints, returns, bridge, exit, stress, and classifications unavailable. Acquisition financing remains acquisition financing and cannot become refinancing policy.
+
+The permanent adversarial proof validates evidence mismatch, adjudication rejection, accepted-entry disagreement, narrow conflict, role conflict, duplicate primary, ambiguous source presence, missing values, accepted zeros, invalid core, job mismatch, counterfeit contracts, caller overrides, legacy isolation, and immutability.
+
+Gate 5A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Full QA and build pass, the support-authority matrix remains `37 / 37`, and the Vercel function budget remains `12 / 12`. NEXT: Gate 5B deterministic source-case operating underwriting and objective rent/vacancy bridge.
