@@ -529,6 +529,7 @@ assert.match(handlerFinalHtml, /<\/html>/i);
 assert.match(handlerFinalHtml, /InvestorIQ/i);
 assert.match(handlerFinalHtml, /Acquisition Memo/i);
 assert.equal(/ReferenceError:|TypeError:|is not defined|\bNaN\b|\bInfinity\b|stack trace/i.test(handlerFinalHtml), false);
-assert.equal(/DSCR|refi|DCF|waterfall|equity return|deal score|final recommendation|BUY|SELL|HOLD|loan approval|lender commitment/i.test(handlerFinalHtml), false);
+assert.match(handlerFinalHtml, /Debt Service and Coverage/i);
+assert.equal(/refi|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(handlerFinalHtml), false);
 
 console.log("acquisition-memo-v2 publish-or-collapse smoke PASS");

@@ -267,18 +267,16 @@ const handlerRequest = {
         original_filename: "Property_Tax_Support.pdf",
       },
       documentSources: [
-        { originalFilename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx", semantic_doc_role: "t12", payload: { document_text_extracted: "Trailing 12-Month Income Statement" } },
-        { originalFilename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx", semantic_doc_role: "rent_roll", payload: { document_text_extracted: "Rent Roll" } },
-        { originalFilename: "Stonebridge_Assumptions.pdf", semantic_doc_role: "purchase_assumptions", debt_basis: "proposed_acquisition", payload: { document_text_extracted: "Purchase Assumptions / Proposed Acquisition Financing" } },
-        { originalFilename: "Current_Debt_Stonebridge.pdf", semantic_doc_role: "current_debt", debt_basis: "current_debt", payload: { document_text_extracted: "Existing Current Debt Statement" } },
-        { originalFilename: "Stonebridge_Reno_Plan.pdf", semantic_doc_role: "renovation_plan", payload: { document_text_extracted: "Structured Renovation / CapEx Plan" } },
-        { originalFilename: "Stonebridge_Appraisal_Summary.pdf", semantic_doc_role: "appraisal", payload: { document_text_extracted: "Appraisal Summary / Valuation Context" } },
-        { originalFilename: "Stonebridge_Market_Survey.pdf", semantic_doc_role: "market_survey", payload: { document_text_extracted: "Market Rent Survey Context" } },
-        { originalFilename: "Stonebridge_Phase_I_ESA.pdf", semantic_doc_role: "phase_i_esa", payload: { document_text_extracted: "Phase I ESA / Environmental Due Diligence Context" } },
+        { id: "t12-file", original_filename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx", doc_type: "t12", parse_status: "parsed" },
+        { id: "rent-roll-file", original_filename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx", doc_type: "rent_roll", parse_status: "parsed" },
+        { id: "assumptions-file", original_filename: "Stonebridge_Assumptions.pdf", doc_type: "purchase_assumptions", parse_status: "parsed" },
+        { id: "current-debt-file", original_filename: "Current_Debt_Stonebridge.pdf", doc_type: "current_debt", parse_status: "parsed" },
       ],
       coverageArtifacts: [
-        { type: "t12_parsed", payload: { effective_gross_income: 1500000, total_operating_expenses: 555000, net_operating_income: 945000, expense_lines: [ { label: "Property Taxes", amount: 185000 }, { label: "Insurance", amount: 72000 }, { label: "Repairs & Maintenance", amount: 104000 }, { label: "Utilities", amount: 86000 }, { label: "Property Management", amount: 60000 }, { label: "Payroll / Admin", amount: 28000 } ] } },
-        { type: "rent_roll_parsed", payload: { total_units: 64, occupancy: 0.9375, unit_mix: [ { label: "1BR", count: 32, current_rent: 1850, market_rent: 2050 }, { label: "2BR", count: 32, current_rent: 1881, market_rent: 2425 } ], annual_in_place_rent: 1432800, annual_market_rent: 1718400 } },
+        { id: "artifact-t12", file_id: "t12-file", type: "t12_parsed", payload: { source_file_id: "t12-file", source_original_filename: "T12_Stonebridge_Lofts_Attack_Test_8.xlsx", t12_parsed: { effective_gross_income: 1500000, total_operating_expenses: 555000, net_operating_income: 945000, gross_potential_rent: 1718400, expense_lines: [ { label: "Property Taxes", amount: 185000 }, { label: "Insurance", amount: 72000 }, { label: "Repairs & Maintenance", amount: 104000 }, { label: "Utilities", amount: 86000 }, { label: "Property Management", amount: 60000 }, { label: "Payroll / Admin", amount: 28000 } ] } } },
+        { id: "artifact-rent-roll", file_id: "rent-roll-file", type: "rent_roll_parsed", payload: { source_file_id: "rent-roll-file", source_original_filename: "Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx", rent_roll_parsed: { total_units: 64, occupancy: 0.9375, unit_mix: [ { label: "1BR", count: 32, current_rent: 1850, market_rent: 2050 }, { label: "2BR", count: 32, current_rent: 1881, market_rent: 2425 } ], annual_in_place_rent: 1432800, annual_market_rent: 1718400 } } },
+        { id: "artifact-assumptions", file_id: "assumptions-file", type: "document_text_extracted", payload: { source_file_id: "assumptions-file", source_original_filename: "Stonebridge_Assumptions.pdf", document_text_extracted: "Purchase assumptions / proposed acquisition financing\nPurchase Price $13,500,000\nNOI Basis $945,000\nGoing-In Cap Reference 7.00%\nProposed Acquisition Loan $9,450,000\nLTV 70.0%\nInterest Rate 5.95%\nAmortization 30 years\nLender Fee 0.85%" } },
+        { id: "artifact-current-debt", file_id: "current-debt-file", type: "document_text_extracted", payload: { source_file_id: "current-debt-file", source_original_filename: "Current_Debt_Stonebridge.pdf", document_text_extracted: "Existing Current Debt Statement\nCurrent Outstanding Balance $6,800,000\nInterest Rate 4.85%\nAmortization Remaining 24 years\nMonthly Payment $39,250\nMaturity Date 2029-11-01", current_debt_parsed: { current_outstanding_balance: 6800000, interest_rate: 4.85, amortization_remaining_years: 24, monthly_payment: 39250, maturity_date: "2029-11-01" } } },
       ],
     },
   },
@@ -289,11 +287,10 @@ await generateClientReport(handlerRequest, handlerResponse);
 assert.equal(handlerResponse.statusCode, 200);
 assert.equal(handlerResponse.body?.success, true);
 assert.equal(handlerResponse.body?.report_mode, "v1_core");
+assert.equal(handlerResponse.body?.customer_surface_model_validation?.ok, true);
+assert.equal(handlerResponse.body?.customer_surface_html_validation?.ok, true);
 
 const finalHtml = String(handlerResponse.body?.final_html || "");
-const renderValidation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, finalHtml);
-assert.equal(renderValidation.ok, true);
-assert.equal(renderValidation.violations.length, 0);
 
 assert.match(finalHtml, /<!DOCTYPE html>/i);
 assert.match(finalHtml, /<body/i);
@@ -305,14 +302,17 @@ assert.match(finalHtml, /Acquisition Memo/i);
 assert.match(finalHtml, /<td>1BR<\/td>/i);
 assert.match(finalHtml, /<td>2BR<\/td>/i);
 assert.match(finalHtml, /<td>Current Outstanding Balance<\/td><td style="font-weight:600;">\$6,800,000<\/td>/i);
-assert.match(finalHtml, /<td>Proposed Acquisition Loan<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
+assert.match(finalHtml, /<td>Proposed Loan Amount<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
 assert.match(finalHtml, /<td>Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
+assert.match(finalHtml, /Debt Service and Coverage/i);
+assert.match(finalHtml, /Current Debt[\s\S]{0,240}2\.01x/i);
+assert.match(finalHtml, /Proposed Acquisition Financing[\s\S]{0,240}1\.40x/i);
 assert.equal(/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(finalHtml), false);
 assert.equal(/<td style="font-weight:600;">-<\/td>/i.test(finalHtml), false);
 assert.equal(/<td[^>]*>\s*Going-In Cap Rate\s*<\/td>\s*<td[^>]*>\s*0\.0%\s*<\/td>/i.test(finalHtml), false);
 assert.equal(/Current Debt Maturity Not available/i.test(finalHtml), false);
 assert.equal(/Maturity Date Not available/i.test(finalHtml), false);
-assert.equal(/DSCR|refi|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalHtml), false);
+assert.equal(/refi|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalHtml), false);
 assert.equal(/\b(V2 Canonical Package|Source Authority|Boss Contract|canonical source package|V2 projection|report shell stays presentation-only)\b/i.test(finalHtml), false);
 assert.equal(/ReferenceError|TypeError|is not defined|stack trace/i.test(finalHtml), false);
 

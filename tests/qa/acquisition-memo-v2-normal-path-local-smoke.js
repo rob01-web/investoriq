@@ -10,8 +10,12 @@ process.env.QA_REVIEW_ENABLED ||= "false";
 process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY ||= "true";
 
 const { default: generateClientReport } = await import("../../api/generate-client-report.js");
-const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
 const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
+const {
+  buildCanonicalSourceTruthPackage,
+  constrainCanonicalSourcePackageToSourceTruth,
+} = await import("../../api/_lib/source-truth-package.js");
+const { buildCanonicalInstitutionalFinancialIntelligence } = await import("../../api/_lib/institutional-financial-intelligence.js");
 const {
   buildAcquisitionMemoBossContract,
   validateAcquisitionMemoBossContract,
@@ -159,14 +163,22 @@ if (handlerResponse.body?.success !== true) {
 assert.equal(handlerResponse.body?.report_mode, "v1_core");
 const finalHtml = String(handlerResponse.body?.final_html || "");
 
-const localSourcePackage = buildCanonicalSourcePackage(
-  structuredClone(requestBody.__test_payloads.documentSources),
-  structuredClone(requestBody.__test_payloads.coverageArtifacts)
-);
-const localProjection = buildAcquisitionMemoProjection(localSourcePackage);
+const localSourceTruthPackage = buildCanonicalSourceTruthPackage({
+  uploadedFiles: structuredClone(requestBody.__test_payloads.documentSources),
+  artifacts: structuredClone(requestBody.__test_payloads.coverageArtifacts),
+});
+const localSourcePackage = constrainCanonicalSourcePackageToSourceTruth(null, localSourceTruthPackage);
+const localFinancialIntelligence = buildCanonicalInstitutionalFinancialIntelligence({
+  sourceTruthPackage: localSourceTruthPackage,
+  asOfDate: "2026-06-20",
+});
+const localProjection = buildAcquisitionMemoProjection(localSourcePackage, {
+  financialIntelligence: localFinancialIntelligence,
+});
 const localBossContract = buildAcquisitionMemoBossContract({
   canonicalSourcePackage: localSourcePackage,
   acquisitionMemoProjection: localProjection,
+  financialIntelligence: localFinancialIntelligence,
   coreMetrics: {
     units: 64,
     occupancy: 0.9375,
@@ -216,7 +228,10 @@ assert.match(finalHtml, /<td>Lender \/ Origination Fee<\/td><td style="font-weig
 assert.match(finalHtml, /<td>Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
 assert.equal(/<td style="font-weight:600;">-<\/td>/i.test(finalHtml), false);
 assert.equal(/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(finalHtml), false);
-assert.equal(/DSCR|refi|refinance|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalHtml), false);
+assert.match(finalHtml, /Debt Service and Coverage/i);
+assert.match(finalHtml, /Current Debt[\s\S]{0,240}2\.01x/i);
+assert.match(finalHtml, /Proposed Acquisition Financing[\s\S]{0,240}1\.40x/i);
+assert.equal(/refi|refinance|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalHtml), false);
 assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(finalHtml), false);
 
 console.log("acquisition-memo-v2-normal-path-local-smoke: ok");

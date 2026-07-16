@@ -1,4 +1,5 @@
 import { formatInterestRatePercent } from "./report-formatting-helpers.js";
+import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
 
 const MODEL_VERSION = "acq_memo_v2_customer_surface_model_v1";
 
@@ -705,6 +706,10 @@ function buildSectionMap(bossContract = null) {
     "documentTreatment",
     "dataCoverageSourceLimitations",
     "methodologyDataTransparency",
+    "debtServiceCoverage",
+    "debtTermAnalysis",
+    "coreReconciliation",
+    "capitalPlanAnalysis",
   ];
   const sectionMap = {};
   for (const key of Object.keys(sections)) {
@@ -1380,11 +1385,20 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
   canonicalSourcePackage = null,
   acquisitionMemoProjection = null,
   bossContract = null,
+  financialIntelligence = null,
   coreMetrics = null,
   propertyProfile = null,
   reportMeta = null,
   reportMode = null,
 } = {}) {
+  const canonicalFinancialIntelligence =
+    financialIntelligence ||
+    acquisitionMemoProjection?.financialIntelligence ||
+    bossContract?.financialIntelligence ||
+    null;
+  if (canonicalFinancialIntelligence && !isCanonicalInstitutionalFinancialIntelligence(canonicalFinancialIntelligence)) {
+    throw new Error("CANONICAL_INSTITUTIONAL_FINANCIAL_INTELLIGENCE_REQUIRED_FOR_CUSTOMER_SURFACE_MODEL");
+  }
   const supportSources = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection, bossContract);
   const supportSourcesByRole = {
     __all: supportSources,
@@ -1464,6 +1478,25 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
   const sections = {};
   for (const [key, section] of Object.entries(sectionMap)) {
     sections[key] = buildSectionRoleModel(section, supportSourcesByRole, coreSources, valueSemantics);
+    const financialSection = canonicalFinancialIntelligence?.customerSections?.[key] || null;
+    if (financialSection) {
+      sections[key] = {
+        ...sections[key],
+        status: financialSection.displayReady === true ? "required" : "collapsed",
+        facts: clone(financialSection.facts || {}),
+        factAvailability: {
+          ...(sections[key]?.factAvailability || {}),
+          required: clone(financialSection.requiredFacts || []),
+          available: clone(financialSection.availableFacts || []),
+          missing: clone(financialSection.missingFacts || []),
+          sourcePresent: financialSection.sourcePresent === true,
+          roleAccepted: financialSection.roleAccepted === true,
+          factAccepted: financialSection.factAccepted === true,
+          sourceBacked: financialSection.sourceBacked === true,
+          sectionDisplayReady: financialSection.displayReady === true,
+        },
+      };
+    }
   }
   const acceptedSourceTruth = {
     purchaseAssumptionsPresent: supportSources.some((doc) => Boolean(doc?.acceptedPurchaseAssumptionsTruth)),
@@ -1533,7 +1566,12 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       operatingStatementTTMSummary: sections.operatingStatementTTMSummary?.facts || {},
       dataCoverageSourceLimitations: sections.dataCoverageSourceLimitations?.facts || {},
       documentTreatment: sections.documentTreatment?.facts || {},
+      debtServiceCoverage: sections.debtServiceCoverage?.facts || {},
+      debtTermAnalysis: sections.debtTermAnalysis?.facts || {},
+      coreReconciliation: sections.coreReconciliation?.facts || {},
+      capitalPlanAnalysis: sections.capitalPlanAnalysis?.facts || {},
     },
+    financialIntelligence: clone(canonicalFinancialIntelligence),
     valueSemantics,
     financialTruth: {
       breakEvenOccupancy: {
@@ -1621,6 +1659,18 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
     pushIssue("MODEL_SUPPORT_SOURCES_MISSING", "supportSources must be an array.", "critical", "model.supportSources");
   }
 
+  if (
+    model.financialIntelligence != null &&
+    !isCanonicalInstitutionalFinancialIntelligence(model.financialIntelligence)
+  ) {
+    pushIssue(
+      "MODEL_FINANCIAL_INTELLIGENCE_RECEIPT_INVALID",
+      "Institutional financial intelligence must remain the canonical consume-only receipt.",
+      "critical",
+      "model.financialIntelligence"
+    );
+  }
+
   const coreT12 = model.coreSources?.coreT12 || null;
   const coreRentRoll = model.coreSources?.coreRentRoll || null;
   if (!coreT12) pushIssue("MODEL_CORE_T12_MISSING", "coreSources.coreT12 is required.", "fatal_core", "model.coreSources.coreT12");
@@ -1654,6 +1704,10 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
       documentTreatment: { mustHaveFacts: ["support_doc_count"] },
       dataCoverageSourceLimitations: { mustHaveFacts: ["core_source_count"] },
       methodologyDataTransparency: { mustHaveFacts: ["method"] },
+      debtServiceCoverage: { mustHaveFacts: [] },
+      debtTermAnalysis: { mustHaveFacts: [] },
+      coreReconciliation: { mustHaveFacts: [] },
+      capitalPlanAnalysis: { mustHaveFacts: [] },
     };
 
     for (const [sectionKey, expectation] of Object.entries(sectionExpectation)) {
@@ -1680,6 +1734,34 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
       }
       if (shouldRender && isCoreSection && !section.factAvailability?.sourceBacked) {
         pushIssue("SECTION_NOT_SOURCE_BACKED", `${sectionKey} must be source-backed.`, "critical", `model.sections.${sectionKey}.factAvailability.sourceBacked`);
+      }
+    }
+
+    if (isCanonicalInstitutionalFinancialIntelligence(model.financialIntelligence)) {
+      for (const [sectionKey, receiptSection] of Object.entries(model.financialIntelligence.customerSections || {})) {
+        const modelSection = model.sections?.[sectionKey] || null;
+        if (
+          receiptSection?.displayReady === true &&
+          (modelSection?.status !== "required" || modelSection?.factAvailability?.sourceBacked !== true)
+        ) {
+          pushIssue(
+            "MODEL_FINANCIAL_INTELLIGENCE_TRUTH_LOST",
+            `${sectionKey} lost a display-ready canonical financial-intelligence receipt.`,
+            "critical",
+            `model.sections.${sectionKey}`
+          );
+        }
+        if (
+          receiptSection?.displayReady !== true &&
+          modelSection?.factAvailability?.sourceBacked === true
+        ) {
+          pushIssue(
+            "MODEL_FINANCIAL_INTELLIGENCE_FALSE_COMPLETENESS",
+            `${sectionKey} cannot become source-backed when its canonical receipt is not display-ready.`,
+            "critical",
+            `model.sections.${sectionKey}.factAvailability.sourceBacked`
+          );
+        }
       }
     }
   }
@@ -1823,6 +1905,10 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
   }
 
   const expected = expectedSurfaceValuesFromModel(model);
+  const canonicalFinancialIntelligence = isCanonicalInstitutionalFinancialIntelligence(model?.financialIntelligence)
+    ? model.financialIntelligence
+    : null;
+  const dscrAuthorized = canonicalFinancialIntelligence?.customerSections?.debtServiceCoverage?.displayReady === true;
   const acceptedPurchaseAssumptionsPresent = Boolean(model?.sourceTruth?.accepted?.purchaseAssumptionsPresent);
   const acceptedCurrentDebtPresent = Boolean(model?.sourceTruth?.accepted?.currentDebtPresent);
   if (acceptedPurchaseAssumptionsPresent && /no purchase assumptions uploaded|purchase assumptions provided\s+no/i.test(htmlText)) {
@@ -1966,6 +2052,41 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
     pushIssue("HTML_FALSE_UNIT_MIX_FALLBACK", "False missing unit mix fallback must not appear when structured unit mix exists.", "critical", "html.unitMix");
   }
 
+
+  const financialHeadings = {
+    debtServiceCoverage: "Debt Service and Coverage",
+    debtTermAnalysis: "Debt Term and Maturity Analysis",
+    coreReconciliation: "Core Source Reconciliation",
+    capitalPlanAnalysis: "Capital Plan and Reserve Position",
+  };
+  for (const [sectionKey, heading] of Object.entries(financialHeadings)) {
+    if (
+      canonicalFinancialIntelligence?.customerSections?.[sectionKey]?.displayReady === true &&
+      !containsText(htmlText, heading)
+    ) {
+      pushIssue(
+        "HTML_FINANCIAL_INTELLIGENCE_SECTION_MISSING",
+        `${heading} is missing from customer HTML.`,
+        "critical",
+        `html.${sectionKey}`
+      );
+    }
+  }
+  if (dscrAuthorized) {
+    for (const [roleKey, roleFacts] of Object.entries(model?.sections?.debtServiceCoverage?.facts || {})) {
+      const roleLabel = roleKey === "currentDebt" ? "Current Debt DSCR" : "Proposed Acquisition DSCR";
+      const ratio = normalizeMoney(roleFacts?.dscr);
+      if (Number.isFinite(ratio) && !containsText(htmlText, `${ratio.toFixed(2)}x`)) {
+        pushIssue(
+          "HTML_CANONICAL_DSCR_VALUE_MISSING",
+          `${roleLabel} is missing its canonical value.`,
+          "critical",
+          `html.debtServiceCoverage.${roleKey}`
+        );
+      }
+    }
+  }
+
   if (
     containsText(htmlText, "Boss Contract") ||
     containsText(htmlText, "V2 Canonical Package") ||
@@ -1979,7 +2100,7 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
   }
 
   if (
-    containsText(htmlText, "DSCR") ||
+    (!dscrAuthorized && containsText(htmlText, "DSCR")) ||
     containsText(htmlText, "refi") ||
     containsText(htmlText, "refinance") ||
     containsText(htmlText, "DCF") ||
@@ -1987,9 +2108,9 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
     containsText(htmlText, "equity return") ||
     containsText(htmlText, "deal score") ||
     containsText(htmlText, "final recommendation") ||
-    containsText(htmlText, "BUY") ||
-    containsText(htmlText, "SELL") ||
-    containsText(htmlText, "HOLD") ||
+    /\bBUY\b/i.test(normalizedHtml) ||
+    /\bSELL\b/i.test(normalizedHtml) ||
+    /\bHOLD\b/i.test(normalizedHtml) ||
     containsText(htmlText, "loan approval") ||
     containsText(htmlText, "lender commitment")
   ) {

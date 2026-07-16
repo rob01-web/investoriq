@@ -1,4 +1,5 @@
 import pdfParse from "pdf-parse";
+import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
 
 const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "p0c_final_pdf_publication_quality_boss_v1";
 
@@ -199,12 +200,23 @@ export function buildApprovedPdfSurfaceManifest({
   requiredTextAnchors = [],
   sourceReconciliation = null,
   deterministicContractQaSeal = null,
+  financialIntelligence = null,
 } = {}) {
   const reconciliationState = sourceReconciliation?.state && typeof sourceReconciliation.state === "object"
     ? sourceReconciliation.state
     : sourceReconciliation;
   const reconciliationRequired = deterministicContractQaSeal?.source_reconciliation?.required === true ||
     ["source_reconciliation_required", "parser_suspected"].includes(String(reconciliationState?.status || "").toLowerCase());
+  const financialSectionHeadings = {
+    debtServiceCoverage: "Debt Service and Coverage",
+    debtTermAnalysis: "Debt Term and Maturity Analysis",
+    coreReconciliation: "Core Source Reconciliation",
+    capitalPlanAnalysis: "Capital Plan and Reserve Position",
+  };
+  const financialIntelligenceHeadings = Object.entries(financialIntelligence?.customerSections || {})
+    .filter(([, section]) => section?.displayReady === true)
+    .map(([sectionKey]) => financialSectionHeadings[sectionKey])
+    .filter(Boolean);
   return {
     approvedText: stripHtml(approvedHtml),
     financialRows: extractApprovedFinancialRows(approvedHtml),
@@ -215,6 +227,12 @@ export function buildApprovedPdfSurfaceManifest({
       disclosure: String(reconciliationState?.source_reconciliation_disclosure || "").trim(),
     },
     deterministicContractQaSealOk: deterministicContractQaSeal?.ok === true,
+    financialIntelligence: {
+      present: financialIntelligence != null,
+      valid: financialIntelligence == null ||
+        isCanonicalInstitutionalFinancialIntelligence(financialIntelligence),
+      requiredHeadings: financialIntelligenceHeadings,
+    },
   };
 }
 
@@ -370,6 +388,20 @@ function inspectApprovedSurface(analysis = {}, manifest = {}) {
       ));
     }
   }
+  const missingFinancialIntelligenceHeadings = (Array.isArray(manifest?.financialIntelligence?.requiredHeadings)
+    ? manifest.financialIntelligence.requiredHeadings
+    : []).filter((heading) => !pdfText.includes(normalizeComparisonText(heading)));
+  if (manifest?.financialIntelligence?.valid !== true || missingFinancialIntelligenceHeadings.length > 0) {
+    issues.push(buildIssue(
+      "PDF_FINANCIAL_INTELLIGENCE_RECEIPT_SURFACE_MISMATCH",
+      "The final PDF did not preserve the approved institutional financial-intelligence surface.",
+      {
+        receipt_valid: manifest?.financialIntelligence?.valid === true,
+        missing_headings: missingFinancialIntelligenceHeadings,
+      },
+      "pdf.approvedSurface.financialIntelligence"
+    ));
+  }
   return issues;
 }
 
@@ -378,6 +410,7 @@ export async function inspectFinalPdfPublicationQuality({
   approvedHtml = "",
   deterministicContractQaSeal = null,
   sourceReconciliation = null,
+  financialIntelligence = null,
   requiredTextAnchors = [],
   artifactMode = "production_pdf",
   publicationTarget = "internal_test",
@@ -410,6 +443,7 @@ export async function inspectFinalPdfPublicationQuality({
     requiredTextAnchors,
     sourceReconciliation,
     deterministicContractQaSeal,
+    financialIntelligence,
   });
   const internalStub = normalizedArtifactMode === "stub_pdf" && !externalTarget;
   if (!internalStub) {
@@ -461,6 +495,8 @@ export async function inspectFinalPdfPublicationQuality({
       required_anchor_count: manifest.requiredTextAnchors.length,
       reconciliation_required: manifest.reconciliation.required,
       contract_qa_sealed: manifest.deterministicContractQaSealOk,
+      financial_intelligence_receipt_present: manifest.financialIntelligence.present,
+      financial_intelligence_required_section_count: manifest.financialIntelligence.requiredHeadings.length,
     },
     issues,
   };

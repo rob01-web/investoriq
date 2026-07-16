@@ -4,6 +4,8 @@
  * Must not independently classify documents.
  */
 
+import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
+
 function isCanonicalSupportDocEntry(entry) {
   return Boolean(entry) && typeof entry === "object";
 }
@@ -53,6 +55,47 @@ function normalizeProjectedPurchaseAssumptionEntry(entry) {
   return cloned;
 }
 
+function buildFinancialIntelligenceReconciliation(financialIntelligence) {
+  if (!isCanonicalInstitutionalFinancialIntelligence(financialIntelligence)) return null;
+  const result = financialIntelligence?.analyses?.coreReconciliation?.reconciliation || null;
+  if (result?.calculationStatus !== "calculated" || result?.sourceBound !== true) {
+    return {
+      state: {
+        status: "insufficient_inputs",
+        t12_gpr: null,
+        rr_annual_in_place: null,
+        difference_amount: null,
+        variance_pct: null,
+        source_reconciliation_disclosure: null,
+        materiality_classification: null,
+        source_bound: false,
+      },
+      disclosures: [],
+      sourceBacked: false,
+    };
+  }
+  const variancePresent = Number(result.differenceAmount) !== 0;
+  const disclosure = String(result.sourceBoundExplanation || "").trim();
+  return {
+    state: {
+      status: variancePresent ? "source_reconciliation_required" : "aligned",
+      t12_gpr: result.t12GrossPotentialRent,
+      rr_annual_in_place: result.rentRollAnnualInPlaceRent,
+      difference_amount: result.differenceAmount,
+      variance_pct: result.varianceRatioToT12Gpr,
+      source_reconciliation_disclosure: disclosure,
+      materiality_classification: null,
+      materiality_threshold: null,
+      source_bound: true,
+      comparison_status: result.comparisonStatus || null,
+    },
+    disclosures: variancePresent && disclosure
+      ? [{ code: "SOURCE_RECONCILIATION_DISCLOSURE", text: disclosure }]
+      : [],
+    sourceBacked: true,
+  };
+}
+
 function buildChecklist(projection) {
   return [
     {
@@ -82,7 +125,10 @@ function buildChecklist(projection) {
   ];
 }
 
-export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
+export function buildAcquisitionMemoProjection(canonicalSourcePackage, { financialIntelligence = null } = {}) {
+  if (financialIntelligence && !isCanonicalInstitutionalFinancialIntelligence(financialIntelligence)) {
+    throw new Error("CANONICAL_INSTITUTIONAL_FINANCIAL_INTELLIGENCE_REQUIRED_FOR_ACQUISITION_PROJECTION");
+  }
   const supportDocsMap = canonicalSourcePackage?.supportDocs instanceof Map
     ? canonicalSourcePackage.supportDocs
     : new Map();
@@ -117,6 +163,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
   const sourceReconciliationDisclosures = Array.isArray(sourceTruthAuthority?.disclosures)
     ? sourceTruthAuthority.disclosures.map(cloneEntry).filter(Boolean)
     : [];
+  const financialIntelligenceReconciliation = buildFinancialIntelligenceReconciliation(financialIntelligence);
   const projection = {
     authorityVersion: "v2",
     coreSourceSummary: {
@@ -162,7 +209,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
       classifiedBy: "canonical_source_truth_support_adjudicator",
       projectedBy: "buildAcquisitionMemoProjection",
     },
-    sourceReconciliation: {
+    sourceReconciliation: financialIntelligenceReconciliation || {
       state: sourceReconciliationState,
       disclosures: sourceReconciliationDisclosures,
       sourceBacked: Boolean(
@@ -171,6 +218,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage) {
         Number.isFinite(Number(sourceReconciliationState.rr_annual_in_place))
       ),
     },
+    financialIntelligence,
   };
 
   projection.acquisitionContext = normalizeProjectedPurchaseAssumptionEntry(purchaseAssumptions);

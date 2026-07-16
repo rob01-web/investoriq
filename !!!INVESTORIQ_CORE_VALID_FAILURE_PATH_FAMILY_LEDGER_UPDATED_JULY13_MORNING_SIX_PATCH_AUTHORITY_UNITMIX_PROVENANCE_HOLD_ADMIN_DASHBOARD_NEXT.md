@@ -19335,3 +19335,34 @@ Gate 4F financial results create no renderer output, Boss mutation, CustomerSurf
 Verification: Financial Intelligence `PASS`; support authority `PASS` with 37 scenarios; Source Truth pipeline, phase, and constitutional matrix `PASS`; full QA and production build `PASS`; Vercel budget `PASS 12 / 12`; diff integrity `PASS`.
 
 Status: Gate 4F `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4G atomic CustomerSurfaceModel, Boss, Contract QA, PDF Boss, Manifest, and Dashboard integration.
+
+## July 16 Gate 4G CVF closure
+
+Gate 4G adds `api/_lib/institutional-financial-intelligence.js` as the sole Gate 4 aggregate receipt owner and atomically cuts the canonical calculations into Projection, Boss, CustomerSurfaceModel, rendering, Report Contract QA, PDF Boss, Quality Manifest, and Admin incident projection.
+
+Closed Gate 4G failure families:
+
+```text
+receipt marker or version alone unlocks customer output -> prohibited
+sourcePresent silently becomes roleAccepted -> prohibited
+accepted role without accepted fact becomes display-ready -> prohibited
+eligible calculation lacks formula, required inputs, or provenance -> prohibited
+reserve-per-unit calculation loses input provenance -> prohibited
+downstream Projection reuses the legacy 5% reconciliation classification -> prohibited
+Boss forbids canonical receipt-backed DSCR -> corrected
+legacy no-receipt Boss silently authorizes DSCR -> prohibited
+CustomerSurfaceModel loses a canonical calculation receipt -> hard fail
+renderer reconstructs a financial value from payload aliases -> prohibited
+Report Contract QA accepts a label with the wrong value -> prohibited
+PDF Boss accepts HTML and PDF disagreement -> prohibited
+Quality Manifest omits calculation receipts -> prohibited
+Admin projection reconstructs financial facts from raw artifacts -> prohibited
+optional support collapse blocks accepted core publication -> prohibited
+unit-mix validation assumes only 1BR or 2BR source labels -> prohibited
+```
+
+The Gate 4G validator requires the complete consume-only policy plus section and calculation integrity. Every display-ready section proves `sourcePresent`, `roleAccepted`, `factAccepted`, `sourceBacked`, and `sectionDisplayReady` without conflating those meanings. Every eligible result remains finite, deterministic, formula-bound, required-input-bound, and provenance-bound.
+
+All Gate 4 outputs remain optional to report-level publication. Missing, unreadable, conflicting, ambiguous, or incomplete support evidence collapses only the affected debt, reconciliation, or capital section. Valid canonical T12 and Rent Roll remain sovereign.
+
+Status: Gate 4G `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gate 4 is complete locally. Next bounded CVF slice is Gate 5A canonical institutional-underwriting input and scenario-policy authority.

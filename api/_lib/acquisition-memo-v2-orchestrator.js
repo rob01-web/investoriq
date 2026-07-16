@@ -144,6 +144,7 @@ export function runAcquisitionMemoV2Orchestrator({
       canonicalSourcePackage: acquisitionMemoV2DocumentArgs?.sourcePackage || null,
       acquisitionMemoProjection: acquisitionMemoV2DocumentArgs?.acquisitionMemoProjection || null,
       bossContract: acquisitionMemoBossContract || acquisitionMemoV2DocumentArgs?.bossContract || null,
+      financialIntelligence: acquisitionMemoV2DocumentArgs?.financialIntelligence || null,
       coreMetrics: acquisitionMemoV2DocumentArgs?.coreMetrics || null,
       propertyProfile: acquisitionMemoV2DocumentArgs?.propertyProfile || null,
       reportMeta: acquisitionMemoV2DocumentArgs?.reportMeta || null,
@@ -179,6 +180,7 @@ export function runAcquisitionMemoV2Orchestrator({
       sourceReconciliation: customerSurfaceModel?.sourceTruth?.sourceReconciliation || null,
       breakEven: customerSurfaceModel?.financialTruth?.breakEvenOccupancy || null,
       supportSections: customerSurfaceModel?.sections || null,
+      financialIntelligence: customerSurfaceModel?.financialIntelligence || null,
       grossRentCapitalizationAuthorized: false,
     });
     const compliance = {

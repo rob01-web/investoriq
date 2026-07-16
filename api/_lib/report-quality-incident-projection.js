@@ -265,6 +265,22 @@ function buildReceiptEvents(manifest) {
       message: "The final Boss compliance receipt did not pass.",
     }));
   }
+  const financialIntelligence = asObject(receipts.institutionalFinancialIntelligence);
+  if (Object.keys(financialIntelligence).length > 0 && (
+    financialIntelligence.source !== "canonical_institutional_financial_intelligence" ||
+    financialIntelligence.receiptVersion !== 1 ||
+    financialIntelligence?.policy?.authorityCreating !== false ||
+    financialIntelligence?.policy?.downstreamConsumeOnly !== true
+  )) {
+    events.push(event({
+      code: "FINANCIAL_INTELLIGENCE_RECEIPT_INVALID",
+      family: "calculation_receipt_integrity",
+      severity: "high",
+      ownerArea: "deterministic_financial_math",
+      responsibility: "investoriq_defect",
+      message: "The institutional financial-intelligence receipt did not preserve its canonical consume-only contract.",
+    }));
+  }
   return events;
 }
 
@@ -484,6 +500,13 @@ export function buildReportQualityIncidentProjection({
     } : null,
     documents: clone(asArray(manifest.documents)),
     calculations: clone(asArray(manifest.calculations)),
+    financialIntelligence: {
+      source: manifest?.receipts?.institutionalFinancialIntelligence?.source || null,
+      receiptVersion: manifest?.receipts?.institutionalFinancialIntelligence?.receiptVersion || null,
+      coverage: clone(asObject(manifest?.receipts?.institutionalFinancialIntelligence?.coverage)),
+      eligibleCalculationCount: asArray(manifest.calculations).filter((calculation) => calculation?.eligible === true).length,
+      totalCalculationCount: asArray(manifest.calculations).length,
+    },
     sections: clone(asArray(manifest.sections)),
     events,
     actionReceipts: clone(asArray(actionReceipts)),

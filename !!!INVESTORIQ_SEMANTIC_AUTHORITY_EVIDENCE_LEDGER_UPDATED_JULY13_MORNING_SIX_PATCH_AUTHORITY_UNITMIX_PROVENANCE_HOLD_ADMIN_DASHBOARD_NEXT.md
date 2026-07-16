@@ -8435,3 +8435,38 @@ Same-role optional fact conflicts are removed from accepted truth while uncontes
 Gate 4F verification: Financial Intelligence `PASS`; support authority `PASS` with 37 scenarios; Source Truth pipelines and constitutional matrix `PASS`; full QA and build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`. No renderer implementation or Gate 4F financial output changed. Canonical document-treatment labels were added for the two new accepted roles.
 
 NEXT: Gate 4G atomic downstream integration.
+
+## July 16 Gate 4G downstream authority receipt
+
+Gate 4G establishes the completed Gate 4 evidence chain:
+
+```text
+raw uploaded evidence
+-> deterministic semantic evidence
+-> canonical support-document adjudication
+-> canonical Source Truth accepted roles, facts, evidence, conflicts, and duplicates
+-> canonical Gate 4 input contracts
+-> deterministic Gate 4 analyses
+-> immutable institutional financial-intelligence receipt
+-> downstream consume-only report and quality surfaces
+```
+
+`api/_lib/institutional-financial-intelligence.js` is the sole aggregate owner. Its receipt does not become a new evidence adjudicator. It can preserve and calculate from canonical accepted truth only. Its validator rejects incomplete or forged marker-only objects and requires the constitutional policy, Source Truth identity, four section receipts, and formula/input/provenance integrity for every eligible calculation.
+
+The accepted-state vocabulary remains exact end to end:
+
+```text
+sourcePresent = relevant evidence exists
+roleAccepted = canonical adjudication accepted the source role
+factAccepted = canonical adjudication accepted at least the required fact state
+sourceBacked = accepted fact bundle is bound to exact canonical evidence
+sectionDisplayReady = every fact required by that customer section is eligible to render
+```
+
+No state is derived from filename, candidate parser route, artifact type, field presence, or calculation result alone. A downstream consumer cannot promote a collapsed receipt, fill null with zero, select a conflict winner, or create a customer fact.
+
+The four consume-only customer surfaces are `debtServiceCoverage`, `debtTermAnalysis`, `coreReconciliation`, and `capitalPlanAnalysis`. Exact calculations and qualifications flow through Projection, Boss, CustomerSurfaceModel, renderer, Report Contract QA, PDF Boss, Manifest, and Admin incident projection without reinterpretation.
+
+The generic unit-mix validator now derives its required labels from accepted Rent Roll Source Truth. Source-defined labels such as Studio, 0BR, 3BR, All Units, or another exact accepted label can be validated without hardcoded property or bedroom assumptions.
+
+Gate 4G is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5A must define canonical institutional-underwriting inputs, policy authority, and scenario authority before any constraint, stress, or classification calculation is connected to customer output.

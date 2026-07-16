@@ -802,10 +802,11 @@ const listedNotModeledSectionMatch = /<p class="subsection-title">Listed but Not
 if (listedNotModeledSectionMatch) {
   assert.equal(/purchase_assumptions_source\.txt/i.test(listedNotModeledSectionMatch[0]), false);
 }
+assert.match(fullRenderHtml, /Debt Service and Coverage/i);
+assert.match(fullRenderHtml, /Current Debt[\s\S]{0,260}[0-9]+\.[0-9]{2}x/i);
+assert.match(fullRenderHtml, /Proposed Acquisition Financing[\s\S]{0,260}[0-9]+\.[0-9]{2}x/i);
 const forbiddenSurfacePatterns = [
   /Capital Risk Profile/i,
-  /Current Debt DSCR/i,
-  /\bDSCR\b/i,
   /Debt Coverage Constraint/i,
   /refinance capacity/i,
   /refinance proceeds/i,

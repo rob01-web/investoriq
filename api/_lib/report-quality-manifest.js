@@ -315,8 +315,8 @@ function buildAcquisitionSections(customerSurfaceModel) {
       reviewRequired: outcome === "unresolved",
       customerContactRequired: false,
       sourcePresent: factAvailability.sourcePresent === true || Boolean(text(sourceDocument.fileId || sourceDocument.file_id)),
-      roleAccepted: sourceBacked || Boolean(text(section?.sourceRole).startsWith("core_")),
-      factAccepted: availableFacts.length > 0,
+      roleAccepted: factAvailability.roleAccepted === true || sourceBacked || Boolean(text(section?.sourceRole).startsWith("core_")),
+      factAccepted: factAvailability.factAccepted === true || availableFacts.length > 0,
       sourceBacked,
       sectionDisplayReady: outcome === "rendered" || outcome === "qualified" || outcome === "disclosed",
       acceptedFacts,
@@ -389,7 +389,7 @@ function buildCalculationReceipts(customerSurfaceModel) {
     sourceIdentityKey("core", coreT12.fileId || coreT12.file_id, coreT12.artifactId || coreT12.artifact_id),
     sourceIdentityKey("core", coreRentRoll.fileId || coreRentRoll.file_id, coreRentRoll.artifactId || coreRentRoll.artifact_id),
   ]);
-  return Object.entries(asObject(customerSurfaceModel?.financialTruth)).map(([calculationKey, receipt]) => {
+  const existingReceipts = Object.entries(asObject(customerSurfaceModel?.financialTruth)).map(([calculationKey, receipt]) => {
     const numerator = Number(receipt?.numerator);
     const denominator = Number(receipt?.denominator);
     const result = Number(receipt?.result);
@@ -417,6 +417,24 @@ function buildCalculationReceipts(customerSurfaceModel) {
       },
     };
   });
+  const institutionalReceipts = asArray(
+    customerSurfaceModel?.financialIntelligence?.calculationReceipts
+  ).map((receipt) => ({
+    ...clone(asObject(receipt)),
+    authority: {
+      ...clone(asObject(receipt?.authority)),
+      source: "canonical_institutional_financial_intelligence",
+      authorityCreating: false,
+      receiptOnly: true,
+    },
+  }));
+  const byKey = new Map();
+  for (const receipt of [...existingReceipts, ...institutionalReceipts]) {
+    const key = text(receipt?.calculationKey);
+    if (!key) continue;
+    byKey.set(key, receipt);
+  }
+  return [...byKey.values()];
 }
 
 function receiptSummary(value, fields = []) {
@@ -495,6 +513,25 @@ export function validateReportQualityManifest(manifest, { requireFinal = false }
       } else if (Math.abs(numerator / denominator - result) > 1e-9) {
         push("MANIFEST_BREAK_EVEN_RESULT_MISMATCH", `${path}.result`, "Break-even occupancy does not reconcile to its recorded inputs.");
       }
+    }
+  }
+
+  const institutionalFinancialIntelligence = asObject(
+    manifest?.receipts?.institutionalFinancialIntelligence
+  );
+  if (Object.keys(institutionalFinancialIntelligence).length > 0) {
+    if (
+      institutionalFinancialIntelligence.source !== "canonical_institutional_financial_intelligence" ||
+      institutionalFinancialIntelligence.receiptVersion !== 1 ||
+      institutionalFinancialIntelligence?.policy?.authorityCreating !== false ||
+      institutionalFinancialIntelligence?.policy?.downstreamConsumeOnly !== true ||
+      institutionalFinancialIntelligence.reportPublicationBlocker !== false
+    ) {
+      push(
+        "MANIFEST_FINANCIAL_INTELLIGENCE_RECEIPT_INVALID",
+        "receipts.institutionalFinancialIntelligence",
+        "Institutional financial intelligence must remain canonical, consume-only, non-authoritative, and non-blocking."
+      );
     }
   }
 
@@ -639,6 +676,19 @@ export function buildReportQualityManifestCandidate({
             validation: receiptSummary(customerSurfaceModelValidation, ["ok", "issues"]),
             htmlValidation: receiptSummary(customerSurfaceHtmlValidation, ["ok", "issues"]),
           }
+        : null,
+      institutionalFinancialIntelligence: customerSurfaceModel?.financialIntelligence
+        ? receiptSummary(customerSurfaceModel.financialIntelligence, [
+            "source",
+            "receiptVersion",
+            "sourceTruthReceipt",
+            "analysisContext",
+            "policy",
+            "customerSections",
+            "calculationReceipts",
+            "coverage",
+            "reportPublicationBlocker",
+          ])
         : null,
       deterministicContractQaSeal: receiptSummary(deterministicContractQaSeal, [
         "source",

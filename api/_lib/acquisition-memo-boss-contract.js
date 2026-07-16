@@ -3,6 +3,7 @@ import {
   ACQUISITION_FINANCING_DISPLAY_LABELS,
   requiredAcquisitionFinancingDisplayLabels,
 } from "./acquisition-financing-display-contract.js";
+import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
 
 const CONTRACT_VERSION = "acq_memo_boss_contract_v1";
 
@@ -41,6 +42,26 @@ const COLLAPSEABLE_FORBIDDEN_SURFACE_PATTERNS = Object.freeze([
   /\bloan approval\b/i,
 ]);
 
+function financialIntelligencePermitsDscr(value) {
+  const receipt = value?.financialIntelligence || value;
+  return Boolean(
+    isCanonicalInstitutionalFinancialIntelligence(receipt) &&
+    receipt?.customerSections?.debtServiceCoverage?.displayReady === true
+  );
+}
+
+function forbiddenSurfacesFor(financialIntelligence = null) {
+  return FORBIDDEN_SURFACES.filter(
+    (surface) => surface !== "DSCR" || !financialIntelligencePermitsDscr(financialIntelligence)
+  );
+}
+
+function collapseableForbiddenPatternsFor(bossContract = null) {
+  return COLLAPSEABLE_FORBIDDEN_SURFACE_PATTERNS.filter(
+    (pattern) => pattern.source !== "\\bDSCR\\b" || !financialIntelligencePermitsDscr(bossContract)
+  );
+}
+
 const COLLAPSEABLE_BOSS_VIOLATION_CODES = Object.freeze([
   "UNIT_MIX_NO_FALSE_MISSING_ROWS_TEXT",
   "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS",
@@ -53,6 +74,7 @@ const COLLAPSEABLE_BOSS_VIOLATION_CODES = Object.freeze([
   "DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED",
   "UNSUPPORTED_RENOVATION_MODELING_SURFACE",
   "UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE",
+  "INSTITUTIONAL_FINANCIAL_INTELLIGENCE_MISSING",
 ]);
 
 const HARD_FATAL_BOSS_VIOLATION_CODES = Object.freeze([
@@ -96,6 +118,7 @@ const SOURCE_BACKED_INTEGRITY_VIOLATION_SECTIONS = Object.freeze({
   CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED: "currentDebtContext",
   PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED: "proposedFinancingContext",
   ACQUISITION_REQUEST_FACTS_REQUIRED_WHEN_SOURCE_BACKED: "acquisitionRequestContext",
+  INSTITUTIONAL_FINANCIAL_INTELLIGENCE_MISSING: "debtServiceCoverage",
 });
 
 function isPlainObject(value) {
@@ -702,6 +725,47 @@ function buildSectionContract({
   };
 }
 
+function buildFinancialIntelligenceSectionContract(sectionKey, financialIntelligence) {
+  const section = financialIntelligence?.customerSections?.[sectionKey] || null;
+  const displayReady = section?.displayReady === true;
+  const analysisPathsBySection = {
+    debtServiceCoverage: ["analyses.debtService", "analyses.dscr"],
+    debtTermAnalysis: ["analyses.debtRisk"],
+    coreReconciliation: ["analyses.coreReconciliation"],
+    capitalPlanAnalysis: ["analyses.capitalPlan"],
+  };
+  return buildSectionContract({
+    status: displayReady ? "required" : "collapsed",
+    requiredFacts: displayReady ? section.requiredFacts || [] : [],
+    sourceBindings: buildSectionBindings(
+      "canonical_institutional_financial_intelligence",
+      [`customerSections.${sectionKey}`, ...(analysisPathsBySection[sectionKey] || [])]
+    ),
+    collapseInstructions: [
+      "Collapse when the canonical financial-intelligence receipt does not contain a complete eligible input bundle.",
+    ],
+    renderRequirements: [
+      "Render only receipt-backed values and receipt-preserved qualifications.",
+      "Do not infer thresholds, scenarios, causes, or missing numeric values.",
+    ],
+    factAvailability: {
+      ...factAvailability(section?.requiredFacts || [], section?.availableFacts || [], displayReady),
+      sourcePresent: section?.sourcePresent === true,
+      roleAccepted: section?.roleAccepted === true,
+      factAccepted: section?.factAccepted === true,
+      sectionDisplayReady: displayReady,
+    },
+    postRenderAssertions: displayReady
+      ? [buildBossContractAssertion(
+          "INSTITUTIONAL_FINANCIAL_INTELLIGENCE_MISSING",
+          `${sectionKey} must render every display-ready canonical receipt value.`,
+          "critical",
+          sectionKey
+        )]
+      : [],
+  });
+}
+
 function summarizeCoreSource(coreSource, defaultRole, defaultLabel) {
   const source = truthyObject(coreSource);
   if (!source) return null;
@@ -920,6 +984,17 @@ function routeAcquisitionMemoBossViolations(bossContract, validationOrViolations
     }
 
     const code = String(violation?.code || "");
+    if (code === "INSTITUTIONAL_FINANCIAL_INTELLIGENCE_MISSING") {
+      const sectionKey = String(violation?.section || "").trim();
+      const sectionSourceBacked = Boolean(getFactAvailability(bossContract?.sections?.[sectionKey])?.sourceBacked);
+      if (sectionSourceBacked) {
+        push("fatal_core", violation, {
+          routingReason: "display_ready_financial_intelligence_render_failure",
+          section: sectionKey,
+        });
+        continue;
+      }
+    }
     const sourceBackedIntegritySectionKey = SOURCE_BACKED_INTEGRITY_VIOLATION_SECTIONS[code] || null;
     if (sourceBackedIntegritySectionKey) {
       const sectionSourceBacked = Boolean(getFactAvailability(bossContract?.sections?.[sourceBackedIntegritySectionKey])?.sourceBacked);
@@ -939,7 +1014,7 @@ function routeAcquisitionMemoBossViolations(bossContract, validationOrViolations
 
     if (code === "NO_FORBIDDEN_SURFACES") {
       const hasHardFatalSurface = HARD_FATAL_FORBIDDEN_SURFACE_PATTERNS.some((pattern) => pattern.test(htmlString));
-      const hasCollapseableSurface = COLLAPSEABLE_FORBIDDEN_SURFACE_PATTERNS.some((pattern) => pattern.test(htmlString));
+      const hasCollapseableSurface = collapseableForbiddenPatternsFor(bossContract).some((pattern) => pattern.test(htmlString));
       if (hasHardFatalSurface || (!hasCollapseableSurface && !hasHardFatalSurface)) {
         push("fatal_core", violation, {
           routingReason: hasHardFatalSurface ? "hard_fatal_forbidden_surface" : "forbidden_surface_unresolved",
@@ -1050,7 +1125,7 @@ function collapseAcquisitionMemoBossViolationsHtml(bossContract, html, routing =
   }
 
   const collapseableForbiddenScrubPatterns = [
-    /\bDSCR\b/gi,
+    ...(financialIntelligencePermitsDscr(bossContract) ? [] : [/\bDSCR\b/gi]),
     /\brefinance\b/gi,
     /\brefi\b/gi,
     /\bDCF\b/gi,
@@ -1087,6 +1162,7 @@ function buildAcquisitionMemoBossContract({
   canonicalSourcePackage = null,
   sourceTruthPackage = null,
   acquisitionMemoProjection = null,
+  financialIntelligence = null,
   coreMetrics = null,
   t12Payload = null,
   propertyProfile = null,
@@ -1094,6 +1170,10 @@ function buildAcquisitionMemoBossContract({
   reportMode = null,
 } = {}) {
   const hasCanonicalSourceTruth = isCanonicalSourceTruthPackage(sourceTruthPackage);
+  const canonicalFinancialIntelligence = financialIntelligence || acquisitionMemoProjection?.financialIntelligence || null;
+  if (canonicalFinancialIntelligence && !isCanonicalInstitutionalFinancialIntelligence(canonicalFinancialIntelligence)) {
+    throw new Error("CANONICAL_INSTITUTIONAL_FINANCIAL_INTELLIGENCE_REQUIRED_FOR_BOSS_CONTRACT");
+  }
   const sourceTruthT12 = hasCanonicalSourceTruth
     ? buildCoreSourceFromTruthPackage(
         sourceTruthPackage?.core?.t12,
@@ -1120,12 +1200,16 @@ function buildAcquisitionMemoBossContract({
   );
   const supportDocs = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection);
   const sourceReconciliationState = normalizeBossContractFact(
-    hasCanonicalSourceTruth
+    canonicalFinancialIntelligence
+      ? acquisitionMemoProjection?.sourceReconciliation?.state || null
+      : hasCanonicalSourceTruth
       ? sourceTruthPackage?.source_reconciliation_state || null
       : acquisitionMemoProjection?.sourceReconciliation?.state || null
   );
   const sourceReconciliationDisclosures = normalizeBossContractFact(
-    hasCanonicalSourceTruth
+    canonicalFinancialIntelligence
+      ? acquisitionMemoProjection?.sourceReconciliation?.disclosures || []
+      : hasCanonicalSourceTruth
       ? sourceTruthPackage?.disclosures || []
       : acquisitionMemoProjection?.sourceReconciliation?.disclosures || []
   );
@@ -1144,6 +1228,7 @@ function buildAcquisitionMemoBossContract({
     : [];
   const sourceReconciliationSourceBacked = sourceReconciliationRequired &&
     sourceReconciliationRequiredFacts.every((fact) => sourceReconciliationAvailableFacts.includes(fact));
+  const primaryConstraintReconciliationRequired = sourceReconciliationRequired && !canonicalFinancialIntelligence;
   const coreT12Source = findSupportDocByRole(supportDocs, "core_t12") || coreT12;
   const purchaseAssumptionsDoc = findSupportDocByRole(supportDocs, "purchase_assumptions") || acquisitionMemoProjection?.supportDocProjection?.purchaseAssumptions || null;
   const promotedCurrentDebtDoc = findSupportDocByRole(supportDocs, "current_debt_context") || acquisitionMemoProjection?.supportDocProjection?.currentDebtContext || null;
@@ -1322,14 +1407,14 @@ function buildAcquisitionMemoBossContract({
       sourceBindings: buildSectionBindings("core_rent_roll", ["annual_in_place_rent", "annual_market_rent", "unit_mix"]),
     }),
     primaryConstraintReviewDisclosure: buildSectionContract({
-      status: sourceReconciliationRequired ? "required" : "collapsed",
-      requiredFacts: sourceReconciliationRequiredFacts,
+      status: primaryConstraintReconciliationRequired ? "required" : "collapsed",
+      requiredFacts: primaryConstraintReconciliationRequired ? sourceReconciliationRequiredFacts : [],
       sourceBindings: buildSectionBindings("source_truth_package", ["source_reconciliation_state", "disclosures"]),
       collapseInstructions: ["Collapse when canonical Source Truth does not require a reconciliation disclosure."],
       factAvailability: factAvailability(
-        sourceReconciliationRequiredFacts,
+        primaryConstraintReconciliationRequired ? sourceReconciliationRequiredFacts : [],
         sourceReconciliationAvailableFacts,
-        sourceReconciliationSourceBacked
+        primaryConstraintReconciliationRequired && sourceReconciliationSourceBacked
       ),
     }),
     acquisitionMemoSummary: buildSectionContract({
@@ -1472,6 +1557,22 @@ function buildAcquisitionMemoBossContract({
         { sourceRole: "purchase_assumptions", factPaths: ["proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent"], notes: [] },
       ],
     }),
+    debtServiceCoverage: buildFinancialIntelligenceSectionContract(
+      "debtServiceCoverage",
+      canonicalFinancialIntelligence
+    ),
+    debtTermAnalysis: buildFinancialIntelligenceSectionContract(
+      "debtTermAnalysis",
+      canonicalFinancialIntelligence
+    ),
+    coreReconciliation: buildFinancialIntelligenceSectionContract(
+      "coreReconciliation",
+      canonicalFinancialIntelligence
+    ),
+    capitalPlanAnalysis: buildFinancialIntelligenceSectionContract(
+      "capitalPlanAnalysis",
+      canonicalFinancialIntelligence
+    ),
     lenderDiligenceChecklist: buildSectionContract({
       status: "required_if_source_present",
       requiredFacts: ["has_purchase_assumptions", "has_current_debt_context", "has_structured_renovation", "has_appraisal_context", "has_market_survey_context", "has_environmental_context"],
@@ -1570,8 +1671,9 @@ function buildAcquisitionMemoBossContract({
       reportMeta,
       coreMetrics,
     }),
+    financialIntelligence: normalizeBossContractFact(canonicalFinancialIntelligence),
     sections,
-    forbiddenSurfaces: [...FORBIDDEN_SURFACES],
+    forbiddenSurfaces: forbiddenSurfacesFor(canonicalFinancialIntelligence),
     renderRequirements: [
       "Renderer must obey the Boss Contract deterministically.",
       "Renderer must not invent facts or use unsupported fallback text when source-backed facts exist.",
@@ -1645,6 +1747,10 @@ function validateAcquisitionMemoBossContract(contract) {
       "capRateValueIndication",
       "currentDebtContext",
       "proposedFinancingContext",
+      "debtServiceCoverage",
+      "debtTermAnalysis",
+      "coreReconciliation",
+      "capitalPlanAnalysis",
       "documentTreatment",
       "lenderDiligenceChecklist",
     ];
@@ -1686,7 +1792,8 @@ function validateAcquisitionMemoBossContract(contract) {
   if (!Array.isArray(contract.forbiddenSurfaces) || contract.forbiddenSurfaces.length === 0) {
     pushIssue("FORBIDDEN_SURFACES_MISSING", "forbiddenSurfaces must be a non-empty array.", "critical", "forbiddenSurfaces");
   } else {
-    const requiredForbidden = FORBIDDEN_SURFACES.filter((surface) => !contract.forbiddenSurfaces.includes(surface));
+    const requiredForbidden = forbiddenSurfacesFor(contract?.financialIntelligence)
+      .filter((surface) => !contract.forbiddenSurfaces.includes(surface));
     if (requiredForbidden.length > 0) {
       pushIssue("FORBIDDEN_SURFACES_INCOMPLETE", `forbiddenSurfaces is missing: ${requiredForbidden.join(", ")}.`, "critical", "forbiddenSurfaces");
     }
@@ -1749,6 +1856,12 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
   const acquisitionRequestSection = findSection(bossContract, "acquisitionRequestContext");
   const operatingStatementSection = findSection(bossContract, "operatingStatementTTMSummary");
   const documentTreatmentSection = findSection(bossContract, "documentTreatment");
+  const financialIntelligenceSections = [
+    ["debtServiceCoverage", "Debt Service and Coverage"],
+    ["debtTermAnalysis", "Debt Term and Maturity Analysis"],
+    ["coreReconciliation", "Core Source Reconciliation"],
+    ["capitalPlanAnalysis", "Capital Plan and Reserve Position"],
+  ];
 
   const coreT12Valid = Boolean(bossContract?.coreGate?.t12Valid);
   const coreRentRollValid = Boolean(bossContract?.coreGate?.rentRollValid);
@@ -1761,6 +1874,22 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
   const sourceBackedDocumentTreatment = Boolean(getFactAvailability(documentTreatmentSection)?.sourceBacked);
   const sourceBackedAcqRequest = Boolean(getFactAvailability(acquisitionRequestSection)?.sourceBacked);
 
+  for (const [sectionKey, heading] of financialIntelligenceSections) {
+    const sectionContract = findSection(bossContract, sectionKey);
+    if (
+      getFactAvailability(sectionContract)?.sectionDisplayReady === true &&
+      !new RegExp(escapeRegExp(heading), "i").test(htmlString)
+    ) {
+      addRenderViolation(
+        violations,
+        "INSTITUTIONAL_FINANCIAL_INTELLIGENCE_MISSING",
+        "critical",
+        sectionKey,
+        `${heading} must render when its canonical receipt is display-ready.`
+      );
+    }
+  }
+
   if (coreRentRollValid && sourceBackedUnitMix) {
     if (/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(htmlString)) {
       addRenderViolation(
@@ -1771,13 +1900,42 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
         "Unit Mix cannot show a false missing-rows fallback when structured unit evidence is source-backed."
       );
     }
-    if (!/(1BR|2BR)/i.test(htmlString)) {
+    const acceptedUnitMixRows = Array.isArray(sourceRentRoll?.unit_mix) && sourceRentRoll.unit_mix.length > 0
+      ? sourceRentRoll.unit_mix
+      : Array.isArray(sourceRentRoll?.units)
+        ? sourceRentRoll.units
+        : [];
+    const acceptedUnitMixLabels = [...new Set(
+      acceptedUnitMixRows
+        .map((row) => String(
+          row?.label ??
+          row?.unit_label ??
+          row?.unitLabel ??
+          row?.unit_type ??
+          row?.unitType ??
+          row?.type ??
+          row?.bedroom_type ??
+          row?.bedroomType ??
+          row?.bedrooms ??
+          row?.beds ??
+          row?.bedroom_count ??
+          ""
+        ).trim())
+        .map((label) => label ? (/^\d+$/.test(label) ? `${label}BR` : label) : "Unit Mix")
+        .filter(Boolean)
+    )];
+    const missingUnitMixLabels = acceptedUnitMixLabels.filter(
+      (label) => !new RegExp(`(?:>|\\s)${escapeRegExp(label)}(?:<|\\s)`, "i").test(htmlString)
+    );
+    if (acceptedUnitMixLabels.length === 0 || missingUnitMixLabels.length > 0) {
       addRenderViolation(
         violations,
         "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS",
         "critical",
         "unitMix",
-        "Unit Mix must render structured unit rows when the rent roll is source-backed."
+        missingUnitMixLabels.length > 0
+          ? `Unit Mix is missing accepted Rent Roll labels: ${missingUnitMixLabels.join(", ")}.`
+          : "Unit Mix must render structured unit rows when the rent roll is source-backed."
       );
     }
   }
@@ -1891,7 +2049,7 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
   }
 
   const forbiddenPatterns = [
-    /\bDSCR\b/i,
+    ...(financialIntelligencePermitsDscr(bossContract) ? [] : [/\bDSCR\b/i]),
     /\brefinance\b/i,
     /\brefi\b/i,
     /\bDCF\b/i,

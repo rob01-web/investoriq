@@ -780,3 +780,23 @@ The future Admin projection may surface a capital limitation only after Gate 4G 
 Narrow optional capital fact conflicts preserve uncontested authority. Material plan-total conflicts remain fail-closed at the document role. Cross-role conflicts select no winner and collapse only the affected comparison.
 
 Gate 4F verification: Financial Intelligence `PASS`; support authority `PASS` with 37 scenarios; Source Truth pipeline and constitutional suites `PASS`; full QA and production build `PASS`; diff integrity `PASS`; Vercel budget `PASS 12 / 12`.
+
+## July 16 Gate 4G checkpoint
+
+```text
+Gate 3: PASS / deployed / production route verified
+Gate 4A through Gate 4F: PASS / committed before Gate 4G as recorded above
+Gate 4G: PASS locally / atomic downstream integration
+Gate 4: FUNCTIONALLY COMPLETE LOCALLY
+Gate 5A: NEXT / canonical institutional-underwriting input and scenario-policy contract
+```
+
+The Quality Manifest and Admin incident projection now consume the same immutable institutional financial-intelligence receipt used by the Acquisition report. They do not reconstruct calculations from raw uploads, parser outputs, aliases, HTML, or legacy underwriting fields.
+
+The Manifest records section decisions, calculation formulas, required inputs, accepted provenance, eligible results, qualifications, and collapse reasons. The Admin projection receives receipt summaries and calculation receipts only. A collapsed optional financial section may create a published-with-limitations quality record when appropriate, but it cannot become a platform defect, catastrophic core failure, customer upload workflow, credit action, or report-level publication blocker.
+
+The integration changes no customer remedy authority, credit restoration logic, billing logic, Delivery Gate logic, terminal taxonomy, or Screening behavior. It also adds no serverless function and preserves the Vercel Hobby budget.
+
+Customer output now includes source-backed Debt Service and Coverage, Debt Term and Maturity Analysis, Core Source Reconciliation, and Capital Plan and Reserve Position only when the corresponding receipt is display-ready. The report never exposes internal receipt names or implementation machinery.
+
+Gate 5A must first define the accepted inputs, policy thresholds, scenario authority, and deterministic formulas for institutional underwriting. The Admin Dashboard may display Gate 5 results only from a future finalized canonical receipt. It must not infer a refinance classification, risk tier, stress result, or recommendation from Gate 4 facts alone.

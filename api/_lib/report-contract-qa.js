@@ -4,6 +4,7 @@ import {
   buildDeterministicReportContractQaSeal,
   DETERMINISTIC_REPORT_CONTRACT,
 } from "./deterministic-report-contract-qa-seal.js";
+import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
 
 import {
   buildCurrentDebtAssessmentState,
@@ -1070,6 +1071,7 @@ export function buildReportContractQa({
   canonicalSupportDocMap = null,
   renderedDocumentTreatmentRows = [],
   upstreamDeterministicContractQaSeal = null,
+  financialIntelligence = null,
 } = {}) {
   const rawHtml = String(html || "");
   const text = stripHtml(html);
@@ -2797,9 +2799,17 @@ export function buildReportContractQa({
 
   // Rendered DSCR extraction is evidence-only for conformance checks.
   const currentDebtDscrValues = extractCurrentDebtDscrValues(text);
-  const canonicalCurrentDebtDscrStatus = String(currentDebtState?.current_debt_dscr_status || "").toLowerCase();
-  const canonicalCurrentDebtDscr = Number(currentDebtState?.current_debt_dscr);
-  if (hasCanonicalCurrentDebtState && canonicalCurrentDebtDscrStatus === "computed" && Number.isFinite(canonicalCurrentDebtDscr)) {
+  const hasInstitutionalFinancialIntelligence =
+    isCanonicalInstitutionalFinancialIntelligence(financialIntelligence);
+  const financialCurrentDebtDscr = financialIntelligence?.analyses?.dscr?.currentDebt || null;
+  const canonicalCurrentDebtDscrStatus = hasInstitutionalFinancialIntelligence
+    ? financialCurrentDebtDscr?.calculationStatus === "calculated" ? "computed" : "not_assessed"
+    : String(currentDebtState?.current_debt_dscr_status || "").toLowerCase();
+  const canonicalCurrentDebtDscr = hasInstitutionalFinancialIntelligence
+    ? Number(financialCurrentDebtDscr?.ratio)
+    : Number(currentDebtState?.current_debt_dscr);
+  const hasCurrentDebtDscrAuthority = hasInstitutionalFinancialIntelligence || hasCanonicalCurrentDebtState;
+  if (hasCurrentDebtDscrAuthority && canonicalCurrentDebtDscrStatus === "computed" && Number.isFinite(canonicalCurrentDebtDscr)) {
     const tolerance = 0.02;
     const mismatchedValues = currentDebtDscrValues.filter((entry) =>
       Math.abs(entry.value - canonicalCurrentDebtDscr) > tolerance
@@ -2840,7 +2850,7 @@ export function buildReportContractQa({
     }
   }
   const canonicalDebtNotComputed = canonicalCurrentDebtDscrStatus && canonicalCurrentDebtDscrStatus !== "computed";
-  if (hasCanonicalCurrentDebtState && canonicalDebtNotComputed && currentDebtDscrValues.length > 0) {
+  if (hasCurrentDebtDscrAuthority && canonicalDebtNotComputed && currentDebtDscrValues.length > 0) {
     addViolation(violations, {
       code: "CURRENT_DEBT_DSCR_CANONICAL_NOT_ASSESSED_CONFLICT",
       severity: "critical",
@@ -2889,7 +2899,9 @@ export function buildReportContractQa({
     }
   }
 
-  const canonicalSourceReconciliationVariance = Number(sourceReportCoverageQa?.source_reconciliation_state?.variance_pct);
+  const canonicalSourceReconciliationVariance = hasInstitutionalFinancialIntelligence
+    ? Number(financialIntelligence?.analyses?.coreReconciliation?.reconciliation?.varianceRatioToT12Gpr)
+    : Number(sourceReportCoverageQa?.source_reconciliation_state?.variance_pct);
   const renderedSourceReconciliationVarianceValues = extractSourceReconciliationVarianceValues(text);
   if (Number.isFinite(canonicalSourceReconciliationVariance) && renderedSourceReconciliationVarianceValues.length > 0) {
     const canonicalVariancePct = canonicalSourceReconciliationVariance * 100;
@@ -3375,6 +3387,7 @@ export function buildReportContractQa({
         }
       : null,
     grossRentCapitalizationAuthorized: false,
+    financialIntelligence,
     upstreamSeal: upstreamDeterministicContractQaSeal,
   });
   for (const issue of deterministicContractQaSeal.issues) {

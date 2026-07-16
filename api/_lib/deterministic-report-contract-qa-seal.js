@@ -1,3 +1,5 @@
+import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
+
 const CONTRACT_QA_SEAL_VERSION = "p0b_deterministic_contract_qa_v1";
 const BREAK_EVEN_FORMULA = "total_operating_expenses / gross_potential_rent";
 const RECONCILIATION_REQUIRED_STATUSES = new Set([
@@ -297,12 +299,91 @@ function validateBreakEven(text, breakEven = null) {
   return issues;
 }
 
+function formatFinancialIntelligenceResult(receipt) {
+  const result = finite(receipt?.result);
+  if (!Number.isFinite(result)) return null;
+  const units = String(receipt?.units || "");
+  if (units === "ratio_x") return `${result.toFixed(2)}x`;
+  if (units === "ratio") return formatPercent(result, 2);
+  if (units.startsWith("currency")) return formatMoney(result);
+  return String(result);
+}
+
+function validateInstitutionalFinancialIntelligence(text, financialIntelligence = null) {
+  const issues = [];
+  if (financialIntelligence == null) return issues;
+  if (!isCanonicalInstitutionalFinancialIntelligence(financialIntelligence)) {
+    return [buildIssue(
+      "FINANCIAL_INTELLIGENCE_RECEIPT_INVALID",
+      "The financial-intelligence render contract requires the canonical immutable receipt.",
+      {},
+      "contract.financialIntelligence"
+    )];
+  }
+  const headings = {
+    debtServiceCoverage: "Debt Service and Coverage",
+    debtTermAnalysis: "Debt Term and Maturity Analysis",
+    coreReconciliation: "Core Source Reconciliation",
+    capitalPlanAnalysis: "Capital Plan and Reserve Position",
+  };
+  const renderedLabels = {
+    currentDebtAnnualDebtService: "Current Debt",
+    proposedFinancingAnnualDebtService: "Proposed Acquisition Financing",
+    currentDebtDscr: "Current Debt",
+    proposedFinancingDscr: "Proposed Acquisition Financing",
+    proposedLenderFeeDollars: "Proposed Lender Fee",
+    coreRentDifference: "Rent Roll less T12",
+    coreRentVarianceToT12Gpr: "Variance to T12 Gross Potential Rent",
+    coreRentDifferencePerUnitMonthly: "Difference per Unit per Month",
+    annualReserveContributionPerUnit: "Annual Reserve Contribution per Unit",
+  };
+  for (const [sectionKey, section] of Object.entries(financialIntelligence.customerSections || {})) {
+    if (section?.displayReady !== true) continue;
+    const heading = headings[sectionKey];
+    if (heading && !text.includes(heading)) {
+      issues.push(buildIssue(
+        "FINANCIAL_INTELLIGENCE_SECTION_NOT_RENDERED",
+        `${heading} is display-ready but missing from the approved customer surface.`,
+        { section: sectionKey },
+        `html.financialIntelligence.${sectionKey}`
+      ));
+    }
+  }
+  for (const receipt of Array.isArray(financialIntelligence.calculationReceipts)
+    ? financialIntelligence.calculationReceipts
+    : []) {
+    if (receipt?.eligible !== true || receipt?.sectionDisplayReady !== true) continue;
+    const display = formatFinancialIntelligenceResult(receipt);
+    const calculationKey = String(receipt?.calculationKey || "");
+    const label = renderedLabels[calculationKey] || (
+      calculationKey.startsWith("capitalPlan") && calculationKey.endsWith("ReserveLessRequirement")
+        ? `Capital Plan ${calculationKey.match(/capitalPlan(\d+)/)?.[1] || ""} Reserve less Requirement`.trim()
+        : receipt?.label || calculationKey
+    );
+    if (!display || !containsLabeledDisplay(text, label, [display])) {
+      issues.push(buildIssue(
+        "FINANCIAL_INTELLIGENCE_VALUE_NOT_RENDERED",
+        `${receipt?.label || receipt?.calculationKey || "A canonical calculation"} is missing its canonical value.`,
+        {
+          calculation_key: calculationKey || null,
+          expected_label: label,
+          expected_display: display,
+          canonical_result: receipt?.result ?? null,
+        },
+        `html.financialIntelligence.${receipt?.calculationKey || "unknown"}`
+      ));
+    }
+  }
+  return issues;
+}
+
 export function buildDeterministicReportContractQaSeal({
   html = "",
   reportIdentity = null,
   sourceReconciliation = null,
   breakEven = null,
   supportSections = null,
+  financialIntelligence = null,
   grossRentCapitalizationAuthorized = false,
   upstreamSeal = null,
 } = {}) {
@@ -313,6 +394,7 @@ export function buildDeterministicReportContractQaSeal({
     ...(fullCustomerIdentitySurface ? validateIdentity(text, reportIdentity) : []),
     ...validateSupportFactBundles(supportSections),
     ...validateBreakEven(text, breakEven),
+    ...validateInstitutionalFinancialIntelligence(text, financialIntelligence),
   ];
   const reconciliation = validateReconciliation(text, sourceReconciliation);
   issues.push(...reconciliation.issues);

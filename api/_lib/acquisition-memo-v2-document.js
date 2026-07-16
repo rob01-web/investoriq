@@ -1011,6 +1011,119 @@ function renderDebtFinancingContextSection({
   return renderSection("Debt / Financing Context", `<table class="detail-table"><tbody>${rows}</tbody></table>`, { pageBreakBefore: true });
 }
 
+function renderDebtServiceCoverageSection(customerSurfaceModel = null) {
+  const section = getCustomerSurfaceSection(customerSurfaceModel, "debtServiceCoverage");
+  if (section?.factAvailability?.sectionDisplayReady !== true) return "";
+  const rows = Object.entries(section?.facts || {}).map(([roleKey, facts]) => {
+    const contextLabel = roleKey === "currentDebt" ? "Current Debt" : "Proposed Acquisition Financing";
+    const monthlyDebtService = toFiniteNumber(facts?.monthlyDebtService);
+    const annualDebtService = toFiniteNumber(facts?.annualDebtService);
+    const dscr = toFiniteNumber(facts?.dscr);
+    if (![monthlyDebtService, annualDebtService, dscr].every(Number.isFinite)) return "";
+    const basis = facts?.modeledDebtService === true
+      ? "Modeled level-payment debt service"
+      : "Source-stated monthly payment, annualized";
+    return `<tr><td>${escapeHtml(contextLabel)}</td><td>${formatMoney(monthlyDebtService)}</td><td>${formatMoney(annualDebtService)}</td><td>${dscr.toFixed(2)}x</td><td>${escapeHtml(basis)}</td></tr>`;
+  }).filter(Boolean).join("");
+  if (!rows) return "";
+  const qualifications = Object.entries(section?.facts || {}).map(([roleKey, facts]) => {
+    if (!String(facts?.qualification || "").trim()) return "";
+    const contextLabel = roleKey === "currentDebt" ? "Current Debt" : "Proposed Acquisition Financing";
+    return `<p class="footer-note"><strong>${escapeHtml(contextLabel)}:</strong> ${escapeHtml(facts.qualification)}</p>`;
+  }).filter(Boolean).join("");
+  return renderSection(
+    "Debt Service and Coverage",
+    `<table class="source-table"><thead><tr><th>Context</th><th>Monthly Debt Service</th><th>Annual Debt Service</th><th>DSCR</th><th>Basis</th></tr></thead><tbody>${rows}</tbody></table>${qualifications}<p class="footer-note">No lender covenant threshold or coverage tier is inferred.</p>`,
+    { pageBreakBefore: true }
+  );
+}
+
+function renderDebtTermAnalysisSection(customerSurfaceModel = null) {
+  const section = getCustomerSurfaceSection(customerSurfaceModel, "debtTermAnalysis");
+  if (section?.factAvailability?.sectionDisplayReady !== true) return "";
+  const facts = section?.facts || {};
+  const rows = [];
+  const addRoleRows = (roleKey, roleLabel) => {
+    const maturity = facts?.maturity?.[roleKey] || {};
+    const rateStructure = facts?.rateStructure?.[roleKey] || {};
+    if (maturity.analysisStatus === "assessed") {
+      rows.push(`<tr><td>${escapeHtml(`${roleLabel} Maturity Date`)}</td><td>${escapeHtml(maturity.normalizedMaturityDate || maturity.maturityDate || "")}</td></tr>`);
+      rows.push(`<tr><td>${escapeHtml(`${roleLabel} Days to Maturity`)}</td><td>${Number(maturity.daysToMaturity).toLocaleString("en-US")}</td></tr>`);
+      rows.push(`<tr><td>${escapeHtml(`${roleLabel} Maturity Position`)}</td><td>${escapeHtml(String(maturity.maturityPosition || "").replace(/_/g, " "))}</td></tr>`);
+    }
+    if (rateStructure.analysisStatus === "assessed" && rateStructure.rateStructure) {
+      rows.push(`<tr><td>${escapeHtml(`${roleLabel} Rate Structure`)}</td><td>${escapeHtml(String(rateStructure.rateStructure).replace(/^./, (value) => value.toUpperCase()))}</td></tr>`);
+    }
+  };
+  addRoleRows("currentDebt", "Current Debt");
+  addRoleRows("proposedFinancing", "Proposed Acquisition Financing");
+  const lenderFee = facts?.lenderFee || {};
+  if (lenderFee.calculationStatus === "calculated" && Number.isFinite(toFiniteNumber(lenderFee.lenderFeeDollars))) {
+    rows.push(`<tr><td>Proposed Lender Fee</td><td>${formatMoney(lenderFee.lenderFeeDollars)}</td></tr>`);
+  }
+  if (!rows.length) return "";
+  return renderSection(
+    "Debt Term and Maturity Analysis",
+    `<table class="detail-table"><tbody>${rows.join("")}</tbody></table><p class="footer-note">Contractual term positions are shown without an inferred risk tier or rate-shock scenario.</p>`,
+    { pageBreakBefore: true }
+  );
+}
+
+function renderCoreReconciliationAnalysisSection(customerSurfaceModel = null) {
+  const section = getCustomerSurfaceSection(customerSurfaceModel, "coreReconciliation");
+  if (section?.factAvailability?.sectionDisplayReady !== true) return "";
+  const facts = section?.facts || {};
+  const rows = [
+    `<tr><td>T12 Gross Potential Rent</td><td>${formatMoney(facts.t12GrossPotentialRent)}</td></tr>`,
+    `<tr><td>Rent Roll Annual In-Place Rent</td><td>${formatMoney(facts.rentRollAnnualInPlaceRent)}</td></tr>`,
+    `<tr><td>Rent Roll less T12</td><td>${formatMoney(facts.differenceAmount)}</td></tr>`,
+    `<tr><td>Variance to T12 Gross Potential Rent</td><td>${formatReconciliationVariance(facts.varianceRatioToT12Gpr)}</td></tr>`,
+    Number.isFinite(toFiniteNumber(facts.perUnitMonthlyDifference))
+      ? `<tr><td>Difference per Unit per Month</td><td>${formatMoney(facts.perUnitMonthlyDifference)}</td></tr>`
+      : "",
+  ].filter(Boolean).join("");
+  return renderSection(
+    "Core Source Reconciliation",
+    `<table class="detail-table"><tbody>${rows}</tbody></table><p class="body-copy" style="margin-top:10px;">${escapeHtml(facts.sourceBoundExplanation || "")}</p>`,
+    { pageBreakBefore: true }
+  );
+}
+
+function renderCapitalPlanAnalysisSection(customerSurfaceModel = null) {
+  const section = getCustomerSurfaceSection(customerSurfaceModel, "capitalPlanAnalysis");
+  if (section?.factAvailability?.sectionDisplayReady !== true) return "";
+  const facts = section?.facts || {};
+  const rows = [];
+  for (const [index, plan] of (Array.isArray(facts.capitalPlans) ? facts.capitalPlans : []).entries()) {
+    const label = `Capital Plan ${index + 1}`;
+    if (Number.isFinite(toFiniteNumber(plan?.planAmount))) rows.push(`<tr><td>${label} Amount</td><td>${formatMoney(plan.planAmount)}</td></tr>`);
+    const schedule = plan?.timing?.relativeSchedule || {};
+    if (Number.isInteger(schedule.durationMonths)) rows.push(`<tr><td>${label} Duration</td><td>${schedule.durationMonths} months</td></tr>`);
+    const buckets = plan?.timing?.sourceLabeledBuckets || {};
+    if (Number.isFinite(toFiniteNumber(buckets.immediate))) rows.push(`<tr><td>${label} Immediate Capital</td><td>${formatMoney(buckets.immediate)}</td></tr>`);
+    if (Number.isFinite(toFiniteNumber(buckets.nearTerm))) rows.push(`<tr><td>${label} Near-Term Capital</td><td>${formatMoney(buckets.nearTerm)}</td></tr>`);
+    if (Number.isFinite(toFiniteNumber(buckets.longTerm))) rows.push(`<tr><td>${label} Long-Term Capital</td><td>${formatMoney(buckets.longTerm)}</td></tr>`);
+    const comparison = plan?.reserveComparison || {};
+    if (comparison.calculationStatus === "calculated") {
+      rows.push(`<tr><td>${label} Reserve less Requirement</td><td>${formatMoney(comparison.reserveLessRequirementAmount)}</td></tr>`);
+      if (Number.isFinite(toFiniteNumber(comparison.reserveCoverageRatio))) rows.push(`<tr><td>${label} Reserve Coverage</td><td>${Number(comparison.reserveCoverageRatio).toFixed(2)}x</td></tr>`);
+    }
+  }
+  const reserve = facts?.reserve || {};
+  if (Number.isFinite(toFiniteNumber(reserve.reserveBalance))) rows.push(`<tr><td>Capital Reserve Balance</td><td>${formatMoney(reserve.reserveBalance)}</td></tr>`);
+  if (Number.isFinite(toFiniteNumber(reserve.annualReserveContribution))) rows.push(`<tr><td>Annual Reserve Contribution</td><td>${formatMoney(reserve.annualReserveContribution)}</td></tr>`);
+  if (Number.isFinite(toFiniteNumber(reserve.contributionPerUnitAnnual))) rows.push(`<tr><td>Annual Reserve Contribution per Unit</td><td>${formatMoney(reserve.contributionPerUnitAnnual)}</td></tr>`);
+  const deferred = facts?.deferredMaintenance || {};
+  if (deferred.sourceStatus && deferred.sourceStatus !== "not_established") rows.push(`<tr><td>Deferred Maintenance Status</td><td>${escapeHtml(String(deferred.sourceStatus).replace(/_/g, " "))}</td></tr>`);
+  if (Number.isFinite(toFiniteNumber(deferred.amount))) rows.push(`<tr><td>Deferred Maintenance Amount</td><td>${formatMoney(deferred.amount)}</td></tr>`);
+  if (!rows.length) return "";
+  return renderSection(
+    "Capital Plan and Reserve Position",
+    `<table class="detail-table"><tbody>${rows.join("")}</tbody></table><p class="footer-note">Reserve adequacy and deferred-maintenance severity are not classified without an approved policy.</p>`,
+    { pageBreakBefore: true }
+  );
+}
+
 function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePackage = null, bossContract = null, customerSurfaceModel = null) {
   const bossDocs = Array.isArray(customerSurfaceModel?.supportSources) && customerSurfaceModel.supportSources.length
     ? customerSurfaceModel.supportSources
@@ -1405,6 +1518,7 @@ export function renderCompleteAcquisitionMemoV2Html({
   propertyProfile = null,
   bossContract = null,
   customerSurfaceModel = null,
+  financialIntelligence = null,
 } = {}) {
   try {
     const hasCanonicalBreakEvenContract = Boolean(customerSurfaceModel?.financialTruth?.breakEvenOccupancy);
@@ -1452,6 +1566,18 @@ export function renderCompleteAcquisitionMemoV2Html({
     const operatingSupportSection = renderSafely("Operating Support", () => renderOperatingSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.operatingSupport });
     const rentValueSupportSection = renderSafely("Rent / Value Support", () => renderRentValueSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.rentValueSupport });
     const debtFinancingContextSection = renderSafely("Debt / Financing Context", () => renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage, loanTermSheetTermsPayload, mortgagePayload, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.debtFinancingContext });
+    const debtServiceCoverageSection = bossSections.debtServiceCoverage?.status === "required"
+      ? renderSafely("Debt Service and Coverage", () => renderDebtServiceCoverageSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.debtServiceCoverage })
+      : "";
+    const debtTermAnalysisSection = bossSections.debtTermAnalysis?.status === "required"
+      ? renderSafely("Debt Term and Maturity Analysis", () => renderDebtTermAnalysisSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.debtTermAnalysis })
+      : "";
+    const coreReconciliationAnalysisSection = bossSections.coreReconciliation?.status === "required"
+      ? renderSafely("Core Source Reconciliation", () => renderCoreReconciliationAnalysisSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.coreReconciliation })
+      : "";
+    const capitalPlanAnalysisSection = bossSections.capitalPlanAnalysis?.status === "required"
+      ? renderSafely("Capital Plan and Reserve Position", () => renderCapitalPlanAnalysisSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.capitalPlanAnalysis })
+      : "";
     const operatingStatementSection = renderSafely("Operating Statement / TTM Summary", () => renderOperatingStatementSection({ sourcePackage, t12Payload, coreMetrics, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.operatingStatementTTMSummary });
     const dataCoverageSection = renderSafely("Data Coverage & Source Limitations", () => renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.dataCoverageSourceLimitations });
     const treatmentSection = renderSafely("Source Context / Support Document Treatment", () => renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.sourceContextSupportDocumentTreatment });
@@ -1597,6 +1723,10 @@ export function renderCompleteAcquisitionMemoV2Html({
     ${operatingSupportSection}
     ${rentValueSupportSection}
     ${debtFinancingContextSection}
+    ${debtServiceCoverageSection}
+    ${debtTermAnalysisSection}
+    ${coreReconciliationAnalysisSection}
+    ${capitalPlanAnalysisSection}
     ${operatingStatementSection}
     ${dataCoverageSection}
     ${treatmentSection}

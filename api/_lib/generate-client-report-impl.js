@@ -43,6 +43,7 @@ import {
 } from "./source-truth-package.js";
 import { buildReportQualityManifestCandidate } from "./report-quality-manifest.js";
 import { buildAcquisitionMemoProjection } from "./acquisition-memo-projection.js";
+import { buildCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
 import { renderAcquisitionMemo } from "./acquisition-memo-renderer.js";
 import {
   buildAcquisitionMemoBossContract,
@@ -4665,6 +4666,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       }
     }
     const acqMemoV2SourceAuthorityEnabled = effectiveReportMode === "v1_core";
+    const acquisitionMemoGeneratedAt = new Date().toISOString();
+    const acquisitionMemoFinancialIntelligence = acqMemoV2SourceAuthorityEnabled
+      ? buildCanonicalInstitutionalFinancialIntelligence({
+          sourceTruthPackage: sourceTruthPackageResult,
+          asOfDate: acquisitionMemoGeneratedAt.slice(0, 10),
+        })
+      : null;
     let acquisitionMemoV2Bridge = null;
     let acquisitionMemoV2Finalization = null;
     const sourceTruthCanonicalSourcePackage = constrainCanonicalSourcePackageToSourceTruth(
@@ -4682,13 +4690,16 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       const canonicalSourcePackage = testAcqMemoV2SourcePackage
         ? constrainCanonicalSourcePackageToSourceTruth(testAcqMemoV2SourcePackage, sourceTruthPackageResult)
         : sourceTruthCanonicalSourcePackage;
-      const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage);
+      const acquisitionMemoProjection = buildAcquisitionMemoProjection(canonicalSourcePackage, {
+        financialIntelligence: acquisitionMemoFinancialIntelligence,
+      });
       const renderedAcquisitionMemo = renderAcquisitionMemo(acquisitionMemoProjection);
       acquisitionMemoV2Bridge = {
         canonicalSourcePackage,
         sourceTruthPackage: sourceTruthPackageResult,
         acquisitionMemoProjection,
         renderedAcquisitionMemo,
+        financialIntelligence: acquisitionMemoFinancialIntelligence,
       };
     }
     const canonicalSupportDocAuthorityRows = Array.from(sourceTruthCanonicalSourcePackage.supportDocs.values()).map((doc) => ({
@@ -4823,6 +4834,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
             canonicalSourcePackage: acquisitionMemoV2Bridge.canonicalSourcePackage,
             sourceTruthPackage: acquisitionMemoV2Bridge.sourceTruthPackage,
             acquisitionMemoProjection: acquisitionMemoV2Bridge.acquisitionMemoProjection,
+            financialIntelligence: acquisitionMemoFinancialIntelligence,
             coreMetrics: acquisitionMemoRenderContext,
             t12Payload,
             propertyProfile: {
@@ -4835,7 +4847,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
               reportMode: effectiveReportMode,
               reportTier,
               visibleClassification: coverClassificationLabel,
-              generatedAt: new Date().toISOString(),
+              generatedAt: acquisitionMemoGeneratedAt,
               propertyName: propertyNameDisplay,
               propertyAddress: displayPropertyAddress,
               propertyTitle: displayPropertyTitle,
@@ -5078,6 +5090,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       sourceTruthPackage: sourceTruthPackageResult,
       sourceTruthRequired: true,
       bossContract: acquisitionMemoBossContract,
+      financialIntelligence: acquisitionMemoFinancialIntelligence,
       t12Payload,
       acquisitionTermsPayload,
       loanTermSheetTermsPayload,
@@ -5100,7 +5113,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         reportMode: effectiveReportMode,
         reportTier,
         visibleClassification: coverClassificationLabel,
-        generatedAt: new Date().toISOString(),
+        generatedAt: acquisitionMemoGeneratedAt,
         propertyName: propertyNameDisplay,
         propertyAddress: displayPropertyAddress,
         propertyTitle: displayPropertyTitle,
@@ -8207,6 +8220,8 @@ try {
     renderedDocumentTreatmentRows,
     upstreamDeterministicContractQaSeal:
       acquisitionMemoV2Finalization?.deterministicContractQaSeal || null,
+    financialIntelligence:
+      acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
   });
   reportContractQaResult = reportContractQa;
   const contractTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -8780,6 +8795,7 @@ try {
     approvedHtml: docHtml,
     deterministicContractQaSeal: finalPdfDeterministicContractQaSeal,
     sourceReconciliation: finalPdfSourceReconciliation,
+    financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
     requiredTextAnchors: ["Acquisition Memo"],
     artifactMode: finalPdfArtifactMode,
     publicationTarget: finalPdfPublicationTarget,

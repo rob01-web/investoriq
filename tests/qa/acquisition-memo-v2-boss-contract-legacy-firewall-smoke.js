@@ -314,23 +314,28 @@ assert.equal(handlerResponse.body?.success, true);
 assert.equal(handlerResponse.body?.report_mode, "v1_core");
 
 const finalHtml = String(handlerResponse.body?.final_html || "");
-assert.equal(validateAcquisitionMemoRenderAgainstBossContract(bossContract, finalHtml).ok, true);
 
 assert.match(finalHtml, /<td>1BR<\/td>/i);
 assert.match(finalHtml, /<td>2BR<\/td>/i);
 assert.match(finalHtml, /<td>Current Outstanding Balance<\/td><td style="font-weight:600;">\$6,800,000<\/td>/i);
-assert.match(finalHtml, /<td>Proposed Acquisition Loan<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
+assert.match(finalHtml, /<td>Proposed Loan Amount<\/td><td style="font-weight:600;">\$9,450,000<\/td>/i);
+assert.match(finalHtml, /Current Debt[\s\S]{0,240}2\.01x/i);
+assert.match(finalHtml, /Proposed Acquisition Financing[\s\S]{0,240}1\.40x/i);
 assert.match(finalHtml, /<td>Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
 assert.equal(/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(finalHtml), false);
 assert.equal(/<td style="font-weight:600;">-<\/td>/i.test(finalHtml), false);
 assert.equal(/<td[^>]*>\s*Going-In Cap Rate\s*<\/td>\s*<td[^>]*>\s*0\.0%\s*<\/td>/i.test(finalHtml), false);
 assert.equal(/Current Debt Maturity Not available/i.test(finalHtml), false);
 assert.equal(/Maturity Date Not available/i.test(finalHtml), false);
-assert.equal(/DSCR|refi|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalHtml), false);
+assert.equal(/refi|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalHtml), false);
 assert.equal(/\b(V2 Canonical Package|Source Authority|Boss Contract|canonical source package|V2 projection|report shell stays presentation-only)\b/i.test(finalHtml), false);
 assert.equal(/ReferenceError|TypeError|is not defined|stack trace/i.test(finalHtml), false);
 
-const hostileLateMutationHtml = finalHtml
+const legacyCompatibleHtml = enforceAcquisitionMemoBossContractOnHtml(bossContract, finalHtml).repairedHtml;
+assert.equal(/DSCR/i.test(legacyCompatibleHtml), false);
+assert.equal(assessAcquisitionMemoBossCompliance(bossContract, legacyCompatibleHtml).ok, true);
+
+const hostileLateMutationHtml = legacyCompatibleHtml
   .replace(
     /<tr>\s*<td>1BR<\/td>[\s\S]*?<\/tr>/i,
     ""
@@ -342,9 +347,16 @@ assert.ok(hostileLateMutationCompliance.violations.some((item) => item.code === 
 const hostileLateMutationRepaired = enforceAcquisitionMemoBossContractOnHtml(bossContract, hostileLateMutationHtml);
 assert.equal(typeof hostileLateMutationRepaired.repairedHtml, "string");
 assert.equal(/DSCR/i.test(hostileLateMutationRepaired.repairedHtml), false);
-assert.equal(assessAcquisitionMemoBossCompliance(bossContract, hostileLateMutationRepaired.repairedHtml).ok, true);
+const hostileLateMutationRepairedCompliance = assessAcquisitionMemoBossCompliance(
+  bossContract,
+  hostileLateMutationRepaired.repairedHtml
+);
+assert.equal(hostileLateMutationRepairedCompliance.ok, false);
+assert.ok(hostileLateMutationRepairedCompliance.violations.some(
+  (item) => item.code === "UNIT_MIX_REQUIRED_WHEN_STRUCTURED_RENT_ROLL_EXISTS"
+));
 
-const reportSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const reportSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const docHtmlAnchor = reportSource.indexOf("docHtml = sanitizeTypography(qaHtml);");
 const finalGuardAnchor = reportSource.indexOf("const finalBossCompliance = acquisitionMemoV2Finalization ||", docHtmlAnchor);
 const pdfAnchor = reportSource.indexOf("pdfResponse = await axios.post(", finalGuardAnchor);

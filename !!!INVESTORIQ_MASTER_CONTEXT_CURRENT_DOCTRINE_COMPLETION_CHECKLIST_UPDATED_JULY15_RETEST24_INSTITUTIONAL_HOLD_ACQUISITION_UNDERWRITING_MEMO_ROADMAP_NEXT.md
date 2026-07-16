@@ -2127,5 +2127,56 @@ Vercel function budget: PASS, 12 / 12
 git diff --check: PASS
 ```
 
+## July 16 Gate 4G status
+
+```text
+GATE 4G ATOMIC DOWNSTREAM INTEGRATION: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+SCREENING BEHAVIOR CHANGED: NO
+DELIVERY GATE BEHAVIOR CHANGED: NO
+CORE PUBLICATION BEHAVIOR CHANGED: NO
+NEXT: Gate 5A canonical institutional-underwriting input and scenario-policy contract
+```
+
+Gate 4G adds `api/_lib/institutional-financial-intelligence.js` as the one immutable aggregate receipt owner for Gate 4A through Gate 4F. It consumes canonical Source Truth after adjudication and carries the canonical contracts, deterministic analyses, customer-section decisions, exact formulas, accepted inputs, provenance, qualifications, and collapse reasons. It cannot create authority, mutate Source Truth, infer missing numeric values, infer thresholds, invent scenarios, reuse legacy underwriting output, or block publication when valid T12 and Rent Roll authority exists.
+
+The canonical receipt is now consumed through the complete Acquisition path:
+
+```text
+canonical Source Truth
+-> institutional financial-intelligence receipt
+-> Acquisition Projection
+-> Boss Contract
+-> CustomerSurfaceModel
+-> deterministic document renderer
+-> Report Contract QA seal
+-> final PDF publication quality Boss
+-> Report Quality Manifest
+-> Admin quality incident projection
+```
+
+The receipt validator requires the full consume-only policy, Source Truth identity, all four section contracts, exact accepted-state booleans, and calculation receipts with formula, required inputs, exact provenance, finite eligible result, and non-blocking policy. A marker and version alone cannot unlock a report section.
+
+Customer-visible Acquisition sections now activate only when their canonical receipt section is display-ready:
+
+```text
+Debt Service and Coverage
+Debt Term and Maturity Analysis
+Core Source Reconciliation
+Capital Plan and Reserve Position
+```
+
+Current Debt DSCR and Proposed Acquisition DSCR remain separate. No covenant threshold, risk tier, materiality threshold, cause, stress scenario, reserve-adequacy conclusion, deferred-maintenance severity, or recommendation is inferred. Missing or conflicting optional evidence collapses only the dependent section.
+
+Gate 4G removes downstream parallel reconciliation authority by making Projection consume the Gate 4E receipt when it exists. Legacy no-receipt Boss behavior remains fail-closed and still forbids DSCR. The legacy firewall proof now explicitly verifies that canonical handler output may contain receipt-backed DSCR while the legacy contract cannot authorize it.
+
+The unit-mix render validator was also corrected to validate the actual canonical Rent Roll labels. It no longer assumes that accepted unit rows must be named `1BR` or `2BR`. This is a generic authority repair for studio, bedroom-count, commercial-style, and source-defined unit labels; it creates no label and changes no source fact.
+
+Gate 4G verification includes the atomic integration smoke, every Boss-family smoke, CustomerSurfaceModel, document rendering, final HTML handoff, Report Contract QA, PDF Boss, Manifest, Admin incident projection, optional-support collapse, legacy no-receipt firewall, full launch core, production build, support-authority matrix, terminology guards, Vercel function budget, and diff integrity.
+
+Gate 4 is now functionally complete locally. Gate 5 must begin with a new canonical institutional-underwriting input and scenario-policy contract. It may calculate LTV-constrained proceeds, DSCR-constrained proceeds, binding constraints, base and stressed value, and refinance classifications only after every source input, policy threshold, scenario, and formula has explicit authority. Legacy underwriting files remain reference-only and may not be imported into production authority or customer-output paths.
+
 ---
 # End of Active Master Context

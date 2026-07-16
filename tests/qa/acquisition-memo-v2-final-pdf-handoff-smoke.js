@@ -450,7 +450,7 @@ function buildGenericFinalHandoffPayload() {
   return payload;
 }
 
-async function buildLocalCanonicalSourcePackage(requestBody) {
+async function buildLocalSourceAuthority(requestBody) {
   const {
     buildCanonicalSourceTruthPackage,
     constrainCanonicalSourcePackageToSourceTruth,
@@ -465,18 +465,27 @@ async function buildLocalCanonicalSourcePackage(requestBody) {
     uploadedFiles,
     artifacts: structuredClone(requestBody.__test_payloads.coverageArtifacts),
   });
-  return constrainCanonicalSourcePackageToSourceTruth(null, sourceTruthPackage);
+  return {
+    sourceTruthPackage,
+    sourcePackage: constrainCanonicalSourcePackageToSourceTruth(null, sourceTruthPackage),
+  };
 }
 
 async function buildLocalBossContract(requestBody, overrides = {}) {
   const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
   const { buildAcquisitionMemoBossContract } = await import("../../api/_lib/acquisition-memo-boss-contract.js");
-  const sourcePackage = await buildLocalCanonicalSourcePackage(requestBody);
-  const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage);
   const scenario = buildScenarioInputs(requestBody, overrides);
+  const { sourceTruthPackage, sourcePackage } = await buildLocalSourceAuthority(requestBody);
+  const { buildCanonicalInstitutionalFinancialIntelligence } = await import("../../api/_lib/institutional-financial-intelligence.js");
+  const financialIntelligence = buildCanonicalInstitutionalFinancialIntelligence({
+    sourceTruthPackage,
+    asOfDate: String(scenario.reportMeta.generatedAt).slice(0, 10),
+  });
+  const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage, { financialIntelligence });
   return buildAcquisitionMemoBossContract({
     canonicalSourcePackage: sourcePackage,
     acquisitionMemoProjection,
+    financialIntelligence,
     t12Payload: structuredClone(requestBody.__test_payloads.t12Payload),
     coreMetrics: scenario.coreMetrics,
     propertyProfile: scenario.propertyProfile,
@@ -487,13 +496,19 @@ async function buildLocalBossContract(requestBody, overrides = {}) {
 
 async function buildLocalCustomerSurfaceModel(requestBody, localBossContract, overrides = {}) {
   const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
-  const sourcePackage = await buildLocalCanonicalSourcePackage(requestBody);
-  const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage);
   const scenario = buildScenarioInputs(requestBody, overrides);
+  const { sourceTruthPackage, sourcePackage } = await buildLocalSourceAuthority(requestBody);
+  const { buildCanonicalInstitutionalFinancialIntelligence } = await import("../../api/_lib/institutional-financial-intelligence.js");
+  const financialIntelligence = buildCanonicalInstitutionalFinancialIntelligence({
+    sourceTruthPackage,
+    asOfDate: String(scenario.reportMeta.generatedAt).slice(0, 10),
+  });
+  const acquisitionMemoProjection = buildAcquisitionMemoProjection(sourcePackage, { financialIntelligence });
   return buildAcquisitionMemoV2CustomerSurfaceModel({
     canonicalSourcePackage: sourcePackage,
     acquisitionMemoProjection,
     bossContract: localBossContract,
+    financialIntelligence,
     coreMetrics: scenario.coreMetrics,
     propertyProfile: scenario.propertyProfile,
     reportMeta: scenario.reportMeta,
@@ -680,7 +695,10 @@ assertNormalizedVisibleTextContains({
 assert.equal(finalPdfHandoffHtml.includes("T12_Stonebridge_Lofts_Attack_Test_8.xlsx"), true);
 assert.equal(finalPdfHandoffHtml.includes("Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx"), true);
 
-assert.equal(/DSCR|refi|refinance|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalPdfHandoffHtml), false);
+assert.match(finalPdfHandoffHtml, /Debt Service and Coverage/i);
+assert.match(finalPdfHandoffHtml, /Current Debt[\s\S]{0,240}2\.01x/i);
+assert.match(finalPdfHandoffHtml, /Proposed Acquisition Financing[\s\S]{0,240}1\.40x/i);
+assert.equal(/refi|refinance|DCF|waterfall|equity return|deal score|final recommendation|\bBUY\b|\bSELL\b|\bHOLD\b|loan approval|lender commitment/i.test(finalPdfHandoffHtml), false);
 assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(finalPdfHandoffHtml), false);
 assert.equal(/<td style="font-weight:600;">-<\/td>/i.test(finalPdfHandoffHtml), false);
 assert.equal(/No parsed unit mix rows were available from the canonical rent roll evidence\./i.test(finalPdfHandoffHtml), false);
@@ -776,7 +794,13 @@ assert.equal(/64-Unit Multifamily/i.test(genericCoverIdentity), false);
 assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(genericFinalPdfHandoffHtml), false);
 const tamperedMissingFactHtml = genericFinalPdfHandoffHtml.replace("Property Taxes", "Property Tax");
 assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(tamperedMissingFactHtml, genericLocalCustomerSurfaceModel).ok, false);
-assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(`${genericFinalPdfHandoffHtml}\nDSCR`, genericLocalCustomerSurfaceModel).ok, false);
+const genericCurrentDscr = Number(genericLocalCustomerSurfaceModel?.financialIntelligence?.customerSections?.debtServiceCoverage?.facts?.currentDebt?.dscr);
+assert.equal(Number.isFinite(genericCurrentDscr), true);
+const genericDscrDisplay = `${genericCurrentDscr.toFixed(2)}x`;
+assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(
+  genericFinalPdfHandoffHtml.replace(genericDscrDisplay, "9.99x"),
+  genericLocalCustomerSurfaceModel
+).ok, false);
 assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(`${genericFinalPdfHandoffHtml}\nBoss Contract`, genericLocalCustomerSurfaceModel).ok, false);
 
 console.log("acquisition-memo-v2-final-pdf-handoff-smoke: ok");
