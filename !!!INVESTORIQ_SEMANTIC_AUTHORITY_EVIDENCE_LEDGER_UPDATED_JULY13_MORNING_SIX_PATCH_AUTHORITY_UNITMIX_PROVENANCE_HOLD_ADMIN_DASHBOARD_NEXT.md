@@ -8279,3 +8279,51 @@ No threshold is inferred. No calculated ratio becomes a source fact. No modeled 
 Bridge, exit, and stress remain null until a canonical scenario contract exists. Arbitrary input objects cannot activate them. Accepted zero and negative NOI values are preserved; missing values remain null.
 
 Gate 4C verification: focused Gate 4A through 4C smokes `PASS`; full QA `PASS`; build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`. Public terminology guards remain active.
+
+## July 16 Gate 4D debt-risk authority receipt
+
+Gate 4C is committed and deployed at `2ed59d3`. Gate 4D extends the protected authority chain:
+
+```text
+raw extracted support text
+-> deterministic semantic family evidence
+-> canonical support-role adjudication
+-> exact source binding for rate structure, loan term, and maturity
+-> canonical Source Truth accepted fact or narrow fact conflict
+-> canonical debt-service input contract
++ canonical report analysis context
+-> deterministic maturity, rate-variability, lender-fee, and refinancing-readiness receipt
+```
+
+New accepted semantic values are deliberately small and explicit:
+
+```text
+rate_structure: fixed | floating | hybrid
+loan_term_years: accepted positive source value only
+maturity_date: accepted labeled source value only
+```
+
+`maturity_date` is no longer a current-debt semantic-family signal by itself. It remains a role-neutral fact until stronger document evidence establishes `current_debt_context` or `purchase_assumptions`.
+
+Deterministic categorical evidence handles semantic families, not thousands of phrases. It recognizes explicit fixed, floating, variable, adjustable, and hybrid structures; rejects negated fixed language; and withholds authority when fixed and floating terms conflict without an explicit transition. Every accepted categorical value retains an exact excerpt, source value, normalized value, and binding method.
+
+The Gate 4A contract now carries optional `rate_structure`, `loan_term_years`, and proposed `maturity_date` facts without adding them to any debt-service or DSCR required bundle. Their absence cannot change existing calculation eligibility.
+
+The canonical report analysis context requires a valid `YYYY-MM-DD` as-of date and prohibits system-clock fallback. Maturity results are reproducible. The analysis accepts unambiguous day-level ISO or named-month dates and refuses ambiguous slash dates or month-only precision.
+
+The debt-risk receipt preserves these semantic boundaries:
+
+```text
+contractual maturity position is not a risk tier
+floating or hybrid structure is not a modeled rate shock
+lender-fee dollars are a deterministic derivation, not a source-stated dollar fee
+current debt maturity is not future refinancing authority
+proposed acquisition financing is not refinancing
+missing refinancing terms mean model ineligible
+```
+
+Source Truth narrow conflict treatment is now explicit. Optional same-role conflicts in `rate_structure`, `loan_term_years`, or `maturity_date` reject only the disputed fact and create a `support.fact_conflicts` receipt. Uncontested accepted facts remain available. Full financing-bundle contradictions retain document-level rejection. Quality Manifest and incident consumers preserve this distinction.
+
+Gate 4D verification: support authority matrix `PASS` with 33 scenarios; Source Truth pipelines and constitutional matrix `PASS`; Quality Ops `PASS`; Financial Intelligence `PASS`; full QA and build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`. No renderer or customer copy changed.
+
+NEXT: Gate 4E T12 versus Rent Roll reconciliation materiality and source-bound explanation.

@@ -19231,3 +19231,35 @@ Collapsed coverage receipts retain valid accepted numerator or denominator compo
 Gate 4C performs no rendering, Boss, CustomerSurfaceModel, Delivery Gate, Screening, credit, billing, or publication mutation. Focused QA, full QA, build, terminology guards, diff integrity, and the 12 / 12 Vercel budget pass.
 
 Status: Gate 4C `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4D maturity, rate structure, refinancing, and lender-fee risk.
+
+## July 16 Gate 4D CVF closure
+
+Gate 4C is committed and deployed at `2ed59d3`. Gate 4D adds `api/_lib/deterministic-debt-risk-analysis.js` as the sole deterministic maturity, rate-structure, lender-fee, and refinancing-readiness owner. `api/_lib/report-analysis-context.js` supplies the required reproducible report as-of date.
+
+Closed Gate 4D failure families:
+
+```text
+maturity date alone cross-promotes proposed financing into current debt -> prohibited
+filename or parser role creates rate structure -> prohibited
+fixed, floating, or hybrid label lacks exact source evidence -> fact not accepted
+fixed and floating wording conflicts without an explicit transition -> rate structure rejected
+amortization is mistaken for loan term -> prohibited
+ambiguous maturity date is guessed -> analysis not assessed
+system clock silently changes maturity result -> prohibited
+missing maturity or rate structure becomes a risk label -> prohibited
+missing lender fee becomes zero -> prohibited
+accepted zero lender fee becomes missing -> prohibited
+proposed acquisition financing becomes refinancing authority -> prohibited
+current debt facts become future refinancing terms -> prohibited
+missing refinancing fact bundle produces a model -> prohibited
+optional risk fact conflict destroys uncontested financing authority -> prohibited
+optional debt-risk limitation blocks valid core publication -> prohibited
+```
+
+Source Truth now records narrow optional fact conflicts through `support.fact_conflicts`. Disputed `rate_structure`, `loan_term_years`, or `maturity_date` facts are excluded from accepted truth while the accepted role and uncontested facts remain intact. Material bundle conflicts retain the prior full fail-closed behavior. The Quality Manifest records accepted and rejected facts, and the Admin incident projection creates a non-blocking `SUPPORT_FACT_CONFLICT` event.
+
+Gate 4D creates no renderer output, Boss mutation, CustomerSurfaceModel mutation, Delivery Gate change, Screening change, credit change, billing change, or customer lifecycle change. No covenant threshold, risk tier, rate shock, recommendation, or refinancing scenario is inferred.
+
+Verification: support authority `PASS` with 33 scenarios; Source Truth pipeline, phase, and constitutional matrix `PASS`; Quality Ops `PASS`; Financial Intelligence `PASS`; full QA and production build `PASS`; Vercel budget `PASS 12 / 12`; diff integrity `PASS`.
+
+Status: Gate 4D `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4E T12 versus Rent Roll reconciliation materiality and source-bound explanation.

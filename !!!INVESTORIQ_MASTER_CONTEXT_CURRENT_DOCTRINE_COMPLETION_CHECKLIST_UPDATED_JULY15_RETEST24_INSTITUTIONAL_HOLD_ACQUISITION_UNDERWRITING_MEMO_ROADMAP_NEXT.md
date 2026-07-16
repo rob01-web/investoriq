@@ -1865,5 +1865,84 @@ Vercel function budget: PASS, 12 / 12
 git diff --check: PASS
 ```
 
+## Gate 4D status
+
+```text
+GATE 4C PRODUCTION COMMIT: 2ed59d3
+GATE 4C DEPLOYMENT: PASS
+GATE 4D DEBT RISK INTELLIGENCE: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+CUSTOMER-FACING COPY PRODUCED: NO
+RENDERER BEHAVIOR CHANGED: NO
+CORE PUBLICATION BEHAVIOR CHANGED: NO
+NEXT: 4E T12 versus Rent Roll reconciliation materiality and source-bound explanation
+```
+
+New canonical owners:
+
+```text
+api/_lib/report-analysis-context.js
+api/_lib/deterministic-debt-risk-analysis.js
+```
+
+Extended canonical owners:
+
+```text
+api/_lib/support-doc-semantic-evidence.js
+api/_lib/support-document-authority-adjudicator.js
+api/_lib/source-truth-package.js
+api/_lib/debt-service-input-contract.js
+api/_lib/report-quality-manifest.js
+api/_lib/report-quality-incident-projection.js
+```
+
+Gate 4D adds accepted, exact-evidence-bound support for explicit fixed, floating, and hybrid rate structures, proposed loan term, and proposed or current maturity date. Maturity date is role-neutral and can no longer independently create current-debt authority. Filename, parser route, or candidate metadata cannot create any of these facts.
+
+The deterministic analysis requires an explicit canonical report as-of date. It never uses the system clock as an undeclared fallback. It produces objective maturity positions only: future, due on the analysis date, matured, or not assessed. Ambiguous slash dates and incomplete month-only dates are not guessed.
+
+Rate analysis records only the accepted contractual structure and whether rate variability is present. It performs no unsupported rate shock, benchmark, spread, risk tier, pass/fail result, or covenant inference.
+
+Lender-fee economics use only accepted proposed loan amount and accepted lender-fee rate. The permanent reference proof is:
+
+```text
+$9,450,000 proposed loan x 0.85% lender fee = $80,325.00
+$80,325.00 / $13,500,000 purchase price = 0.595%
+```
+
+Accepted zero lender fee remains zero. Missing amount, rate, or evidence collapses only the calculation and remains null.
+
+Refinancing readiness remains fail-closed. Current maturity may identify a contractual maturity event, but current debt facts are not future refinancing terms. Proposed acquisition financing is never relabeled as refinancing. A refinancing model remains ineligible until accepted refinancing amount, rate, amortization, term, and value basis exist.
+
+Source Truth now resolves conflicts at the narrowest safe boundary for Gate 4D optional facts. If same-role sources disagree only on rate structure, loan term, or maturity, the disputed fact is rejected and recorded while uncontested accepted facts remain authoritative. Material financing-bundle conflicts retain the existing document-level fail-closed behavior. The Quality Manifest and Admin incident projection record `fact_conflict` and `SUPPORT_FACT_CONFLICT` without blocking a valid core report.
+
+Permanent proof owners:
+
+```text
+tests/qa/deterministic-debt-risk-analysis-smoke.js
+tests/qa/support-document-authority-adversarial-matrix-smoke.js
+tests/qa/debt-service-input-contract-smoke.js
+tests/qa/report-quality-manifest-smoke.js
+tests/qa/report-quality-incident-projection-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+The permanent authority matrix now covers 33 scenarios, including common fixed and floating wording, hybrid transitions, negation, filename disagreement, amortization versus loan term, optional fact conflicts, and preservation of uncontested financing authority.
+
+Exact verification after Gate 4D:
+
+```text
+npm.cmd run qa:support-authority: PASS, 33 scenarios
+npm.cmd run qa:source-truth-pipelines: PASS
+npm.cmd run qa:source-truth-phase7-8: PASS
+npm.cmd run qa:source-truth-matrix: PASS
+npm.cmd run qa:quality-ops: PASS
+npm.cmd run qa:financial-intelligence: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS
+```
+
 ---
 # End of Active Master Context

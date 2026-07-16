@@ -716,3 +716,22 @@ Gate 4C is not yet connected to the Admin Dashboard or customer report. It creat
 The future Quality Manifest can distinguish calculated coverage, collapsed coverage, missing numerator, missing denominator, evidence gap, authority conflict, modeled-denominator qualification, and scenario-contract absence without reconstructing facts from raw artifacts.
 
 Gate 4C does not infer covenant thresholds, pass/fail labels, risk tiers, scenarios, or customer recommendations. It does not mutate Source Truth, delivery, publication, credits, billing, or customer lifecycle.
+
+## July 16 Gate 4D checkpoint
+
+```text
+Gate 3: PASS / deployed / production route verified
+Gate 4A: PASS / committed and deployed
+Gate 4B: PASS / committed and deployed
+Gate 4C: PASS / committed and deployed at 2ed59d3
+Gate 4D: PASS locally / maturity, rate structure, lender fee, and refinancing readiness
+Gate 4E: NEXT / T12 versus Rent Roll reconciliation materiality and source-bound explanation
+```
+
+Gate 4D remains analysis-only and is not yet connected to customer report rendering. It creates immutable receipts from canonical accepted facts and a deterministic as-of date. Missing or ambiguous optional inputs collapse only the affected component and never block a valid core report.
+
+The Admin quality architecture now recognizes narrow support-fact conflicts. If accepted same-role documents disagree only on rate structure, loan term, or maturity, Source Truth excludes the disputed fact while preserving the accepted role and uncontested facts. The Report Quality Manifest records the rejected fact and evidence under `fact_conflict`. The incident projection emits `SUPPORT_FACT_CONFLICT`, places the receipt in `PUBLISHED_WITH_LIMITATIONS`, and does not classify it as a platform defect or report blocker.
+
+No customer upload workflow, customer remedy workflow, credit action, billing action, Delivery Gate change, terminal-code change, renderer change, or public wording was introduced. The Vercel budget remains 12 / 12.
+
+Gate 4D verification: Quality Ops `PASS`; Financial Intelligence `PASS`; support authority `PASS` with 33 scenarios; Source Truth pipeline and constitutional suites `PASS`; full QA and build `PASS`; diff integrity `PASS`.
