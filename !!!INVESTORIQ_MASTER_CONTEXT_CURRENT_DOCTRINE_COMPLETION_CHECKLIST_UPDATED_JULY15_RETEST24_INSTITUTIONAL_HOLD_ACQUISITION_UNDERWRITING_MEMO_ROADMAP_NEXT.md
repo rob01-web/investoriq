@@ -2312,5 +2312,75 @@ git diff --check: PASS before ledger update
 
 Gate 5C is bounded to deterministic acquisition and appraisal valuation reference math from Gate 5A accepted facts. The intended scope is source-bound purchase price per unit, appraisal value per unit, purchase price versus appraisal value difference, source-case capitalization-rate arithmetic where an accepted NOI basis and value exist, and exact comparison to a source-stated cap rate where available. Gate 5C must not create an exit value, future cap rate, appreciation assumption, refinance proceeds, return projection, classification, recommendation, or customer output.
 
+## July 16 Gate 5C status
+
+```text
+GATE 5B: COMMITTED AT c38c91a / ORIGIN MAIN MATCH CONFIRMED
+GATE 5B VERCEL AUTOMATIC DEPLOYMENT: NOT CONFIRMED DURING REPORTED GITHUB INTEGRATION OUTAGE
+GATE 5C DETERMINISTIC ACQUISITION AND APPRAISAL VALUATION REFERENCE: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION CHANGED: NO
+NEXT: Gate 5D deterministic source-bound acquisition capital structure and equity reference
+```
+
+Gate 5C creates one new bounded production owner:
+
+```text
+api/_lib/deterministic-acquisition-valuation-analysis.js
+```
+
+It consumes only a complete canonical Gate 5A institutional-underwriting input contract. It does not read raw uploads, parser candidates, filenames, artifact types, aliases, legacy underwriting output, renderer state, or caller-supplied valuation assumptions. Its complete immutable receipt is validated by deterministic reconstruction from the embedded Gate 5A contract.
+
+Gate 5C calculates exactly twelve source-bound measures when their exact facts are eligible:
+
+```text
+purchase price per accepted unit
+T12 source-case NOI divided by accepted purchase price
+purchase-assumption NOI basis divided by accepted purchase price
+source-stated going-in cap rate less purchase-assumption-derived cap rate
+T12 source-case NOI less purchase-assumption NOI basis
+T12 source-case cap rate less purchase-assumption-derived cap rate
+appraised value per accepted unit
+appraisal NOI divided by accepted appraised value
+source-stated appraisal cap rate less appraisal-derived cap rate
+appraised value less purchase price
+appraised-value difference divided by purchase price
+appraised-value difference per accepted unit
+```
+
+The T12 NOI, purchase-assumption NOI, and appraisal NOI remain separate named bases with their own provenance. A source-stated cap rate is never replaced by a locally derived rate. A difference is reported only as arithmetic and does not become a discount, premium, value conclusion, or risk classification. Appraised value remains a source reference and cannot become future value or exit value.
+
+Each calculation records its registered formula, exact canonical fact requirements, exact numeric inputs, fact-level provenance, units, precision, result or null, collapse reason, customer-surface prohibition, and non-blocking state. Missing total units collapse only per-unit measures. Missing purchase-assumption NOI collapses only the dependent NOI and cap-rate comparisons. Missing appraisal NOI or cap rate preserves accepted appraised-value arithmetic while collapsing dependent cap-rate measures. Missing, conflicting, duplicated, rejected, or evidence-mismatched optional support authority cannot block valid core publication.
+
+Gate 5C explicitly leaves market-value conclusions, future value, exit cap rates, appreciation, refinance proceeds, return analysis, risk classification, and recommendations unauthorized and null. Every section has `customerSurfaceAuthorized: false` and `reportPublicationBlocker: false`.
+
+Permanent proof owner:
+
+```text
+tests/qa/deterministic-acquisition-valuation-analysis-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+The adversarial proof covers complete calculations, exact formulas, cross-document provenance, immutability, caller-override rejection, result tampering, formula tampering, provenance tampering, marker-only input rejection, missing cap rates, missing NOI bases, missing unit count, missing purchase evidence, missing appraisal evidence, narrow fact conflict, evidence mismatch, rejected zero purchase price, rejected zero appraised value, accepted zero NOI, accepted negative NOI, negative appraised-value difference, optional-section collapse, legacy isolation, downstream isolation, and the customer em-dash prohibition.
+
+Exact Gate 5C verification:
+
+```text
+node tests/qa/deterministic-acquisition-valuation-analysis-smoke.js: PASS
+npm.cmd run qa:financial-intelligence: PASS, 10 smokes
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+support-document authority adversarial matrix: PASS, 37 scenarios
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS before ledger update
+```
+
+Gate 5D is bounded to deterministic source-bound acquisition capital structure and equity-reference arithmetic. It may use only an accepted purchase price and accepted proposed acquisition financing facts already carried by the canonical Gate 5A contract. It may calculate objective proposed-loan-to-price, price less proposed loan, and source-backed lender-fee arithmetic when the full exact fact bundle exists. It must keep current debt separate, must not invent closing costs or additional equity, and must not promote acquisition terms into refinance assumptions, calculate refinance proceeds, create return metrics, classify risk, recommend action, or connect customer output.
+
 ---
 # End of Active Master Context

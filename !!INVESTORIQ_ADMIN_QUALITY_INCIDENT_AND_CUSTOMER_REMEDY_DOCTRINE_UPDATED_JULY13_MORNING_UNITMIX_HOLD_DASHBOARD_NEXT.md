@@ -868,3 +868,39 @@ The dashboard may not label source-stated rent difference as rent growth, market
 Gate 5B verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 9 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
 
 Gate 5B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5C deterministic source-bound acquisition and appraisal valuation reference. Gate 5C remains analysis-only and may not create future value, return, risk, recommendation, customer remedy, or publication authority.
+
+## July 16 Gate 5C checkpoint
+
+```text
+Gate 5B: COMMITTED AT c38c91a / ORIGIN MAIN MATCH CONFIRMED
+Gate 5B Vercel automatic deployment: NOT CONFIRMED DURING REPORTED GITHUB INTEGRATION OUTAGE
+Gate 5C: PASS locally / deterministic acquisition and appraisal valuation receipt
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+```
+
+Gate 5C creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, or Screening behavior. Every Gate 5C section and calculation has `customerSurfaceAuthorized: false` and `reportPublicationBlocker: false`.
+
+The future Quality Manifest and Admin projection may consume Gate 5C only after a later finalized Gate 5 aggregate receipt and atomic downstream gate establish exact mappings. They must not reconstruct valuation arithmetic from raw Source Truth, interpret a sign as a discount or premium, treat an appraisal as future value, classify a cap-rate difference, or turn optional valuation collapse into a platform defect.
+
+Permitted future administrative states remain factual:
+
+```text
+canonical acquisition valuation reference unavailable
+canonical appraisal valuation reference unavailable
+per-unit measure unavailable because accepted unit count is missing
+source-stated cap-rate comparison unavailable because its exact NOI basis is missing
+valuation comparison completed from accepted source references
+dependent valuation calculation collapsed
+future-value and return policy not established
+```
+
+The dashboard may not label purchase price, appraised value, a value difference, NOI difference, or cap-rate difference as favorable, unfavorable, overvalued, undervalued, accretive, risky, or recommended without later authorized classification policy.
+
+Gate 5C verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 10 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
+
+Gate 5C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5D deterministic source-bound acquisition capital structure and equity reference. Gate 5D remains analysis-only and may not create refinance policy, returns, classifications, customer remedies, or publication authority.

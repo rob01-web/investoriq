@@ -19442,3 +19442,38 @@ No expense normalization, economic-vacancy inference, rent-growth inference, sce
 Verification: dedicated Gate 5B smoke `PASS`; Financial Intelligence `PASS` with 9 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
 
 Status: Gate 5B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5C deterministic source-bound acquisition and appraisal valuation reference. Gate 5C cannot infer future value, an exit cap rate, appreciation, refinance proceeds, returns, risk, or a recommendation.
+
+## July 16 Gate 5C CVF closure
+
+Gate 5B is committed at `c38c91a`, with exact `origin/main` parity confirmed. Vercel automatic deployment was not confirmed during the reported GitHub integration outage. Gate 5C adds one immutable deterministic acquisition and appraisal valuation receipt without changing any downstream consumer.
+
+Closed Gate 5C failure families:
+
+```text
+marker-only Gate 5A object unlocks valuation calculations -> prohibited
+caller-supplied future value, exit cap rate, or recommendation changes receipt -> prohibited
+changed valuation result survives validation -> prohibited
+changed formula survives validation -> prohibited
+changed provenance survives validation -> prohibited
+T12 NOI, purchase-assumption NOI, and appraisal NOI are blended -> prohibited
+source-stated cap rate is replaced by a derived rate -> prohibited
+missing unit count becomes zero or blocks non-unit measures -> prohibited
+missing purchase-assumption NOI collapses accepted purchase price arithmetic -> prohibited
+missing appraisal NOI collapses accepted appraised-value arithmetic -> prohibited
+zero purchase price or zero appraised value becomes a valid denominator -> prohibited
+accepted zero or negative NOI becomes missing -> prohibited
+negative appraised-value difference becomes a risk conclusion -> prohibited
+arithmetic value difference becomes a discount or premium classification -> prohibited
+appraised value becomes future or exit value -> prohibited
+optional valuation ambiguity blocks valid core publication -> prohibited
+Gate 5C changes Screening or customer rendering -> prohibited
+legacy underwriting becomes production authority -> prohibited
+```
+
+The sole Gate 5C production owner is `api/_lib/deterministic-acquisition-valuation-analysis.js`. It requires the complete Gate 5A input contract and validates its entire receipt by deterministic reconstruction. Twelve objective measures are supported across acquisition reference, appraisal reference, and acquisition-versus-appraisal comparison sections. Every measure carries exact formula, facts, values, provenance, precision, collapse reason, and non-blocking state.
+
+No market-value conclusion, future value, appreciation, exit cap rate, refinance proceeds, return, classification, recommendation, customer rendering, Screening behavior, Delivery Gate behavior, or terminal taxonomy changed.
+
+Verification: dedicated Gate 5C smoke `PASS`; Financial Intelligence `PASS` with 10 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
+
+Status: Gate 5C `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5D deterministic source-bound acquisition capital structure and equity reference. Gate 5D cannot use current debt as acquisition financing, promote acquisition terms into refinance policy, invent costs, calculate returns, classify risk, recommend action, or change customer output.

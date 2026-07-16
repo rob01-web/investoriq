@@ -8568,3 +8568,40 @@ Missing or ineligible optional inputs remain null and collapse only their depend
 Permanent proof is `tests/qa/deterministic-source-case-underwriting-analysis-smoke.js`, registered in `qa:financial-intelligence`. Gate 5B verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `9 / 9`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
 
 Gate 5B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5C may create deterministic source-bound acquisition and appraisal valuation references only. Future value, future cap rates, appreciation, refinance proceeds, returns, classifications, recommendations, and customer output remain unauthorized.
+
+## July 16 Gate 5C valuation authority receipt
+
+Gate 5B is committed at `c38c91a`, with exact `origin/main` parity confirmed. Vercel automatic deployment remained unconfirmed during the reported GitHub integration outage. Gate 5C extends the protected authority chain without creating new source authority:
+
+```text
+canonical Source Truth accepted core and support facts with exact evidence
+-> canonical Gate 4 financial-intelligence receipt
+-> canonical Gate 5A scenario-policy and input contracts
+-> deterministic Gate 5C acquisition and appraisal valuation receipt
+-> no downstream consumer and no customer surface yet
+```
+
+`api/_lib/deterministic-acquisition-valuation-analysis.js` is the sole Gate 5C owner. It accepts only the complete Gate 5A contract and retains job identity, core publication authority, required fact names, exact inputs, fact-level provenance, deterministic formulas, precision, result or null, section decision, limitation codes, and non-blocking state.
+
+The semantic boundaries are explicit:
+
+```text
+T12 net operating income remains the source-case operating basis
+purchase-assumption NOI remains the acquisition source basis
+appraisal NOI remains the appraisal source basis
+source-stated cap rates remain source facts
+derived cap rates remain deterministic calculations
+cap-rate differences remain arithmetic comparisons
+appraised value remains a present source reference
+value differences remain unclassified arithmetic
+```
+
+The twelve receipts cover purchase price per unit, two acquisition cap-rate bases, two acquisition basis comparisons, source-stated acquisition cap-rate comparison, appraised value per unit, appraisal-derived cap rate, source-stated appraisal cap-rate comparison, appraised value less purchase price, value difference ratio, and value difference per unit.
+
+Missing or ineligible facts collapse only dependent calculations. Missing total units do not collapse non-unit valuation arithmetic. Missing NOI or stated cap rate does not erase an accepted source value. A narrow fact conflict or evidence mismatch cannot be revived by a derived formula. Accepted zero and negative NOI remain arithmetic inputs. Zero purchase price and zero appraised value are rejected by the Gate 5A positive-value contract before Gate 5C.
+
+Gate 5C does not create a market-value conclusion, future value, exit cap rate, appreciation assumption, refinance proceeds, return, risk classification, recommendation, Projection fact, Boss fact, CustomerSurfaceModel fact, rendered section, Manifest projection, Admin incident, or Screening behavior.
+
+Permanent proof is `tests/qa/deterministic-acquisition-valuation-analysis-smoke.js`, registered in `qa:financial-intelligence`. Gate 5C verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `10 / 10`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
+
+Gate 5C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5D deterministic source-bound acquisition capital structure and equity reference. Current debt, refinance policy, invented acquisition costs, return assumptions, classifications, recommendations, and customer output remain outside Gate 5D authority.
