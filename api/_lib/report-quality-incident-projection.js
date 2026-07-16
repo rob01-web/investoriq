@@ -144,7 +144,24 @@ function buildDocumentEvents(documents) {
     if (document?.documentClass !== "support") continue;
     const identity = text(document?.sourceIdentityKey || document?.documentId) || "support_document";
     const conflictState = text(document?.conflict?.state).toLowerCase();
-    if (["conflicting", "ambiguous"].includes(conflictState)) {
+    if (conflictState === "fact_conflict") {
+      events.push(event({
+        code: "SUPPORT_FACT_CONFLICT",
+        family: "support_source_authority",
+        severity: "medium",
+        ownerArea: "support_document_authority",
+        responsibility: "customer_source_limitation",
+        message: "Conflicting support facts were excluded while the uncontested accepted role and facts were preserved.",
+        scope: `document:${identity}`,
+        customerVisible: false,
+        detail: {
+          conflictState,
+          reasons: asArray(document?.conflict?.reasons),
+          rejectedFacts: Object.keys(document?.rejectedFacts || {}),
+          adjudicatedRole: document?.adjudicatedRole || null,
+        },
+      }));
+    } else if (["conflicting", "ambiguous"].includes(conflictState)) {
       events.push(event({
         code: conflictState === "conflicting" ? "SUPPORT_SOURCE_CONFLICT" : "SUPPORT_SOURCE_AMBIGUOUS",
         family: "support_source_authority",

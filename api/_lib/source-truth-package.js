@@ -255,6 +255,8 @@ function buildSupportAuthority(artifacts, coreFileIds) {
   }
 
   const conflictingFileIds = new Set();
+  const narrowFactConflictFields = new Set(["rate_structure", "loan_term_years", "maturity_date"]);
+  const narrowFactConflictsByRole = new Map();
   const acceptedByRole = new Map();
   for (const decision of decisions) {
     if (!decision.roleAccepted || duplicateFileIds.has(decision.fileId)) continue;
@@ -270,8 +272,25 @@ function buildSupportAuthority(artifacts, coreFileIds) {
         for (const field of Object.keys(left.acceptedFacts || {})) {
           if (!(field in (right.acceptedFacts || {}))) continue;
           if (String(left.acceptedFacts[field]) !== String(right.acceptedFacts[field])) {
-            conflictingFileIds.add(left.fileId);
-            conflictingFileIds.add(right.fileId);
+            if (narrowFactConflictFields.has(field)) {
+              const key = `${left.canonicalRole}:${field}`;
+              const conflict = narrowFactConflictsByRole.get(key) || {
+                canonicalRole: left.canonicalRole,
+                factName: field,
+                decisions: new Map(),
+              };
+              for (const decision of [left, right]) {
+                conflict.decisions.set(decision.fileId, {
+                  file_id: decision.fileId,
+                  value: decision.acceptedFacts[field],
+                  evidence: decision.acceptedFactEvidence?.[field] || null,
+                });
+              }
+              narrowFactConflictsByRole.set(key, conflict);
+            } else {
+              conflictingFileIds.add(left.fileId);
+              conflictingFileIds.add(right.fileId);
+            }
           }
         }
       }
@@ -301,18 +320,35 @@ function buildSupportAuthority(artifacts, coreFileIds) {
   }
   const accepted = decisions
     .filter((decision) => decision.roleAccepted && !duplicateFileIds.has(decision.fileId) && !conflictingFileIds.has(decision.fileId))
-    .map((decision) => ({
-      file_id: decision.fileId,
-      original_filename: decision.originalFilename,
-      validated_role: validatedRoleByCanonicalRole[decision.canonicalRole] || decision.canonicalRole,
-      canonical_role: decision.canonicalRole,
-      artifact_id: null,
-      accepted_facts: decision.acceptedFacts,
-      accepted_fact_evidence: decision.acceptedFactEvidence,
-      section_eligibility: decision.sectionEligibility,
-      primary_for_role: primaryFileByRole.get(decision.canonicalRole) === decision.fileId,
-      authority_decision: decision,
-    }));
+    .map((decision) => {
+      const disputedFields = [...narrowFactConflictsByRole.values()]
+        .filter((conflict) => conflict.canonicalRole === decision.canonicalRole)
+        .map((conflict) => conflict.factName);
+      const disputedFieldSet = new Set(disputedFields);
+      const acceptedFacts = Object.fromEntries(
+        Object.entries(decision.acceptedFacts || {}).filter(([field]) => !disputedFieldSet.has(field))
+      );
+      const acceptedFactEvidence = Object.fromEntries(
+        Object.entries(decision.acceptedFactEvidence || {}).filter(([field]) => !disputedFieldSet.has(field))
+      );
+      const sectionEligibility = { ...(decision.sectionEligibility || {}) };
+      if (decision.canonicalRole === "current_debt_context" && disputedFieldSet.has("maturity_date")) {
+        sectionEligibility.currentDebt = false;
+      }
+      return {
+        file_id: decision.fileId,
+        original_filename: decision.originalFilename,
+        validated_role: validatedRoleByCanonicalRole[decision.canonicalRole] || decision.canonicalRole,
+        canonical_role: decision.canonicalRole,
+        artifact_id: null,
+        accepted_facts: acceptedFacts,
+        accepted_fact_evidence: acceptedFactEvidence,
+        fact_conflicts: disputedFields,
+        section_eligibility: sectionEligibility,
+        primary_for_role: primaryFileByRole.get(decision.canonicalRole) === decision.fileId,
+        authority_decision: decision,
+      };
+    });
   const advisory = decisions
     .filter((decision) => !decision.roleAccepted || duplicateFileIds.has(decision.fileId) || conflictingFileIds.has(decision.fileId))
     .map((decision) => ({
@@ -329,6 +365,17 @@ function buildSupportAuthority(artifacts, coreFileIds) {
   const rejected = advisory
     .filter((entry) => ["rejected", "unreadable"].includes(entry.status))
     .map((entry) => ({ ...entry, reasons: [entry.status], customer_delivery_blocker: false }));
+  const factConflicts = [...narrowFactConflictsByRole.values()]
+    .map((conflict) => ({
+      canonical_role: conflict.canonicalRole,
+      fact_name: conflict.factName,
+      sources: [...conflict.decisions.values()].sort((left, right) => left.file_id.localeCompare(right.file_id)),
+      decision: "fact_rejected_role_preserved",
+      customer_delivery_blocker: false,
+    }))
+    .sort((left, right) =>
+      left.canonical_role.localeCompare(right.canonical_role) || left.fact_name.localeCompare(right.fact_name)
+    );
   return {
     accepted,
     advisory,
@@ -336,6 +383,7 @@ function buildSupportAuthority(artifacts, coreFileIds) {
     adjudication_decisions: decisions,
     shadow_comparisons: shadowComparisons,
     conflicts: [...conflictingFileIds],
+    fact_conflicts: factConflicts,
     duplicates: [...duplicateFileIds],
   };
 }

@@ -147,23 +147,45 @@ function buildSupportDocuments(sourceTruthPackage) {
   );
   const conflicts = new Set(unique(support.conflicts));
   const duplicates = new Set(unique(support.duplicates));
+  const factConflicts = asArray(support.fact_conflicts);
 
   return asArray(support.adjudication_decisions).map((decision) => {
     const fileId = text(decision?.fileId);
     const acceptedEntry = acceptedByFile.get(fileId) || null;
     const advisoryEntry = advisoryByFile.get(fileId) || null;
     const roleAccepted = Boolean(acceptedEntry);
+    const fileFactConflicts = factConflicts.filter((conflict) =>
+      asArray(conflict?.sources).some((source) => text(source?.file_id) === fileId)
+    );
+    const rejectedConflictFacts = Object.fromEntries(
+      fileFactConflicts.flatMap((conflict) =>
+        asArray(conflict?.sources)
+          .filter((source) => text(source?.file_id) === fileId)
+          .map((source) => [text(conflict?.fact_name), clone(source?.value)])
+          .filter(([factName]) => Boolean(factName))
+      )
+    );
+    const rejectedConflictEvidence = Object.fromEntries(
+      fileFactConflicts.flatMap((conflict) =>
+        asArray(conflict?.sources)
+          .filter((source) => text(source?.file_id) === fileId)
+          .map((source) => [text(conflict?.fact_name), clone(source?.evidence)])
+          .filter(([factName]) => Boolean(factName))
+      )
+    );
     const acceptedFacts = roleAccepted
       ? clone(asObject(acceptedEntry?.accepted_facts))
       : {};
     const rejectedFacts = roleAccepted
-      ? {}
+      ? rejectedConflictFacts
       : clone(asObject(decision?.acceptedFacts));
     const factAccepted = roleAccepted && Object.keys(acceptedFacts).length > 0;
     const conflictState = conflicts.has(fileId)
       ? "conflicting"
       : duplicates.has(fileId)
         ? "duplicate"
+        : fileFactConflicts.length > 0
+          ? "fact_conflict"
         : decision?.ambiguity?.present === true
           ? "ambiguous"
           : roleAccepted
@@ -177,6 +199,7 @@ function buildSupportDocuments(sourceTruthPackage) {
       roleAccepted &&
       acceptedEntry?.authority_decision?.sourceBacked === true
     );
+    const acceptedSectionEligibility = Object.values(asObject(acceptedEntry?.section_eligibility));
 
     return {
       documentClass: "support",
@@ -199,7 +222,7 @@ function buildSupportDocuments(sourceTruthPackage) {
         ? clone(asObject(acceptedEntry?.accepted_fact_evidence))
         : {},
       rejectedFactEvidence: roleAccepted
-        ? {}
+        ? rejectedConflictEvidence
         : clone(asObject(decision?.acceptedFactEvidence)),
       sourcePresent: decision?.sourcePresent === true,
       roleAccepted,
@@ -207,13 +230,17 @@ function buildSupportDocuments(sourceTruthPackage) {
       sourceBacked: acceptedSourceBacked,
       sectionDisplayReady: Boolean(
         acceptedSourceBacked &&
-        acceptedEntry?.authority_decision?.sectionDisplayReady === true
+        (
+          acceptedSectionEligibility.some((value) => value === true) ||
+          (acceptedSectionEligibility.length === 0 && acceptedEntry?.authority_decision?.sectionDisplayReady === true)
+        )
       ),
       conflict: {
         state: conflictState,
         reasons: unique([
           ...asArray(decision?.ambiguity?.reasons),
           conflicts.has(fileId) ? "conflicting_accepted_fact_bundle" : null,
+          ...fileFactConflicts.map((conflict) => `conflicting_accepted_fact:${text(conflict?.fact_name)}`),
           duplicates.has(fileId) ? "duplicate_physical_source" : null,
           !roleAccepted && advisoryEntry?.status ? advisoryEntry.status : null,
         ]),
@@ -587,7 +614,7 @@ export function buildReportQualityManifestCandidate({
         factAcceptedCount: supportDocuments.filter((document) => document.factAccepted).length,
         sourceBackedCount: supportDocuments.filter((document) => document.sourceBacked).length,
         ambiguousOrConflictingCount: supportDocuments.filter((document) =>
-          ["ambiguous", "conflicting", "duplicate"].includes(text(document?.conflict?.state))
+          ["ambiguous", "conflicting", "fact_conflict", "duplicate"].includes(text(document?.conflict?.state))
         ).length,
       },
       delivery: delivery,
@@ -596,6 +623,7 @@ export function buildReportQualityManifestCandidate({
     calculations,
     sections,
     conflicts: clone(asArray(sourceTruthPackage?.support?.conflicts)),
+    factConflicts: clone(asArray(sourceTruthPackage?.support?.fact_conflicts)),
     duplicates: clone(asArray(sourceTruthPackage?.support?.duplicates)),
     disclosures: clone(asArray(sourceTruthPackage?.disclosures)),
     receipts: {

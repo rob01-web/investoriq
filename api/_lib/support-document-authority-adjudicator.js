@@ -180,6 +180,7 @@ const FACT_SPECS = Object.freeze({
   ltv: { labels: [/\bl\s*\.?\s*t\s*\.?\s*v\b/i, /loan[-\s]*to[-\s]*value/i], percent: true },
   interest_rate: { labels: [/interest\s+rate/i, /note\s+rate/i, /coupon\s+rate/i, /proposed\s+rate/i], percent: true },
   amortization_years: { labels: [/amortization/i, /amortisation/i] },
+  loan_term_years: { labels: [/loan\s+term/i, /term\s+to\s+maturity/i, /initial\s+term/i] },
   lender_fee_percent: { labels: [/lender\s+fee/i, /origination\s+fee/i, /financing\s+fee/i], percent: true },
   going_in_cap_rate: { labels: [/going[-\s]*in cap/i, /entry cap/i], percent: true },
   noi_basis: { labels: [/noi basis/i] },
@@ -266,9 +267,91 @@ function normalizeBoundFactValue(candidate, evidence, spec) {
   return candidate > 1 ? candidate / 100 : candidate;
 }
 
+function isNegatedCategoricalMatch(source, index) {
+  const prefix = source.slice(Math.max(0, index - 30), index);
+  return /\b(?:not|no)\s+(?:an?\s+)?$/i.test(prefix) || /\bnon[-\s]?$/i.test(prefix);
+}
+
+function categoricalMatches(source, patterns) {
+  const matches = [];
+  for (const pattern of patterns) {
+    const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+    const matcher = new RegExp(pattern.source, flags);
+    for (const match of source.matchAll(matcher)) {
+      const index = match.index || 0;
+      if (isNegatedCategoricalMatch(source, index)) continue;
+      matches.push({
+        index,
+        value: text(match[0]),
+        excerpt: text(source.slice(Math.max(0, index - 30), Math.min(source.length, index + match[0].length + 50))),
+      });
+    }
+  }
+  return matches.sort((left, right) => left.index - right.index);
+}
+
+function rateStructureFromSource(rawSourceText) {
+  const hybrid = categoricalMatches(rawSourceText, [
+    /\bhybrid(?:\s+interest)?\s+rate\b/i,
+    /\bfixed[-\s]+to[-\s]+(?:floating|variable|adjustable)(?:\s+rate)?\b/i,
+    /\bfixed[-\s]+(?:interest[-\s]+)?rate\b[^\r\n]{0,100}\b(?:then|thereafter)\b[^\r\n]{0,60}\b(?:floating|variable|adjustable)(?:[-\s]+(?:interest[-\s]+)?rate)?\b/i,
+    /\b(?:interest\s+)?rate\s+(?:is\s+)?fixed\b[^\r\n]{0,100}\b(?:then|thereafter)\b[^\r\n]{0,60}\b(?:floating|variable|adjustable)\b/i,
+  ]);
+  if (hybrid.length > 0) {
+    return {
+      accepted: true,
+      value: "hybrid",
+      evidence: {
+        excerpt: hybrid[0].excerpt,
+        method: "deterministic_categorical_source_binding",
+        sourceValue: hybrid[0].value,
+        normalizedValue: "hybrid",
+      },
+      ambiguity: null,
+    };
+  }
+
+  const fixed = categoricalMatches(rawSourceText, [
+    /\bfixed[-\s]+(?:interest[-\s]+)?rate\b/i,
+    /\b(?:interest\s+)?rate\s+(?:is\s+)?fixed\b/i,
+    /\b(?:rate\s+structure|interest\s+rate\s+type|rate\s+type)\s*[:\-]?\s*fixed\b/i,
+  ]);
+  const floating = categoricalMatches(rawSourceText, [
+    /\b(?:floating|variable|adjustable)[-\s]+(?:interest[-\s]+)?rate\b/i,
+    /\b(?:interest\s+)?rate\s+(?:is\s+)?(?:floating|variable|adjustable)\b/i,
+    /\b(?:rate\s+structure|interest\s+rate\s+type|rate\s+type)\s*[:\-]?\s*(?:floating|variable|adjustable)\b/i,
+  ]);
+  if (fixed.length > 0 && floating.length > 0) {
+    return {
+      accepted: false,
+      value: null,
+      evidence: null,
+      ambiguity: {
+        reason: "conflicting_fixed_and_floating_rate_language",
+        excerpts: [fixed[0].excerpt, floating[0].excerpt],
+      },
+    };
+  }
+  const acceptedMatch = fixed[0] || floating[0] || null;
+  const normalizedValue = fixed.length > 0 ? "fixed" : floating.length > 0 ? "floating" : null;
+  return {
+    accepted: Boolean(acceptedMatch && normalizedValue),
+    value: normalizedValue,
+    evidence: acceptedMatch
+      ? {
+          excerpt: acceptedMatch.excerpt,
+          method: "deterministic_categorical_source_binding",
+          sourceValue: acceptedMatch.value,
+          normalizedValue,
+        }
+      : null,
+    ambiguity: null,
+  };
+}
+
 function acceptedFactsForRole(role, artifacts, rawSourceText) {
   const fieldsByRole = {
-    purchase_assumptions: ["purchase_price", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "lender_fee_percent", "going_in_cap_rate", "noi_basis"],
+    purchase_assumptions: ["purchase_price", "proposed_loan_amount", "ltv", "interest_rate", "amortization_years", "loan_term_years", "lender_fee_percent", "going_in_cap_rate", "noi_basis"],
     current_debt_context: ["current_outstanding_balance", "interest_rate", "amortization_remaining_years", "monthly_payment"],
     appraisal_context: ["appraised_value", "appraisal_cap_rate", "appraisal_noi"],
     renovation_capex_context: ["total_renovation_budget"],
@@ -276,6 +359,7 @@ function acceptedFactsForRole(role, artifacts, rawSourceText) {
   };
   const acceptedFacts = {};
   const factEvidence = {};
+  const factAmbiguities = {};
   for (const field of fieldsByRole[role] || []) {
     const spec = FACT_SPECS[field];
     if (!spec) continue;
@@ -318,7 +402,7 @@ function acceptedFactsForRole(role, artifacts, rawSourceText) {
       }
     }
   }
-  if (role === "current_debt_context") {
+  if (["current_debt_context", "purchase_assumptions"].includes(role)) {
     const maturityMatch = rawSourceText.match(
       /maturity date\s*[:\-]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|[A-Za-z]{3,9}\s+\d{4})/i
     );
@@ -326,8 +410,15 @@ function acceptedFactsForRole(role, artifacts, rawSourceText) {
       acceptedFacts.maturity_date = text(maturityMatch[1]);
       factEvidence.maturity_date = { excerpt: text(maturityMatch[0]), method: "deterministic_label_value_binding", sourceValue: acceptedFacts.maturity_date };
     }
+    const rateStructure = rateStructureFromSource(rawSourceText);
+    if (rateStructure.accepted) {
+      acceptedFacts.rate_structure = rateStructure.value;
+      factEvidence.rate_structure = rateStructure.evidence;
+    } else if (rateStructure.ambiguity) {
+      factAmbiguities.rate_structure = rateStructure.ambiguity;
+    }
   }
-  return { acceptedFacts, factEvidence };
+  return { acceptedFacts, factEvidence, factAmbiguities };
 }
 
 function sectionEligibilityFor(role, acceptedFacts, roleAccepted) {
@@ -379,7 +470,7 @@ export function buildSupportDocumentAuthorityDecision({ file = {}, artifacts = [
         : canonicalRole
           ? "candidate_supported"
           : "unclassified";
-  const { acceptedFacts, factEvidence } = acceptedFactsForRole(canonicalRole, artifacts, rawSourceText);
+  const { acceptedFacts, factEvidence, factAmbiguities } = acceptedFactsForRole(canonicalRole, artifacts, rawSourceText);
   const contextualRole = ["market_survey_context", "environmental_context", "historical_debt_context"].includes(canonicalRole);
   const financingDisclaimed = canonicalRole === "purchase_assumptions" && hasNonAuthoritativeFinancingDisclaimer(rawSourceText);
   const roleAccepted = mode === "active" && Boolean(canonicalRole) && !ambiguous && !financingDisclaimed && (contextualRole || Object.keys(acceptedFacts).length > 0);
@@ -407,6 +498,7 @@ export function buildSupportDocumentAuthorityDecision({ file = {}, artifacts = [
     roleAccepted,
     acceptedFacts,
     acceptedFactEvidence: factEvidence,
+    factAmbiguities,
     sourceBacked,
     sectionDisplayReady: sourceBacked,
     sectionEligibility,

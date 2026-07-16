@@ -153,6 +153,33 @@ assert.equal(conflict.queue, 'PUBLISHED_WITH_LIMITATIONS');
 assert.equal(conflict.customerAttentionRisk, 'MEDIUM');
 assert.equal(conflict.events.some((entry) => entry.code === 'SUPPORT_SOURCE_CONFLICT'), true);
 
+const factConflictManifest = structuredClone(publishedManifest('incident-fact-conflict'));
+factConflictManifest.documents.push({
+  documentClass: 'support',
+  documentId: 'fact-conflict-file',
+  sourceIdentityKey: 'support:file:fact-conflict-file',
+  adjudicatedRole: 'purchase_assumptions',
+  acceptedFacts: { proposed_loan_amount: 9450000 },
+  rejectedFacts: { rate_structure: 'fixed' },
+  sourcePresent: true,
+  roleAccepted: true,
+  factAccepted: true,
+  sourceBacked: true,
+  sectionDisplayReady: true,
+  conflict: { state: 'fact_conflict', reasons: ['conflicting_accepted_fact:rate_structure'] },
+  duplicate: { state: 'none', duplicateOf: null },
+  extraction: { state: 'text_available', warnings: [] },
+  candidateRoles: ['purchase_assumptions'],
+});
+const factConflict = buildReportQualityIncidentProjection({
+  manifest: factConflictManifest,
+  canonicalDeliveryDecision: deliverable,
+});
+assert.equal(factConflict.queue, 'PUBLISHED_WITH_LIMITATIONS');
+assert.equal(factConflict.customerAttentionRisk, 'MEDIUM');
+assert.equal(factConflict.events.some((entry) => entry.code === 'SUPPORT_FACT_CONFLICT'), true);
+assert.equal(factConflict.events.some((entry) => entry.customerVisible === true), false);
+
 const unavailable = buildUnavailableReportQualityManifestCandidate({
   jobId: 'incident-blocked',
   userId: 'incident-user',

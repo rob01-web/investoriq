@@ -82,7 +82,6 @@ const SUPPORT_FAMILY_PATTERNS = Object.freeze({
     /current loan balance/i,
     /unpaid principal balance/i,
     /monthly debt service/i,
-    /maturity date/i,
   ],
   appraisal: [
     /appraisal(?: summary| report| context)?/i,

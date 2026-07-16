@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 
 import { buildAcquisitionMemoBossContract } from "../../api/_lib/acquisition-memo-boss-contract.js";
 import { runAcquisitionMemoV2Pipeline } from "../../api/_lib/acquisition-memo-v2-pipeline.js";
+import { buildDeterministicReportContractQaSeal } from "../../api/_lib/deterministic-report-contract-qa-seal.js";
 import { runScreeningReportPipeline } from "../../api/_lib/screening-report-pipeline.js";
 import { buildCanonicalSourceTruthPackage } from "../../api/_lib/source-truth-package.js";
 
@@ -42,12 +43,16 @@ const validSourceTruth = buildCanonicalSourceTruthPackage({
   artifacts: [t12Artifact, rentRollArtifact],
 });
 assert.equal(validSourceTruth.core_publishable, true);
+const screeningHtml = "<html><body>Authority Property</body></html>";
+const deterministicContractQaSeal = buildDeterministicReportContractQaSeal({ html: screeningHtml });
+assert.equal(deterministicContractQaSeal.ok, true);
 
 const screeningOutput = runScreeningReportPipeline({
-  finalHtml: "<html><body>Authority Property</body></html>",
+  finalHtml: screeningHtml,
   sourceTruthPackage: validSourceTruth,
   sourceTruthRequired: true,
   deliveryGateDecisionResult: { delivery_gate_status: "deliverable" },
+  deterministicContractQaSeal,
 });
 assert.equal(screeningOutput.sourceTruthPackage, validSourceTruth);
 assert.equal(screeningOutput.sealedCustomerOutput, true);

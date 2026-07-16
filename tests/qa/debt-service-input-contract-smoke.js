@@ -71,7 +71,10 @@ const proposed = supportEntry({
     ltv: 0.7,
     interest_rate: 0.0595,
     amortization_years: 30,
+    loan_term_years: 5,
     lender_fee_percent: 0.0085,
+    maturity_date: '2031-07-15',
+    rate_structure: 'fixed',
   },
   factEvidence: {
     purchase_price: evidence(13500000, 'Purchase Price: $13,500,000'),
@@ -79,7 +82,10 @@ const proposed = supportEntry({
     ltv: evidence(70, 'LTV: 70%', 0.7),
     interest_rate: evidence(5.95, 'Interest Rate: 5.95%', 0.0595),
     amortization_years: evidence(30, 'Amortization: 30 years'),
+    loan_term_years: evidence(5, 'Loan Term: 5 years'),
     lender_fee_percent: evidence(0.85, 'Lender Fee: 0.85%', 0.0085),
+    maturity_date: evidence('2031-07-15', 'Maturity Date: 2031-07-15'),
+    rate_structure: evidence('Fixed Rate', 'Rate Structure: Fixed Rate', 'fixed'),
   },
 });
 
@@ -97,8 +103,25 @@ assert.equal(
 assert.equal(completeProposedContract.proposedFinancing.facts.proposed_loan_amount.value, 9450000);
 assert.equal(completeProposedContract.proposedFinancing.facts.interest_rate.sourceBacked, true);
 assert.equal(completeProposedContract.proposedFinancing.facts.lender_fee_percent.factAccepted, true);
+assert.equal(completeProposedContract.proposedFinancing.facts.loan_term_years.value, 5);
+assert.equal(completeProposedContract.proposedFinancing.facts.maturity_date.value, '2031-07-15');
+assert.equal(completeProposedContract.proposedFinancing.facts.rate_structure.value, 'fixed');
+assert.equal(completeProposedContract.proposedFinancing.facts.rate_structure.sourceBacked, true);
 assert.equal(completeProposedContract.proposedFinancing.reportPublicationBlocker, false);
 assert.equal(Object.isFrozen(completeProposedContract), true);
+
+const proposedWithoutOptionalRiskFacts = structuredClone(proposed);
+for (const factName of ['loan_term_years', 'maturity_date', 'rate_structure']) {
+  delete proposedWithoutOptionalRiskFacts.accepted_facts[factName];
+  delete proposedWithoutOptionalRiskFacts.accepted_fact_evidence[factName];
+}
+const contractWithoutOptionalRiskFacts = buildCanonicalDebtServiceInputContract({
+  sourceTruthPackage: sourceTruth({ accepted: [proposedWithoutOptionalRiskFacts] }),
+});
+assert.equal(contractWithoutOptionalRiskFacts.proposedFinancing.dscrEligibility.eligible, true);
+assert.equal(contractWithoutOptionalRiskFacts.proposedFinancing.facts.loan_term_years.value, null);
+assert.equal(contractWithoutOptionalRiskFacts.proposedFinancing.facts.maturity_date.value, null);
+assert.equal(contractWithoutOptionalRiskFacts.proposedFinancing.facts.rate_structure.value, null);
 
 const incompleteProposed = structuredClone(proposed);
 delete incompleteProposed.accepted_facts.amortization_years;
@@ -238,6 +261,19 @@ const zeroContract = buildCanonicalDebtServiceInputContract({
 });
 assert.equal(zeroContract.proposedFinancing.facts.proposed_loan_amount.value, null);
 assert.equal(zeroContract.proposedFinancing.dscrEligibility.eligible, false);
+
+const invalidRateStructure = structuredClone(proposed);
+invalidRateStructure.accepted_facts.rate_structure = 'assumed_fixed';
+invalidRateStructure.accepted_fact_evidence.rate_structure = evidence(
+  'Assumed Fixed',
+  'Rate Structure: Assumed Fixed',
+  'assumed_fixed'
+);
+const invalidRateStructureContract = buildCanonicalDebtServiceInputContract({
+  sourceTruthPackage: sourceTruth({ accepted: [invalidRateStructure] }),
+});
+assert.equal(invalidRateStructureContract.proposedFinancing.facts.rate_structure.value, null);
+assert.equal(invalidRateStructureContract.proposedFinancing.dscrEligibility.eligible, true);
 
 assert.throws(
   () => buildCanonicalDebtServiceInputContract({ sourceTruthPackage: { source: 'legacy_fixture_v2' } }),

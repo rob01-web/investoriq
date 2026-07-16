@@ -294,6 +294,60 @@ assert.equal(ambiguousDebt.sourceBacked, false);
 assert.equal(ambiguousDebt.sectionDisplayReady, false);
 assert.equal(ambiguousDebt.conflict.state, "ambiguous");
 
+const factConflictSourceTruth = structuredClone(sourceTruthPackage);
+factConflictSourceTruth.support.accepted[0].fact_conflicts = ["rate_structure"];
+factConflictSourceTruth.support.fact_conflicts = [{
+  canonical_role: "purchase_assumptions",
+  fact_name: "rate_structure",
+  sources: [
+    {
+      file_id: "support-purchase",
+      value: "fixed",
+      evidence: {
+        excerpt: "Rate Structure Fixed Rate",
+        method: "deterministic_categorical_source_binding",
+        sourceValue: "Fixed Rate",
+        normalizedValue: "fixed",
+      },
+    },
+    {
+      file_id: "support-purchase-conflict",
+      value: "floating",
+      evidence: {
+        excerpt: "Rate Structure Variable Rate",
+        method: "deterministic_categorical_source_binding",
+        sourceValue: "Variable Rate",
+        normalizedValue: "floating",
+      },
+    },
+  ],
+  decision: "fact_rejected_role_preserved",
+  customer_delivery_blocker: false,
+}];
+const factConflictCandidate = buildReportQualityManifestCandidate({
+  jobId: "manifest-fact-conflict-job",
+  reportFamily: "acquisition_memo",
+  reportType: "underwriting",
+  reportMode: "v1_core",
+  propertyName: "Manifest Fact Conflict Property",
+  generatedAt: "2026-07-15T20:00:30.000Z",
+  sourceTruthPackage: factConflictSourceTruth,
+  customerSurfaceModel,
+  deterministicContractQaSeal: { ok: true, status: "sealed", issues: [] },
+  deliveryDecision: deliverableDecision,
+});
+const factConflictDocument = factConflictCandidate.documents
+  .find((document) => document.fileId === "support-purchase");
+assert.equal(factConflictDocument.roleAccepted, true);
+assert.equal(factConflictDocument.acceptedFacts.proposed_loan_amount, 9450000);
+assert.equal(factConflictDocument.acceptedFacts.rate_structure, undefined);
+assert.equal(factConflictDocument.rejectedFacts.rate_structure, "fixed");
+assert.equal(factConflictDocument.conflict.state, "fact_conflict");
+assert.deepEqual(factConflictDocument.conflict.reasons, ["conflicting_accepted_fact:rate_structure"]);
+assert.equal(factConflictCandidate.qualityState.optionalSupport.ambiguousOrConflictingCount, 3);
+assert.equal(factConflictCandidate.factConflicts.length, 1);
+assert.equal(validateReportQualityManifest(factConflictCandidate).ok, true);
+
 const collapsedCurrentDebt = candidate.sections.find((section) => section.sectionKey === "currentDebtContext");
 assert.equal(collapsedCurrentDebt.outcome, "collapsed");
 assert.equal(collapsedCurrentDebt.sourcePresent, true);

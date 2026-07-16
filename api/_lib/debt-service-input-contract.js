@@ -10,10 +10,12 @@ const SUPPORT_FACT_SPECS = Object.freeze({
   amortization_remaining_years: { kind: 'positive_number' },
   monthly_payment: { kind: 'positive_number' },
   maturity_date: { kind: 'text' },
+  rate_structure: { kind: 'enum', allowedValues: ['fixed', 'floating', 'hybrid'] },
   purchase_price: { kind: 'positive_number' },
   proposed_loan_amount: { kind: 'positive_number' },
   ltv: { kind: 'positive_ratio' },
   amortization_years: { kind: 'positive_number' },
+  loan_term_years: { kind: 'positive_number' },
   lender_fee_percent: { kind: 'rate' },
 });
 
@@ -43,6 +45,10 @@ function deepFreeze(value) {
 
 function normalizedFactValue(value, spec) {
   if (spec?.kind === 'text') return text(value) || null;
+  if (spec?.kind === 'enum') {
+    const normalized = text(value).toLowerCase();
+    return spec.allowedValues.includes(normalized) ? normalized : null;
+  }
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return null;
   if (spec?.kind === 'positive_number' && numeric <= 0) return null;
@@ -299,6 +305,7 @@ export function buildCanonicalDebtServiceInputContract({ sourceTruthPackage } = 
       'amortization_remaining_years',
       'monthly_payment',
       'maturity_date',
+      'rate_structure',
     ],
     bundleDefinitions: [
       {
@@ -321,7 +328,10 @@ export function buildCanonicalDebtServiceInputContract({ sourceTruthPackage } = 
       'ltv',
       'interest_rate',
       'amortization_years',
+      'loan_term_years',
       'lender_fee_percent',
+      'maturity_date',
+      'rate_structure',
     ],
     bundleDefinitions: [
       {

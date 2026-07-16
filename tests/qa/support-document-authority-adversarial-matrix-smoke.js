@@ -2,6 +2,7 @@ import assert from "assert";
 
 import { adjudicateSupportDocumentAuthority } from "../../api/_lib/support-document-authority-adjudicator.js";
 import { buildCanonicalSourceTruthPackage } from "../../api/_lib/source-truth-package.js";
+import { buildCanonicalDebtServiceInputContract } from "../../api/_lib/debt-service-input-contract.js";
 
 const completeAcquisition = [
   "Purchase Assumptions / Proposed Acquisition Financing",
@@ -11,7 +12,10 @@ const completeAcquisition = [
   "Proposed Loan Amount $9,450,000",
   "LTV 70%",
   "Interest Rate 5.95%",
+  "Rate Structure Fixed",
   "Amortization 30 years",
+  "Loan Term 5 years",
+  "Maturity Date 2031-07-15",
   "Lender Fee 0.85%",
 ].join("\n");
 
@@ -19,6 +23,7 @@ const completeCurrentDebt = [
   "Existing Current Debt Statement",
   "Current Outstanding Balance $6,800,000",
   "Interest Rate 4.85%",
+  "Rate Structure Fixed",
   "Amortization Remaining 24 years",
   "Monthly Payment $39,250",
   "Maturity Date 2029-11-01",
@@ -166,6 +171,68 @@ assert.equal(
   39250,
   "magnitude suffix detection must not consume the M in the following Maturity label"
 );
+const acquisitionDecision = scenarios.find((scenario) => scenario.name === "affirmative_acquisition_financing_complete")?.result;
+assert.equal(acquisitionDecision?.acceptedFacts?.rate_structure, "fixed");
+assert.equal(acquisitionDecision?.acceptedFacts?.loan_term_years, 5);
+assert.equal(acquisitionDecision?.acceptedFacts?.maturity_date, "2031-07-15");
+assert.equal(acquisitionDecision?.acceptedFactEvidence?.rate_structure?.normalizedValue, "fixed");
+assert.match(acquisitionDecision?.acceptedFactEvidence?.rate_structure?.excerpt || "", /fixed/i);
+
+const floatingDecision = decision(
+  "floating-rate",
+  completeAcquisition.replace("Rate Structure Fixed", "Interest Rate Type: Variable")
+);
+assert.equal(floatingDecision.acceptedFacts.rate_structure, "floating");
+assert.equal(floatingDecision.acceptedFactEvidence.rate_structure.normalizedValue, "floating");
+
+const commonFixedWordingDecision = decision(
+  "fixed-interest-rate",
+  completeAcquisition.replace("Rate Structure Fixed", "Fixed Interest Rate")
+);
+assert.equal(commonFixedWordingDecision.acceptedFacts.rate_structure, "fixed");
+
+const commonFloatingWordingDecision = decision(
+  "rate-is-floating",
+  completeAcquisition.replace("Rate Structure Fixed", "Interest Rate is Floating")
+);
+assert.equal(commonFloatingWordingDecision.acceptedFacts.rate_structure, "floating");
+
+const hybridDecision = decision(
+  "hybrid-rate",
+  completeAcquisition.replace("Rate Structure Fixed", "Fixed Rate for 24 months, then floating rate")
+);
+assert.equal(hybridDecision.acceptedFacts.rate_structure, "hybrid");
+
+const conflictingRateDecision = decision(
+  "conflicting-rate",
+  completeAcquisition.replace("Rate Structure Fixed", "Fixed Rate\nVariable Rate")
+);
+assert.equal(conflictingRateDecision.roleAccepted, true);
+assert.equal(conflictingRateDecision.acceptedFacts.rate_structure, undefined);
+assert.equal(
+  conflictingRateDecision.factAmbiguities.rate_structure.reason,
+  "conflicting_fixed_and_floating_rate_language"
+);
+
+const amortizationOnlyDecision = decision(
+  "amortization-not-term",
+  completeAcquisition.replace("Loan Term 5 years\n", "")
+);
+assert.equal(amortizationOnlyDecision.acceptedFacts.amortization_years, 30);
+assert.equal(amortizationOnlyDecision.acceptedFacts.loan_term_years, undefined);
+
+const filenameOnlyRateDecision = decision(
+  "filename-rate",
+  completeAcquisition.replace("Rate Structure Fixed\n", ""),
+  { filename: "Fixed_Rate_Terms.pdf" }
+);
+assert.equal(filenameOnlyRateDecision.acceptedFacts.rate_structure, undefined);
+
+const negatedFixedDecision = decision(
+  "negated-fixed-rate",
+  completeAcquisition.replace("Rate Structure Fixed", "Rate Structure: not fixed\nVariable Rate")
+);
+assert.equal(negatedFixedDecision.acceptedFacts.rate_structure, "floating");
 
 function packageForTexts(entries) {
   const uploadedFiles = entries.map((entry) => ({ id: entry.id, original_filename: entry.filename, parse_status: "parsed" }));
@@ -193,4 +260,35 @@ assert.equal(conflictingPackage.support.accepted.some((entry) => entry.canonical
 assert.equal(conflictingPackage.support.advisory.filter((entry) => entry.status === "conflicting").length, 2);
 assert.equal(conflictingPackage.true_blockers.some((entry) => /support/i.test(entry)), false);
 
-console.log(`support-document authority adversarial matrix PASS (${scenarios.length + 2} scenarios)`);
+const rateStructureConflictPackage = packageForTexts([
+  { id: "rate-conflict-a", filename: "Terms Fixed.pdf", text: completeAcquisition },
+  {
+    id: "rate-conflict-b",
+    filename: "Terms Floating.pdf",
+    text: completeAcquisition.replace("Rate Structure Fixed", "Variable Rate"),
+  },
+]);
+const acceptedRateConflictEntries = rateStructureConflictPackage.support.accepted
+  .filter((entry) => entry.canonical_role === "purchase_assumptions");
+assert.equal(acceptedRateConflictEntries.length, 2);
+assert.equal(acceptedRateConflictEntries.filter((entry) => entry.primary_for_role).length, 1);
+assert.equal(acceptedRateConflictEntries.every((entry) => entry.accepted_facts.rate_structure === undefined), true);
+assert.equal(acceptedRateConflictEntries.every((entry) => entry.accepted_facts.proposed_loan_amount === 9450000), true);
+assert.equal(acceptedRateConflictEntries.every((entry) => entry.section_eligibility.proposedFinancing === true), true);
+assert.deepEqual(
+  rateStructureConflictPackage.support.fact_conflicts.map((entry) => entry.fact_name),
+  ["rate_structure"]
+);
+assert.equal(rateStructureConflictPackage.support.fact_conflicts[0].decision, "fact_rejected_role_preserved");
+assert.equal(rateStructureConflictPackage.support.conflicts.length, 0);
+assert.equal(rateStructureConflictPackage.true_blockers.some((entry) => /support/i.test(entry)), false);
+const rateConflictDebtContract = buildCanonicalDebtServiceInputContract({
+  sourceTruthPackage: rateStructureConflictPackage,
+});
+assert.equal(
+  rateConflictDebtContract.proposedFinancing.debtServiceBundles[0].eligibleForDeterministicCalculation,
+  true
+);
+assert.equal(rateConflictDebtContract.proposedFinancing.facts.rate_structure.value, null);
+
+console.log(`support-document authority adversarial matrix PASS (${scenarios.length + 11} scenarios)`);
