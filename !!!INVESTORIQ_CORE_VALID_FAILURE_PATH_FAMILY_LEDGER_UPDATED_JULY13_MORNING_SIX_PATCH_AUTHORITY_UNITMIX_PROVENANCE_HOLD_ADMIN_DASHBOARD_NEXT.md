@@ -19263,3 +19263,36 @@ Gate 4D creates no renderer output, Boss mutation, CustomerSurfaceModel mutation
 Verification: support authority `PASS` with 33 scenarios; Source Truth pipeline, phase, and constitutional matrix `PASS`; Quality Ops `PASS`; Financial Intelligence `PASS`; full QA and production build `PASS`; Vercel budget `PASS 12 / 12`; diff integrity `PASS`.
 
 Status: Gate 4D `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4E T12 versus Rent Roll reconciliation materiality and source-bound explanation.
+
+## July 16 Gate 4E CVF closure
+
+Gate 4D is committed and deployed at `62ae77f`, with its ledger update at `c790986`. Gate 4E adds `api/_lib/core-reconciliation-input-contract.js` as the sole canonical input owner and `api/_lib/deterministic-core-reconciliation-analysis.js` as the sole deterministic calculation owner for T12 versus Rent Roll reconciliation intelligence.
+
+Closed Gate 4E failure families:
+
+```text
+broad T12 gross income is relabeled as Gross Potential Rent -> prohibited
+T12 reconciliation value disagrees with its accepted core fact -> evidence gap and collapse
+monthly Rent Roll summary is used without annualization -> prohibited
+Rent Roll reconciliation value disagrees with canonical source selection -> evidence gap and collapse
+point-in-time Rent Roll and trailing T12 are presented as equivalent concepts -> prohibited
+variance cause is inferred from the amount alone -> prohibited
+legacy 5% materiality threshold is silently reused -> prohibited
+arbitrary caller threshold creates classification -> prohibited
+missing reconciliation value becomes zero -> prohibited
+accepted zero Rent Roll value becomes missing -> prohibited
+optional unit count absence destroys the core comparison -> prohibited
+optional reconciliation limitation blocks valid core publication -> prohibited
+```
+
+Gate 4E calculates objective variance measures only. The permanent reference proof produces a difference of `-$180,000.00`, a T12 GPR-relative variance of `-11.16%`, and a 64-unit monthly difference of `-$234.38` per unit. The explanation identifies only the accepted measures, their time-basis distinction, and the fact that accepted sources do not establish cause.
+
+Materiality classification remains fail-closed at `not_classified` with a null threshold until an approved canonical policy exists. Missing inputs and evidence gaps produce null calculations and retain any separately valid accepted component. All Gate 4E outcomes remain non-blocking to canonically valid T12 and Rent Roll publication.
+
+The existing live `buildSourceReconciliationState(...)` path still owns customer behavior and still contains the legacy 5% rule plus broad source fallbacks. It was not modified in Gate 4E. Gate 4G must perform the bounded atomic downstream cutover; no parallel authority is permitted after that integration.
+
+Gate 4E creates no renderer output, Boss mutation, CustomerSurfaceModel mutation, Delivery Gate change, Screening change, credit change, billing change, or publication mutation.
+
+Verification: Financial Intelligence `PASS`; Source Truth pipelines and constitutional matrix `PASS`; diff integrity `PASS`; full QA and production build `PASS`; Vercel budget `PASS 12 / 12`.
+
+Status: Gate 4E `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4F CapEx timing, reserve adequacy, and deferred maintenance.

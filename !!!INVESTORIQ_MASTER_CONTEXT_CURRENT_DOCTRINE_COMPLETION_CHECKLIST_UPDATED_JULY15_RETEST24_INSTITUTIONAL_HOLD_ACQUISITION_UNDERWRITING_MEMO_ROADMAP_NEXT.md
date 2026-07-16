@@ -1944,5 +1944,77 @@ Vercel function budget: PASS, 12 / 12
 git diff --check: PASS
 ```
 
+## July 16 Gate 4E status
+
+```text
+GATE 4D PRODUCTION COMMIT: 62ae77f
+GATE 4D DEPLOYMENT: PASS
+GATE 4D LEDGER COMMIT: c790986
+GATE 4E CORE RECONCILIATION INTELLIGENCE: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+CUSTOMER-FACING COPY PRODUCED: NO
+RENDERER BEHAVIOR CHANGED: NO
+CORE PUBLICATION BEHAVIOR CHANGED: NO
+NEXT: 4F CapEx timing, reserve adequacy, and deferred maintenance
+```
+
+New canonical owners:
+
+```text
+api/_lib/core-reconciliation-input-contract.js
+api/_lib/deterministic-core-reconciliation-analysis.js
+```
+
+Gate 4E creates a consume-only authority chain:
+
+```text
+canonical accepted T12 Gross Potential Rent
++ canonical accepted annualized Rent Roll in-place rent
++ optional canonical accepted unit count
+-> immutable reconciliation input contract
+-> deterministic difference, variance, direction, and per-unit monthly measure
+-> source-limited explanation with no inferred cause
+```
+
+The contract accepts only canonical Source Truth. It requires the reconciliation value to remain bound to the accepted core source identity, accepted semantic fact, and canonical source-selection path. Broad T12 `gross_income` and `total_income` fallbacks are prohibited. An unannualized monthly Rent Roll summary cannot become an annual comparison value.
+
+The permanent reference proof is:
+
+```text
+T12 Gross Potential Rent: $1,612,800.00
+Rent Roll annual in-place rent: $1,432,800.00
+Rent Roll minus T12 GPR: -$180,000.00
+Variance relative to T12 GPR: -11.16%
+64-unit monthly difference: -$234.38 per unit
+```
+
+The analysis distinguishes a point-in-time annualized Rent Roll measure from a trailing T12 source measure. It does not claim that the concepts are equivalent, infer vacancy or any other cause, normalize either source, or make an unsupported adjustment.
+
+Materiality is fail-closed. Gate 4E calculates objective dollar, ratio, and per-unit measures, but it does not reuse the legacy 5% rule or accept an arbitrary caller threshold. Until a canonical approved materiality policy exists, classification remains `not_classified`, the threshold remains null, and the receipt states `CANONICAL_MATERIALITY_POLICY_NOT_AVAILABLE`.
+
+Missing or evidence-gapped reconciliation facts collapse only this optional analysis. Accepted zero remains zero. Missing values remain null. The receipt cannot block a report whose T12 and Rent Roll remain canonically valid.
+
+The existing live `buildSourceReconciliationState(...)` helper still contains the legacy 5% classification and broader source fallbacks. Gate 4E deliberately does not change that live owner. Gate 4G must atomically replace downstream use with the new canonical contract and analysis after Gate 4F is complete.
+
+Permanent proof owner:
+
+```text
+tests/qa/deterministic-core-reconciliation-analysis-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+Exact verification after Gate 4E:
+
+```text
+npm.cmd run qa:financial-intelligence: PASS
+npm.cmd run qa:source-truth-pipelines: PASS
+npm.cmd run qa:source-truth-matrix: PASS
+npm.cmd run qa:diff-check: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+Vercel function budget: PASS, 12 / 12
+```
+
 ---
 # End of Active Master Context

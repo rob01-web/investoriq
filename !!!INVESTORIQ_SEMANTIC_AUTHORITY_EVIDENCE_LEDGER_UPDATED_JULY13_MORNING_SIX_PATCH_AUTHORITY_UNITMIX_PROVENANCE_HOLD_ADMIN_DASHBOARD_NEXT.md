@@ -8327,3 +8327,53 @@ Source Truth narrow conflict treatment is now explicit. Optional same-role confl
 Gate 4D verification: support authority matrix `PASS` with 33 scenarios; Source Truth pipelines and constitutional matrix `PASS`; Quality Ops `PASS`; Financial Intelligence `PASS`; full QA and build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`. No renderer or customer copy changed.
 
 NEXT: Gate 4E T12 versus Rent Roll reconciliation materiality and source-bound explanation.
+
+## July 16 Gate 4E core reconciliation authority receipt
+
+Gate 4D is committed and deployed at `62ae77f`, with its ledger update at `c790986`. Gate 4E extends the protected consume-only chain:
+
+```text
+validated T12 and Rent Roll core artifacts
+-> canonical Source Truth core facts and source reconciliation selection
+-> canonical core reconciliation input contract
+-> deterministic difference and variance analysis
+-> immutable source-limited reconciliation receipt
+```
+
+Accepted reconciliation meanings remain deliberately narrow:
+
+```text
+T12 Gross Potential Rent from gross_potential_rent or gross_scheduled_rent only
+Rent Roll annual in-place rent from an explicitly annual source path only
+total units as an optional accepted Rent Roll fact
+```
+
+The input contract binds each value to the canonical Source Truth package, accepted core role, accepted fact or source-selection value, source identity key, file and artifact identity, and core validation state. A parser route, filename, broad income alias, unannualized monthly summary, or standalone calculated value cannot create reconciliation authority.
+
+The deterministic receipt preserves these semantic boundaries:
+
+```text
+Rent Roll annual in-place rent minus T12 Gross Potential Rent is a comparison, not a source fact
+point-in-time Rent Roll and trailing T12 measures are not declared equivalent
+variance direction is not a causal explanation
+objective size is not a materiality classification without approved policy
+missing input is not zero
+optional comparison collapse is not a core publication blocker
+```
+
+For the permanent reference case, the accepted facts produce:
+
+```text
+$1,432,800.00 - $1,612,800.00 = -$180,000.00
+-$180,000.00 / $1,612,800.00 = -0.111607
+display variance = -11.16%
+-$180,000.00 / 64 units / 12 months = -$234.38 per unit per month
+```
+
+The source-limited explanation states the accepted amounts and direction, identifies the distinct time bases, and explicitly withholds cause. It never inserts vacancy, concessions, collections, loss-to-lease, timing, turnover, bad debt, or any other unsupported narrative.
+
+The legacy 5% threshold is rejected. Objective dollar, ratio, and per-unit measures are recorded, but classification and threshold remain null with `CANONICAL_MATERIALITY_POLICY_NOT_AVAILABLE`. Arbitrary threshold and cause fields passed by callers have no effect.
+
+Gate 4E verification: Financial Intelligence `PASS`; Source Truth pipelines and constitutional matrix `PASS`; diff check `PASS`; full QA and build `PASS`; Vercel budget `PASS 12 / 12`. Public terminology guards remain active. No renderer or customer copy changed.
+
+NEXT: Gate 4F CapEx timing, reserve adequacy, and deferred maintenance.

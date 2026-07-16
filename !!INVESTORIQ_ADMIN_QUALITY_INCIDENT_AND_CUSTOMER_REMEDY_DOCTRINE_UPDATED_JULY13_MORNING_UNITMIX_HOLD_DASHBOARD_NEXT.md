@@ -735,3 +735,25 @@ The Admin quality architecture now recognizes narrow support-fact conflicts. If 
 No customer upload workflow, customer remedy workflow, credit action, billing action, Delivery Gate change, terminal-code change, renderer change, or public wording was introduced. The Vercel budget remains 12 / 12.
 
 Gate 4D verification: Quality Ops `PASS`; Financial Intelligence `PASS`; support authority `PASS` with 33 scenarios; Source Truth pipeline and constitutional suites `PASS`; full QA and build `PASS`; diff integrity `PASS`.
+
+## July 16 Gate 4E checkpoint
+
+```text
+Gate 3: PASS / deployed / production route verified
+Gate 4A: PASS / committed and deployed
+Gate 4B: PASS / committed and deployed
+Gate 4C: PASS / committed and deployed
+Gate 4D: PASS / committed and deployed at 62ae77f
+Gate 4E: PASS locally / deterministic T12 versus Rent Roll reconciliation
+Gate 4F: NEXT / CapEx timing, reserve adequacy, and deferred maintenance
+```
+
+Gate 4E remains analysis-only and is not connected to the Admin Dashboard or customer report. It produces an immutable comparison receipt from canonical accepted T12 Gross Potential Rent and canonical accepted annualized Rent Roll in-place rent.
+
+The future Quality Manifest can record accepted inputs, exact source identities, dollar variance, ratio variance, direction, optional per-unit monthly measure, time-basis limitation, missing input, evidence gap, source-bound explanation status, and the absence of an approved materiality classification. It does not reconstruct facts from raw artifacts.
+
+The future Admin incident projection may display a reconciliation limitation only after Gate 4G defines the canonical integration mapping. Gate 4E itself creates no incident, customer remedy, customer upload request, credit action, billing action, Delivery Gate change, terminal-code change, renderer change, or public wording.
+
+The legacy 5% materiality rule is not carried forward. Until an approved canonical materiality policy exists, classification remains null. This prevents the Dashboard or report from presenting an invented threshold as institutional doctrine.
+
+Gate 4E verification: Financial Intelligence `PASS`; Source Truth pipelines and constitutional matrix `PASS`; full QA and production build `PASS`; diff integrity `PASS`; Vercel budget `PASS 12 / 12`.
