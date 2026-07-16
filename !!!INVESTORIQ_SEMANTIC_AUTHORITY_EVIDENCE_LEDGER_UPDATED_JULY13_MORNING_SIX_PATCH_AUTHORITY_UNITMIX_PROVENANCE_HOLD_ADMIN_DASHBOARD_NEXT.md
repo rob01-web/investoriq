@@ -8605,3 +8605,39 @@ Gate 5C does not create a market-value conclusion, future value, exit cap rate, 
 Permanent proof is `tests/qa/deterministic-acquisition-valuation-analysis-smoke.js`, registered in `qa:financial-intelligence`. Gate 5C verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `10 / 10`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
 
 Gate 5C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5D deterministic source-bound acquisition capital structure and equity reference. Current debt, refinance policy, invented acquisition costs, return assumptions, classifications, recommendations, and customer output remain outside Gate 5D authority.
+
+## July 16 Gate 5D capital-structure authority receipt
+
+Gate 5C is committed at `7705c46`, with exact `origin/main` parity confirmed. Vercel deployment was not verified in this turn. Gate 5D extends the authority chain without creating source truth:
+
+```text
+canonical Source Truth accepted purchase and financing facts
+-> canonical Gate 4 debt input facts and lender-fee calculation
+-> canonical Gate 5A valuation and underwriting input contract
+-> deterministic Gate 5D acquisition capital-structure receipt
+-> no downstream consumer and no customer surface yet
+```
+
+`api/_lib/deterministic-acquisition-capital-structure-analysis.js` is the sole Gate 5D owner. Purchase price is anchored to the Gate 5A valuation fact. The proposed-financing role must be the accepted primary with no role conflict. Every financing fact must be individually source-backed, carry the accepted purchase-assumptions role, exact fact path, and exact primary source identity. A second canonical purchase-price copy may corroborate the valuation fact but cannot override it. Disagreement collapses purchase-price-dependent calculations.
+
+Capital-structure eligibility does not require the interest-rate and amortization bundle needed for debt-service modeling. Accepted loan amount, LTV, lender fee, and unit count retain independent eligibility. This is narrow collapse, not reduced authority.
+
+The ten receipts cover derived proposed-loan-to-price, stated-LTV difference, purchase price less proposed loan, the corresponding purchase-price share, loan per unit, unfinanced purchase price per unit, lender-fee dollars, lender-fee share of purchase price, source-stated-LTV-implied loan amount, and proposed loan less implied loan amount.
+
+Gate 5D preserves exact meanings:
+
+```text
+purchase price less proposed loan = arithmetic before other costs
+unfinanced purchase-price share = arithmetic ratio, not equity classification
+lender-fee dollars = accepted loan times accepted fee rate
+source-stated-LTV-implied loan = reconciliation reference
+current debt = excluded
+refinance assumptions = unavailable
+total equity requirement = unavailable
+```
+
+Missing or rejected facts collapse only dependent measures. Zero lender fee remains zero. A zero loan is rejected by the positive financing contract. A proposed loan above purchase price or a stated-LTV disagreement remains unclassified arithmetic. Current debt changes cannot alter Gate 5D calculations.
+
+Permanent proof is `tests/qa/deterministic-acquisition-capital-structure-analysis-smoke.js`, registered in `qa:financial-intelligence`. Gate 5D verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `11 / 11`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
+
+Gate 5D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5E canonical acquisition-cost, equity-basis, and return-readiness authority contract. No return metric may exist until its full source and policy bundle is explicitly eligible.

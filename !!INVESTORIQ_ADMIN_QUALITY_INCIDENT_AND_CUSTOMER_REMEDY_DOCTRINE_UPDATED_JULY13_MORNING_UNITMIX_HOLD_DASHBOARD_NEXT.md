@@ -904,3 +904,40 @@ The dashboard may not label purchase price, appraised value, a value difference,
 Gate 5C verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 10 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
 
 Gate 5C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5D deterministic source-bound acquisition capital structure and equity reference. Gate 5D remains analysis-only and may not create refinance policy, returns, classifications, customer remedies, or publication authority.
+
+## July 16 Gate 5D checkpoint
+
+```text
+Gate 5C: COMMITTED AT 7705c46 / ORIGIN MAIN MATCH CONFIRMED
+Gate 5C Vercel deployment: NOT VERIFIED IN THIS TURN
+Gate 5D: PASS locally / deterministic acquisition capital-structure receipt
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+```
+
+Gate 5D creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, or Screening behavior. The Gate 5D section and every calculation have `customerSurfaceAuthorized: false` and `reportPublicationBlocker: false`.
+
+The future Quality Manifest and Admin projection may consume Gate 5D only after a later finalized Gate 5 aggregate receipt and atomic downstream gate establish exact mappings. They must not reconstruct capital-structure arithmetic, call purchase price less proposed loan total equity, infer fee funding source, create closing costs, use current debt as an acquisition use, classify an over-loan or LTV difference, or turn optional collapse into a platform defect.
+
+Permitted future administrative states remain factual:
+
+```text
+canonical purchase price unavailable
+canonical proposed loan unavailable
+source-stated LTV unavailable
+lender-fee input unavailable
+purchase-price canonical copies disagree
+capital-structure calculation completed from accepted source facts
+dependent calculation collapsed
+total-equity and return authority not established
+```
+
+The dashboard may not label loan-to-price, purchase price less loan, lender fee, or source-stated-LTV disagreement as favorable, unfavorable, leveraged, undercapitalized, risky, or recommended without later authorized classification policy.
+
+Gate 5D verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 11 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
+
+Gate 5D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5E canonical acquisition-cost, equity-basis, and return-readiness authority. Gate 5E remains eligibility-only and cannot create returns, customer remedies, or publication authority.

@@ -19477,3 +19477,41 @@ No market-value conclusion, future value, appreciation, exit cap rate, refinance
 Verification: dedicated Gate 5C smoke `PASS`; Financial Intelligence `PASS` with 10 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
 
 Status: Gate 5C `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5D deterministic source-bound acquisition capital structure and equity reference. Gate 5D cannot use current debt as acquisition financing, promote acquisition terms into refinance policy, invent costs, calculate returns, classify risk, recommend action, or change customer output.
+
+## July 16 Gate 5D CVF closure
+
+Gate 5C is committed at `7705c46`, with exact `origin/main` parity confirmed. Vercel deployment was not verified in this turn. Gate 5D adds one immutable deterministic acquisition capital-structure receipt without changing downstream behavior.
+
+Closed Gate 5D failure families:
+
+```text
+marker-only Gate 5A object unlocks capital-structure calculations -> prohibited
+caller-supplied costs, payoff, equity, refinance, or recommendation changes receipt -> prohibited
+changed result, formula, or provenance survives validation -> prohibited
+debt-service incompleteness erases individually accepted capital facts -> prohibited
+contradictory canonical purchase-price copies select a winner -> prohibited
+proposed financing fact with mismatched source identity survives -> prohibited
+missing purchase price becomes zero -> prohibited
+missing LTV collapses non-LTV capital measures -> prohibited
+missing fee collapses non-fee capital measures -> prohibited
+missing unit count collapses non-unit capital measures -> prohibited
+zero proposed loan becomes accepted positive financing -> prohibited
+accepted zero lender fee becomes missing -> prohibited
+purchase price less loan becomes total equity requirement -> prohibited
+lender fee becomes an assumed equity use -> prohibited
+current debt becomes acquisition financing or payoff -> prohibited
+acquisition terms become refinance assumptions -> prohibited
+loan above purchase price becomes an inferred risk classification -> prohibited
+LTV disagreement becomes a recommendation -> prohibited
+optional capital-structure ambiguity blocks valid core publication -> prohibited
+Gate 5D changes Screening or customer rendering -> prohibited
+legacy underwriting becomes production authority -> prohibited
+```
+
+The sole Gate 5D production owner is `api/_lib/deterministic-acquisition-capital-structure-analysis.js`. Ten objective measures are supported. Every measure carries an exact formula, accepted facts, values, provenance, precision, collapse reason, customer-surface prohibition, and non-blocking state. Lender-fee dollars are permanently cross-checked against the existing Gate 4 canonical calculation.
+
+No closing costs, total equity requirement, fee funding source, current-debt payoff, refinance proceeds, return, classification, recommendation, customer rendering, Screening behavior, Delivery Gate behavior, or terminal taxonomy changed.
+
+Verification: dedicated Gate 5D smoke `PASS`; Financial Intelligence `PASS` with 11 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
+
+Status: Gate 5D `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5E canonical acquisition-cost, equity-basis, and return-readiness authority. Gate 5E defines eligibility only and cannot calculate returns or create customer output.

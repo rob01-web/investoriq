@@ -2382,5 +2382,77 @@ git diff --check: PASS before ledger update
 
 Gate 5D is bounded to deterministic source-bound acquisition capital structure and equity-reference arithmetic. It may use only an accepted purchase price and accepted proposed acquisition financing facts already carried by the canonical Gate 5A contract. It may calculate objective proposed-loan-to-price, price less proposed loan, and source-backed lender-fee arithmetic when the full exact fact bundle exists. It must keep current debt separate, must not invent closing costs or additional equity, and must not promote acquisition terms into refinance assumptions, calculate refinance proceeds, create return metrics, classify risk, recommend action, or connect customer output.
 
+## July 16 Gate 5D status
+
+```text
+GATE 5C: COMMITTED AT 7705c46 / ORIGIN MAIN MATCH CONFIRMED
+GATE 5C VERCEL DEPLOYMENT: NOT VERIFIED IN THIS TURN
+GATE 5D DETERMINISTIC ACQUISITION CAPITAL STRUCTURE AND EQUITY REFERENCE: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION CHANGED: NO
+NEXT: Gate 5E canonical acquisition-cost, equity-basis, and return-readiness authority contract
+```
+
+Gate 5D creates one new bounded production owner:
+
+```text
+api/_lib/deterministic-acquisition-capital-structure-analysis.js
+```
+
+It consumes only a complete canonical Gate 5A institutional-underwriting input contract. Purchase price remains anchored to the Gate 5A valuation receipt. The canonical Gate 4 debt input copy must carry the same source identity and, when present, the same value. A contradictory canonical copy selects no winner and collapses every purchase-price-dependent Gate 5D measure.
+
+Capital-structure eligibility is deliberately narrower than debt-service eligibility. An exact accepted proposed loan, purchase price, LTV, or lender-fee fact may support its own deterministic arithmetic even when interest rate or amortization is missing and the separate debt-service bundle is incomplete. This preserves narrow collapse without weakening source authority.
+
+Gate 5D calculates exactly ten source-bound measures when their exact inputs are eligible:
+
+```text
+proposed loan divided by purchase price
+source-stated LTV less derived proposed-loan-to-price
+purchase price less proposed loan
+purchase-price-less-loan divided by purchase price
+proposed loan per accepted unit
+purchase-price-less-loan per accepted unit
+proposed lender-fee dollars
+lender fee divided by purchase price
+purchase price multiplied by source-stated LTV
+proposed loan less source-stated-LTV-implied loan
+```
+
+`purchase price less proposed loan` is an unfinanced purchase-price reference before costs. It is not total equity required. Gate 5D does not infer closing costs, fee funding source, current-debt payoff, additional financing, total uses, or total equity requirement. Negative results and source inconsistencies remain arithmetic facts and cannot create risk classifications or recommendations.
+
+The lender-fee formula is cross-checked in permanent proof against the existing canonical Gate 4 lender-fee result. Gate 5D cannot silently diverge from the established formula `accepted_proposed_loan_amount_times_accepted_lender_fee_rate`.
+
+Each calculation records the registered formula, exact accepted facts, numeric inputs, fact-level provenance, units, precision, result or null, collapse reason, customer-surface prohibition, and non-blocking state. Missing LTV collapses only LTV-dependent comparisons. Missing fee rate collapses only fee measures. Missing total units collapses only per-unit measures. Missing loan amount does not erase a separately calculable source-stated-LTV-implied loan reference. Optional acquisition evidence cannot block valid core publication.
+
+Gate 5D explicitly leaves closing costs, total equity requirement, lender-fee funding source, current-debt payoff, refinance proceeds, returns, risk classification, and recommendations unauthorized and null. The section has `customerSurfaceAuthorized: false` and `reportPublicationBlocker: false`.
+
+Permanent proof owner:
+
+```text
+tests/qa/deterministic-acquisition-capital-structure-analysis-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+The adversarial proof covers complete calculations, Gate 4 lender-fee parity, provenance, immutability, caller overrides, result tampering, formula tampering, provenance tampering, marker-only input rejection, debt-service incompleteness with valid capital facts, missing LTV, missing fee, missing unit count, missing loan, missing purchase price, role conflict, evidence mismatch, rejected zero loan, accepted zero fee, proposed loan above purchase price, stated-LTV disagreement, contradictory canonical purchase-price copies, source-identity mismatch, current-debt isolation, legacy isolation, downstream isolation, and the customer em-dash prohibition.
+
+Exact Gate 5D verification:
+
+```text
+node tests/qa/deterministic-acquisition-capital-structure-analysis-smoke.js: PASS
+npm.cmd run qa:financial-intelligence: PASS, 11 smokes
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+support-document authority adversarial matrix: PASS, 37 scenarios
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS before ledger update
+```
+
+Gate 5E must define the canonical authority and completeness contract required before any return metric can exist. It must separately identify accepted acquisition costs, accepted funding sources, lender-fee funding treatment, total equity basis, hold period, interim cash flows, exit value authority, exit costs, and timing. Missing inputs remain null and make the dependent return ineligible. Gate 5E must not calculate IRR, equity multiple, cash-on-cash return, refinance proceeds, or a recommendation.
+
 ---
 # End of Active Master Context
