@@ -833,3 +833,38 @@ These states remain analysis limitations unless a separate true platform or core
 Maximum LTV, minimum DSCR, refinance terms, normalization rules, bridge assumptions, exit assumptions, stress shocks, and risk classifications remain unavailable. The dashboard may not infer them from purchase assumptions, current debt, prior reports, old underwriting fields, or its own thresholds.
 
 Gate 5A verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 8 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS`. Next is Gate 5B, still analysis-only until a later atomic customer-surface gate is separately proven.
+
+## July 16 Gate 5B checkpoint
+
+```text
+Gate 5A: COMMITTED AT 702c940 / ORIGIN MAIN MATCH CONFIRMED
+Gate 5A Vercel automatic deployment: NOT CONFIRMED DURING REPORTED GITHUB INTEGRATION OUTAGE
+Gate 5B: PASS locally / deterministic source-case analysis receipt
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+```
+
+Gate 5B creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, or Screening behavior. Its receipt is analysis-only and every section has `customerSurfaceAuthorized: false` and `reportPublicationBlocker: false`.
+
+The future Quality Manifest and Admin incident projection may consume Gate 5B only after a later finalized Gate 5 aggregate receipt and atomic downstream gate establish canonical mapping. They must not calculate Gate 5B measures from raw Source Truth, reconstruct a missing result, turn a collapsed optional analysis into a platform defect, or infer risk from an arithmetic variance.
+
+Permitted future administrative states remain factual:
+
+```text
+canonical source-case input unavailable
+calculation completed from canonical inputs
+dependent ratio collapsed because its denominator was not eligible
+source-stated market rent comparison unavailable
+physical vacancy position unavailable
+future underwriting policy not established
+```
+
+The dashboard may not label source-stated rent difference as rent growth, market acceptance, or value-add potential. It may not label physical vacancy as economic vacancy. It may not classify an expense ratio, NOI margin, variance, rent difference, occupancy, or unit equivalent as good, bad, adequate, material, risky, or recommended without a later authorized classification policy.
+
+Gate 5B verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 9 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
+
+Gate 5B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5C deterministic source-bound acquisition and appraisal valuation reference. Gate 5C remains analysis-only and may not create future value, return, risk, recommendation, customer remedy, or publication authority.

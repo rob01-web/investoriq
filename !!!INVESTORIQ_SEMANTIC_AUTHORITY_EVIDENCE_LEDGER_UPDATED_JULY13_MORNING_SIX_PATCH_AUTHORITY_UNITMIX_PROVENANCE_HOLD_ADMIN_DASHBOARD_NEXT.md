@@ -8532,3 +8532,39 @@ This permits a future objective accepted-source operating receipt while keeping 
 The permanent adversarial proof validates evidence mismatch, adjudication rejection, accepted-entry disagreement, narrow conflict, role conflict, duplicate primary, ambiguous source presence, missing values, accepted zeros, invalid core, job mismatch, counterfeit contracts, caller overrides, legacy isolation, and immutability.
 
 Gate 5A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Full QA and build pass, the support-authority matrix remains `37 / 37`, and the Vercel function budget remains `12 / 12`. NEXT: Gate 5B deterministic source-case operating underwriting and objective rent/vacancy bridge.
+
+## July 16 Gate 5B deterministic analysis authority receipt
+
+Gate 5A is committed at `702c940`, with exact `origin/main` parity confirmed. Vercel automatic deployment remained unconfirmed during a reported GitHub integration outage. Gate 5B extends the protected authority chain as follows:
+
+```text
+canonical Source Truth accepted facts and exact evidence
+-> canonical Gate 4 financial-intelligence receipt
+-> canonical Gate 5A scenario-policy and input contracts
+-> deterministic Gate 5B source-case analysis receipt
+-> no downstream consumer and no customer surface yet
+```
+
+`api/_lib/deterministic-source-case-underwriting-analysis.js` is the sole Gate 5B owner. It does not adjudicate documents or create accepted facts. It consumes only a fully valid Gate 5A contract and retains the complete input contract, job identity, core publication authority, required fact names, exact numeric inputs, exact provenance, deterministic formula, precision, result, section decision, limitation codes, and non-blocking state.
+
+The accepted-state boundary remains unchanged:
+
+```text
+sourcePresent does not mean accepted
+roleAccepted does not mean every fact is accepted
+factAccepted does not mean every section is complete
+sourceBacked requires exact accepted evidence
+calculationEligible requires the complete Gate 5A bundle
+calculated requires eligible finite inputs and the exact registered formula
+customerSurfaceAuthorized remains false
+```
+
+Gate 5B supports ten arithmetic receipts: implied NOI, NOI reconciliation difference, operating expense ratio, NOI margin, annual market rent difference, market rent difference ratio, monthly market rent difference per unit, physical vacancy rate, occupied unit equivalent, and vacant unit equivalent. Each receipt is source-bound to accepted T12 or Rent Roll provenance. The validator reconstructs the entire expected object from the embedded canonical contract, preventing a marker, local result, changed formula, changed evidence, or changed section state from becoming authority.
+
+Gate 5B does not reinterpret source-stated market rent as achievable rent or growth. It does not convert physical vacancy into economic vacancy. It does not normalize expenses, create bridge or exit assumptions, calculate refinance constraints or returns, classify risk, recommend action, or connect to Projection, Boss, CustomerSurfaceModel, rendering, Quality Manifest, Admin projection, or Screening.
+
+Missing or ineligible optional inputs remain null and collapse only their dependent calculation or section. Accepted zero remains zero. A denominator that cannot support a ratio produces null with an exact reason, not zero or false completeness. Every section remains non-blocking to valid core publication.
+
+Permanent proof is `tests/qa/deterministic-source-case-underwriting-analysis-smoke.js`, registered in `qa:financial-intelligence`. Gate 5B verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `9 / 9`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
+
+Gate 5B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5C may create deterministic source-bound acquisition and appraisal valuation references only. Future value, future cap rates, appreciation, refinance proceeds, returns, classifications, recommendations, and customer output remain unauthorized.

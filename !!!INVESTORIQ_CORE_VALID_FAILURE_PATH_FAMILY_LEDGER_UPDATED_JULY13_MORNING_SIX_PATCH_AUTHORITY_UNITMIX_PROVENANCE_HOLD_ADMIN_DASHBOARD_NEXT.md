@@ -19406,3 +19406,39 @@ All support fact values fail closed to null unless canonical role acceptance, fa
 Verification: Gate 5A smoke `PASS`; Financial Intelligence `PASS` with 8 smokes; full QA, parser, recovery, routing, production build, 37-scenario authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
 
 Status: Gate 5A `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5B deterministic source-case operating underwriting and objective rent/vacancy bridge.
+
+## July 16 Gate 5B CVF closure
+
+Gate 5A is committed at `702c940`, and the exact commit is present on `origin/main`. Vercel automatic deployment was not confirmed because Vercel reported a GitHub integration outage. Gate 5B adds one immutable deterministic source-case analysis receipt without connecting any customer surface.
+
+Closed Gate 5B failure families:
+
+```text
+marker-only Gate 5A object unlocks calculations -> prohibited
+caller-supplied result or policy override changes the receipt -> prohibited
+changed formula survives validation -> prohibited
+changed result survives validation -> prohibited
+changed provenance survives validation -> prohibited
+missing source value becomes zero -> prohibited
+accepted zero becomes missing -> prohibited
+zero denominator produces a fabricated ratio -> prohibited
+source-stated market rent difference becomes forecast rent growth -> prohibited
+source-stated market rent becomes an achievability conclusion -> prohibited
+physical vacancy becomes economic vacancy -> prohibited
+unit-equivalent arithmetic becomes invented unit-row fact -> prohibited
+expense normalization occurs without policy -> prohibited
+bridge, exit, or stress case is invented -> prohibited
+refinance proceeds or return analysis is calculated -> prohibited
+risk classification or recommendation is created -> prohibited
+optional analysis collapse blocks valid core publication -> prohibited
+Gate 5B changes Screening or a customer renderer -> prohibited
+legacy underwriting becomes production authority -> prohibited
+```
+
+The sole Gate 5B production owner is `api/_lib/deterministic-source-case-underwriting-analysis.js`. It requires the complete canonical Gate 5A input contract, preserves exact input provenance, records exact formulas and required canonical facts, and validates by deterministic reconstruction. Ten objective measures are supported across source-case operating, rent difference, and physical vacancy sections. Each unavailable dependent measure collapses to null with an exact reason code and cannot block report-level publication.
+
+No expense normalization, economic-vacancy inference, rent-growth inference, scenario, refinance constraint, return, classification, recommendation, customer rendering, Screening behavior, Delivery Gate behavior, or terminal taxonomy changed.
+
+Verification: dedicated Gate 5B smoke `PASS`; Financial Intelligence `PASS` with 9 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
+
+Status: Gate 5B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5C deterministic source-bound acquisition and appraisal valuation reference. Gate 5C cannot infer future value, an exit cap rate, appreciation, refinance proceeds, returns, risk, or a recommendation.

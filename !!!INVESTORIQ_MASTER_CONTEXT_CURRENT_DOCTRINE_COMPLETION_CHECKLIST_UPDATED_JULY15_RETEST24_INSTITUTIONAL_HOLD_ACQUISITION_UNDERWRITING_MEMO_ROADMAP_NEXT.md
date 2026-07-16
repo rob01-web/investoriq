@@ -2246,5 +2246,71 @@ git diff --check: PASS
 
 Gate 5B is bounded to deterministic source-case operating underwriting and the objective rent/vacancy bridge. It may calculate only from Gate 5A eligible inputs. It must not normalize expenses without an approved normalization policy, invent economic vacancy, infer rent growth, create bridge or exit cases, calculate refinance proceeds, classify risk, issue a recommendation, or connect customer output until its own receipt and atomic downstream gate pass.
 
+## July 16 Gate 5B status
+
+```text
+GATE 5A: COMMITTED AT 702c940 / ORIGIN MAIN MATCH CONFIRMED
+GATE 5A VERCEL AUTOMATIC DEPLOYMENT: NOT CONFIRMED DUE REPORTED GITHUB INTEGRATION OUTAGE
+GATE 5B DETERMINISTIC SOURCE-CASE UNDERWRITING: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION CHANGED: NO
+NEXT: Gate 5C deterministic source-bound acquisition and appraisal valuation reference
+```
+
+Gate 5B creates one new bounded production owner:
+
+```text
+api/_lib/deterministic-source-case-underwriting-analysis.js
+```
+
+It consumes only a complete canonical Gate 5A institutional-underwriting input contract. It does not read raw uploads, parser candidates, filenames, artifact types, aliases, legacy underwriting output, or renderer state. Its complete output is immutable and its validator rebuilds the expected receipt from the embedded canonical input contract. A changed formula, result, provenance receipt, policy flag, section decision, or input receipt fails validation.
+
+The receipt calculates exactly ten objective source-case measures when their Gate 5A inputs are eligible:
+
+```text
+implied NOI from accepted effective gross income less accepted operating expenses
+accepted NOI less implied NOI reconciliation difference
+operating expense ratio
+NOI margin
+annual source-stated market rent difference
+market rent difference ratio to accepted in-place rent
+monthly market rent difference per accepted unit
+physical vacancy rate from accepted occupancy
+occupied unit equivalent
+vacant unit equivalent
+```
+
+These calculations are source-bound arithmetic, not forecasts or conclusions. Source-stated market rent difference is not rent growth or rent achievability. Physical vacancy is not economic vacancy. Unit equivalents are deterministic products of accepted unit count and occupancy, not invented unit-row facts. A zero accepted value remains zero. A missing or ineligible value remains null. A zero or negative denominator collapses only the dependent ratio.
+
+Gate 5B explicitly leaves expense normalization, economic vacancy, rent growth, bridge, exit, stress, refinance constraints, return analysis, risk classification, and recommendations unauthorized and null. Every section has `customerSurfaceAuthorized: false` and `reportPublicationBlocker: false`. Optional analysis collapse cannot block publication when canonical T12 and Rent Roll authority remains valid.
+
+Permanent proof owner:
+
+```text
+tests/qa/deterministic-source-case-underwriting-analysis-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+The adversarial proof covers exact formulas and results, provenance binding, deep immutability, caller-override rejection, result tampering, formula tampering, provenance tampering, marker-only input rejection, missing market rent, zero EGI, zero expense, zero NOI, zero occupancy, zero in-place rent, negative NOI, market rent below in-place rent, missing occupancy, optional-section collapse, legacy isolation, downstream isolation, and the customer em-dash prohibition.
+
+Exact Gate 5B verification:
+
+```text
+node tests/qa/deterministic-source-case-underwriting-analysis-smoke.js: PASS
+npm.cmd run qa:financial-intelligence: PASS, 9 smokes
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+support-document authority adversarial matrix: PASS, 37 scenarios
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS before ledger update
+```
+
+Gate 5C is bounded to deterministic acquisition and appraisal valuation reference math from Gate 5A accepted facts. The intended scope is source-bound purchase price per unit, appraisal value per unit, purchase price versus appraisal value difference, source-case capitalization-rate arithmetic where an accepted NOI basis and value exist, and exact comparison to a source-stated cap rate where available. Gate 5C must not create an exit value, future cap rate, appreciation assumption, refinance proceeds, return projection, classification, recommendation, or customer output.
+
 ---
 # End of Active Master Context
