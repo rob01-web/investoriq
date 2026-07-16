@@ -1700,4 +1700,116 @@ Initial Gate 4 bounded sequence:
 No DSCR, debt, refinancing, CapEx, or sensitivity result may render unless its complete required accepted fact bundle and provenance are present. Missing optional facts collapse or qualify the narrow section. They do not become zero and do not block valid core publication.
 
 ---
+# 26. July 16 Gate 3 Production Verification and Gate 4A Close-Out
+
+## Gate 3 production status
+
+```text
+DEPLOYMENT FUNCTION LIMIT REPAIR: PASS at commit 04631b5
+VERCEL HOBBY FUNCTION BUDGET: PASS, 12 / 12
+QUALITY INCIDENT PRODUCTION ROUTE: PASS
+ADMIN AUTHENTICATED EMPTY STATE: PASS
+LEGACY ALIAS FALLBACK: FALSE
+RAW ARTIFACT RECONSTRUCTION: FALSE
+```
+
+The live Admin Dashboard loaded the canonical `BLOCKED`, `PUBLISHED WITH LIMITATIONS`, and `PUBLISHED CLEAN` queues. It displayed the required receipt-only and no-legacy-fallback boundaries. Zero incidents are expected until a report processed after Gate 3 deployment produces a finalized Report Quality Manifest. The valid empty state is not a dashboard failure.
+
+Gate 3 is now locked. A later report should populate the dashboard from its finalized Manifest without reopening Gate 3 architecture.
+
+## Gate 4A status
+
+```text
+GATE 4A CANONICAL DEBT-SERVICE INPUT CONTRACT: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+DOWNSTREAM REPORT BEHAVIOR CHANGED: NO
+CALCULATIONS PERFORMED: NO
+NEXT: 4B deterministic annual and monthly debt-service math
+```
+
+New canonical owner:
+
+```text
+api/_lib/debt-service-input-contract.js
+```
+
+Permanent proof owner:
+
+```text
+tests/qa/debt-service-input-contract-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+The contract accepts only `canonical_source_truth_package`. It binds canonical T12 NOI and individually accepted support facts to exact provenance. It permits current-debt calculation eligibility from either an accepted stated monthly payment or an accepted balance/rate/remaining-amortization bundle. It permits proposed-financing calculation eligibility only from an accepted loan-amount/rate/amortization bundle.
+
+Missing facts remain null. Evidence gaps remain ineligible. Conflicting authority collapses only the affected debt analysis. Duplicate evidence cannot create a conflict when a single accepted primary remains. Current debt and proposed financing cannot cross-promote. The contract is consume-only, immutable, non-authority-creating, non-rendering, and cannot block valid core publication.
+
+Exact verification:
+
+```text
+npm.cmd run qa:financial-intelligence: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS
+```
+
+## Gate 4B status
+
+```text
+GATE 4B DETERMINISTIC MONTHLY AND ANNUAL DEBT-SERVICE MATH: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+CUSTOMER-FACING COPY PRODUCED: NO
+RENDERER BEHAVIOR CHANGED: NO
+DSCR CALCULATED: NO
+NEXT: 4C current, proposed, bridge, exit, and stress DSCR eligibility
+```
+
+New canonical calculation owner:
+
+```text
+api/_lib/deterministic-debt-service-calculation.js
+```
+
+Permanent proof owner:
+
+```text
+tests/qa/deterministic-debt-service-calculation-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+Gate 4B consumes only the canonical Gate 4A input contract. It supports two exact methods:
+
+```text
+accepted source-stated monthly payment -> annualized by 12
+accepted principal + annual rate + amortization -> deterministic level-payment model
+```
+
+Modeled payments are explicitly classified as modeled and not source-stated. The calculation convention is recorded as 12 periods per year, accepted annual interest rate divided by 12, and end-of-period payment timing. This is a deterministic methodology receipt, not a new source fact.
+
+Reference proof values:
+
+```text
+$9,450,000 at 5.95% over 30 years -> $56,354.10 monthly / $676,249.20 annual
+$5,000,000 at 5.25% over 20 years -> $33,692.21 monthly / $404,306.52 annual
+$5,850 accepted monthly payment -> $70,200 annualized
+```
+
+Missing or evidence-ineligible inputs remain null. Non-whole or unsafe payment-period counts collapse the calculation. Zero-interest and near-zero-interest cases remain deterministic. Current stated payment takes precedence over a modeled current payment when both are eligible. Optional debt calculation failure never blocks valid core publication.
+
+New customer-surface doctrine proof is locked into the Gate 4B smoke: no em dash character and no public wording that exposes implementation machinery. Gate 4B produces no customer copy and makes no renderer change.
+
+Exact verification after Gate 4B:
+
+```text
+npm.cmd run qa:financial-intelligence: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS
+```
+
+---
 # End of Active Master Context

@@ -19155,3 +19155,51 @@ Gate 11: Launch Operations, Monitoring, Analytics, and Certification
 ```
 
 Institutional composition, role-specific support fact bundles, debt/lender analytics, renovation/value-creation underwriting, valuation, returns, risk register, diligence tracking, deterministic visual design, and committee-ready presentation remain required inside these bounded gates.
+
+---
+
+## July 16 Gate 3 production proof and Gate 4A CVF closure
+
+Gate 3 deployed successfully after consolidating the Quality Incident endpoint behind the existing admin function. The live authenticated Admin Dashboard loaded all three canonical Manifest queues and the valid empty receipt state. Vercel function count is locked by regression proof at 12 / 12.
+
+Gate 4A closes the following debt-input failure families before calculation work begins:
+
+```text
+accepted debt fact without exact accepted evidence -> ineligible evidence gap
+missing numeric debt input -> null, never zero
+multiple accepted sources without one canonical primary -> ineligible
+conflicting accepted debt sources -> affected debt analysis collapses
+duplicate source with one accepted primary -> duplicate disclosed, authority preserved
+current debt carrying proposed-financing fields -> no cross-role promotion
+proposed financing carrying current-debt fields -> no cross-role promotion
+optional debt failure -> never a report publication blocker
+noncanonical or legacy source package -> rejected by contract constructor
+```
+
+Production owner: `api/_lib/debt-service-input-contract.js`.
+
+Permanent proof: `tests/qa/debt-service-input-contract-smoke.js` through `qa:financial-intelligence` and `qa:full`.
+
+Status: Gate 4A `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4B deterministic annual and monthly debt-service math. No renderer, Boss, CustomerSurfaceModel, Delivery Gate, Screening, or publication behavior changed in Gate 4A.
+
+## July 16 Gate 4B CVF closure
+
+Gate 4B adds `api/_lib/deterministic-debt-service-calculation.js` as the only new debt-service calculation owner. It accepts only the canonical Gate 4A contract and closes these calculation failure families:
+
+```text
+missing debt input -> calculation collapsed with null outputs
+unbound accepted fact -> calculation collapsed
+conflicting debt authority -> calculation collapsed
+source-stated monthly payment -> preserved and annualized exactly by 12
+both stated and modeled current debt eligible -> stated payment takes precedence
+zero or near-zero rate -> numerically stable deterministic calculation
+fractional non-monthly amortization period -> calculation collapsed
+unsafe payment-period count -> calculation collapsed
+numeric overflow or non-finite result -> calculation collapsed
+modeled payment -> explicitly qualified as modeled, not source-stated
+optional debt calculation failure -> never a core publication blocker
+```
+
+Gate 4B performs no DSCR, stress, rendering, Boss, CustomerSurfaceModel, Delivery Gate, Screening, credit, billing, or publication mutation. Focused QA, full QA, build, diff integrity, terminology guards, and the 12 / 12 Vercel budget all pass.
+
+Status: Gate 4B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED`. Next bounded CVF slice is Gate 4C DSCR eligibility and calculation.

@@ -8182,3 +8182,71 @@ Gate 11: Launch Operations, Monitoring, Analytics, and Certification
 ```
 
 Every later gate remains subordinate to accepted Source Truth, complete fact-bundle eligibility, deterministic math, non-inference, consume-only downstream contracts, final PDF certification, immutable Manifest receipts, and canonical incident monitoring.
+
+---
+
+## July 16 Gate 3 production receipt and Gate 4A semantic contract
+
+Gate 3 production verification is complete. The deployed authenticated dashboard loaded the canonical Manifest queues, receipt-only projection boundary, no-legacy-alias boundary, and valid empty state. Empty queues mean no finalized post-deployment Manifest matched the filters; they do not authorize reconstruction from historical raw artifacts.
+
+Gate 4A adds one consume-only semantic boundary:
+
+```text
+canonical_source_truth_package
+-> accepted canonical T12 NOI
++ accepted primary debt-role facts
++ exact accepted fact evidence
+-> canonical_debt_service_input_contract
+-> eligible or ineligible calculation bundle only
+```
+
+Accepted calculation bundles:
+
+```text
+current stated debt service:
+  monthly_payment
+
+current modeled debt service:
+  current_outstanding_balance
+  interest_rate
+  amortization_remaining_years
+
+proposed modeled debt service:
+  proposed_loan_amount
+  interest_rate
+  amortization_years
+
+DSCR eligibility additionally requires:
+  canonical T12 net_operating_income
+```
+
+LTV, purchase price, lender fee, and maturity remain accepted context when evidence-bound, but they cannot substitute for a required debt-service input. The contract performs no payment, annualization, DSCR, stress, or renderer calculation. That work begins only in Gate 4B and remains subordinate to this contract.
+
+Gate 4A verification: focused smoke `PASS`; full QA `PASS`; build `PASS`; Vercel function budget `PASS 12 / 12`; diff check `PASS`.
+
+## July 16 Gate 4B deterministic derivation receipt
+
+Gate 4B extends the consume-only chain without creating new source authority:
+
+```text
+canonical_debt_service_input_contract
+-> eligible evidence-bound debt-service bundle
+-> deterministic debt-service calculation
+-> immutable monthly and annual derivation receipt
+```
+
+The result distinguishes semantic truth classes:
+
+```text
+source-stated monthly payment
+deterministically annualized source-stated payment
+deterministically modeled monthly debt service
+deterministically modeled annual debt service
+collapsed calculation with null output
+```
+
+A modeled debt-service result is never promoted to a lender-stated fact. Its receipt permanently records accepted input provenance, the annual-rate-to-monthly-rate convention, payment timing, number of periods, formula class, and required qualification state.
+
+No DSCR, stress, maturity risk, refinancing risk, lender-fee analysis, renderer output, or customer copy is produced in Gate 4B. Public terminology guards prohibit em dash characters and wording that reveals implementation machinery. Missing values remain null and optional calculation limitations remain non-blocking.
+
+Gate 4B verification: focused Gate 4A and 4B smokes `PASS`; full QA `PASS`; build `PASS`; Vercel budget `PASS 12 / 12`; diff check `PASS`.

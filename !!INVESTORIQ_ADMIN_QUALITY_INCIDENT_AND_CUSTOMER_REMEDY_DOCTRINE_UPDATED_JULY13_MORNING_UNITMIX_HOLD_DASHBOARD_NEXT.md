@@ -669,3 +669,34 @@ Gate 11: Launch operations, monitoring, analytics, and certification
 ```
 
 Gate 4 begins with new deterministic, source-bound debt-service and DSCR contracts. Legacy underwriting code remains quarantined and must not be reused if it can weaken the current authority chain.
+
+---
+
+## July 16 deployed Gate 3 verification and Gate 4A checkpoint
+
+```text
+Gate 1: controlled live Acquisition proof - PASS
+Gate 2: Canonical Report Quality Manifest - PASS / committed
+Gate 3: Admin Quality Incident and Customer Remedy Dashboard - PASS / deployed / production route verified
+Gate 4A: Canonical debt-service input contract - PASS locally / uncommitted / undeployed
+Gate 4B: Deterministic annual and monthly debt-service math - NEXT
+```
+
+The deployed Admin Dashboard loaded `BLOCKED`, `PUBLISHED WITH LIMITATIONS`, and `PUBLISHED CLEAN`, plus the required receipt-only projection and no-legacy-alias signals. Its empty state is valid because no finalized post-Gate-3 Manifest has yet populated the queues.
+
+The Vercel Hobby ceiling is protected at 12 / 12 deployable functions by `tests/qa/vercel-function-budget-smoke.js`. Future API additions must consolidate behind existing entrypoints or intentionally change hosting architecture; they may not silently exceed the deployment budget.
+
+Gate 4A is not an admin remedy or authority surface. It consumes canonical Source Truth, records calculation eligibility, preserves exact provenance, and never mutates Source Truth, Delivery Gate, publication, credits, billing, or customer lifecycle. Optional debt ambiguity remains a narrow analysis collapse and never becomes a core-valid report blocker.
+
+## July 16 Gate 4B checkpoint
+
+```text
+Gate 3: PASS / deployed / production route verified
+Gate 4A: PASS locally / canonical debt-service input contract
+Gate 4B: PASS locally / deterministic monthly and annual debt-service math
+Gate 4C: NEXT / DSCR eligibility and deterministic coverage calculation
+```
+
+Gate 4B is not yet connected to the Admin Dashboard or customer report. It creates immutable calculation receipts only. Modeled results require qualification and cannot be presented as source-stated payments. Collapsed calculations remain null and non-blocking.
+
+The permanent Gate 4B proof includes source-stated annualization, modeled current debt, modeled proposed financing, zero and near-zero rates, incomplete inputs, evidence gaps, conflicts, unsafe payment periods, deterministic rounding, immutability, no em dash characters, and no customer-visible implementation terminology.
