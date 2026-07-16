@@ -15,16 +15,16 @@ Older archived instructions must not override this file.
 # 1. Current Repository Baseline
 ```text
 CURRENT REPOSITORY BASELINE:
-414945a
+cde0b05
 
 COMMIT MESSAGE:
 updates
 
 LOCAL HEAD:
-414945a
+cde0b05
 
 ORIGIN/MAIN:
-414945a
+cde0b05
 
 BRANCH:
 main
@@ -55,17 +55,27 @@ RETEST 23:
 Permanent split-brain delivery regression case
 
 RETEST 24:
-Live pipeline PASS
-Publication PASS
-Support Document Authority PASS
-Current debt / proposed financing separation PASS
-Institutional customer deliverable HOLD
+Historical institutional PDF defect case
+P0-A through P0-D closed the identified defect families locally
 
-LIVE RETEST:
-ONE CONTROLLED ACQUISITION RETEST AUTHORIZED after commit and deployment of the locally accepted P0-A through P0-D bundle
+RETEST 26:
+Report published but customer lifecycle state remained contradictory
+Permanent split-brain dashboard regression case
+
+RETEST 27:
+Controlled DocRaptor test-mode live publication PASS
+Report published
+Report History READY
+No contradictory FAILED banner
+
+GATE 2 REPORT QUALITY MANIFEST:
+PASS / committed at cde0b05
+
+GATE 3 ADMIN QUALITY INCIDENT DASHBOARD:
+PASS locally / uncommitted / not deployed
 
 PRODUCTION CERTIFICATION:
-HOLD
+HOLD while DocRaptor remains intentionally in test mode and Gate 3 awaits deployment verification
 
 LOCAL P0-A THROUGH P0-D CERTIFICATION:
 PASS on July 15, 2026
@@ -155,7 +165,7 @@ Compare
 -> Finance
 ```
 ---
-# 5. RETEST 24 Institutional Verdict
+# 5. Historical RETEST 24 Institutional Verdict
 ```text
 LIVE PIPELINE:
 PASS
@@ -192,7 +202,7 @@ correct canonical facts
 -> materially defective PDF publishes
 ```
 ---
-# 6. Immediate RETEST 24 Defects
+# 6. Historical RETEST 24 Defects Closed by P0-A Through P0-D
 ## 6.1 Break-Even Occupancy is wrong
 The report shows:
 
@@ -907,9 +917,9 @@ Customer remedy controls:
 ```text
 mark for review
 mark customer contacted
-issue free rerun
-restore credit
-request replacement documents
+request free corrected rerun
+request or verify credit restoration through the protected workflow
+record replacement source required and customer-contact routing
 attach corrected report
 issue account credit
 record refund
@@ -971,7 +981,7 @@ identify the limitation
 avoid guessing
 publish valid core analysis
 explain what was not used
-offer a replacement-document rerun path
+record replacement source required and coordinate any corrected rerun through InvestorIQ support
 ```
 ---
 # 17. Institutional Expansion Roadmap
@@ -1306,49 +1316,61 @@ Do not let implementation convenience redefine doctrine.
 ---
 # 21. Current Exact Next Task
 ```text
-Commit and deploy the accepted P0-A through P0-D bundle,
-then run one controlled live Acquisition retest in DocRaptor test mode.
+Pause for the night.
+
+On resume, review the uncommitted Gate 3 bundle,
+commit and deploy it when approved,
+then verify that the Admin Quality Incident Dashboard reads finalized
+Report Quality Manifests and canonical delivery decisions in production.
+
+After Gate 3 deployment verification, begin Gate 4:
+Institutional Financial Intelligence.
 ```
 Do not:
 
 ```text
-start advanced returns modeling
-start broad Full Underwriting rebuild
 reopen Source Truth broadly
 reopen Support Document Authority broadly
-run more than the one authorized controlled live Acquisition retest
-start institutional visual redesign
+resurrect legacy Full Underwriting authority or math
+reuse legacy DSCR/refi/DCF code as production authority
+let the Admin Dashboard reconstruct truth from raw files, HTML, logs, or aliases
+let remedy controls silently mutate credits, billing, publication, or Source Truth
+begin advanced returns modeling before bounded debt-service and DSCR contracts
 rename runtime families without a controlled identity migration
 ```
-The controlled live retest must prove the complete customer PDF, canonical artifacts,
-publication state, worker state, and credit state agree before production certification changes from HOLD.
+
+RETEST 27 supplied the controlled test-mode live publication proof. The report published and the customer dashboard showed the canonical READY state. DocRaptor production mode remains intentionally disabled until report quality is consistently certified.
 
 ---
 # 22. Protected Short-Form Handoff
 ```text
 CURRENT BASELINE:
-414945a / updates
+cde0b05 / updates
 
 InvestorIQ will not revive the old Full Underwriting pipeline.
 
 The current Acquisition Memo will evolve into a source-bound
 Acquisition Underwriting Memo through bounded modules.
 
-RETEST 24:
-live pipeline PASS
-institutional/customer deliverable HOLD
+RETEST 27:
+controlled DocRaptor test-mode live publication PASS
+report published
+customer dashboard READY
+no contradictory failed banner
 
-Immediate blockers:
-- RETEST 24 P0 defect family closed locally by P0-A through P0-D
-- production proof remains pending one controlled live Acquisition retest
+Gate status:
+- Gate 1 controlled live Acquisition proof: PASS
+- Gate 2 Canonical Report Quality Manifest: PASS and committed at cde0b05
+- Gate 3 Admin Quality Incident and Customer Remedy Dashboard: PASS locally / uncommitted
+- DocRaptor external production mode: intentionally OFF
 
 NEXT:
-commit and deploy the accepted P0-A through P0-D bundle
-run one controlled live Acquisition retest in DocRaptor test mode
+rest
+review, commit, and deploy the Gate 3 bundle
+verify the Manifest-only Admin quality queues after deployment
 
 THEN:
-Report Quality Manifest
-Admin Quality Incident Dashboard
+Institutional Financial Intelligence
 institutional composition and distribution hygiene
 deterministic visual system
 role-specific support fact bundles
@@ -1394,7 +1416,9 @@ Historical checkpoints are evidence only.
 They are not active execution instructions.
 
 ---
-# 24. July 15 P0-A Through P0-D Local Completion Receipt
+# 24. Historical July 15 P0-A Through P0-D Local Completion Receipt
+
+This section records the pre-RETEST 27 checkpoint. Section 25 is the controlling current continuation point.
 ```text
 VERDICT:
 LOCAL PASS
@@ -1515,21 +1539,165 @@ production build: PASS
 
 ```text
 Gate 1: one controlled live Acquisition proof
+  STATUS: PASS through RETEST 27 in DocRaptor test mode
 Gate 2: Canonical Report Quality Manifest
+  STATUS: PASS and committed at cde0b05
 Gate 3: Admin Quality Incident and Customer Remedy Dashboard
-Stage 1: institutional composition and distribution hygiene
-Stage 2: deterministic visual system
-Stage 3: role-specific support fact bundles
-Stage 4: debt and lender analytics
-Stage 5: renovation and value-creation underwriting
-Stage 6: valuation and scenario analysis
-Stage 7: returns engine
-Stage 8: risk register and diligence tracker
-Stage 9: Elite certification across correctness, provenance, layout,
-         disclosure, role separation, remedy, and adversarial replay
+  STATUS: PASS locally / uncommitted / not deployed
+Gate 4: Institutional Financial Intelligence
+  STATUS: NEXT after Gate 3 deployment verification
+Gate 5: Institutional Underwriting
+  normalized income/expenses, vacancy, rent bridge, CapEx, valuation, and returns
+Gate 6: Investment Committee Memo
+  thesis, strengths, weaknesses, risks, diligence, recommendation, and confidence
+Gate 7: Scenario Engine
+  source-bound rent, occupancy, rate, tax, expense, cap-rate, and exit stresses
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
 No later stage may bypass Source Truth, the Support Document Authority Adjudicator, deterministic calculations, CustomerSurfaceModel, Boss, Contract QA, Delivery Seal, or the Final PDF Publication Quality Boss.
+
+---
+# 25. July 15 Night Close-Out - Gates 1 Through 3
+
+## Exact repository state
+
+```text
+HEAD: cde0b05
+ORIGIN/MAIN: cde0b05
+BRANCH: main
+WORKING TREE: DIRTY / UNCOMMITTED
+DEPLOYMENT OF GATE 3: NO
+LIVE SERVICES RUN FOR GATE 3: NO
+LIVE RETEST RUN FOR GATE 3: NO
+```
+
+## Gate 1 live proof
+
+RETEST 27 closed the contradictory customer lifecycle family exposed by RETEST 26. The Acquisition report published, appeared in Report History, and the dashboard displayed READY without the stale FAILED banner.
+
+DocRaptor remains intentionally in test mode. This is a deliberate operational choice, not a publication defect.
+
+## Gate 2 Report Quality Manifest
+
+Gate 2 is committed at `cde0b05`.
+
+The Manifest is immutable, receipt-only, non-authoritative, and records:
+
+```text
+accepted and rejected document facts
+exact provenance and source identity
+section render/collapse/omit/qualify/disclose decisions
+calculation eligibility and deterministic inputs
+conflicts and duplicates
+CustomerSurfaceModel, Contract QA, Boss, Delivery, and PDF receipts
+publication, credit, and remedy state
+```
+
+Published final Manifests require canonical delivery authority, report/storage identity, and certified PDF evidence.
+
+## Gate 3 Admin Quality Incident and Customer Remedy Dashboard
+
+Gate 3 passes locally in the current uncommitted working tree.
+
+Canonical chain:
+
+```text
+finalized Report Quality Manifest
++ exact canonical delivery decision
++ append-only admin action receipts
+-> receipt-only quality incident projection
+-> Admin Quality Incident and Customer Remedy Dashboard
+```
+
+The dashboard never reconstructs truth from filenames, parser labels, raw file rows, HTML fragments, scattered worker logs, or legacy delivery aliases.
+
+Implemented queues:
+
+```text
+BLOCKED
+PUBLISHED WITH LIMITATIONS
+PUBLISHED CLEAN
+```
+
+Implemented operational classification:
+
+```text
+collapse_expected
+collapse_unexpected
+collapse_requires_review
+Customer Attention Risk: HIGH / MEDIUM / LOW
+InvestorIQ defect / customer source limitation / mixed responsibility
+owner routing
+recurring defect-family counts
+report inspection links
+```
+
+Remedy controls create append-only requests and records. They do not directly mutate Source Truth, delivery, publication, credits, billing, refunds, or account balances.
+
+Current product terminology is explicit: where required core evidence is unusable, the dashboard records `replacement source required` and customer-contact routing. It does not imply that a post-submission customer upload workflow exists.
+
+## Gate 3 production owners
+
+```text
+api/_lib/report-quality-manifest.js
+api/_lib/report-quality-incident-projection.js
+api/admin/quality-incidents.js
+api/admin-run-worker.js
+api/_lib/generate-client-report-impl.js
+src/components/Admin/QualityIncidentDashboard.jsx
+src/pages/AdminDashboard.jsx
+package.json
+```
+
+Permanent regression owners:
+
+```text
+tests/qa/report-quality-manifest-smoke.js
+tests/qa/report-quality-incident-projection-smoke.js
+tests/qa/admin-quality-incidents-smoke.js
+```
+
+## Exact local verification
+
+```text
+npm.cmd run qa:quality-ops: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS
+P0-A through P0-D: PASS
+Source Truth constitutional matrix: PASS
+Acquisition normal-path local smoke: PASS
+Support Document Authority adversarial matrix: PASS, 24 scenarios
+git diff --check: PASS
+```
+
+Offline harness warnings about unavailable live Supabase writes, missing optional AI credentials, browser-data age, and bundle size were non-failing and did not alter the PASS verdict.
+
+## Gate 4 controlling next boundary
+
+Gate 4 is Institutional Financial Intelligence. It must be built as new deterministic, source-bound modules. Legacy underwriting code remains quarantined and must not be reused if it can weaken the current authority chain.
+
+Initial Gate 4 bounded sequence:
+
+```text
+4A canonical debt-service input contract
+4B deterministic annual and monthly debt-service math
+4C current, proposed, bridge, exit, and stress DSCR eligibility
+4D maturity, fixed/floating, refinancing, and lender-fee risk
+4E T12 versus Rent Roll reconciliation materiality and source-bound explanation
+4F CapEx timing, reserve adequacy, and deferred-maintenance classification
+4G CustomerSurfaceModel, Boss, Contract QA, PDF Boss, Manifest, and Dashboard integration
+4H generated adversarial matrix and permanent regression proof
+```
+
+No DSCR, debt, refinancing, CapEx, or sensitivity result may render unless its complete required accepted fact bundle and provenance are present. Missing optional facts collapse or qualify the narrow section. They do not become zero and do not block valid core publication.
 
 ---
 # End of Active Master Context

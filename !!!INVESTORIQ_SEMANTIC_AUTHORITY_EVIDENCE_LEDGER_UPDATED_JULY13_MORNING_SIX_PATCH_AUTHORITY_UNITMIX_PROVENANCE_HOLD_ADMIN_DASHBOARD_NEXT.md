@@ -1,32 +1,35 @@
-# July 15, 2026 Active Continuation - P0-A Through P0-D PASS Locally / Controlled Live Acquisition Proof Next
+# July 15, 2026 Night Close-Out - Semantic Authority Protected / Gates 1 and 2 PASS / Gate 3 PASS Locally
 
-### The July 15 Semantic Authority and Publication Evidence Addendum at the end of this ledger is the controlling continuation point. The July 13 evidence below remains historical evidence only.
+### The July 15 Gate 3 Semantic Receipt Addendum at the end of this ledger is the controlling continuation point. Earlier evidence remains historical evidence only.
 
 ## Current exact state
 
 ```text
 CURRENT COMMITTED BASELINE:
-414945a
+cde0b05
 updates
 
 CURRENT WORKING TREE:
 DIRTY / UNCOMMITTED.
-Contains the accepted Support Document Authority repair and P0-A through P0-D local bundle.
+Contains the locally accepted Gate 3 receipt projection, API, dashboard, and terminal Manifest completion.
 
 DEPLOYMENT:
-NO.
+Gate 2 and earlier work deployed.
+Gate 3 not committed or deployed.
 
 LIVE RETEST:
-One controlled Acquisition proof authorized after commit and deployment.
+RETEST 27 PASS in DocRaptor test mode.
+Published report and canonical customer READY state agreed.
 
 PRODUCTION CERTIFICATION:
-HOLD.
+HOLD while DocRaptor remains intentionally in test mode and Gate 3 awaits deployment verification.
 
 NEXT ACTIVE BOUNDARY:
-Commit and deploy, then run one controlled live Acquisition retest in DocRaptor test mode.
+Rest, then review/commit/deploy Gate 3 and verify canonical production reads.
+Gate 4 Institutional Financial Intelligence follows.
 
 ADMIN QUALITY INCIDENT DASHBOARD:
-MANDATORY after the controlled live proof and Canonical Report Quality Manifest.
+PASS locally / receipt-only / uncommitted / not deployed.
 ```
 
 ## Historical July 13 checkpoint evidence begins below
@@ -428,9 +431,9 @@ The dashboard must support:
 ```text
 mark for review
 mark customer contacted
-issue free rerun
-restore credit
-request replacement documents
+request free corrected rerun
+request or verify credit restoration through the protected workflow
+record replacement source required and customer-contact routing
 attach corrected report
 issue account credit
 record refund
@@ -728,14 +731,14 @@ Worker cannot publish from aliases, top-level compatibility fields, missing cano
 
 Dashboard cannot reconstruct customer truth from file rows, doc_type, parse_status, parse_error, or failed candidate/support rows.
 
-Only catastrophic core terminal codes ask the customer for replacement documents.
+Only catastrophic core terminal codes may state that replacement source evidence is required and direct the customer to InvestorIQ support.
 
 Internal Source Truth/render/PDF/storage/publication failures use neutral customer messaging and preserve exact reference code.
 ```
 
 ## Terminal failure taxonomy lock
 
-Only these terminal codes request replacement documents:
+Only these terminal codes may classify replacement source evidence as required:
 
 ```text
 CORE_T12_CATASTROPHICALLY_UNUSABLE
@@ -7839,7 +7842,9 @@ That is the root evidence base for the next Codex execution phase.
 
 ---
 
-# July 15, 2026 Semantic Authority and Publication Evidence Addendum
+# Historical July 15, 2026 Semantic Authority and Publication Evidence Addendum
+
+This section records the pre-RETEST 27, pre-Manifest, and pre-Gate 3 checkpoint. The Gate 3 Semantic Receipt Addendum below is controlling.
 
 This addendum preserves the accepted July 13 authority work and records the completed P0 customer-egress and publication proof. Earlier next-task instructions are historical only.
 
@@ -7967,4 +7972,213 @@ production build: PASS
 
 Every later module, including debt analytics, renovation underwriting, valuation, scenario analysis, returns, risk, diligence, and visualization, must consume accepted Source Truth and deterministic calculations. Later modules may add analysis only when their complete role-specific fact bundle is accepted. Missing optional evidence must collapse the narrow section, not mutate core truth or block a valid report.
 
-Production certification remains HOLD pending one controlled live Acquisition retest after commit and deployment.
+Production certification remains HOLD while DocRaptor remains intentionally in test mode and the locally accepted Gate 3 bundle awaits deployment verification.
+
+---
+
+# July 15, 2026 Gate 3 Semantic Receipt Addendum
+
+This addendum supersedes every earlier next-task instruction in this ledger. It does not replace or weaken AUTH-001 through AUTH-105 evidence.
+
+## Exact authority chain after Gate 3
+
+```text
+raw extraction
+-> deterministic semantic evidence
+-> optional evidence-bound AI candidate analysis
+-> exact source-excerpt and value validation
+-> conflict, duplicate, and ambiguity adjudication
+-> canonical accepted role and fact bundle in Source Truth
+-> consume-only Projection
+-> consume-only Boss Contract
+-> consume-only CustomerSurfaceModel
+-> deterministic customer calculations and reconciliation
+-> deterministic Contract QA Seal
+-> canonical Delivery Seal decision
+-> final PDF rendering
+-> Final PDF Publication Quality Boss
+-> terminal publication or blocked state
+-> immutable receipt-only Report Quality Manifest
+-> receipt-only Report Quality Incident Projection
+-> Admin Quality Incident and Customer Remedy Dashboard
+```
+
+Semantic authority stops at canonical Source Truth and the protected downstream contracts. The Manifest and Dashboard record what happened. They do not decide which role or fact is true.
+
+## Gate 2 evidence boundary
+
+Committed baseline:
+
+```text
+cde0b05
+```
+
+The Report Quality Manifest records accepted facts, rejected facts, evidence, identity, conflicts, section outcomes, calculation eligibility, final receipts, publication, credit, and remedy state.
+
+It is constitutionally marked:
+
+```text
+authorityCreating: false
+receiptOnly: true
+downstreamConsumeOnly: true
+legacyUnderwritingReuseAllowed: false
+```
+
+Final published Manifests now require the full object whose exact source is:
+
+```text
+canonical_delivery_decision
+```
+
+A compatibility alias, normalized status object, filename, parser label, raw file row, or rendered surface cannot satisfy that requirement.
+
+## Blocked-terminal semantic receipt
+
+Every terminal path can now retain an honest quality receipt:
+
+```text
+canonical Source Truth candidate when available
+canonical delivery decision when available
+explicit terminal code
+explicit failure class
+credit restoration state
+remedy state
+publication.state = blocked
+```
+
+If canonical evidence was never constructed, the unavailable candidate records that absence. It contains no invented documents, facts, sections, calculations, or provenance.
+
+Post-gate internal failure is represented without rewriting history:
+
+```text
+content/delivery eligibility may be deliverable
+publication may still be blocked by PDF, storage, or platform failure
+both receipts remain explicit
+```
+
+## Gate 3 incident projection authority boundary
+
+Production owner:
+
+```text
+api/_lib/report-quality-incident-projection.js
+```
+
+Allowed truth inputs:
+
+```text
+canonical_report_quality_manifest
+canonical_delivery_decision
+```
+
+Allowed non-truth operational input:
+
+```text
+quality_incident_action_receipt
+```
+
+Forbidden reconstruction inputs:
+
+```text
+filenames
+parser labels or routes
+raw upload rows
+HTML fragments
+worker logs
+artifact-order inference
+legacy delivery aliases
+model narrative
+single-field completeness guesses
+```
+
+The projection may classify quality impact, responsibility, severity, owner area, and remedy eligibility only from the finalized receipts. It cannot promote a candidate role, accept a fact, manufacture completeness, modify a canonical decision, or make a report publishable.
+
+## Gate 3 operational evidence
+
+```text
+BLOCKED
+PUBLISHED WITH LIMITATIONS
+PUBLISHED CLEAN
+
+collapse_expected
+collapse_unexpected
+collapse_requires_review
+
+Customer Attention Risk: HIGH / MEDIUM / LOW
+```
+
+Action receipts explicitly preserve:
+
+```text
+authorityCreating false
+sourceTruthChanged false
+deliveryChanged false
+publicationChanged false
+creditMutationPerformed false
+financialMutationPerformed false
+```
+
+## Exact production files in the Gate 3 semantic boundary
+
+```text
+api/_lib/report-quality-manifest.js
+api/_lib/report-quality-incident-projection.js
+api/admin/quality-incidents.js
+api/admin-run-worker.js
+api/_lib/generate-client-report-impl.js
+src/components/Admin/QualityIncidentDashboard.jsx
+src/pages/AdminDashboard.jsx
+```
+
+## Local proof
+
+```text
+Report Quality Manifest smoke: PASS
+Report Quality Incident Projection smoke: PASS
+Admin Quality Incident authority-boundary smoke: PASS
+qa:quality-ops: PASS
+qa:full: PASS
+production build: PASS
+P0-A through P0-D: PASS
+Source Truth constitutional matrix: PASS
+Acquisition normal path: PASS
+Support Document Authority adversarial matrix: PASS, 24 scenarios
+```
+
+No live service, deployment, DocRaptor call, or live retest was run for Gate 3.
+
+## Gate 4 semantic contract
+
+Institutional Financial Intelligence is next after Gate 3 deployment verification.
+
+Every new debt, DSCR, refinancing, sensitivity, reconciliation, reserve, and CapEx result must declare:
+
+```text
+required canonical role
+required accepted fact bundle
+accepted provenance for every input
+deterministic formula and version
+units and timing basis
+eligibility state
+result or null
+collapse/qualification reason
+section display readiness
+```
+
+Legacy underwriting code remains quarantined. Historical formulas or labels may inform product vocabulary only after independent review. They may not become production truth, code authority, or a shortcut around the current canonical chain.
+
+Missing optional inputs remain null and ineligible. They must never be coerced to zero, filled by AI, inferred from market convention, or used to block valid core publication.
+
+## Preserved ELITE roadmap after Gate 4
+
+```text
+Gate 5: Institutional Underwriting
+Gate 6: Investment Committee Memo
+Gate 7: Scenario Engine
+Gate 8: Due Diligence Engine
+Gate 9: Institutional Scoring
+Gate 10: ELITE Presentation and PDF System
+Gate 11: Launch Operations, Monitoring, Analytics, and Certification
+```
+
+Every later gate remains subordinate to accepted Source Truth, complete fact-bundle eligibility, deterministic math, non-inference, consume-only downstream contracts, final PDF certification, immutable Manifest receipts, and canonical incident monitoring.

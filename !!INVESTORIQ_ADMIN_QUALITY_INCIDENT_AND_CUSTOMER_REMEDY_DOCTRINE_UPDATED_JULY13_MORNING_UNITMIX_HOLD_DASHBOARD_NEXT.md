@@ -2,12 +2,15 @@
 
 The Admin Quality Incident and Customer Remedy Doctrine remains mandatory.
 
-The Support Document Authority repair and P0-A through P0-D now pass locally. Implementation is intentionally queued after:
+The Support Document Authority repair, P0-A through P0-D, controlled RETEST 27 publication proof, and Canonical Report Quality Manifest have passed. The Admin Quality Incident and Customer Remedy Dashboard now passes locally in the uncommitted Gate 3 working tree.
 
 ```text
-1. the accepted local bundle is committed and deployed;
-2. one controlled live Acquisition proof passes;
-3. the Canonical Report Quality Manifest contract is implemented.
+Gate 1 controlled live Acquisition proof: PASS
+Gate 2 Canonical Report Quality Manifest: PASS / committed at cde0b05
+Gate 3 Admin Quality Incident and Customer Remedy Dashboard: PASS locally
+Gate 3 commit: NO
+Gate 3 deployment: NO
+Gate 4 Institutional Financial Intelligence: NEXT after Gate 3 deployment verification
 ```
 
 The dashboard must consume a canonical Report Quality Manifest. It must not infer truth independently from filenames, parser labels, raw file rows, HTML, or scattered logs.
@@ -15,15 +18,12 @@ The dashboard must consume a canonical Report Quality Manifest. It must not infe
 Current next-project order:
 
 ```text
-commit and deploy P0-A through P0-D
--> one controlled live Acquisition proof
--> canonical Report Quality Manifest
--> bounded audit of existing admin architecture against the Manifest
--> persistence and quality-event capture
--> dashboard queues
--> incident detail
--> customer remedy controls
--> proactive alerts
+rest
+-> review and commit the Gate 3 bundle
+-> deploy Gate 3
+-> verify Manifest-only production reads and signed report inspection links
+-> begin Gate 4 Institutional Financial Intelligence
+-> add proactive alert delivery only after the canonical incident queues are proven in production
 ```
 
 ---
@@ -244,7 +244,7 @@ The dashboard must show:
 - reports with unexpected collapse
 - reports with automatic credit restoration
 - reports eligible for free corrected rerun
-- reports awaiting customer replacement documents
+- reports where replacement source evidence is required and customer contact may be needed
 
 ---
 
@@ -288,7 +288,7 @@ InvestorIQ must still:
 - avoid guessing
 - publish valid core analysis
 - explain what was not used
-- offer a replacement-document rerun path
+- record that replacement source evidence is required and route any corrected rerun through InvestorIQ support
 
 ---
 
@@ -298,7 +298,7 @@ InvestorIQ must still:
 
 - report remains delivered
 - limitation is clearly disclosed
-- customer may upload replacement support and rerun
+- the limitation remains documented and any corrected rerun is coordinated through InvestorIQ support
 
 ### Level 2: InvestorIQ Omitted or Misclassified Clear Optional Evidence
 
@@ -332,8 +332,8 @@ The dashboard must support:
 
 - mark for review
 - mark as customer contacted
-- issue free rerun
-- restore credit
+- request a free corrected rerun
+- request or verify credit restoration through the protected credit workflow
 - issue account credit
 - record refund decision
 - attach corrected report
@@ -387,7 +387,9 @@ This work must not weaken:
 
 ---
 
-# July 15, 2026 P0 Completion and Dashboard Continuation Addendum
+# Historical July 15, 2026 P0 Completion and Dashboard Continuation Addendum
+
+This section records the pre-RETEST 27 and pre-Gate 3 checkpoint. The Gate 3 Local Completion and Night Close-Out addendum is controlling.
 
 The prerequisite P0-A through P0-D local program is complete.
 
@@ -475,3 +477,195 @@ Elite certification
 ```
 
 The dashboard is operational accountability, not a new truth authority. It must consume canonical decisions and persisted evidence and must never infer customer truth independently.
+
+---
+
+# July 15, 2026 Gate 3 Local Completion and Night Close-Out
+
+This addendum is the controlling continuation point for the Admin Quality Incident and Customer Remedy program.
+
+## Current exact state
+
+```text
+HEAD: cde0b05
+ORIGIN/MAIN: cde0b05
+Gate 2 Manifest: committed
+Gate 3 Dashboard: PASS locally / uncommitted / not deployed
+Gate 3 live services: not run
+Gate 3 live retest: not run
+DocRaptor external production mode: intentionally OFF
+```
+
+## Implemented canonical data flow
+
+```text
+finalized Report Quality Manifest
++ exact canonical delivery decision
++ append-only quality incident action receipts
+-> receipt-only incident projection
+-> Admin Quality Incident and Customer Remedy Dashboard
+```
+
+The endpoint queries only these artifact types:
+
+```text
+report_quality_manifest
+delivery_gate_decision
+quality_incident_action
+```
+
+It does not query or reconstruct incident truth from:
+
+```text
+analysis_job_files
+reports table metadata
+filenames
+parser labels
+raw upload rows
+HTML
+worker events
+legacy compatibility aliases
+```
+
+The report inspection link is generated only from the finalized Manifest's published storage path.
+
+## Implemented queues and classifications
+
+Mandatory queues:
+
+```text
+BLOCKED
+PUBLISHED WITH LIMITATIONS
+PUBLISHED CLEAN
+```
+
+Collapse state:
+
+```text
+collapse_expected
+collapse_unexpected
+collapse_requires_review
+```
+
+Operational classification:
+
+```text
+Customer Attention Risk: HIGH / MEDIUM / LOW
+responsibility: InvestorIQ defect / customer source limitation / mixed
+owner routing
+recurring defect-family counts
+section decisions
+support authority receipts
+calculation eligibility
+terminal failure and credit state
+```
+
+## Implemented remedy controls
+
+Current controls record append-only operational receipts for:
+
+```text
+mark for review
+mark customer contacted
+request free corrected rerun
+request credit restoration review
+record replacement source required
+record account-credit review
+record refund review
+attach corrected-report reference
+link permanent regression case
+close incident
+```
+
+These controls do not yet execute financial or constitutional mutations. Every action receipt explicitly records:
+
+```text
+authorityCreating false
+sourceTruthChanged false
+deliveryChanged false
+publicationChanged false
+creditMutationPerformed false
+financialMutationPerformed false
+```
+
+Direct credit changes, refunds, billing changes, report replacement, or publication changes require their own protected execution workflow and audit receipt. They must never be smuggled into the quality projection endpoint.
+
+## Current customer terminology rule
+
+InvestorIQ currently has no post-submission customer upload workflow. Therefore no dashboard, customer message, remedy recommendation, or compatibility alias may tell the customer to upload additional or replacement documents.
+
+Allowed current wording includes:
+
+```text
+core evidence unusable
+replacement source required
+customer contact needed
+contact InvestorIQ support
+support-coordinated corrected rerun
+```
+
+## Terminal Manifest completion
+
+Published and blocked outcomes now receive separate terminal Manifest treatment:
+
+```text
+published:
+  canonical delivery decision required
+  report and storage identity required
+  certified PDF receipt required
+
+blocked:
+  terminal code required
+  failure class required
+  credit/remedy state recorded
+  canonical delivery decision retained when available
+  no report publication is implied
+```
+
+If a report was content-eligible but later failed PDF or storage, the Manifest preserves the deliverable content decision and separately records blocked publication. The dashboard must display the internal platform failure without misclassifying the customer's documents.
+
+## Gate 3 production files
+
+```text
+api/_lib/report-quality-manifest.js
+api/_lib/report-quality-incident-projection.js
+api/admin/quality-incidents.js
+api/admin-run-worker.js
+api/_lib/generate-client-report-impl.js
+src/components/Admin/QualityIncidentDashboard.jsx
+src/pages/AdminDashboard.jsx
+package.json
+```
+
+## Permanent local acceptance
+
+```text
+tests/qa/report-quality-manifest-smoke.js: PASS
+tests/qa/report-quality-incident-projection-smoke.js: PASS
+tests/qa/admin-quality-incidents-smoke.js: PASS
+npm.cmd run qa:quality-ops: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS
+P0-A through P0-D: PASS
+Source Truth constitutional matrix: PASS
+Support Document Authority adversarial matrix: PASS, 24 scenarios
+git diff --check: PASS
+```
+
+## Updated ELITE roadmap checkpoint
+
+```text
+Gate 1: controlled live Acquisition proof - PASS
+Gate 2: Canonical Report Quality Manifest - PASS / committed
+Gate 3: Admin Quality Incident and Customer Remedy Dashboard - PASS locally
+Gate 4: Institutional Financial Intelligence - NEXT after Gate 3 deployment verification
+Gate 5: Institutional Underwriting
+Gate 6: Investment Committee Memo
+Gate 7: Scenario Engine
+Gate 8: Due Diligence Engine
+Gate 9: Institutional Scoring
+Gate 10: ELITE Presentation and PDF system
+Gate 11: Launch operations, monitoring, analytics, and certification
+```
+
+Gate 4 begins with new deterministic, source-bound debt-service and DSCR contracts. Legacy underwriting code remains quarantined and must not be reused if it can weaken the current authority chain.

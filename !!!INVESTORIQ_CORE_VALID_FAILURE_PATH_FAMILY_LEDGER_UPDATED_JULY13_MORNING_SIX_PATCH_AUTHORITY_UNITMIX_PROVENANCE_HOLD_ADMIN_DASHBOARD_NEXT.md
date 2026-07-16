@@ -1,32 +1,35 @@
-# July 15, 2026 Active Continuation - P0-A Through P0-D PASS Locally / Controlled Live Acquisition Proof Next
+# July 15, 2026 Night Close-Out - Gates 1 and 2 PASS / Gate 3 PASS Locally / Gate 4 Next
 
-### The July 15 P0 Completion Addendum at the end of this ledger is the controlling continuation point. The July 13 evidence below remains historical evidence only.
+### The July 15 Gate 3 Completion Addendum at the end of this ledger is the controlling continuation point. Earlier evidence remains historical evidence only.
 
 ## Current exact state
 
 ```text
 CURRENT COMMITTED BASELINE:
-414945a
+cde0b05
 updates
 
 CURRENT WORKING TREE:
 DIRTY / UNCOMMITTED.
-Contains the accepted Support Document Authority repair and P0-A through P0-D local bundle.
+Contains the locally accepted Gate 3 Admin Quality Incident and Customer Remedy bundle.
 
 DEPLOYMENT:
-NO.
+Gate 2 and earlier work deployed.
+Gate 3 not committed or deployed.
 
 LIVE RETEST:
-One controlled Acquisition proof authorized after commit and deployment.
+RETEST 27 PASS in DocRaptor test mode.
+Report published and customer dashboard showed READY.
 
 PRODUCTION CERTIFICATION:
-HOLD.
+HOLD while DocRaptor remains intentionally in test mode and Gate 3 awaits deployment verification.
 
 NEXT ACTIVE BOUNDARY:
-Commit and deploy, then run one controlled live Acquisition retest in DocRaptor test mode.
+Rest, then review/commit/deploy Gate 3 and verify its Manifest-only production reads.
+Gate 4 Institutional Financial Intelligence follows.
 
 ADMIN QUALITY INCIDENT DASHBOARD:
-MANDATORY after the controlled live proof and Canonical Report Quality Manifest.
+PASS locally / uncommitted / not deployed.
 ```
 
 ## Historical July 13 checkpoint evidence begins below
@@ -428,9 +431,9 @@ The dashboard must support:
 ```text
 mark for review
 mark customer contacted
-issue free rerun
-restore credit
-request replacement documents
+request free corrected rerun
+request or verify credit restoration through the protected workflow
+record replacement source required and customer-contact routing
 attach corrected report
 issue account credit
 record refund
@@ -728,14 +731,14 @@ Worker cannot publish from aliases, top-level compatibility fields, missing cano
 
 Dashboard cannot reconstruct customer truth from file rows, doc_type, parse_status, parse_error, or failed candidate/support rows.
 
-Only catastrophic core terminal codes ask the customer for replacement documents.
+Only catastrophic core terminal codes may state that replacement source evidence is required and direct the customer to InvestorIQ support.
 
 Internal Source Truth/render/PDF/storage/publication failures use neutral customer messaging and preserve exact reference code.
 ```
 
 ## Terminal failure taxonomy lock
 
-Only these terminal codes request replacement documents:
+Only these terminal codes may classify replacement source evidence as required:
 
 ```text
 CORE_T12_CATASTROPHICALLY_UNUSABLE
@@ -897,7 +900,7 @@ Core-valid held output resolves to REPORT_CONTRACT_FAILED, not missing source do
 
 CVF-25X TERMINAL_FAILURE_TAXONOMY_OVERBROAD_DOCUMENT_REPLACEMENT:
 CLOSED / protect.
-Only the three catastrophic core terminal codes request replacement documents.
+Only the three catastrophic core terminal codes may classify replacement source evidence as required.
 
 CVF-25Y CONSTITUTIONAL_MATRIX_NOT_LOCKED_ACROSS_BOTH_LANES:
 CLOSED / protect.
@@ -18859,7 +18862,9 @@ No live retest until node tests/qa/generate-client-report-rent-roll-smoke.js pas
 
 ---
 
-# July 15, 2026 P0 Completion Addendum
+# Historical July 15, 2026 P0 Completion Addendum
+
+This section records the pre-RETEST 27, pre-Manifest, and pre-Gate 3 checkpoint. The Gate 3 Completion Addendum below is controlling.
 
 This addendum supersedes the July 13 continuation instructions above. The historical evidence remains valid; its stale next-task directions do not.
 
@@ -18944,3 +18949,209 @@ commit and deploy the accepted P0-A through P0-D bundle
 ```
 
 No broad Source Truth or Support Document Authority reopening is authorized by this addendum.
+
+---
+
+# July 15, 2026 Gate 3 Completion Addendum
+
+This addendum supersedes every earlier next-task instruction in this ledger. Historical CVF evidence remains preserved and must not be deleted or reinterpreted as current execution authority.
+
+## Current gate state
+
+```text
+Gate 1 controlled live Acquisition proof: PASS through RETEST 27
+Gate 2 Canonical Report Quality Manifest: PASS / committed at cde0b05
+Gate 3 Admin Quality Incident and Customer Remedy Dashboard: PASS locally
+Gate 3 commit: NO
+Gate 3 deployment: NO
+Gate 3 live service or live retest: NO
+Gate 4 Institutional Financial Intelligence: NEXT after Gate 3 deployment verification
+```
+
+## New CVF families closed locally
+
+### CVF-G3-01 - Blocked terminal without a final quality receipt
+
+Prior risk:
+
+```text
+published reports could receive a finalized Manifest,
+while blocked or platform-failed reports could terminate without one.
+The BLOCKED admin queue would then need to reconstruct truth from secondary evidence.
+```
+
+Local closure:
+
+```text
+separate blocked-terminal Manifest finalizer
+explicit terminal code and failure class
+credit/remedy receipt
+canonical delivery receipt when one exists
+honest unavailable-evidence candidate when Source Truth was never constructed
+```
+
+### CVF-G3-02 - Noncanonical delivery receipt accepted by final Manifest
+
+Prior risk:
+
+```text
+a normalized compatibility object could look deliverable without carrying
+the exact canonical_delivery_decision source marker.
+```
+
+Local closure:
+
+```text
+published final Manifest requires exact canonical delivery authority
+worker passes the full canonical deliveryDecisionState
+legacy aliases cannot finalize published quality truth
+```
+
+### CVF-G3-03 - Admin dashboard becomes a competing truth engine
+
+Prior risk:
+
+```text
+admin triage could reconstruct quality state from filenames, parser labels,
+raw file rows, HTML fragments, scattered logs, or legacy aliases.
+```
+
+Local closure:
+
+```text
+one receipt-only incident projection owner
+inputs limited to final Report Quality Manifest and exact canonical delivery state
+append-only action receipts allowed only for operational history
+no raw-source or legacy-alias fallback
+```
+
+### CVF-G3-04 - Remedy control silently changes constitutional state
+
+Prior risk:
+
+```text
+an admin button could bypass Source Truth, Delivery Gate, publication locks,
+credit accounting, or billing review.
+```
+
+Local closure:
+
+```text
+current controls record requests and references only
+authorityCreating false
+sourceTruthChanged false
+deliveryChanged false
+publicationChanged false
+creditMutationPerformed false
+financialMutationPerformed false
+```
+
+### CVF-G3-05 - Post-gate platform failure overwrites content eligibility
+
+Prior risk:
+
+```text
+a report can pass content/delivery eligibility and later fail PDF or storage.
+Forcing the earlier canonical decision to blocked would falsify history.
+Treating the terminal result as published would also be false.
+```
+
+Local closure:
+
+```text
+the Manifest preserves the deliverable canonical decision
+and separately records blocked publication with the internal terminal failure.
+Both facts remain visible without contradiction.
+```
+
+### CVF-G3-06 - Customer remedy wording implies a nonexistent upload workflow
+
+Local closure:
+
+```text
+replacement source required
+customer contact routing
+support-coordinated corrected rerun
+no claim that a customer can upload more documents after submission
+```
+
+## Gate 3 queue doctrine now implemented
+
+```text
+BLOCKED
+PUBLISHED WITH LIMITATIONS
+PUBLISHED CLEAN
+
+collapse_expected
+collapse_unexpected
+collapse_requires_review
+
+Customer Attention Risk: HIGH / MEDIUM / LOW
+responsibility: InvestorIQ defect / customer source limitation / mixed
+owner routing
+recurring defect-family counts
+report inspection links
+append-only remedy requests
+```
+
+## Production owner boundary
+
+```text
+api/_lib/report-quality-manifest.js
+api/_lib/report-quality-incident-projection.js
+api/admin/quality-incidents.js
+api/admin-run-worker.js
+api/_lib/generate-client-report-impl.js
+src/components/Admin/QualityIncidentDashboard.jsx
+src/pages/AdminDashboard.jsx
+package.json
+```
+
+No Gate 3 production change grants authority to AI, parser route, filename, artifact type, taxonomy, Manifest, incident projection, admin UI, or remedy controls.
+
+## Permanent verification
+
+```text
+tests/qa/report-quality-manifest-smoke.js: PASS
+tests/qa/report-quality-incident-projection-smoke.js: PASS
+tests/qa/admin-quality-incidents-smoke.js: PASS
+npm.cmd run qa:quality-ops: PASS
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS
+P0-A through P0-D: PASS
+Source Truth constitutional matrix: PASS
+Support Document Authority adversarial matrix: PASS, 24 scenarios
+git diff --check: PASS
+```
+
+## Exact next CVF boundary
+
+Gate 4 must add Institutional Financial Intelligence through bounded, deterministic modules:
+
+```text
+canonical accepted debt-service input contract
+monthly and annual debt-service math
+current/proposed/bridge/exit/stress DSCR eligibility
+fixed/floating and maturity/refinancing risk
+lender fee and debt-cost analysis
+reconciliation materiality
+CapEx timing, reserve adequacy, and deferred-maintenance classification
+```
+
+Legacy underwriting code remains quarantined. It may be inspected only as historical product context, never copied into production authority or used to bypass current Source Truth, fact-bundle, deterministic-math, Boss, Contract QA, Delivery Seal, PDF Boss, Manifest, or Dashboard contracts.
+
+Missing optional Gate 4 inputs must collapse or qualify only the narrow section. They must never become zero, false completeness, inferred facts, or a blocker to valid T12/Rent Roll publication.
+
+## Preserved ELITE roadmap after Gate 4
+
+```text
+Gate 5: Institutional Underwriting
+Gate 6: Investment Committee Memo
+Gate 7: Scenario Engine
+Gate 8: Due Diligence Engine
+Gate 9: Institutional Scoring
+Gate 10: ELITE Presentation and PDF System
+Gate 11: Launch Operations, Monitoring, Analytics, and Certification
+```
+
+Institutional composition, role-specific support fact bundles, debt/lender analytics, renovation/value-creation underwriting, valuation, returns, risk register, diligence tracking, deterministic visual design, and committee-ready presentation remain required inside these bounded gates.
