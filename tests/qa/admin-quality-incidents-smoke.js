@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-const apiSource = read('api/admin/quality-incidents.js');
+const apiSource = read('api/_lib/admin-quality-incidents-handler.js');
+const adminRouterSource = read('api/admin/queue-metrics.js');
+const vercelSource = read('vercel.json');
 const projectionSource = read('api/_lib/report-quality-incident-projection.js');
 const dashboardSource = read('src/components/Admin/QualityIncidentDashboard.jsx');
 const adminPageSource = read('src/pages/AdminDashboard.jsx');
@@ -26,6 +28,11 @@ assert.match(apiSource, /legacyAliasFallbackAllowed:\s*false/);
 assert.match(apiSource, /reconstructionFromRawArtifactsAllowed:\s*false/);
 assert.match(apiSource, /creditMutationPerformed:\s*false/);
 assert.match(apiSource, /financialMutationPerformed:\s*false/);
+assert.match(adminRouterSource, /admin_route\s*\|\|\s*['"]['"]/);
+assert.match(adminRouterSource, /quality_incidents/);
+assert.match(adminRouterSource, /qualityIncidentsHandler\(req, res\)/);
+assert.match(vercelSource, /\^\/api\/admin\/quality-incidents\/\?\$/);
+assert.match(vercelSource, /\/api\/admin\/queue-metrics\?admin_route=quality_incidents/);
 
 assert.match(projectionSource, /REPORT_QUALITY_INCIDENT_FINAL_MANIFEST_REQUIRED/);
 assert.match(projectionSource, /collapse_expected/);

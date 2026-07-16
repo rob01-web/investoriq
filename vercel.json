@@ -8,6 +8,8 @@
   "routes": [
     { "handle": "filesystem" },
 
+    { "src": "^/api/admin/quality-incidents/?$", "dest": "/api/admin/queue-metrics?admin_route=quality_incidents" },
+
     { "src": "^/api/(.*)$", "dest": "/api/$1" },
 
     { "src": "^/assets/(.*)$", "dest": "/assets/$1" },

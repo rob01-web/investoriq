@@ -4,7 +4,7 @@ import {
   buildReportQualityIncidentProjection,
   buildReportQualityIncidentRollup,
   extractCanonicalDeliveryDecisionState,
-} from '../_lib/report-quality-incident-projection.js';
+} from './report-quality-incident-projection.js';
 
 const ALLOWED_ARTIFACT_TYPES = Object.freeze([
   'report_quality_manifest',

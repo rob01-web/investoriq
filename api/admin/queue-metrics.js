@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { classifyDiagnosticOwnerArea } from '../_lib/validator-diagnostics-rollup.js';
+import qualityIncidentsHandler from '../_lib/admin-quality-incidents-handler.js';
 
 const severityRank = { critical: 4, high: 3, medium: 2, low: 1, none: 0 };
 
@@ -888,6 +889,10 @@ function buildFixQueueDetails({
 }
 
 export default async function handler(req, res) {
+  if (String(req.query?.admin_route || '') === 'quality_incidents') {
+    return qualityIncidentsHandler(req, res);
+  }
+
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });
