@@ -9041,3 +9041,34 @@ Exact validators reconstruct each contract from its canonical predecessor. Gate 
 Permanent proof is carried by `tests/qa/institutional-due-diligence-evidence-inventory-contract-smoke.js`, `tests/qa/institutional-due-diligence-coverage-classification-contract-smoke.js`, `tests/qa/institutional-due-diligence-priority-eligibility-contract-smoke.js`, and `tests/qa/institutional-due-diligence-completion-handoff-contract-smoke.js`. Verification is `PASS`: all four dedicated adversarial smokes; Financial Intelligence with 25 total smokes including Gates 7A through 8D; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 8 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 9 Institutional Scoring authority review. Gates 9 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 9A through 9D scoring lineage, methodology, execution, and completion receipts
+
+Gate 9A consumes only the exact canonical Gate 8 completion receipt. It registers operational, financial, debt, income-stability, value-add, and execution-risk dimensions and catalogs eligible canonical receipt lineage. Eligible lineage is not a selected scoring input. With no approved scoring-input policy, selected inputs and copied numeric values remain empty.
+
+Gate 9B consumes only the exact canonical Gate 9A receipt. It requires exact approved policy authority for weights, thresholds, normalization formulas, classification bands, and overall-score methodology. No such policy exists. Every weight remains null, every threshold and classification set remains empty, and each missing dimension collapses without reweighting.
+
+Gate 9C consumes only the exact canonical Gate 9B receipt. All six dimensions are `collapsed_ineligible`; no arithmetic is attempted. Dimension scores, overall score, classifications, rankings, strengths, weaknesses, principal risks, recommendations, and confidence remain null or empty.
+
+Gate 9D establishes `established_collapsed_no_approved_scoring_policy`. This receipt certifies complete architecture and exact collapsed state, not a completed score. Its Gate 6 handoff contains no deterministic strength, weakness, or principal-risk classification receipt and does not authorize any scoring-dependent memo component.
+
+Permanent semantic boundary:
+
+```text
+eligible lineage is not selected scoring input
+document fact is not scoring authority without approved scoring-input policy
+dimension definition is not weight or threshold authority
+Screening deal score is not Underwriting institutional score
+missing dimension is not zero and is not permission to reweight
+collapsed execution is not an adverse score
+architecture completion is not completed scoring analysis
+Gate 9 completion receipt is not strength, weakness, or risk classification
+Gate 9 handoff is not Gate 6 component execution
+optional scoring absence is not core failure or publication authority
+```
+
+Exact validators reconstruct each contract from its canonical predecessor. Caller values, policies, weights, thresholds, formulas, scores, classifications, receipts, and handoffs are ignored. Marker-only or tampered predecessors, copied values, promoted eligibility, reweighting, attempted ineligible calculations, fabricated scores or conclusions, Gate 6 sequencing mutation, customer authorization, and publication blocking invalidate the applicable contract.
+
+Permanent proof is carried by `tests/qa/institutional-scoring-input-lineage-contract-smoke.js`, `tests/qa/institutional-scoring-methodology-authority-contract-smoke.js`, `tests/qa/institutional-scoring-execution-contract-smoke.js`, and `tests/qa/institutional-scoring-completion-handoff-contract-smoke.js`. Verification is `PASS`: all four dedicated adversarial smokes; Financial Intelligence with 29 total smokes including Gates 7A through 9D; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 9 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scoring remains correctly collapsed until exact scoring-input and methodology policy authority exists. Gates 10 through 11 remain preserved. Next is a separately bounded Gate 10 ELITE Presentation and PDF System review, including page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

@@ -3425,5 +3425,99 @@ Gate 11: Launch Operations and Certification
 
 Gate 9 is not authorized by Gate 8 completion. Its exact scoring inputs, dimensions, weights, thresholds, missing-dimension behavior, Gate 6 dependencies, and non-blocking publication behavior require a separately bounded doctrine review.
 
+## July 17 Gates 9A through 9D Institutional Scoring completion
+
+Gate 8 is committed at `a83cf6d` with exact `origin/main` parity confirmed before the bounded Gate 9 sequence began.
+
+Gate 9 was completed in four independently verified stages:
+
+```text
+Gate 9A: canonical scoring-input lineage
+Gate 9B: scoring-methodology and policy authority
+Gate 9C: fail-closed scoring execution
+Gate 9D: canonical Gate 9 completion receipt and non-executing Gate 6 handoff
+```
+
+Gate 9A registers six institutional scoring dimensions: operational, financial, debt, income stability, value add, and execution risk. It catalogs eligible canonical receipt lineage only. No approved scoring-input policy exists, so no numeric value is copied, selected, inferred, substituted, or made scoring-eligible.
+
+Gate 9B requires an exact approved scoring-methodology policy before any weight, threshold, normalization formula, classification band, or overall-score formula may exist. No such policy exists. All six weights remain null, all threshold and classification sets remain empty, and missing dimensions collapse without redistribution or reweighting. Screening scores and legacy underwriting are prohibited as substitutes.
+
+Gate 9C deterministically represents all six dimensions as `collapsed_ineligible`. It attempts zero calculations and creates zero dimension scores, classifications, rankings, strengths, weaknesses, principal risks, recommendations, or confidence labels. The overall score and classification remain null.
+
+Gate 9D establishes the canonical `canonical_gate_9_institutional_scoring_receipt` in authority state `established_collapsed_no_approved_scoring_policy`. Architecture completion does not claim completed scoring analysis. Its internal Gate 6 handoff carries no deterministic strength, weakness, or principal-risk classification receipt and therefore cannot execute the scoring-dependent Gate 6 components, recommendation, confidence, or final memo. The embedded Gate 6D sequencing contract remains unmodified.
+
+Permanent Gate 9 prohibitions:
+
+```text
+caller scoring input, number, weight, threshold, formula, score, classification, receipt, or handoff -> ignored
+marker-only or tampered upstream receipt -> rejected
+eligible lineage catalog promoted to selected scoring input -> rejected
+document fact copied without approved scoring-input policy -> rejected
+Screening deal score or legacy underwriting reused -> rejected
+missing dimension redistributed or reweighted -> rejected
+ineligible dimension calculation attempted -> rejected
+dimension or overall score fabricated -> rejected
+strength, weakness, risk, ranking, recommendation, or confidence fabricated -> rejected
+collapsed completion receipt represented as completed scoring analysis -> rejected
+Gate 6 component or memo execution authorized without exact classification receipts -> rejected
+embedded Gate 6 sequencing mutated -> rejected
+customer surface, Screening, Delivery Gate, Admin, or publication behavior changed -> rejected
+optional scoring collapse blocks validated core publication -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes. Unsupported scoring and memo sections collapse, omit, qualify, or disclose. Missing optional scoring authority cannot create a whole-report customer-document failure. The deferred catastrophic-core usability threshold remains a separate constitutional TODO and is unchanged.
+
+Verification completed after all four stages:
+
+```text
+dedicated Gate 9A adversarial smoke: PASS
+dedicated Gate 9B adversarial smoke: PASS
+dedicated Gate 9C adversarial smoke: PASS
+dedicated Gate 9D adversarial smoke: PASS
+Financial Intelligence: PASS, 29 total smokes including Gates 7A through 9D
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 9 INSTITUTIONAL SCORING ARCHITECTURE: COMPLETE / PASS LOCALLY
+BASE GATE 8 COMMIT: a83cf6d
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+SCORING DIMENSIONS REGISTERED: 6 / 6
+APPROVED SCORING-INPUT POLICY AVAILABLE: NO
+SCORING-ELIGIBLE DIMENSIONS: 0 / 6
+APPROVED SCORING-METHODOLOGY POLICY AVAILABLE: NO
+APPROVED WEIGHTS: 0 / 6
+APPROVED THRESHOLD SETS: 0 / 6
+SCORED DIMENSIONS: 0 / 6
+CLASSIFIED DIMENSIONS: 0 / 6
+OVERALL SCORE: NULL
+STRENGTHS / WEAKNESSES / PRINCIPAL RISKS CREATED: 0 / 0 / 0
+GATE 9 COMPLETION RECEIPT ESTABLISHED: YES, COLLAPSED ANALYSIS ONLY
+MEMO COMPONENT EXECUTED: NO
+GATE 6 SEQUENCING MUTATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: Gate 10 ELITE Presentation and PDF System under a separately bounded authority review
+```
+
+## Preserved Gates 10 through 11 ELITE roadmap after Gate 9 completion
+
+```text
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 10 is not authorized by Gate 9 completion. Its exact presentation, rendering, PDF composition, visual QA, and certification authority require a separately bounded doctrine review.
+
 ---
 # End of Active Master Context

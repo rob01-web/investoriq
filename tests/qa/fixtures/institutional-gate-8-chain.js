@@ -5,6 +5,7 @@ import {
 import { buildCanonicalInstitutionalDueDiligenceEvidenceInventoryContract } from '../../../api/_lib/institutional-due-diligence-evidence-inventory-contract.js';
 import { buildCanonicalInstitutionalDueDiligenceCoverageClassificationContract } from '../../../api/_lib/institutional-due-diligence-coverage-classification-contract.js';
 import { buildCanonicalInstitutionalDueDiligencePriorityEligibilityContract } from '../../../api/_lib/institutional-due-diligence-priority-eligibility-contract.js';
+import { buildCanonicalInstitutionalDueDiligenceCompletionHandoffContract } from '../../../api/_lib/institutional-due-diligence-completion-handoff-contract.js';
 
 function supportTextArtifact(id, filename, text) {
   return {
@@ -48,5 +49,11 @@ export function buildCanonicalGate8B(jobId = 'gate-8-chain-job') {
 export function buildCanonicalGate8C(jobId = 'gate-8-chain-job') {
   return buildCanonicalInstitutionalDueDiligencePriorityEligibilityContract({
     coverageClassificationContract: buildCanonicalGate8B(jobId),
+  });
+}
+
+export function buildCanonicalGate8D(jobId = 'gate-8-chain-job') {
+  return buildCanonicalInstitutionalDueDiligenceCompletionHandoffContract({
+    priorityEligibilityContract: buildCanonicalGate8C(jobId),
   });
 }

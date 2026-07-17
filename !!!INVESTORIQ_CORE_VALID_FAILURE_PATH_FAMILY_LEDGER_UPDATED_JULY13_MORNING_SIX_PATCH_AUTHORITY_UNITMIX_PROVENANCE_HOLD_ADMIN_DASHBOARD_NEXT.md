@@ -19828,3 +19828,32 @@ The core-valid failure doctrine remains publish-or-collapse. Missing optional di
 Verification: dedicated Gates 8A through 8D smokes `PASS`; Financial Intelligence `PASS` with 25 total smokes including Gates 7A through 8D; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 8 architecture `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Diligence analysis is neutral coverage only with zero inferred gaps, findings, priorities, or actions. Next is a separately bounded Gate 9 Institutional Scoring authority review. Gates 9 through 11 remain preserved. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 9A through 9D CVF closure and Gate 9 completion
+
+Gate 8 is committed at `a83cf6d` with `origin/main` parity. Gates 9A through 9D complete the internal Institutional Scoring architecture without selecting or copying numbers, inventing scoring policy, calculating scores, creating classifications, executing memo components, or changing customer, Admin, Screening, Delivery Gate, or publication behavior.
+
+Closed failure families:
+
+```text
+marker-only or tampered Gate 8 or Gate 9 predecessor becomes scoring authority -> prohibited
+caller value, weight, threshold, formula, score, classification, receipt, or handoff survives -> prohibited
+eligible lineage becomes selected scoring input without approved policy -> prohibited
+Screening score or legacy underwriting becomes institutional-scoring authority -> prohibited
+missing dimensions are redistributed or reweighted -> prohibited
+ineligible dimension or overall-score calculation is attempted -> prohibited
+fabricated score, ranking, strength, weakness, risk, recommendation, or confidence survives -> prohibited
+collapsed Gate 9 completion receipt claims completed scoring analysis -> prohibited
+Gate 9 handoff executes Gate 6 components without exact classification receipts -> prohibited
+Gate 9 handoff mutates Gate 6D sequencing -> prohibited
+optional scoring limitation becomes a validated-core publication blocker -> prohibited
+Gate 9 completion changes customer rendering, Screening, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+```
+
+Gate 9 registers six dimensions but leaves scoring-input eligibility at `0 / 6`, approved weights at `0 / 6`, scored dimensions at `0 / 6`, classifications at zero, and overall score null. The canonical Gate 9 completion receipt truthfully records collapsed analysis. Its Gate 6 handoff contains no deterministic strength, weakness, or principal-risk classification receipt, so all dependent memo components remain non-executable.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing optional scoring authority collapses dependent scoring and memo components only. It cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. The deferred catastrophic-core usability threshold remains unchanged.
+
+Verification: dedicated Gates 9A through 9D smokes `PASS`; Financial Intelligence `PASS` with 29 total smokes including Gates 7A through 9D; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 9 architecture `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scoring remains correctly collapsed with zero scores or classifications because no approved scoring-input or methodology policy exists. Gates 10 through 11 remain preserved. Next is a separately bounded Gate 10 ELITE Presentation and PDF System review, including page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

@@ -1285,3 +1285,41 @@ The publish-or-collapse constitution remains unchanged. Accepted complete or con
 Verification: dedicated Gates 8A through 8D smokes `PASS`; Financial Intelligence with 25 total smokes including Gates 7A through 8D; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 8 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 9 Institutional Scoring authority review. Gates 9 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 9A through 9D Admin doctrine checkpoint and Gate 9 completion
+
+```text
+Gate 8: COMMITTED AT a83cf6d / ORIGIN MAIN MATCH CONFIRMED
+Gate 9A: PASS locally / canonical scoring-input lineage
+Gate 9B: PASS locally / scoring-methodology policy authority
+Gate 9C: PASS locally / fail-closed collapsed execution
+Gate 9D: PASS locally / collapsed completion receipt and internal Gate 6 handoff
+Gate 9 architecture: COMPLETE
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Scoring dimensions registered: 6 / 6
+Scoring-eligible dimensions: 0 / 6
+Approved weights: 0 / 6
+Scored dimensions: 0 / 6
+Classifications: 0
+Overall score: NULL
+Strengths / weaknesses / principal risks: 0 / 0 / 0
+Memo components executed: 0
+Gate 6 sequencing mutation: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gates 9A through 9D create no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, institutional score, ranking, classification, strength, weakness, principal risk, recommendation, confidence label, memo component, or Screening behavior.
+
+The Gate 9 completion receipt is internal-only and non-authoritative for customer or administrative messaging. `established_collapsed_no_approved_scoring_policy` means the Institutional Scoring architecture completed safely with no approved scoring input or methodology policy. It is not an adverse score, customer document failure, publication hold, replacement-document workflow, refund or credit remedy, or platform incident.
+
+The publish-or-collapse constitution remains unchanged. Accepted complete or constrained T12 and Rent Roll evidence publishes while unsupported scoring and memo sections collapse, omit, qualify, or disclose. Optional scoring authority absence cannot block validated core publication. The deferred quantified catastrophic-core threshold remains inactive and unchanged.
+
+Verification: dedicated Gates 9A through 9D smokes `PASS`; Financial Intelligence with 29 total smokes including Gates 7A through 9D; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 9 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gates 10 through 11 remain preserved. Next is a separately bounded Gate 10 ELITE Presentation and PDF System review. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
