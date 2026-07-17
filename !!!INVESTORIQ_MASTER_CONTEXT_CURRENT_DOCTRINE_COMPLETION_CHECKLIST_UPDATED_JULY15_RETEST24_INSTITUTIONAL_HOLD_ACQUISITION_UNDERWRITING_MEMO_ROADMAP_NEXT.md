@@ -3090,5 +3090,100 @@ Gate 11: Launch Operations and Certification
 
 Gate 7B may establish only exact source-backed or explicitly approved scenario-policy authority and deterministic stress-set definitions. It may not infer assumptions from current facts, accept caller overrides, calculate scenarios, classify risk, execute memo components, connect customer output, or change protected publication doctrine.
 
+## July 17 Gate 7B scenario-policy and stress-set authority closure
+
+Gate 7A is committed at `fa1cbcb` with exact `origin/main` parity confirmed before Gate 7B began.
+
+Gate 7B adds one internal-only authority owner:
+
+```text
+api/_lib/institutional-scenario-engine-stress-set-authority-contract.js
+```
+
+The owner accepts only the exact complete canonical Gate 7A receipt. It resolves scenario authority only from Gate 7A's canonical source-bound input receipts or its exact embedded approved-policy receipt. Caller values, caller policy objects, current-fact substitutions, compatibility aliases, prior report outputs, and legacy underwriting are not authority.
+
+The embedded canonical scenario-policy receipt remains `not_established`: policy ID, policy version, effective date, approval receipt, and policy values are all absent. All nine stress inputs therefore remain null, authority-unresolved, ineligible, and without provenance.
+
+Gate 7B deterministically defines seven stress sets:
+
+```text
+rent stress set -> rent growth rate
+occupancy stress set -> stress occupancy rate plus stress vacancy rate
+interest-rate stress set -> stress interest rate
+tax stress set -> tax growth rate
+expense stress set -> expense growth rate
+capitalization-rate stress set -> stress capitalization rate
+exit stress set -> exit capitalization rate plus hold period years
+```
+
+Each definition requires every listed input to carry exact source authority or exact explicitly approved scenario-policy authority. Definitions exist independently of authorization. All seven sets remain unauthorized because none has complete canonical input authority. No scenario value, calculation, output, classification, memo component, customer output, or Gate 7 receipt is created.
+
+Permanent Gate 7B prohibitions:
+
+```text
+marker-only or tampered Gate 7A receipt -> rejected
+caller stress value, policy, approval, or stress-set object -> ignored
+counterfeit policy approval inserted upstream -> rejected
+current source-case fact promoted to stress authority -> rejected
+policy approval inferred from identifiers or values -> rejected
+incomplete stress set authorized -> rejected
+scenario calculation or output created -> rejected
+Gate 7 receipt fabricated -> rejected
+risk classification or memo execution created -> rejected
+optional scenario absence blocks validated core publication -> rejected
+Screening, CustomerSurfaceModel, renderer, Delivery Gate, Admin, or terminal taxonomy changed -> rejected
+legacy underwriting reused -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes, with unsupported scenario sections collapsed, omitted, qualified, or disclosed. Missing scenario inputs or policy authority cannot block the whole report. The deferred catastrophic-core usability threshold remains a separate constitutional TODO and is unchanged by Gate 7B.
+
+Verification completed after production and smoke changes:
+
+```text
+dedicated Gate 7B adversarial smoke: PASS
+Financial Intelligence: PASS, 18 total smokes including Gates 7A and 7B
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 7B SCENARIO POLICY AND STRESS SET AUTHORITY: PASS LOCALLY
+BASE GATE 7A COMMIT: fa1cbcb
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+EXACT APPROVED SCENARIO POLICY AVAILABLE: NO
+STRESS INPUTS AUTHORIZED: 0 / 9
+STRESS SETS DETERMINISTICALLY DEFINED: 7 / 7
+STRESS SETS AUTHORIZED: 0 / 7
+SCENARIO CALCULATIONS PERFORMED: NO
+GATE 7 RECEIPT ESTABLISHED: NO
+RISK CLASSIFICATION CREATED: NO
+MEMO COMPONENT EXECUTED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: separately bounded Gate 7C authority review; exact scope not authorized or begun
+```
+
+## Preserved Gates 8 through 11 ELITE roadmap after Gate 7B
+
+```text
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 7C is not authorized by Gate 7B. Any scenario formula, calculation, output, Gate 7 completion receipt, risk classification, memo execution, customer connection, or publication change requires a separately bounded doctrine review.
+
 ---
 # End of Active Master Context

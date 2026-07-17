@@ -1180,3 +1180,36 @@ The publish-or-collapse constitution remains unchanged. Accepted complete or con
 Gate 7A verification: dedicated smoke `PASS`; Financial Intelligence with 17 total smokes including Gate 7A; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 7A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 7B exact source-backed or approved scenario-policy authority and stress-set definition. Gates 8 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 7B Admin doctrine checkpoint
+
+```text
+Gate 7A: COMMITTED AT fa1cbcb / ORIGIN MAIN MATCH CONFIRMED
+Gate 7B: PASS locally / internal-only scenario-policy and stress-set authority
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Approved scenario policy accepted: NONE
+Stress input accepted: NONE
+Stress sets defined: 7 / 7
+Stress sets authorized: 0 / 7
+Scenario calculation: NONE
+Gate 7 receipt: NONE
+Risk classification: NONE
+Memo execution: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 7B creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, scenario result, risk classification, memo component, or Screening behavior.
+
+The scenario-policy and stress-set authority receipt is internal-only and non-authoritative for customer or administrative messaging. A deterministic stress-set definition is not an authorized scenario. Missing source stress values, approved scenario policy, or authorized stress sets are optional analysis limitations, not catastrophic core failures, customer document failures, publication holds, replacement-document workflows, refund or credit remedies, or platform incidents.
+
+The publish-or-collapse constitution remains unchanged. Accepted complete or constrained T12 and Rent Roll evidence publishes while unsupported scenario and memo sections collapse, omit, qualify, or disclose. Optional scenario authority absence cannot block validated core publication. The deferred quantified catastrophic-core threshold remains inactive and unchanged.
+
+Gate 7B verification: dedicated smoke `PASS`; Financial Intelligence with 18 total smokes including Gates 7A and 7B; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 7B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Any Gate 7C scope requires a separately bounded authority review and is not authorized or begun. Gates 8 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

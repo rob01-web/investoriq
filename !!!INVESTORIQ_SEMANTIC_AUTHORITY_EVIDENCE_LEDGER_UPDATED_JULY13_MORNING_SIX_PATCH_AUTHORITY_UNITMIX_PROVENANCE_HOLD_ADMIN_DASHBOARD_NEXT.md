@@ -8925,3 +8925,49 @@ The validator reconstructs the exact Gate 7A contract from the canonical Gate 6D
 Permanent proof is `tests/qa/institutional-scenario-engine-input-authority-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 17 total smokes including Gate 7A; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 7A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 7B exact source-backed or approved scenario-policy authority and stress-set definition only. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 7B scenario-policy and stress-set authority receipt
+
+Gate 7B consumes one exact, complete canonical Gate 7A receipt. It accepts no direct source facts, caller assumptions, renderer data, customer copy, legacy scenario values, compatibility aliases, or prior report outputs.
+
+The only eligible authority paths are:
+
+```text
+exact source-backed stress input already accepted by canonical Gate 7A
+exact explicitly approved scenario-policy value carried by Gate 7A's canonical embedded policy receipt
+```
+
+Neither path currently supplies a stress value. The embedded policy receipt has no approved policy ID, version, effective date, approval receipt, or authorized values. All nine stress inputs remain null, authority-unresolved, provenance-empty, and scenario-ineligible.
+
+Gate 7B defines exact membership for seven stress sets:
+
+```text
+rent stress: rent growth rate
+occupancy stress: stress occupancy rate and stress vacancy rate
+interest-rate stress: stress interest rate
+tax stress: tax growth rate
+expense stress: expense growth rate
+capitalization-rate stress: stress capitalization rate
+exit stress: exit capitalization rate and hold period years
+```
+
+A definition is not authorization. Every required input in a set must carry exact source authority or exact explicitly approved scenario-policy authority. All seven definitions are complete and immutable; all seven authorization states remain `not_established` because required inputs are missing.
+
+Permanent semantic boundary:
+
+```text
+current fact is not stress authority
+policy identifier is not policy approval
+policy value without an exact approval receipt is not approved policy
+stress-set definition is not stress-set authorization
+partial input coverage is not complete set authority
+set authority is not scenario calculation
+scenario calculation is not risk classification
+Gate 7 analysis absence is not core publication failure
+```
+
+The validator reconstructs the exact Gate 7B contract from the canonical Gate 7A chain. Marker-only, partial, copied, or tampered upstream objects fail. Counterfeit approval, promoted current facts, authorized incomplete sets, calculated outputs, fabricated Gate 7 receipts, risk classification, memo execution, and publication blocking invalidate the contract. Caller overrides are ignored.
+
+Permanent proof is `tests/qa/institutional-scenario-engine-stress-set-authority-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 18 total smokes including Gates 7A and 7B; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 7B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Any Gate 7C scope requires a separate bounded authority review. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

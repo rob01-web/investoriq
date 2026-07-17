@@ -19741,3 +19741,32 @@ The core-valid failure doctrine remains publish-or-collapse. Missing scenario in
 Verification: dedicated Gate 7A smoke `PASS`; Financial Intelligence `PASS` with 17 total smokes including Gate 7A; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 7A `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 7B exact source-backed or approved scenario-policy authority and stress-set definition. Gates 8 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 7B CVF closure
+
+Gate 7A is committed at `fa1cbcb` with `origin/main` parity. Gate 7B adds one canonical internal scenario-policy and stress-set authority receipt and no calculation, report, customer, Admin, Screening, Delivery Gate, or publication behavior.
+
+Closed Gate 7B failure families:
+
+```text
+marker-only or partial Gate 7A object creates stress-set authority -> prohibited
+tampered Gate 7A input authority survives -> prohibited
+caller-supplied stress value, policy, approval, or set becomes accepted -> prohibited
+counterfeit approved-policy receipt becomes authority -> prohibited
+current source-case fact becomes a stress input -> prohibited
+policy approval is inferred from a value or identifier -> prohibited
+incomplete stress set becomes authorized -> prohibited
+scenario output or Gate 7 receipt is fabricated -> prohibited
+scenario authority becomes risk classification or memo execution -> prohibited
+optional scenario absence becomes a validated-core publication blocker -> prohibited
+Gate 7B changes Screening, customer rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes a Gate 7B dependency -> prohibited
+```
+
+The sole Gate 7B production owner is `api/_lib/institutional-scenario-engine-stress-set-authority-contract.js`. It requires the exact complete Gate 7A contract, preserves nine null stress-input authority states, confirms that no exact approved scenario policy exists, and deterministically defines seven complete stress-set membership rules. Zero stress sets are authorized and no calculations occur.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing scenario inputs, approved policy, or authorized stress sets collapse only dependent scenario and memo components. They cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. The deferred catastrophic-core usability threshold remains unchanged.
+
+Verification: dedicated Gate 7B smoke `PASS`; Financial Intelligence `PASS` with 18 total smokes including Gates 7A and 7B; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 7B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Any Gate 7C work requires a separately bounded authority review and is not authorized or begun. Gates 8 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
