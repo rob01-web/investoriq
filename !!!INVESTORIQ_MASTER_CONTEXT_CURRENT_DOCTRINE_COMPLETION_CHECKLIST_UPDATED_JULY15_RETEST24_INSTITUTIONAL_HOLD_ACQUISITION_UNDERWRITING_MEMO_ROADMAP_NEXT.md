@@ -3185,5 +3185,115 @@ Gate 11: Launch Operations and Certification
 
 Gate 7C is not authorized by Gate 7B. Any scenario formula, calculation, output, Gate 7 completion receipt, risk classification, memo execution, customer connection, or publication change requires a separately bounded doctrine review.
 
+## July 17 Gates 7C through 7E Scenario Engine completion
+
+Gate 7B is committed at `5205544` with exact `origin/main` parity confirmed before the bounded Gate 7 completion sequence began.
+
+The authorized completion sequence was implemented and verified in three independent stages:
+
+```text
+Gate 7C: deterministic formula registry and calculation eligibility
+Gate 7D: fail-closed canonical scenario execution
+Gate 7E: canonical Gate 7 completion receipt and non-executing Gate 6 handoff
+```
+
+### Gate 7C formula and eligibility authority
+
+Gate 7C adds `api/_lib/institutional-scenario-engine-formula-eligibility-contract.js`. It accepts only the exact complete Gate 7B receipt and registers seven deterministic formula definitions for rent, occupancy, interest-rate, tax, expense, capitalization-rate, and exit stress.
+
+Every formula records exact required stress inputs and exact required scenario context. Missing growth period, debt principal, amortization, payment frequency, property-tax basis, operating-expense basis, stress NOI, or exit-NOI policy remains missing. No caller formula or caller context is accepted. All seven formulas remain calculation-ineligible because Gate 7B authorizes zero stress sets and canonical scenario context is incomplete.
+
+### Gate 7D fail-closed execution
+
+Gate 7D adds `api/_lib/institutional-scenario-engine-execution-contract.js`. It accepts only the exact complete Gate 7C receipt. Every ineligible formula collapses before arithmetic with both applicable canonical authority-limit codes. No calculation is attempted, no input snapshot is created, no arithmetic diagnostic is fabricated, and no output is emitted.
+
+```text
+registered formulas: 7
+eligible formulas: 0
+attempted calculations: 0
+completed calculations: 0
+collapsed formulas: 7
+scenario outputs: 0
+```
+
+### Gate 7E completion receipt and Gate 6 handoff
+
+Gate 7E adds `api/_lib/institutional-scenario-engine-completion-handoff-contract.js`. It accepts only the exact complete Gate 7D receipt and establishes a canonical Gate 7 architecture-completion receipt with authority state `established_collapsed_no_authorized_stress_sets`.
+
+Architecture completion does not manufacture analysis. The receipt truthfully records seven registered formulas, seven collapsed formulas, zero calculations, zero outputs, zero classifications, and zero memo executions. Its internal Gate 6 handoff is available only as collapsed scenario-analysis state. It carries no scenario evidence or output and cannot authorize the Gate 6 risk component or any memo execution. The embedded Gate 6D sequencing contract remains unmodified. Gates 8 and 9 remain required before their dependent memo components can execute.
+
+Permanent Gates 7C through 7E prohibitions:
+
+```text
+caller formula, context, input, output, receipt, or handoff -> ignored
+marker-only or tampered upstream receipt -> rejected
+missing formula context treated as available -> rejected
+ineligible formula promoted to eligible -> rejected
+ineligible calculation attempted -> rejected
+fabricated input snapshot, arithmetic, output, or scenario evidence -> rejected
+collapsed completion receipt represented as calculated analysis -> rejected
+risk classification or memo execution authorized -> rejected
+embedded Gate 6 sequencing mutated -> rejected
+customer surface, Screening, Delivery Gate, Admin, or publication behavior changed -> rejected
+optional scenario collapse blocks validated core publication -> rejected
+legacy underwriting reused -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes. Unsupported scenario and memo sections collapse, omit, qualify, or disclose. Missing optional scenario authority cannot create a whole-report customer-document failure. The deferred catastrophic-core usability threshold remains a separate constitutional TODO and is unchanged.
+
+Verification completed after all three stages:
+
+```text
+dedicated Gate 7C adversarial smoke: PASS
+dedicated Gate 7D adversarial smoke: PASS
+dedicated Gate 7E adversarial smoke: PASS
+Financial Intelligence: PASS, 21 total smokes including Gates 7A through 7E
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 7 SCENARIO ENGINE ARCHITECTURE: COMPLETE / PASS LOCALLY
+BASE GATE 7B COMMIT: 5205544
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+EXACT APPROVED SCENARIO POLICY AVAILABLE: NO
+STRESS INPUTS AUTHORIZED: 0 / 9
+STRESS SETS DEFINED: 7 / 7
+STRESS SETS AUTHORIZED: 0 / 7
+FORMULAS REGISTERED: 7 / 7
+FORMULAS ELIGIBLE: 0 / 7
+CALCULATIONS ATTEMPTED: 0
+SCENARIO OUTPUTS CREATED: 0
+GATE 7 COMPLETION RECEIPT ESTABLISHED: YES, COLLAPSED ANALYSIS ONLY
+RISK CLASSIFICATION CREATED: NO
+MEMO COMPONENT EXECUTED: NO
+GATE 6 SEQUENCING MUTATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: Gate 8 Due Diligence Engine under a separately bounded authority review
+```
+
+## Preserved Gates 8 through 11 ELITE roadmap after Gate 7 completion
+
+```text
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 8 is not authorized by Gate 7 completion. Its exact Due Diligence Engine authority, source-gap semantics, priority rules, memo dependency, and non-blocking publication behavior require a separately bounded doctrine review.
+
 ---
 # End of Active Master Context

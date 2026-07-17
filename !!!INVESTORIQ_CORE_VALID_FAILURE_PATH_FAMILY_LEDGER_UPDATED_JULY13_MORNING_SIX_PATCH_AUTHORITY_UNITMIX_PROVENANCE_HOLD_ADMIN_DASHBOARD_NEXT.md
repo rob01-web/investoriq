@@ -19770,3 +19770,31 @@ The core-valid failure doctrine remains publish-or-collapse. Missing scenario in
 Verification: dedicated Gate 7B smoke `PASS`; Financial Intelligence `PASS` with 18 total smokes including Gates 7A and 7B; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 7B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Any Gate 7C work requires a separately bounded authority review and is not authorized or begun. Gates 8 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 7C through 7E CVF closure and Gate 7 completion
+
+Gate 7B is committed at `5205544` with `origin/main` parity. Gates 7C through 7E complete the internal Scenario Engine architecture without creating scenario assumptions, outputs, classifications, customer surfaces, Admin behavior, Screening behavior, Delivery Gate behavior, or publication control.
+
+Closed failure families:
+
+```text
+caller formula or scenario context replaces canonical eligibility -> prohibited
+missing growth period, debt term, tax basis, expense basis, stress NOI, or exit-NOI policy is inferred -> prohibited
+incomplete stress set or formula becomes calculation-eligible -> prohibited
+ineligible scenario arithmetic is attempted -> prohibited
+caller or fabricated input snapshot, diagnostic, output, or scenario evidence survives -> prohibited
+collapsed Gate 7 completion receipt claims calculated analysis -> prohibited
+Gate 7 receipt becomes risk classification or memo execution authority -> prohibited
+Gate 7 handoff mutates Gate 6D sequencing -> prohibited
+optional scenario collapse becomes a validated-core publication blocker -> prohibited
+Gate 7 completion changes customer rendering, Screening, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes a Gate 7C, 7D, or 7E dependency -> prohibited
+```
+
+Gate 7C registers seven exact deterministic formulas and leaves all seven ineligible. Gate 7D collapses all seven before arithmetic, with zero attempts and zero outputs. Gate 7E establishes a truthful architecture-completion receipt in `established_collapsed_no_authorized_stress_sets` state and a non-executing internal Gate 6 handoff with no scenario evidence, risk authority, or memo authority.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing optional scenario authority collapses dependent scenario and memo components only. It cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. The deferred catastrophic-core usability threshold remains unchanged.
+
+Verification: dedicated Gates 7C, 7D, and 7E smokes `PASS`; Financial Intelligence `PASS` with 21 total smokes including Gates 7A through 7E; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 7 architecture `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scenario analysis is canonically collapsed with zero outputs because exact stress authority is unavailable. Next is a separately bounded Gate 8 Due Diligence Engine authority review. Gates 8 through 11 remain preserved. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

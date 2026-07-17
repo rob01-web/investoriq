@@ -8971,3 +8971,30 @@ The validator reconstructs the exact Gate 7B contract from the canonical Gate 7A
 Permanent proof is `tests/qa/institutional-scenario-engine-stress-set-authority-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 18 total smokes including Gates 7A and 7B; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 7B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Any Gate 7C scope requires a separate bounded authority review. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 7C through 7E formula, execution, and completion authority receipts
+
+Gate 7C consumes only the exact canonical Gate 7B receipt. Its formula registry establishes deterministic methodology, not source facts or scenario assumptions. Each of seven formulas declares all required stress inputs and context authority. No formula is eligible while any required stress set, growth period, debt term, basis, stress NOI, or exit-NOI policy remains unavailable.
+
+Gate 7D consumes only the exact canonical Gate 7C receipt. Every ineligible formula is represented as `collapsed_ineligible`. Calculation attempt, input snapshot, arithmetic diagnostics, and output remain false, empty, or null. This is narrow fail-closed execution, not a negative investment conclusion.
+
+Gate 7E consumes only the exact canonical Gate 7D receipt. Its `established_collapsed_no_authorized_stress_sets` receipt certifies architecture completion and exact collapsed-analysis state. It does not certify scenario output. The Gate 6 handoff contains no scenario evidence or output and does not authorize risk classification or memo execution.
+
+Permanent semantic boundary:
+
+```text
+formula registration is not formula eligibility
+formula eligibility is not calculation execution
+missing context is not zero and is not inferable
+collapsed execution is not adverse scenario output
+architecture completion is not completed scenario analysis
+Gate 7 completion receipt is not Gate 9 risk classification
+Gate 7 handoff is not Gate 6 component execution
+optional scenario absence is not core failure or publication authority
+```
+
+The exact validators reconstruct each contract from its canonical predecessor. Caller formulas, contexts, inputs, outputs, receipts, and handoffs are ignored. Marker-only or tampered predecessors, promoted eligibility, attempted ineligible calculations, fabricated outputs or evidence, risk classification, memo execution, Gate 6 sequencing mutation, customer authorization, and publication blocking invalidate the respective contract.
+
+Permanent proof is carried by `tests/qa/institutional-scenario-engine-formula-eligibility-contract-smoke.js`, `tests/qa/institutional-scenario-engine-execution-contract-smoke.js`, and `tests/qa/institutional-scenario-engine-completion-handoff-contract-smoke.js`. Verification is `PASS`: all three dedicated adversarial smokes; Financial Intelligence with 21 total smokes including Gates 7A through 7E; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 7 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scenario analysis remains correctly collapsed with zero outputs until exact source-backed stress inputs or an exact approved scenario policy exists. Next is a separately bounded Gate 8 Due Diligence Engine authority review. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
