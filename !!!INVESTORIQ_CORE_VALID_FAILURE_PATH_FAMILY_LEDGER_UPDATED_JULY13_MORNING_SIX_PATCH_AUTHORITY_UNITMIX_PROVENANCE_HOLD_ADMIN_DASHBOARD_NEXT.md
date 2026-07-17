@@ -19709,3 +19709,35 @@ The core-valid failure doctrine remains publish-or-collapse. Missing future scen
 Verification: dedicated Gate 6D smoke `PASS`; Financial Intelligence `PASS` with 16 total smokes including Gates 6B through 6D; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 6D `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 7A Scenario Engine authority and source-bound stress-input contract. Gates 8 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 7A CVF closure
+
+Gate 6D is committed at `8cd2d41` with `origin/main` parity. Gate 7A adds one canonical internal Scenario Engine input-authority receipt and no calculation, report, customer, Admin, Screening, Delivery Gate, or publication behavior.
+
+Closed Gate 7A failure families:
+
+```text
+marker-only or partial Gate 6D object creates scenario authority -> prohibited
+tampered Gate 6D sequencing survives -> prohibited
+caller-supplied stress value or policy becomes accepted -> prohibited
+source occupancy becomes stress occupancy -> prohibited
+physical vacancy becomes economic or stress vacancy -> prohibited
+market-rent arithmetic becomes rent growth -> prohibited
+current or proposed interest becomes stress interest -> prohibited
+appraisal or acquisition capitalization becomes stress or exit capitalization -> prohibited
+loan term or amortization becomes hold period -> prohibited
+incomplete scenario family becomes eligible -> prohibited
+scenario output or Gate 7 receipt is fabricated -> prohibited
+scenario authority becomes risk classification or memo execution -> prohibited
+optional scenario absence becomes a validated-core publication blocker -> prohibited
+Gate 7A changes Screening, customer rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes a Gate 7A dependency -> prohibited
+```
+
+The sole Gate 7A production owner is `api/_lib/institutional-scenario-engine-input-authority-contract.js`. It requires the exact complete Gate 6D contract, preserves the embedded canonical source case, and records nine stress-input fields and seven scenario families as unavailable, null, ineligible, uncalculated, and non-blocking.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing scenario inputs or policy collapse only dependent scenario and memo components. They cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. The deferred catastrophic-core usability threshold remains unchanged.
+
+Verification: dedicated Gate 7A smoke `PASS`; Financial Intelligence `PASS` with 17 total smokes including Gate 7A; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 7A `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 7B exact source-backed or approved scenario-policy authority and stress-set definition. Gates 8 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

@@ -2970,5 +2970,125 @@ Gate 11: Launch Operations and Certification
 
 Gate 7A may establish only exact Scenario Engine authority and source-bound stress-input eligibility. It may not invent stress assumptions, accept caller overrides, perform scenario calculations without separately authorized policy and formulas, classify risk, execute memo components, connect customer output, or change protected publication doctrine.
 
+## July 17 Gate 7A Scenario Engine input-authority closure
+
+Gate 6D is committed at `8cd2d41` with exact `origin/main` parity confirmed before Gate 7A began.
+
+Gate 7A adds one internal-only authority owner:
+
+```text
+api/_lib/institutional-scenario-engine-input-authority-contract.js
+```
+
+The owner accepts only the exact complete canonical Gate 6D receipt and consumes the embedded exact canonical Gate 5 scenario-policy contract. It preserves the authorized source case without adjustment and explicitly marks that source case as ineligible to become a stress scenario.
+
+Gate 7A registers nine possible stress-input authority fields:
+
+```text
+rent growth rate
+stress occupancy rate
+stress vacancy rate
+expense growth rate
+tax growth rate
+stress interest rate
+stress capitalization rate
+exit capitalization rate
+hold period years
+```
+
+Every stress-input value remains null, not source-bound, not policy-bound, and ineligible because no exact source assumption with the required scenario semantics and no approved scenario policy currently exists.
+
+Gate 7A registers seven scenario families:
+
+```text
+rent stress
+occupancy stress
+interest-rate stress
+tax stress
+expense stress
+capitalization-rate stress
+exit stress
+```
+
+Every family remains `not_established`, calculation-ineligible, uncalculated, null, unclassified, non-customer-facing, and non-blocking. The canonical Gate 7 Scenario Engine receipt remains not established.
+
+Permanent Gate 7A semantic firewalls:
+
+```text
+source-stated market-rent difference is not rent growth
+source-case occupancy is not stress occupancy
+physical vacancy is not economic or stress vacancy
+current operating expense is not expense growth
+current property tax is not tax growth
+current or proposed acquisition interest rate is not stress interest rate
+source-case or appraisal capitalization rate is not stress capitalization policy
+appraisal or acquisition capitalization rate is not exit capitalization rate
+loan term or amortization is not hold period
+```
+
+Permanent Gate 7A prohibitions:
+
+```text
+marker-only or tampered Gate 6D receipt -> rejected
+caller-authored stress value or policy -> ignored
+existing source-case value promoted to stress input -> rejected
+scenario family authorized without complete canonical inputs -> rejected
+scenario output calculated -> rejected
+Gate 7 receipt fabricated -> rejected
+risk classification or memo execution created -> rejected
+optional scenario absence blocks validated core publication -> rejected
+Screening, CustomerSurfaceModel, renderer, Delivery Gate, Admin, or terminal taxonomy changed -> rejected
+legacy underwriting reused -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes, with unsupported scenario sections collapsed, omitted, qualified, or disclosed. Missing scenario authority cannot block the whole report. The deferred catastrophic-core usability threshold remains a separate constitutional TODO and is unchanged by Gate 7A.
+
+Verification completed after production and smoke changes:
+
+```text
+dedicated Gate 7A adversarial smoke: PASS
+Financial Intelligence: PASS, 17 total smokes including Gate 7A
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 7A SCENARIO ENGINE INPUT AUTHORITY: PASS LOCALLY
+BASE GATE 6D COMMIT: 8cd2d41
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+SOURCE CASE PRESERVED WITHOUT ADJUSTMENT: YES
+STRESS INPUTS AVAILABLE: 0 / 9
+SCENARIO FAMILIES ELIGIBLE: 0 / 7
+SCENARIO CALCULATIONS PERFORMED: NO
+GATE 7 RECEIPT ESTABLISHED: NO
+RISK CLASSIFICATION CREATED: NO
+MEMO COMPONENT EXECUTED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: Gate 7B exact source-backed or approved scenario-policy authority and stress-set definition
+```
+
+## Preserved Gates 8 through 11 ELITE roadmap after Gate 7A
+
+```text
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 7B may establish only exact source-backed or explicitly approved scenario-policy authority and deterministic stress-set definitions. It may not infer assumptions from current facts, accept caller overrides, calculate scenarios, classify risk, execute memo components, connect customer output, or change protected publication doctrine.
+
 ---
 # End of Active Master Context

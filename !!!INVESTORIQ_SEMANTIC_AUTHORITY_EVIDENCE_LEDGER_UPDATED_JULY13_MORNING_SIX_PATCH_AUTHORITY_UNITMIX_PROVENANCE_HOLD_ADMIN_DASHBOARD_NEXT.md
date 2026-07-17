@@ -8884,3 +8884,44 @@ The validator reconstructs the exact Gate 6D contract from the canonical Gate 6C
 Permanent proof is `tests/qa/institutional-investment-committee-memo-dependency-sequencing-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 16 total smokes including Gates 6B through 6D; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 6D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gate 6's pre-downstream authority scaffold is complete and final execution is deferred until Gates 7 through 9. NEXT: Gate 7A Scenario Engine authority and source-bound stress-input contract. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 7A Scenario Engine input-authority receipt
+
+Gate 7A consumes one exact, complete canonical Gate 6D receipt and the exact embedded canonical Gate 5 scenario-policy contract. It does not consume caller assumptions, renderer data, customer copy, legacy scenario values, compatibility aliases, or prior report outputs.
+
+The canonical source case is preserved without adjustment and is explicitly ineligible as a stress scenario. Gate 7A then creates null authority receipts for nine possible stress inputs and groups them into seven scenario families.
+
+Canonical stress-input semantic restrictions:
+
+```text
+market-rent difference lacks time and achievability authority and is not rent growth
+current occupancy is a source-case fact and is not a stress target
+physical vacancy is not economic vacancy or a stress target
+current expenses and expense ratio do not establish expense growth
+current property tax does not establish tax growth
+current or acquisition financing rate does not establish stress or refinance rate
+source-case and appraisal capitalization rates do not establish stress policy
+appraisal and acquisition capitalization rates do not establish exit rate
+loan term and amortization do not establish hold period
+```
+
+Every stress input remains:
+
+```text
+value: null
+authority: not established
+source-bound: false
+policy-bound: false
+scenario eligible: false
+provenance: empty
+customer surface: false
+publication blocker: false
+```
+
+Every scenario family remains calculation-ineligible, uncalculated, null, unclassified, non-customer-facing, and non-blocking. The Gate 7 Scenario Engine receipt remains unavailable because no family has complete canonical stress-input authority.
+
+The validator reconstructs the exact Gate 7A contract from the canonical Gate 6D chain. Marker-only, partial, copied, or tampered upstream objects fail. Promoted source-case values, caller stress inputs, authorized scenarios, calculated outputs, fabricated Gate 7 receipts, risk classifications, and publication blocking invalidate the contract. Caller overrides are ignored.
+
+Permanent proof is `tests/qa/institutional-scenario-engine-input-authority-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 17 total smokes including Gate 7A; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 7A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 7B exact source-backed or approved scenario-policy authority and stress-set definition only. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

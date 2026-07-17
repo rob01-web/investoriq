@@ -7,7 +7,7 @@
   "homepage": "https://investoriq.tech",
   "license": "UNLICENSED",
   "scripts": {
-    "preqa:financial-intelligence": "node tests/qa/institutional-investment-committee-memo-methodology-contract-smoke.js && node tests/qa/institutional-investment-committee-memo-component-evidence-contract-smoke.js && node tests/qa/institutional-investment-committee-memo-dependency-sequencing-contract-smoke.js",
+    "preqa:financial-intelligence": "node tests/qa/institutional-investment-committee-memo-methodology-contract-smoke.js && node tests/qa/institutional-investment-committee-memo-component-evidence-contract-smoke.js && node tests/qa/institutional-investment-committee-memo-dependency-sequencing-contract-smoke.js && node tests/qa/institutional-scenario-engine-input-authority-contract-smoke.js",
     "dev": "vite",
     "generate-charts": "node scripts/generateCharts.js",
     "qa:renderer-scope": "eslint --config eslint.renderer-scope.cjs api/generate-client-report.js",

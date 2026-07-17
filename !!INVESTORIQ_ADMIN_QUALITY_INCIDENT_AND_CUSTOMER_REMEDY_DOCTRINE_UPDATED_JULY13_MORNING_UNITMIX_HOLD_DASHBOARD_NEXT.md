@@ -1150,3 +1150,33 @@ The publish-or-collapse constitution remains unchanged. Accepted complete or con
 Gate 6D verification: dedicated smoke `PASS`; Financial Intelligence with 16 total smokes including Gates 6B through 6D; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 6D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gate 6's pre-downstream authority scaffold is complete. Next is Gate 7A Scenario Engine authority and source-bound stress-input contract. Gates 8 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 7A Admin doctrine checkpoint
+
+```text
+Gate 6D: COMMITTED AT 8cd2d41 / ORIGIN MAIN MATCH CONFIRMED
+Gate 7A: PASS locally / internal-only Scenario Engine input authority
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Stress input accepted: NONE
+Scenario calculation: NONE
+Gate 7 receipt: NONE
+Risk classification: NONE
+Memo execution: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 7A creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, scenario result, risk classification, memo component, or Screening behavior.
+
+The Scenario Engine input-authority receipt is internal-only and non-authoritative for customer or administrative messaging. Missing scenario input or policy authority is an optional analysis limitation, not a catastrophic core failure, customer document failure, publication hold, replacement-document workflow, refund or credit remedy, or platform incident.
+
+The publish-or-collapse constitution remains unchanged. Accepted complete or constrained T12 and Rent Roll evidence publishes while unsupported scenario and memo sections collapse, omit, qualify, or disclose. Optional scenario authority absence cannot block validated core publication. The deferred quantified catastrophic-core threshold remains inactive and unchanged.
+
+Gate 7A verification: dedicated smoke `PASS`; Financial Intelligence with 17 total smokes including Gate 7A; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 7A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 7B exact source-backed or approved scenario-policy authority and stress-set definition. Gates 8 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
