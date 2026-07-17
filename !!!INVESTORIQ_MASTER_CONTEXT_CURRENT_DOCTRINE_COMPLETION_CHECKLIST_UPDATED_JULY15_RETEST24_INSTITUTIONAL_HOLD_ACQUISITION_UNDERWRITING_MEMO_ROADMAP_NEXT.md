@@ -3519,5 +3519,61 @@ Gate 11: Launch Operations and Certification
 
 Gate 10 is not authorized by Gate 9 completion. Its exact presentation, rendering, PDF composition, visual QA, and certification authority require a separately bounded doctrine review.
 
+## July 17 RETEST 29 pre-Gate 10 live-failure postmortem and bounded repair
+
+Gate 9 is committed at `d40cf01`. The user-run live retest `Final Attack Test 8 RETEST 29`, job `c8ee7456-0cc9-40bc-b23e-bb9166248ad6`, failed before publication. The supplied artifact export proves this was not a customer-document failure:
+
+```text
+T12: accepted_complete
+Rent Roll: accepted_complete
+core_publishable: true
+true_blockers: 0
+T12 NOI / EGI / OpEx / GPR: accepted and source-backed
+Rent Roll units / occupancy / annual in-place rent: accepted and source-backed
+source reconciliation: disclose_only_publishable
+user replacement documents required: false
+admin review required for the reconciliation: false
+```
+
+None of the observed conditions was whole-report fatal. The QA-manager HTTP 429 was advisory-only and was not the terminal cause. The source variance required exact canonical disclosure, not failure. The nearly blank PDF page was created by an optional FI-superseded section that was marked collapsed but still rendered a nested forced page break. That presentation defect should have collapsed out of the report.
+
+The terminal `PDF_ARTIFACT_FAILED` was an internal system failure. The Final PDF Publication Quality Boss correctly refused to publish the defective artifact, but InvestorIQ incorrectly converted a repairable optional-section rendering defect into a failed customer report. The uploaded T12 and Rent Roll did not cause the failure and must not be blamed or replaced.
+
+Bounded class-level repair:
+
+```text
+canonical Source Truth reconciliation state and disclosure now outrank Financial Intelligence explanatory copy in the Acquisition Memo projection
+the Boss contract consumes canonical Source Truth reconciliation directly whenever canonical Source Truth is present
+the FI-superseded optional Primary Constraint section now omits completely when collapsed
+the nested forced page break and nearly blank page-5 failure family is removed
+Final PDF Boss strictness is unchanged
+Delivery Gate, Screening, publication threshold, Source Truth acceptance, and terminal taxonomy are unchanged
+no value was invented, inferred, substituted, or hardcoded to RETEST 29 documents
+```
+
+Permanent adversarial proof is `tests/qa/retest29-publish-or-collapse-regression-smoke.js`. It first reproduced the authority displacement against the pre-repair implementation, then passed after the bounded repair. It proves exact Source Truth disclosure precedence under canonical Financial Intelligence, true omission of the superseded optional section, no RETEST 29 constraint-section nested page break, and downstream deterministic-seal agreement.
+
+Verification:
+
+```text
+dedicated RETEST 29 publish-or-collapse regression smoke: PASS
+qa:financial-intelligence: PASS
+qa:full and production build: PASS
+diff integrity: PASS
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+```
+
+Gate 10 has not begun. Gates 10 through 11 remain preserved exactly:
+
+```text
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ---
 # End of Active Master Context

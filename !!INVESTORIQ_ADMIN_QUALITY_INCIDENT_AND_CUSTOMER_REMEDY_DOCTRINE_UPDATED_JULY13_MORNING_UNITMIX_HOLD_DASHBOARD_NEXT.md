@@ -1323,3 +1323,29 @@ The publish-or-collapse constitution remains unchanged. Accepted complete or con
 Verification: dedicated Gates 9A through 9D smokes `PASS`; Financial Intelligence with 29 total smokes including Gates 7A through 9D; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 9 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gates 10 through 11 remain preserved. Next is a separately bounded Gate 10 ELITE Presentation and PDF System review. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 RETEST 29 Admin incident doctrine checkpoint
+
+Gate 9 is committed at `d40cf01`. The user-run RETEST 29 failure is classified `internal_system_failure`, not `customer_document_failure`:
+
+```text
+Core T12 status: accepted_complete
+Core Rent Roll status: accepted_complete
+Core publishable: YES
+True core blockers: 0
+Replacement documents needed: NO
+Reconciliation disposition: DISCLOSE-ONLY / PUBLISHABLE
+QA-manager 429: ADVISORY-ONLY / NOT TERMINAL
+Defective PDF condition: NEARLY BLANK PAGE 5
+Defect owner: OPTIONAL SECTION RENDERING / NESTED PAGE BREAK
+Customer blame authorized: NO
+Replacement-document workflow authorized: NO
+```
+
+The generic failed dashboard state accurately reflected that no report was published, but it did not expose the true internal owner. Admin doctrine must treat this class as a platform rendering incident with retry/remedy ownership, not as damaged uploaded documents. No customer should be asked to replace the accepted T12 or Rent Roll for this incident.
+
+The bounded repair restores canonical Source Truth disclosure precedence and truly omits the FI-superseded optional constraint section. It does not weaken the Final PDF Boss, Delivery Gate, Screening, Source Truth, publication threshold, customer-failure taxonomy, credit restoration, or billing doctrine. Customer rendering changes only by removing the collapsed optional placeholder and its defective page break.
+
+Permanent proof: `tests/qa/retest29-publish-or-collapse-regression-smoke.js`. Dedicated smoke `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` and production build `PASS`; diff integrity `PASS`. Status: `UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`.
+
+Gates 10 through 11 remain preserved. Gate 10 still requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

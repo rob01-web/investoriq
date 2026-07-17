@@ -163,6 +163,24 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage, { financi
   const sourceReconciliationDisclosures = Array.isArray(sourceTruthAuthority?.disclosures)
     ? sourceTruthAuthority.disclosures.map(cloneEntry).filter(Boolean)
     : [];
+  const canonicalSourceReconciliation = sourceTruthAuthority
+    ? {
+        state: sourceReconciliationState
+          ? {
+              ...sourceReconciliationState,
+              materiality_classification: sourceReconciliationState.materiality_classification ?? null,
+              materiality_threshold: sourceReconciliationState.materiality_threshold ?? null,
+              comparison_status: sourceReconciliationState.comparison_status ?? null,
+            }
+          : null,
+        disclosures: sourceReconciliationDisclosures,
+        sourceBacked: Boolean(
+          sourceReconciliationState &&
+          Number.isFinite(Number(sourceReconciliationState.t12_gpr)) &&
+          Number.isFinite(Number(sourceReconciliationState.rr_annual_in_place))
+        ),
+      }
+    : null;
   const financialIntelligenceReconciliation = buildFinancialIntelligenceReconciliation(financialIntelligence);
   const projection = {
     authorityVersion: "v2",
@@ -209,15 +227,7 @@ export function buildAcquisitionMemoProjection(canonicalSourcePackage, { financi
       classifiedBy: "canonical_source_truth_support_adjudicator",
       projectedBy: "buildAcquisitionMemoProjection",
     },
-    sourceReconciliation: financialIntelligenceReconciliation || {
-      state: sourceReconciliationState,
-      disclosures: sourceReconciliationDisclosures,
-      sourceBacked: Boolean(
-        sourceReconciliationState &&
-        Number.isFinite(Number(sourceReconciliationState.t12_gpr)) &&
-        Number.isFinite(Number(sourceReconciliationState.rr_annual_in_place))
-      ),
-    },
+    sourceReconciliation: canonicalSourceReconciliation || financialIntelligenceReconciliation,
     financialIntelligence,
   };
 

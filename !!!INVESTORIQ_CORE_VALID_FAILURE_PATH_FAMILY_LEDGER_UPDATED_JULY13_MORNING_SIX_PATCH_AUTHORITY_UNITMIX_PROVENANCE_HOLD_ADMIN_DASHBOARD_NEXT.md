@@ -19857,3 +19857,27 @@ The core-valid failure doctrine remains publish-or-collapse. Missing optional sc
 Verification: dedicated Gates 9A through 9D smokes `PASS`; Financial Intelligence `PASS` with 29 total smokes including Gates 7A through 9D; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 9 architecture `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scoring remains correctly collapsed with zero scores or classifications because no approved scoring-input or methodology policy exists. Gates 10 through 11 remain preserved. Next is a separately bounded Gate 10 ELITE Presentation and PDF System review, including page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 RETEST 29 core-valid failure-path closure
+
+Gate 9 is committed at `d40cf01`. The user-run RETEST 29 live artifact proves accepted-complete T12 and Rent Roll authority, `core_publishable: true`, zero true blockers, and a `disclose_only_publishable` source reconciliation. This was core-valid input. No replacement document was required.
+
+Closed failure families:
+
+```text
+Financial Intelligence explanation displaces canonical Source Truth reconciliation disclosure -> prohibited
+upstream render validates against FI copy while downstream QA validates against Source Truth copy -> prohibited
+canonical QA disagreement is manufactured by competing disclosure authority -> prohibited
+FI-superseded optional section marked collapsed still emits a full page -> prohibited
+collapsed optional section creates nested forced page break and nearly blank PDF page -> prohibited
+advisory HTTP 429 becomes terminal publication failure -> prohibited
+repairable optional presentation defect becomes customer-document failure -> prohibited
+```
+
+The source variance is disclosure-only and publishable. The HTTP 429 remained advisory-only. The nearly blank page was an internal rendering defect caused by a collapsed optional section, not damaged core evidence. Correct behavior is canonical disclosure plus optional-section omission. The Final PDF Boss remains strict against defective artifacts; the owner repair prevents this defect from reaching that terminal boundary rather than weakening certification.
+
+The class-level repair gives canonical Source Truth reconciliation precedence in projection and Boss consumption and makes the superseded optional constraint section truly omit when collapsed. It contains no document-specific filename, value, threshold, inference, substitution, or parser exception.
+
+Permanent proof: `tests/qa/retest29-publish-or-collapse-regression-smoke.js`. Dedicated smoke `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` and production build `PASS`; diff integrity `PASS`. Status: `UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`.
+
+The core-valid constitution remains unchanged: accepted complete or accepted constrained T12 and Rent Roll evidence publishes; unsupported or defective optional sections collapse, omit, qualify, or disclose. Gates 10 through 11 remain preserved. Gate 10 still requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

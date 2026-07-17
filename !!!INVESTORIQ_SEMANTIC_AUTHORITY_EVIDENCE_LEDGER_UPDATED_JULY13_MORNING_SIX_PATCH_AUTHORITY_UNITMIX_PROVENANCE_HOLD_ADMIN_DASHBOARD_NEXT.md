@@ -9072,3 +9072,27 @@ Exact validators reconstruct each contract from its canonical predecessor. Calle
 Permanent proof is carried by `tests/qa/institutional-scoring-input-lineage-contract-smoke.js`, `tests/qa/institutional-scoring-methodology-authority-contract-smoke.js`, `tests/qa/institutional-scoring-execution-contract-smoke.js`, and `tests/qa/institutional-scoring-completion-handoff-contract-smoke.js`. Verification is `PASS`: all four dedicated adversarial smokes; Financial Intelligence with 29 total smokes including Gates 7A through 9D; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 9 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scoring remains correctly collapsed until exact scoring-input and methodology policy authority exists. Gates 10 through 11 remain preserved. Next is a separately bounded Gate 10 ELITE Presentation and PDF System review, including page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 RETEST 29 semantic-authority correction
+
+Gate 9 is committed at `d40cf01`. RETEST 29 established the following immutable evidence state: both core documents were `accepted_complete`; canonical Source Truth was `core_publishable`; true blockers were empty; and the source reconciliation was `disclose_only_publishable` with exact disclosure `InvestorIQ has not reconciled this variance and does not infer the cause.`
+
+Financial Intelligence correctly produced deterministic source-bound reconciliation analysis, but its explanatory narrative is analysis copy, not Source Truth disclosure authority. The Acquisition Memo projection incorrectly promoted that explanation over the canonical disclosure. The upstream deterministic seal then validated one disclosure while downstream report-contract QA required the canonical disclosure, manufacturing a false disagreement and publication hold.
+
+Permanent semantic boundary:
+
+```text
+Financial Intelligence explanation is not Source Truth disclosure authority
+deterministic analysis is not permission to replace canonical wording
+canonical variance is not catastrophic core damage
+disclose-only reconciliation is not a report blocker
+collapsed optional section is not a customer-visible omission page
+optional presentation defect is not customer-document failure
+advisory rate limit is not terminal authority
+```
+
+The projection now mirrors canonical Source Truth reconciliation whenever canonical authority exists. The Boss contract independently consumes canonical Source Truth first. Financial Intelligence retains its separate deterministic analysis and customer section but cannot rewrite Source Truth. The FI-superseded optional constraint surface now returns no HTML when collapsed, removing the nested page-break failure without inventing replacement content.
+
+Permanent proof is `tests/qa/retest29-publish-or-collapse-regression-smoke.js`: adversarial pre-repair failure reproduced; post-repair exact canonical precedence, omission, and deterministic downstream agreement `PASS`. `qa:financial-intelligence` `PASS`; `qa:full` and build `PASS`; diff integrity `PASS`. Status: `UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`.
+
+Gates 10 through 11 remain preserved. Gate 10 still requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

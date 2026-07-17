@@ -1200,16 +1200,12 @@ function buildAcquisitionMemoBossContract({
   );
   const supportDocs = collectSupportDocs(canonicalSourcePackage, acquisitionMemoProjection);
   const sourceReconciliationState = normalizeBossContractFact(
-    canonicalFinancialIntelligence
-      ? acquisitionMemoProjection?.sourceReconciliation?.state || null
-      : hasCanonicalSourceTruth
+    hasCanonicalSourceTruth
       ? sourceTruthPackage?.source_reconciliation_state || null
       : acquisitionMemoProjection?.sourceReconciliation?.state || null
   );
   const sourceReconciliationDisclosures = normalizeBossContractFact(
-    canonicalFinancialIntelligence
-      ? acquisitionMemoProjection?.sourceReconciliation?.disclosures || []
-      : hasCanonicalSourceTruth
+    hasCanonicalSourceTruth
       ? sourceTruthPackage?.disclosures || []
       : acquisitionMemoProjection?.sourceReconciliation?.disclosures || []
   );
