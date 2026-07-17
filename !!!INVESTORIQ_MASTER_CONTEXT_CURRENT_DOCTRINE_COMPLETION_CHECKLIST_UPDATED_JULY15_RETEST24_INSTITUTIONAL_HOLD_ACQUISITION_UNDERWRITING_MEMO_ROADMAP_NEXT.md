@@ -3565,15 +3565,103 @@ DEPLOYED: NO
 CODEX LIVE RETEST: NOT RUN
 ```
 
-Gate 10 has not begun. Gates 10 through 11 remain preserved exactly:
+## July 17 Gates 10A through 10F ELITE Presentation and PDF System closure
+
+Gate 10 began from clean base commit `424f1cb` after the user-run RETEST 30 published successfully. The RETEST 30 PDF was used only as a presentation specimen. No property name, filename, value, cap-rate series, page count, or document-specific exception from that specimen was hardcoded into production.
+
+Gate 10 completed in six sequentially verified stages:
 
 ```text
-Gate 10: ELITE Presentation and PDF System
-  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
-  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 10A: immutable institutional PDF constitution and certification dimensions
+Gate 10B: six-chapter institutional information architecture and customer-safe language
+Gate 10C: deterministic source-receipted charts, tables, and visual tokens
+Gate 10D: content-driven pagination and deterministic composition-repair policy
+Gate 10E: page-by-page Final PDF Publication Quality Boss certification
+Gate 10F: adversarial ELITE certification seal and mandatory full-QA integration
+```
+
+The canonical constitution is `api/_lib/institutional-pdf-constitution.js`. It creates no source, fact, calculation, scenario, classification, or publication authority. It consumes only the approved customer surface and canonical receipts. It prohibits universal page-count hardcoding, inferred benchmarks, hardcoded financial series, value mutation during layout repair, internal implementation language, BUY/SELL language, blank or nearly blank pages, overflow, row splitting, clipped cells, unreadable text, orphan headings, and missing running navigation.
+
+The Acquisition Memo now composes six content-driven institutional chapters:
+
+```text
+committee overview
+operating performance
+acquisition context
+debt and capital structure
+financial analysis
+source appendix
+```
+
+Redundant Acquisition Memo Summary, Operating Snapshot, Operating Support, and Rent Position Support surfaces no longer render. Raw source filenames are confined to the Source Register. Unit count is labeled as Property Scale unless an exact source-backed asset class exists. Customer statuses no longer expose canonical, parser, authority, or fact-bundle implementation terminology.
+
+The deterministic visual system renders four exact receipt-backed bar charts when their canonical values exist: operating income composition, annual rent position, unit rent position, and debt service and coverage. Every chart carries its exact raw values and canonical source paths. Missing values collapse the chart. No benchmark, threshold, traffic-light state, or stress series is inferred. Cap-rate value indication renders only the exact accepted cap rate and its deterministic value; the former hardcoded 5 / 6 / 7 percent series is removed.
+
+Pagination is content-driven. No universal page count exists. Major institutional chapters may start new pages, while optional sections may not own forced pages. Table headers repeat, rows do not split, source-register cells wrap, headings remain with following content, and running property, chapter, confidentiality, and page navigation are generated. Gate 1 through Gate 9 evidence may add legitimate content and pages; Gate 10 removes duplication and accidental whitespace rather than targeting a page total.
+
+The Final PDF Publication Quality Boss is upgraded from `rendering_survival_only` to `institutional_page_by_page_certification`. Every rendered page receives a receipt containing page number, section identifiers, headings, tables, charts, displayed numbers, geometry, defects, and status. Twelve dimensions are certified on every page:
+
+```text
+geometry
+content density
+heading hierarchy
+tables
+charts
+numbers
+page breaks
+spacing
+alignment
+running navigation
+customer language
+approved-surface parity
+```
+
+Report-wide certification proves every approved table cell and column, chart receipt and exact displayed value, approved number, and heading survived rendering. The Boss checks overflow, blank and nearly blank pages, heading and table separation, running headers and footers, page numbers, line overlap, numeric-column alignment, unreadable rows, prohibited language, and approved-surface loss. Constitution tampering fails closed. The DocRaptor test watermark is excluded from institutional scoring, while any test-mode artifact remains prohibited from external publication.
+
+Presentation repair is deterministic and cannot alter a value, source, disclosure, calculation, classification, or scenario. Optional presentation surfaces collapse upstream; layout defects recompose and rerender; unresolved required-content or authority parity defects remain internal system failures. No presentation defect creates `customer_document_failure`, replacement-document blame, or a weaker Delivery Gate. The strict Final PDF Boss remains before storage upload.
+
+Permanent proof is the mandatory `qa:institutional-pdf` suite:
+
+```text
+institutional PDF constitution smoke: PASS
+institutional information architecture smoke: PASS
+deterministic visual system smoke: PASS
+composition and repair-plan smoke: PASS
+legacy Final PDF Boss and upload-order smoke: PASS
+page-by-page certification adversarial smoke: PASS
+ELITE certification seal smoke: PASS
+Acquisition Memo final-PDF handoff smoke: PASS
+qa:financial-intelligence: PASS
+qa:full and production build: PASS
+diff integrity: PASS
+```
+
+Adversarial proof covers caller constitution overrides, hardcoded series, missing chart receipts, dropped chart labels, dropped table cells, missing approved numbers, numeric-column drift, line overlap, overflow, blank pages, nearly blank pages, orphan headings, separated table headings, unreadable rows, duplicated and missing running navigation, approved-surface disagreement, prohibited punctuation, test-mode external publication, and watermark geometry. Failures remain internal system defects and never customer-document failures.
+
+```text
+GATE 10 ELITE PRESENTATION AND PDF SYSTEM: COMPLETE / PASS LOCALLY
+BASE COMMIT: 424f1cb
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+LIVE CUSTOMER PDF CERTIFIED IN THIS RUN: NO
+UNIVERSAL PAGE COUNT: NONE
+SOURCE TRUTH CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+ADMIN OR CUSTOMER LIFECYCLE CHANGED: NO
+NEXT: Gate 11 Launch Operations and Certification under a separately bounded authority review
+```
+
+## Preserved Gate 11 ELITE roadmap after Gate 10 completion
+
+```text
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+Gate 10 completion does not authorize Gate 11 implementation, deployment, a live retest, or production-mode DocRaptor activation.
 
 ---
 # End of Active Master Context

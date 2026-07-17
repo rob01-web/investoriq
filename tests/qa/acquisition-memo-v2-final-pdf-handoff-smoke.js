@@ -785,11 +785,10 @@ assert.equal(genericCustomerSurfaceHtmlValidation.ok, true);
 assert.equal(genericFinalPdfHandoffHtml.includes("64-Unit Multifamily"), false);
 assert.equal(/64-Unit|64 Unit|64-unit/i.test(genericFinalPdfHandoffHtml), false);
 assert.equal(/Stonebridge/i.test(genericFinalPdfHandoffHtml), false);
-const genericCoverIdentity = (genericFinalPdfHandoffHtml.match(/<div><span>Asset Class<\/span><strong>(.*?)<\/strong><\/div>/i) || [null, ""])[1];
-const genericSummaryIdentity = (genericFinalPdfHandoffHtml.match(/<tr><td>Asset Identity<\/td><td style="font-weight:600;">(.*?)<\/td><\/tr>/i) || [null, ""])[1];
+const genericCoverIdentity = (genericFinalPdfHandoffHtml.match(/<div><span>Property Scale<\/span><strong>(.*?)<\/strong><\/div>/i) || [null, ""])[1];
 assert.ok(genericCoverIdentity, "generic cover identity must be present");
-assert.ok(genericSummaryIdentity, "generic summary identity must be present");
-assert.equal(genericCoverIdentity, genericSummaryIdentity);
+assert.equal(genericCoverIdentity, "12 Units");
+assert.equal(/<span>Asset Class<\/span><strong>12[- ]Unit/i.test(genericFinalPdfHandoffHtml), false);
 assert.equal(/64-Unit Multifamily/i.test(genericCoverIdentity), false);
 assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(genericFinalPdfHandoffHtml), false);
 const tamperedMissingFactHtml = genericFinalPdfHandoffHtml.replace("Property Taxes", "Property Tax");
@@ -798,7 +797,7 @@ const genericCurrentDscr = Number(genericLocalCustomerSurfaceModel?.financialInt
 assert.equal(Number.isFinite(genericCurrentDscr), true);
 const genericDscrDisplay = `${genericCurrentDscr.toFixed(2)}x`;
 assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(
-  genericFinalPdfHandoffHtml.replace(genericDscrDisplay, "9.99x"),
+  genericFinalPdfHandoffHtml.replaceAll(genericDscrDisplay, "9.99x"),
   genericLocalCustomerSurfaceModel
 ).ok, false);
 assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(`${genericFinalPdfHandoffHtml}\nBoss Contract`, genericLocalCustomerSurfaceModel).ok, false);

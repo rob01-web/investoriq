@@ -19881,3 +19881,40 @@ The class-level repair gives canonical Source Truth reconciliation precedence in
 Permanent proof: `tests/qa/retest29-publish-or-collapse-regression-smoke.js`. Dedicated smoke `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` and production build `PASS`; diff integrity `PASS`. Status: `UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`.
 
 The core-valid constitution remains unchanged: accepted complete or accepted constrained T12 and Rent Roll evidence publishes; unsupported or defective optional sections collapse, omit, qualify, or disclose. Gates 10 through 11 remain preserved. Gate 10 still requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 10A through 10F core-valid presentation closure
+
+Gate 10 starts from clean base commit `424f1cb` and completes the ELITE Presentation and PDF System without changing core-document acceptance, catastrophic-core doctrine, Screening, Delivery Gate, terminal taxonomy, or the core publication threshold.
+
+Closed presentation failure families:
+
+```text
+collapsed optional section still owns a forced page -> prohibited
+repairable optional presentation defect becomes customer-document failure -> prohibited
+layout repair changes a source, value, disclosure, calculation, classification, or scenario -> prohibited
+universal or specimen-specific page count controls publication -> prohibited
+hardcoded financial chart or cap-rate series reaches the report -> prohibited
+missing chart input is inferred or benchmarked -> prohibited
+unit count is presented as an inferred asset class -> prohibited
+raw filenames or internal authority terminology leak outside the Source Register -> prohibited
+blank, nearly blank, overflowing, overlapping, unreadable, or misaligned PDF page is certified -> prohibited
+dropped approved table cell, chart value, number, heading, or disclosure is certified -> prohibited
+missing running header, footer, or page number is certified -> prohibited
+caller-tampered PDF constitution weakens certification -> prohibited
+DocRaptor test watermark creates a false quality defect -> prohibited
+test-mode PDF reaches external publication -> prohibited
+Final PDF Boss is bypassed before storage upload -> prohibited
+```
+
+The core-valid path remains publish-or-collapse. Optional unsupported or defective presentation surfaces collapse before final certification. A remaining layout defect is internally repaired and rerendered. Loss of required approved content fails closed as `internal_system_failure`, never `customer_document_failure`, and never blames or requests replacement of accepted core documents.
+
+The upgraded Final PDF Boss performs page-by-page institutional certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice. Page count is content-driven and never a validity threshold. The DocRaptor test watermark is excluded from quality scoring, but test-mode external publication remains blocked.
+
+Verification: dedicated Gate 10A through 10F suite `PASS`; Acquisition Memo final-PDF handoff smoke `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` and production build `PASS`; diff integrity `PASS`. Status: `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`.
+
+The deferred catastrophic-core usability threshold remains unchanged and unimplemented. Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

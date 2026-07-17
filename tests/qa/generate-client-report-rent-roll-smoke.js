@@ -530,9 +530,11 @@ const fullRenderHtml = String(fullRenderHarnessResponse.body?.final_html || "");
 let financingSectionMatch = null;
 if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
   assert.match(fullRenderHtml, /ACQUISITION MEMO/i);
-  assert.match(fullRenderHtml, /Acquisition Memo Summary/i);
-  assert.match(fullRenderHtml, /Operating Snapshot/i);
-  assert.match(fullRenderHtml, /(?:Rent Positioning Summary|Unit-Level Rent Positioning|Summary Rent Positioning)/i);
+  for (const chapter of ["committee-overview", "operating-performance", "acquisition-context", "debt-capital-structure", "financial-analysis", "source-appendix"]) {
+    assert.match(fullRenderHtml, new RegExp(`data-iq-chapter="${chapter}"`, "i"));
+  }
+  assert.doesNotMatch(fullRenderHtml, /Acquisition Memo Summary|Operating Snapshot|Operating Support|Rent Position Support/i);
+  assert.match(fullRenderHtml, /Annual Rent Position/i);
   assert.match(fullRenderHtml, /Rent Position \/ Whole-Property Value Context/i);
   assert.match(fullRenderHtml, /Cap-Rate Value Indication/i);
   assert.match(fullRenderHtml, /Preliminary Financing Readiness Summary/i);
@@ -540,7 +542,7 @@ if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
     /Acquisition Request Context|Proposed Acquisition Financing Context|Purchase Assumptions \/ Proposed Acquisition Financing Context/i.test(fullRenderHtml),
     "Expected an acquisition financing context label in the full render harness"
   );
-  assert.match(fullRenderHtml, /Operating (Support|Snapshot)/i);
+  assert.match(fullRenderHtml, /Operating Performance/i);
   assert.match(fullRenderHtml, /Lender Diligence Checklist/i);
   assert.match(fullRenderHtml, /Proposed Loan Amount/i);
   assert.match(fullRenderHtml, /LTV/i);
@@ -697,12 +699,12 @@ assert.equal(completeFinancingHarnessResponse.body?.success, true);
 const completeFinancingHtml = String(completeFinancingHarnessResponse.body?.final_html || "");
 assert.match(completeFinancingHtml, /Proposed Acquisition Financing Context/i);
 
-assert.match(fullRenderHtml, /Source Context \/ Support Document Treatment/i);
+assert.match(fullRenderHtml, /Source Register (?:&|&amp;) Document Treatment/i);
 assert.match(fullRenderHtml, /Data Coverage (?:&|&amp;) Source Limitations/i);
 assert.match(fullRenderHtml, /Source Reliability/i);
 assert.ok(
   /Source Treatment \/ Quantitative Use/i.test(fullRenderHtml) ||
-    /Support Document Treatment/i.test(fullRenderHtml),
+    /Source Register (?:&|&amp;) Document Treatment/i.test(fullRenderHtml),
   "Expected support-document treatment disclosure to remain present even if the exact subsection label changes"
 );
 assert.match(fullRenderHtml, /Data Limitations (?:&|&amp;) Missing Inputs/i);
@@ -1828,7 +1830,7 @@ assert.match(reportSource, /finalHtml = replaceAll\(finalHtml, "\{\{DEBT_REFI_CO
 assert.equal(/\b(?:BUY\s*\/\s*SELL\s*\/\s*HOLD|BUY\s+RECOMMENDATION|SELL\s+RECOMMENDATION|HOLD\s+RECOMMENDATION)\b/i.test(reportSource), false);
 assert.equal(/classified from the uploaded file names/i.test(reportSource), false);
 assert.equal(/purchase (?:price|assumptions?)[\s\S]{0,80}(?:is|equals|represents)\s+appraised value/i.test(reportSource), false);
-assert.match(acquisitionMemoDocumentSourceForChecks, /unsupported appraisal\/market survey files are not treated as appraised value/i);
+assert.match(acquisitionMemoDocumentSourceForChecks, /Market survey, broker email, appraisal summary[\s\S]{0,180}remain context-only unless explicitly validated for quantitative use/i);
 assert.match(
   reportSource,
   /const acquisitionPurchasePriceVerifiedByTriangle =[\s\S]{0,260}verifiedFields\.includes\("purchase_price"\)/
@@ -6216,11 +6218,11 @@ assert.match(
   attackAppraisalTreatmentRow,
   /Source-Present Support Document \/ Not Authority-Accepted/i,
 );
-assert.match(attackAppraisalTreatmentRow, /Source present \/ rejected/i);
+assert.match(attackAppraisalTreatmentRow, /Retained as context/i);
 assert.equal(/Appraisal \/ Valuation Context/i.test(attackAppraisalTreatmentRow), false);
 assert.match(attackRenderHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,240}Market Rent Survey Context/i);
 assert.match(attackRenderHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,220}Environmental Due Diligence Context/i);
-assert.match(attackRenderHtml, /Current debt context<\/td><td[^>]*>Document received; structured fact bundle incomplete<\/td>/i);
+assert.match(attackRenderHtml, /Current debt context<\/td><td[^>]*>Partial support; dependent analysis limited<\/td>/i);
 assert.equal(/No verified current debt context was provided/i.test(attackRenderHtml), false);
 assert.equal(/Current_Debt_Stonebridge\.pdf[\s\S]{0,300}Purchase Assumptions \/ Acquisition Context/i.test(attackRenderHtml), false);
 assert.equal(/Current debt context<\/td><td[^>]*>(?:Yes|No)<\/td>/i.test(attackRenderHtml), false);
@@ -6408,7 +6410,7 @@ assert.equal(retest4RenderResponse.statusCode, 200);
 assert.equal(retest4RenderResponse.body?.success, true);
 const retest4RenderHtml = String(retest4RenderResponse.body?.final_html || "");
 assert.match(retest4RenderHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,260}Existing Debt Context \/ Current Mortgage \/ Debt Statement/i);
-assert.match(retest4RenderHtml, /Current debt context<\/td><td[^>]*>Source-backed fact bundle complete<\/td>/i);
+assert.match(retest4RenderHtml, /Current debt context<\/td><td[^>]*>Complete for this analysis<\/td>/i);
 assert.match(retest4RenderHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,260}Renovation \/ CapEx Context/i);
 assert.equal(/No verified current debt context was provided/i.test(retest4RenderHtml), false);
 assert.equal(/Current debt context<\/td><td[^>]*>(?:Yes|No)<\/td>/i.test(retest4RenderHtml), false);

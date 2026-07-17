@@ -268,30 +268,12 @@ export function buildLaunchSourceContextBlock({
 export function buildCapRateValueTable(noi, units, documentDerivedCapRate = null, { formatCurrency, formatCapPercentExact } = {}) {
   if (!Number.isFinite(noi) || noi <= 0) return "";
   if (typeof formatCurrency !== "function" || typeof formatCapPercentExact !== "function") return "";
-  const capRates = [0.05, 0.06, 0.07];
   const docCapRate = toCapRatio(documentDerivedCapRate);
-  const addDocumentDerivedCapRate =
-    Number.isFinite(docCapRate) &&
-    docCapRate > 0 &&
-    !capRates.some((rate) => Math.abs(rate - docCapRate) < 0.0001);
-  const tableRates = [...capRates];
-  if (addDocumentDerivedCapRate) {
-    tableRates.push(docCapRate);
-  }
-  const rows = tableRates
-    .map((r) => {
-      const val = noi / r;
-      const perUnit = Number.isFinite(units) && units > 0 ? val / units : null;
-      const label = addDocumentDerivedCapRate && Math.abs(r - docCapRate) < 0.0001
-        ? `${formatCapPercentExact(r)} (document derived)`
-        : `${(r * 100).toFixed(1)}%`;
-      return `<tr><td>${label}</td><td>${formatCurrency(val)}</td><td>${perUnit !== null ? formatCurrency(perUnit) : "-"}</td></tr>`;
-    })
-    .join("");
-  const footnote = addDocumentDerivedCapRate
-    ? `Derived from reported NOI of ${formatCurrency(noi)}. Standardized framework benchmarks are shown with any valid document-derived cap rate. Purchase price and unsupported appraisal/market survey files are not treated as appraised value.`
-    : `Derived from reported NOI of ${formatCurrency(noi)}. Cap rates are standardized framework benchmarks, not document-sourced, and do not represent appraised value.`;
-  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${footnote}</p></div>`;
+  if (!Number.isFinite(docCapRate) || docCapRate <= 0 || docCapRate > 0.5) return "";
+  const value = noi / docCapRate;
+  const perUnit = Number.isFinite(units) && units > 0 ? value / units : null;
+  const row = `<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="${docCapRate}"><td>${formatCapPercentExact(docCapRate)}</td><td>${formatCurrency(value)}</td><td>${perUnit !== null ? formatCurrency(perUnit) : "Not available"}</td></tr>`;
+  return `<div class="card no-break"><p class="subsection-title">Cap Rate Value Indication</p><table><thead><tr><th>Accepted Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${row}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Calculated from reported NOI of ${formatCurrency(noi)} and the accepted cap rate only. No additional scenario rates are introduced.</p></div>`;
 }
 
 function getSupportDocs(sourcePackage = null) {
@@ -653,7 +635,7 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
     ? Number(customerSurfaceModel.supportSourceCounts.uniqueUploadedFileCount)
     : getSupportDocs(sourcePackage).length;
   const assetIdentity = formatAssetIdentityForSurface({ customerSurfaceModel, sourcePackage, coreMetrics, propertyProfile });
-  const assetClass = String(modelIdentity?.assetClass || "").trim() || assetIdentity;
+  const assetClass = String(modelIdentity?.assetClass || "").trim();
   const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
   const coverUnits = Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
     ? Math.round(Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units))
@@ -669,6 +651,8 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
       : "";
   const coverExpenseRatio = Number.isFinite(Number(coreMetrics?.expenseRatio)) ? formatPercentDisplay(coreMetrics.expenseRatio) : "";
   const coverNoiMargin = Number.isFinite(Number(coreMetrics?.noiMargin)) ? formatPercentDisplay(coreMetrics.noiMargin) : "";
+  const propertyProfileLabel = assetClass ? "Asset Class" : coverUnits ? "Property Scale" : "Property Profile";
+  const propertyProfileValue = assetClass || (coverUnits ? `${coverUnits} Units` : assetIdentity || "Not stated");
   return `<div class="cover-wrap">
     <table class="cover-table" width="100%">
       <tr>
@@ -684,7 +668,7 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
             <div class="cover-metric-row">${escapeHtml([assetIdentity || (coverUnits ? `${coverUnits} Units` : "Property Identity"), coverNoi ? `NOI ${coverNoi}` : "", coverExpenseRatio ? `Expense Ratio ${coverExpenseRatio}` : "", coverNoiMargin ? `NOI Margin ${coverNoiMargin}` : ""].filter(Boolean).join(" \u00a0\u00a0|\u00a0\u00a0 "))}</div>
           </div>
           <div class="cover-grid">
-            <div><span>Asset Class</span><strong>${escapeHtml(assetIdentity)}</strong></div>
+            <div><span>${escapeHtml(propertyProfileLabel)}</span><strong>${escapeHtml(propertyProfileValue)}</strong></div>
             <div><span>Report Tier</span><strong>${escapeHtml(reportMeta?.reportTier === 2 ? "Acquisition Memo" : "Screening")}</strong></div>
             <div><span>Documents</span><strong>${escapeHtml(`${supportDocCount + (sourcePackage?.coreT12 ? 1 : 0) + (sourcePackage?.coreRentRoll ? 1 : 0)} uploaded files`)}</strong></div>
           </div>
@@ -699,14 +683,11 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
 }
 
 function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, customerSurfaceModel = null } = {}) {
-  const coreT12 = customerSurfaceModel?.coreSources?.coreT12 || null;
-  const coreRentRoll = customerSurfaceModel?.coreSources?.coreRentRoll || null;
   const assetIdentity = formatAssetIdentityForSurface({ customerSurfaceModel, sourcePackage, coreMetrics });
   const rows = [
-    `<tr><td>Asset Identity</td><td style="font-weight:600;">${escapeHtml(assetIdentity)}</td></tr>`,
-    `<tr><td>ACQUISITION MEMO</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
-    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(coreT12?.filename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td></tr>`,
-    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(coreRentRoll?.filename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>`,
+    `<tr><td>Property Profile</td><td style="font-weight:600;">${escapeHtml(assetIdentity)}</td></tr>`,
+    `<tr><td>Operating Statement Evidence</td><td style="font-weight:600;">${sourcePackage?.coreT12 ? "Accepted for analysis" : "Not provided"}</td></tr>`,
+    `<tr><td>Rent Roll Evidence</td><td style="font-weight:600;">${sourcePackage?.coreRentRoll ? "Accepted for analysis" : "Not provided"}</td></tr>`,
     `<tr><td>Current debt context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "currentDebtContext", acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true))}</td></tr>`,
   ];
   const occupancy = Number.isFinite(Number(coreMetrics?.occupancy)) ? formatPercentDisplay(coreMetrics.occupancy) : "Not available";
@@ -716,7 +697,7 @@ function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoPr
     : "Not available";
   return `<div class="card no-break">
     <p class="subsection-title">Executive Summary</p>
-    <p class="body-copy">Source-backed acquisition overview, operating profile, and primary risk drivers.</p>
+    <p class="body-copy">Document-supported acquisition overview, operating profile, and primary review considerations.</p>
     <table class="detail-table"><tbody>${rows.join("")}</tbody></table>
     <div class="summary-strip">
       <div><span>Occupancy</span><strong>${escapeHtml(occupancy)}</strong></div>
@@ -728,17 +709,15 @@ function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoPr
 
 function renderKeyUpsideDriversSection({ sourcePackage = null, coreMetrics = null, acquisitionMemoProjection = null } = {}) {
   const drivers = [];
-  if (Number.isFinite(Number(coreMetrics?.occupancy))) drivers.push(`Occupancy ${formatPercentDisplay(coreMetrics.occupancy)} anchored by the canonical Rent Roll.`);
+  if (Number.isFinite(Number(coreMetrics?.occupancy))) drivers.push(`Occupancy of ${formatPercentDisplay(coreMetrics.occupancy)} is stated from the accepted Rent Roll.`);
   if (Number.isFinite(Number(coreMetrics?.annualMarketRent)) && Number.isFinite(Number(coreMetrics?.annualInPlaceRent))) {
     drivers.push(`Annual gross rent difference of ${formatMoney(Number(coreMetrics.annualMarketRent) - Number(coreMetrics.annualInPlaceRent))} is documented; no NOI or value conversion is assumed.`);
   }
   if (Number.isFinite(Number(coreMetrics?.noi))) drivers.push(`NOI of ${formatMoney(coreMetrics.noi)} drives cap-rate value indication.`);
   if (Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext)) drivers.push(`Current debt context is uploaded and retained as contextual support.`);
   if (Boolean(acquisitionMemoProjection?.financingReadinessSignals?.hasPurchaseAssumptions)) drivers.push(`Purchase assumptions are separated from existing debt and treated as acquisition context.`);
-  const t12Name = sourcePackage?.coreT12?.originalFilename || "Not present";
-  const rentRollName = sourcePackage?.coreRentRoll?.originalFilename || "Not present";
   if (drivers.length === 0) return "";
-  return `<div class="card no-break"><p class="subsection-title">Key Upside Drivers</p><ul style="margin:0;padding-left:18px;">${drivers.map((driver) => `<li style="margin-bottom:4px;">${escapeHtml(driver)}</li>`).join("")}</ul><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Primary quantitative anchors: ${escapeHtml(t12Name)} and ${escapeHtml(rentRollName)}.</p></div>`;
+  return `<div class="card no-break"><p class="subsection-title">Underwriting Observations</p><ul style="margin:0;padding-left:18px;">${drivers.map((driver) => `<li style="margin-bottom:4px;">${escapeHtml(driver)}</li>`).join("")}</ul><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Quantitative observations are limited to the accepted T12, Rent Roll, and applicable support documents.</p></div>`;
 }
 
 function renderPrimaryConstraintSection({ acquisitionMemoProjection = null, bossContract = null, customerSurfaceModel = null } = {}) {
@@ -753,6 +732,105 @@ function renderPrimaryConstraintSection({ acquisitionMemoProjection = null, boss
     `<tr><td>Variance</td><td style="font-weight:600;">${formatReconciliationVariance(state.variance_pct)}</td></tr>`,
   ];
   return `<div class="card no-break"><p class="subsection-title">Primary Constraint / Source Reconciliation</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table><p class="body-copy">${escapeHtml(state.source_reconciliation_disclosure)}</p></div>`;
+}
+
+function renderEvidenceBarChart({ chartKey, title, series = [], sourcePaths = [], valueFormatter = formatMoney, supplementalHtml = "" } = {}) {
+  const acceptedSeries = series
+    .map((item) => ({
+      label: String(item?.label || "").trim(),
+      value: Number(item?.value),
+      sourcePath: String(item?.sourcePath || "").trim(),
+    }))
+    .filter((item) => item.label && Number.isFinite(item.value) && item.value >= 0 && item.sourcePath);
+  if (!chartKey || !title || acceptedSeries.length === 0) return "";
+  const maxValue = Math.max(...acceptedSeries.map((item) => Math.abs(item.value)));
+  if (!Number.isFinite(maxValue) || maxValue <= 0) return "";
+  const receiptPaths = [...new Set([...sourcePaths, ...acceptedSeries.map((item) => item.sourcePath)].filter(Boolean))];
+  const rows = acceptedSeries.map((item, index) => {
+    const geometryPercent = Math.max(0, Math.min(100, (Math.abs(item.value) / maxValue) * 100));
+    return `<div class="evidence-chart-row" data-iq-value="${item.value}" data-iq-source-path="${escapeHtml(item.sourcePath)}">
+      <div class="evidence-chart-label">${escapeHtml(item.label)}</div>
+      <div class="evidence-chart-track"><div class="evidence-chart-bar evidence-chart-bar-${(index % 3) + 1}" style="width:${geometryPercent.toFixed(4)}%;"></div></div>
+      <div class="evidence-chart-value">${escapeHtml(valueFormatter(item.value))}</div>
+    </div>`;
+  }).join("");
+  return `<div class="evidence-chart no-break" data-iq-chart="${escapeHtml(chartKey)}" data-iq-chart-receipt="${escapeHtml(chartKey)}" data-iq-source-paths="${escapeHtml(receiptPaths.join("|"))}">
+    <p class="subsection-title">${escapeHtml(title)}</p>
+    <div class="evidence-chart-plot">${rows}</div>
+    ${supplementalHtml}
+  </div>`;
+}
+
+function renderInstitutionalOperatingVisuals({ coreMetrics = null, sourcePackage = null, customerSurfaceModel = null } = {}) {
+  const charts = [];
+  const egi = Number(coreMetrics?.egi);
+  const opEx = Number(coreMetrics?.opEx);
+  const noi = Number(coreMetrics?.noi);
+  const incomeChart = renderEvidenceBarChart({
+    chartKey: "operating-income-composition",
+    title: "Operating Income Composition",
+    series: [
+      { label: "Effective Gross Income", value: egi, sourcePath: "core.t12.accepted_facts.effective_gross_income" },
+      { label: "Operating Expenses", value: opEx, sourcePath: "core.t12.accepted_facts.total_operating_expenses" },
+      { label: "Net Operating Income", value: noi, sourcePath: "core.t12.accepted_facts.net_operating_income" },
+    ],
+  });
+  if (incomeChart) charts.push(incomeChart);
+
+  const annualInPlace = Number(coreMetrics?.annualInPlaceRent);
+  const annualMarket = Number(coreMetrics?.annualMarketRent);
+  const rentChart = renderEvidenceBarChart({
+    chartKey: "annual-rent-position",
+    title: "Annual Rent Position",
+    series: [
+      { label: "Annual In-Place Rent", value: annualInPlace, sourcePath: "core.rent_roll.accepted_facts.annual_in_place_rent" },
+      { label: "Annual Market Rent", value: annualMarket, sourcePath: "core.rent_roll.accepted_facts.annual_market_rent" },
+    ],
+  });
+  if (rentChart) charts.push(rentChart);
+
+  const rentRollFacts = customerSurfaceModel?.sourceBackedFacts?.unitMix || sourcePackage?.coreRentRoll?.extractedFacts || {};
+  const unitMixRows = (Array.isArray(rentRollFacts?.unit_mix) ? rentRollFacts.unit_mix : [])
+    .map(normalizeStructuredUnitMixRow)
+    .filter(Boolean);
+  const unitSeries = unitMixRows.flatMap((row, index) => [
+    Number.isFinite(row.inPlace) ? { label: `${row.label} In-Place`, value: row.inPlace, sourcePath: `core.rent_roll.accepted_facts.unit_mix.${index}.current_rent` } : null,
+    Number.isFinite(row.market) ? { label: `${row.label} Market`, value: row.market, sourcePath: `core.rent_roll.accepted_facts.unit_mix.${index}.market_rent` } : null,
+  ].filter(Boolean));
+  const unitChart = renderEvidenceBarChart({
+    chartKey: "unit-rent-position",
+    title: "Unit Rent Position",
+    series: unitSeries,
+  });
+  if (unitChart) charts.push(unitChart);
+  if (charts.length === 0) return "";
+  return `<section class="section institutional-visual-section"><div class="section-header"><span class="section-header-title">Operating Evidence Visuals</span></div><div class="institutional-visual-grid">${charts.join("")}</div></section>`;
+}
+
+function renderInstitutionalDebtVisuals(customerSurfaceModel = null) {
+  const section = customerSurfaceModel?.sections?.debtServiceCoverage || null;
+  if (section?.status !== "required" || section?.factAvailability?.sourceBacked !== true) return "";
+  const current = section?.facts?.currentDebt || null;
+  const proposed = section?.facts?.proposedFinancing || null;
+  const supplemental = [
+    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+  ].filter(Boolean).join("");
+  const chart = renderEvidenceBarChart({
+    chartKey: "debt-service-and-coverage",
+    title: "Annual Debt Service & Coverage",
+    series: [
+      { label: "Current Debt Service", value: current?.annualDebtService, sourcePath: "customerSections.debtServiceCoverage.facts.currentDebt.annualDebtService" },
+      { label: "Proposed Debt Service", value: proposed?.annualDebtService, sourcePath: "customerSections.debtServiceCoverage.facts.proposedFinancing.annualDebtService" },
+    ],
+    sourcePaths: [
+      "customerSections.debtServiceCoverage.facts.currentDebt",
+      "customerSections.debtServiceCoverage.facts.proposedFinancing",
+    ],
+    supplementalHtml: supplemental ? `<div class="evidence-chart-stats">${supplemental}</div>` : "",
+  });
+  if (!chart) return "";
+  return `<section class="section institutional-visual-section"><div class="section-header"><span class="section-header-title">Debt Service &amp; Coverage Visual</span></div>${chart}</section>`;
 }
 
 function renderSupportDocRows(sourcePackage = null) {
@@ -777,7 +855,7 @@ function renderUploadedFilesSection({ sourcePackage = null } = {}) {
 
 function renderReadinessBodyHtml({ renderedAcquisitionMemo = null, acquisitionMemoProjection = null, customerSurfaceModel = null } = {}) {
   if (customerSurfaceModel) {
-    return `<p class="body-copy">Support readiness is stated from canonical fact-bundle completeness below. Missing or incomplete optional support does not alter validated core T12 and Rent Roll authority.</p>`;
+    return `<p class="body-copy">Support readiness reflects the documents provided for this review. Missing or partial optional support limits only the dependent analysis.</p>`;
   }
   const signals = acquisitionMemoProjection?.financingReadinessSignals || {};
   const summaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.financingReadinessSummaryHtml || "").trim();
@@ -792,15 +870,15 @@ function supportFactBundleStatus(customerSurfaceModel = null, sectionKey = "", f
   const required = Array.isArray(availability?.required) ? availability.required : [];
   const missing = Array.isArray(availability?.missing) ? availability.missing : [];
   if (availability?.sourceBacked === true && missing.length === 0) {
-    return required.length > 0 ? "Source-backed fact bundle complete" : "Source-backed context accepted";
+    return required.length > 0 ? "Complete for this analysis" : "Accepted as context";
   }
   if (availability?.sourcePresent === true || section?.sourceDoc) {
     return required.length > 0
-      ? "Document received; structured fact bundle incomplete"
-      : "Context document received";
+      ? "Partial support; dependent analysis limited"
+      : "Received as context";
   }
   if (!section && fallbackSourcePresent === true) {
-    return "Document received; canonical fact completeness unavailable";
+    return "Received; detailed use limited";
   }
   return "Not provided";
 }
@@ -1130,16 +1208,53 @@ function renderDocumentTreatmentSection(renderedAcquisitionMemo = null, sourcePa
     ? customerSurfaceModel.supportSources
     : getBossSupportDocs(bossContract, sourcePackage);
   const tableHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.documentTreatmentSummaryHtml || "").trim();
-  const supportRows = Array.isArray(bossDocs) && bossDocs.length
-    ? bossDocs.map((doc) => `<tr><td>${escapeHtml(doc?.originalFilename || doc?.roleLabel || doc?.canonicalLabel || doc?.canonicalRole || "Support Document")}</td><td style="font-weight:600;">${escapeHtml(doc?.canonicalLabel || doc?.roleLabel || doc?.canonicalRole || "Other Support Document")}</td><td>${escapeHtml(doc?.treatment || "")}</td><td>${escapeHtml(doc?.use || "")}</td></tr>`).join("")
-    : "";
-  const tableBody = supportRows
-    ? `<table class="detail-table"><tbody>${supportRows}</tbody></table>`
+  const coreSources = [
+    {
+      source: customerSurfaceModel?.coreSources?.coreT12 || bossContract?.sourceTruth?.coreT12 || sourcePackage?.coreT12 || null,
+      label: customerSurfaceModel?.coreSources?.coreT12?.visibleLabel || "Core Quantitative Source - Trailing 12-Month Income Statement",
+      treatment: "Core Quantitative Source; accepted for operating analysis",
+      use: "Operating statement and financial metrics",
+    },
+    {
+      source: customerSurfaceModel?.coreSources?.coreRentRoll || bossContract?.sourceTruth?.coreRentRoll || sourcePackage?.coreRentRoll || null,
+      label: customerSurfaceModel?.coreSources?.coreRentRoll?.visibleLabel || "Core Quantitative Source - Rent Roll",
+      treatment: "Core Quantitative Source; accepted for rent analysis",
+      use: "Unit mix, occupancy, and rent positioning",
+    },
+  ];
+  const roleLabels = {
+    purchase_assumptions: "Acquisition Assumptions",
+    current_debt_context: "Current Debt Statement",
+    structured_renovation_capex_plan: "Capital Plan",
+    property_condition_context: "Property Condition / Capital Plan",
+    appraisal_context: "Appraisal Context",
+    market_survey_context: "Market Survey Context",
+    environmental_context: "Environmental Context",
+  };
+  const rows = [];
+  const seenFilenames = new Set();
+  for (const core of coreSources) {
+    const filename = String(core.source?.filename || core.source?.originalFilename || "").trim();
+    if (!filename || seenFilenames.has(filename)) continue;
+    seenFilenames.add(filename);
+    rows.push(`<tr><td>${escapeHtml(filename)}</td><td style="font-weight:600;">${escapeHtml(core.label)}</td><td>${escapeHtml(core.treatment)}</td><td>${escapeHtml(core.use)}</td></tr>`);
+  }
+  for (const doc of Array.isArray(bossDocs) ? bossDocs : []) {
+    const filename = String(doc?.filename || doc?.originalFilename || doc?.original_filename || "").trim();
+    if (!filename || seenFilenames.has(filename)) continue;
+    seenFilenames.add(filename);
+    const role = String(doc?.canonicalRole || doc?.canonical_role || "").trim().toLowerCase();
+    const facts = doc?.facts || doc?.extractedFacts || doc?.acceptedFacts || doc?.accepted_facts || null;
+    const hasStatedFacts = facts && typeof facts === "object" && Object.keys(facts).length > 0;
+    rows.push(`<tr><td>${escapeHtml(filename)}</td><td style="font-weight:600;">${escapeHtml(doc?.visibleLabel || roleLabels[role] || doc?.roleLabel || "Support Document")}</td><td>${hasStatedFacts ? "Accepted for related analysis" : "Retained as context"}</td><td>${hasStatedFacts ? "Only stated values are used in the related section" : "Not used to change report values"}</td></tr>`);
+  }
+  const tableBody = rows.length
+    ? `<table class="detail-table source-register-table"><thead><tr><th>Uploaded File</th><th>Document Role</th><th>Treatment</th><th>Report Use</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
     : tableHtml;
   if (!tableBody) return "";
   return renderSection(
-    "Source Context / Support Document Treatment",
-    `<p class="body-copy">Uploaded files are listed for auditability. Support documents are retained as source context and are not used to override modeled outputs.</p><p class="subsection-title">Document Treatment Summary</p>${tableBody}`,
+    "Source Register & Document Treatment",
+    `<p class="body-copy">Each uploaded file is listed once for auditability. A supporting document affects only the section supported by values stated in that file.</p>${tableBody}`,
     { id: "document-treatment-title", pageBreakBefore: false }
   );
 }
@@ -1206,8 +1321,6 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
   }
   const t12Source = customerSurfaceModel?.coreSources?.coreT12 || bossContract?.sourceTruth?.coreT12 || sourcePackage?.coreT12 || null;
   const rentRollSource = customerSurfaceModel?.coreSources?.coreRentRoll || bossContract?.sourceTruth?.coreRentRoll || sourcePackage?.coreRentRoll || null;
-  const t12Name = t12Source?.filename || t12Source?.originalFilename || "Not present";
-  const rentRollName = rentRollSource?.filename || rentRollSource?.originalFilename || "Not present";
   const t12Snippet = getSourceEvidenceText(t12Source) || String(t12Payload?.document_text_extracted || t12Payload?.source_text || t12Payload?.text || "");
   const t12Facts = {
     ...(t12Payload && typeof t12Payload === "object" ? t12Payload : {}),
@@ -1234,8 +1347,8 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
   return `<div class="card no-break">
     <p class="subsection-title">Operating Statement / TTM Summary</p>
     <table class="detail-table"><tbody>
-      <tr><td>Core T12 source</td><td style="font-weight:600;">${escapeHtml(t12Name)}</td></tr>
-      <tr><td>Core Rent Roll source</td><td style="font-weight:600;">${escapeHtml(rentRollName)}</td></tr>
+      <tr><td>Operating Statement Evidence</td><td style="font-weight:600;">${t12Source ? "Accepted for analysis" : "Not provided"}</td></tr>
+      <tr><td>Rent Roll Evidence</td><td style="font-weight:600;">${rentRollSource ? "Accepted for analysis" : "Not provided"}</td></tr>
       ${rows.join("")}
     </tbody></table>
     ${t12LineItems.length ? `<div class="subsection-block"><p class="subsection-title">T12 Income & Expense Line Items</p><table class="detail-table"><tbody>${t12LineItems.map((item) => `<tr><td>${escapeHtml(item.label)}</td><td style="font-weight:600;">${formatMoney(item.amount)}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -1245,23 +1358,20 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
 }
 
 function renderCapRateValueSection({ acquisitionMemoProjection = null, sourcePackage = null, coreMetrics = null, bossContract = null, customerSurfaceModel = null } = {}) {
-  const noiBasis = Number(acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? NaN);
-  const capRates = [5.0, 6.0, 7.0];
+  const noiBasis = Number(customerSurfaceModel?.valueSemantics?.wholePropertyValue?.noi ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.noi_basis ?? acquisitionMemoProjection?.acquisitionContext?.extractedFacts?.noi_basis ?? coreMetrics?.noi ?? NaN);
+  const acceptedCapRate = Number.isFinite(Number(customerSurfaceModel?.valueSemantics?.wholePropertyValue?.goingInCapRate))
+    ? Number(customerSurfaceModel.valueSemantics.wholePropertyValue.goingInCapRate)
+    : resolveValidGoingInCapRate({ coreMetrics, acquisitionMemoProjection, sourcePackage, bossContract });
   const units = Number(coreMetrics?.units ?? customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units ?? bossContract?.reportContext?.coreMetrics?.units ?? bossContract?.sourceTruth?.coreRentRoll?.extractedFacts?.total_units ?? sourcePackage?.coreRentRoll?.extractedFacts?.total_units ?? sourcePackage?.coreRentRoll?.extractedFacts?.units?.length ?? NaN);
-  const rows = capRates.map((cap) => {
-    const value = Number.isFinite(noiBasis) ? noiBasis / (cap / 100) : NaN;
-    const perUnit = Number.isFinite(value) && Number.isFinite(units) && units > 0 ? value / units : null;
-    const perUnitDisplay = Number.isFinite(perUnit)
-      ? (Math.abs(cap - 7.0) < 0.0001 ? formatMoney(Math.floor(perUnit)) : formatMoney(perUnit))
-      : "-";
-    return `<tr><td>${cap.toFixed(1)}%</td><td style="font-weight:600;">${formatCapRateValue(noiBasis, cap)}</td><td style="font-weight:600;">${perUnitDisplay}</td></tr>`;
-  }).join("");
-  const headlineValue = formatCapRateValue(noiBasis, 7.0);
+  if (!Number.isFinite(noiBasis) || noiBasis <= 0 || !Number.isFinite(acceptedCapRate) || acceptedCapRate <= 0) return "";
+  const impliedValue = noiBasis / acceptedCapRate;
+  const perUnit = Number.isFinite(units) && units > 0 ? impliedValue / units : null;
+  const row = `<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="${acceptedCapRate}"><td>${formatPercentDisplay(acceptedCapRate)}</td><td style="font-weight:600;">${formatMoney(impliedValue)}</td><td style="font-weight:600;">${Number.isFinite(perUnit) ? formatMoney(Math.round(perUnit + 1e-7)) : "Not available"}</td></tr>`;
   return `<div class="card no-break">
     <p class="subsection-title">Cap-Rate Value Indication</p>
-    <p class="body-copy">Document-derived NOI basis is capitalized at stable cap-rate assumptions. The display is deterministic and source-basis driven.</p>
-    <table class="detail-table"><thead><tr><th>Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">7.0% cap value: ${escapeHtml(headlineValue || "Not available")}</p>
+    <p class="body-copy">The accepted NOI basis is capitalized at the accepted going-in cap rate. No additional scenario rates are introduced.</p>
+    <table class="detail-table"><thead><tr><th>Accepted Cap Rate</th><th>Implied Value</th><th>Per Unit</th></tr></thead><tbody>${row}</tbody></table>
+    <p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Accepted-rate value indication: ${formatMoney(impliedValue)}</p>
   </div>`;
 }
 
@@ -1363,7 +1473,7 @@ function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossCo
       }).join("")
     : (sectionHasSourceBackedFacts(unitMixSection)
       ? `<tr><td colspan="5" style="font-weight:600;">${renderSectionCollapseHtml()}</td></tr>`
-      : `<tr><td colspan="5" style="font-weight:600;">No parsed unit mix rows were available from the canonical rent roll evidence.</td></tr>`);
+      : `<tr><td colspan="5" style="font-weight:600;">Detailed unit mix rows were not available from the accepted Rent Roll.</td></tr>`);
   return renderSection(
     "Unit Mix and Rent Positioning",
     `<div class="grid-2-balanced">
@@ -1388,7 +1498,7 @@ function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossCo
           <tr><td>Annual Gross Rent Upside</td><td style="font-weight:600;">${Number.isFinite(annualUpside) ? formatMoney(annualUpside) : "Not available"}</td></tr>
           <tr><td>Rent Gap %</td><td style="font-weight:600;">${Number.isFinite(rentGapPct) ? formatPercentDisplay(rentGapPct) : "Not available"}</td></tr>
           <tr><td>Occupancy basis</td><td style="font-weight:600;">${Number.isFinite(Number(coreMetrics?.occupancy)) ? formatPercentDisplay(coreMetrics.occupancy) : "Not available"}</td></tr>
-          <tr><td>Core rent roll evidence</td><td style="font-weight:600;">${escapeHtml(sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td></tr>
+          <tr><td>Rent Roll Evidence</td><td style="font-weight:600;">${rentRollSource ? "Accepted for analysis" : "Not provided"}</td></tr>
         </tbody></table>
         ${rentRollSnippet ? `<div class="subsection-block"><p class="subsection-title">Rent Roll Snippet</p><p class="body-copy">${escapeHtml(rentRollSnippet.slice(0, 420))}</p></div>` : ""}
       </div>
@@ -1432,9 +1542,9 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
     ? customerSurfaceModel.supportSources
     : getBossSupportDocs(bossContract, sourcePackage);
   const rows = [
-    `<tr><td>Core T12</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreT12?.filename || bossContract?.sourceTruth?.coreT12?.originalFilename || sourcePackage?.coreT12?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreT12?.visibleLabel || bossContract?.sourceTruth?.coreT12?.roleLabel || sourcePackage?.coreT12?.roleLabel || sourcePackage?.coreT12?.canonicalLabel || "")}</td></tr>`,
-    `<tr><td>Core Rent Roll</td><td style="font-weight:600;">${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.filename || bossContract?.sourceTruth?.coreRentRoll?.originalFilename || sourcePackage?.coreRentRoll?.originalFilename || "Not present")}</td><td>${escapeHtml(customerSurfaceModel?.coreSources?.coreRentRoll?.visibleLabel || bossContract?.sourceTruth?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.roleLabel || sourcePackage?.coreRentRoll?.canonicalLabel || "")}</td></tr>`,
-    `<tr><td>Classified support documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>Included in source treatment schedule</td></tr>`,
+    `<tr><td>Operating Statement Evidence</td><td style="font-weight:600;">${sourcePackage?.coreT12 ? "Accepted" : "Not provided"}</td><td>Operating analysis</td></tr>`,
+    `<tr><td>Rent Roll Evidence</td><td style="font-weight:600;">${sourcePackage?.coreRentRoll ? "Accepted" : "Not provided"}</td><td>Rent and unit analysis</td></tr>`,
+    `<tr><td>Supporting documents</td><td style="font-weight:600;">${supportDocs.length}</td><td>See source register</td></tr>`,
   ];
   const sourceSummaryHtml = customerSurfaceModel
     ? ""
@@ -1450,7 +1560,7 @@ function renderDataCoverageSection({ sourcePackage = null, renderedAcquisitionMe
   const reconciliation = getSourceReconciliationForSurface(customerSurfaceModel, bossContract, acquisitionMemoProjection);
   const reconciliationState = reconciliation?.state || null;
   const reconciliationHtml = reconciliation?.sourceBacked === true && ["source_reconciliation_required", "parser_suspected"].includes(String(reconciliationState?.status || "").trim())
-    ? `<div class="subsection-block"><p class="subsection-title">Canonical Source Reconciliation</p><table class="detail-table"><tbody><tr><td>T12 Gross Potential Rent</td><td style="font-weight:600;">${formatMoney(reconciliationState.t12_gpr)}</td></tr><tr><td>Rent Roll Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(reconciliationState.rr_annual_in_place)}</td></tr><tr><td>Rent Roll less T12</td><td style="font-weight:600;">${formatMoney(reconciliationState.difference_amount)}</td></tr><tr><td>Variance</td><td style="font-weight:600;">${formatReconciliationVariance(reconciliationState.variance_pct)}</td></tr></tbody></table><p class="body-copy">${escapeHtml(reconciliationState.source_reconciliation_disclosure)}</p></div>`
+    ? `<div class="subsection-block"><p class="subsection-title">Source Reconciliation</p><table class="detail-table"><tbody><tr><td>T12 Gross Potential Rent</td><td style="font-weight:600;">${formatMoney(reconciliationState.t12_gpr)}</td></tr><tr><td>Rent Roll Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(reconciliationState.rr_annual_in_place)}</td></tr><tr><td>Rent Roll less T12</td><td style="font-weight:600;">${formatMoney(reconciliationState.difference_amount)}</td></tr><tr><td>Variance</td><td style="font-weight:600;">${formatReconciliationVariance(reconciliationState.variance_pct)}</td></tr></tbody></table><p class="body-copy">${escapeHtml(reconciliationState.source_reconciliation_disclosure)}</p></div>`
     : "";
   return renderSection(
     "Data Coverage & Source Limitations",
@@ -1545,7 +1655,7 @@ export function renderCompleteAcquisitionMemoV2Html({
           <div class="brand-mark">INVESTORIQ</div>
           <div class="tagline">Institutional Grade Property Intelligence</div>
         </div>
-        <div style="text-align:center; font-family:var(--font-body); font-size:7.5pt; font-weight:300; color:var(--ink-3);">${escapeHtml([propertyName, propertyAddress || propertyTitle].filter(Boolean).join(" | "))}</div>
+        <div class="report-running-property" style="text-align:center; font-family:var(--font-body); font-size:7.5pt; font-weight:300; color:var(--ink-3);">${escapeHtml([propertyName, propertyAddress || propertyTitle].filter(Boolean).join(" | "))}</div>
         <div style="text-align:right; font-family:var(--font-mono); font-size:6.5pt; font-weight:400; color:var(--ink-4); letter-spacing:0.08em;">${escapeHtml(generatedLabel || "")}</div>
       </div>
     </div>`;
@@ -1554,8 +1664,6 @@ export function renderCompleteAcquisitionMemoV2Html({
     const metricsSection = renderSafely("Key Metrics Snapshot", () => renderMetricsSnapshotSection(coreMetrics, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.keyMetricsSnapshot });
     const keyUpsideDriversSection = renderSafely("Key Upside Drivers", () => renderKeyUpsideDriversSection({ sourcePackage, coreMetrics, acquisitionMemoProjection }), { pageBreakBefore: true, bossSection: bossSections.keyUpsideDrivers });
     const primaryConstraintSection = renderSafely("Primary Constraint / Review Disclosure", () => renderPrimaryConstraintSection({ acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.primaryConstraintReviewDisclosure, omitWhenCollapsed: true });
-    const acquisitionMemoSummarySection = renderSafely("Acquisition Memo Summary", () => renderAcquisitionMemoSummarySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, renderedAcquisitionMemo, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.acquisitionMemoSummary });
-    const operatingSection = renderSafely("Operating Snapshot", () => renderOperatingSnapshotSection({ sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.operatingSnapshot });
     const unitMixSection = renderSafely("Unit Mix and Rent Positioning", () => renderUnitMixSection({ sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.unitMix });
     const valueSensitivitySection = renderSafely("Rent Upside / Value Sensitivity", () => renderValueSensitivitySection({ sourcePackage, acquisitionMemoProjection, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.rentUpsideValueSensitivity });
     const capRateValueSection = renderSafely("Cap-Rate Value Indication", () => renderCapRateValueSection({ acquisitionMemoProjection, sourcePackage, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.capRateValueIndication });
@@ -1564,8 +1672,6 @@ export function renderCompleteAcquisitionMemoV2Html({
       ? bossSections.acquisitionRequestContext
       : bossSections.proposedFinancingContext;
     const acquisitionRequestContextSection = renderSafely("Acquisition Request Context", () => renderAcquisitionRequestContextSection({ acquisitionMemoProjection, sourcePackage, acquisitionTermsPayload, loanTermSheetTermsPayload, coreMetrics, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: acquisitionRequestSurfaceContract });
-    const operatingSupportSection = renderSafely("Operating Support", () => renderOperatingSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.operatingSupport });
-    const rentValueSupportSection = renderSafely("Rent / Value Support", () => renderRentValueSupportSection({ coreMetrics }), { pageBreakBefore: true, bossSection: bossSections.rentValueSupport });
     const debtFinancingContextSection = renderSafely("Debt / Financing Context", () => renderDebtFinancingContextSection({ acquisitionMemoProjection, sourcePackage, loanTermSheetTermsPayload, mortgagePayload, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.debtFinancingContext });
     const debtServiceCoverageSection = bossSections.debtServiceCoverage?.status === "required"
       ? renderSafely("Debt Service and Coverage", () => renderDebtServiceCoverageSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.debtServiceCoverage })
@@ -1580,6 +1686,8 @@ export function renderCompleteAcquisitionMemoV2Html({
       ? renderSafely("Capital Plan and Reserve Position", () => renderCapitalPlanAnalysisSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.capitalPlanAnalysis })
       : "";
     const operatingStatementSection = renderSafely("Operating Statement / TTM Summary", () => renderOperatingStatementSection({ sourcePackage, t12Payload, coreMetrics, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.operatingStatementTTMSummary });
+    const operatingVisualsSection = renderInstitutionalOperatingVisuals({ coreMetrics, sourcePackage, customerSurfaceModel });
+    const debtVisualsSection = renderInstitutionalDebtVisuals(customerSurfaceModel);
     const dataCoverageSection = renderSafely("Data Coverage & Source Limitations", () => renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.dataCoverageSourceLimitations });
     const treatmentSection = renderSafely("Source Context / Support Document Treatment", () => renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.sourceContextSupportDocumentTreatment });
     const methodologySection = renderSafely("Methodology & Data Transparency", () => renderMethodologySection(), { pageBreakBefore: true });
@@ -1595,7 +1703,25 @@ export function renderCompleteAcquisitionMemoV2Html({
   <style>
     @page {
       size: Letter;
-      margin: 36px 36px 48px 36px;
+      margin: 42px 40px 48px 40px;
+      @top-left {
+        content: string(report-property);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 7px;
+        color: #606060;
+      }
+      @top-right {
+        content: string(report-chapter);
+        font-family: 'DM Mono', 'Courier New', monospace;
+        font-size: 7px;
+        color: #9A9A9A;
+      }
+      @bottom-left {
+        content: "INVESTORIQ | CONFIDENTIAL";
+        font-family: 'DM Mono', 'Courier New', monospace;
+        font-size: 7px;
+        color: #9A9A9A;
+      }
       @bottom-right {
         content: "Page " counter(page) " of " counter(pages);
         font-family: 'DM Mono', 'Courier New', monospace;
@@ -1605,6 +1731,9 @@ export function renderCompleteAcquisitionMemoV2Html({
     }
     @page :first {
       margin: 0;
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
       @bottom-right { content: none; }
     }
     :root {
@@ -1620,14 +1749,17 @@ export function renderCompleteAcquisitionMemoV2Html({
       --hairline: #E8E5DF;
       --hairline-mid: #D0CCC4;
       --row-alt: #FAFAF8;
+      --chart-1: #173F2B;
+      --chart-2: #B28A36;
+      --chart-3: #61766A;
       --font-display: 'Cormorant Garamond', Georgia, serif;
       --font-body: 'DM Sans', system-ui, sans-serif;
       --font-mono: 'DM Mono', 'Courier New', monospace;
     }
     * { box-sizing: border-box; }
-    html, body { margin:0; padding:0; background:var(--white); color:var(--ink); font-family:var(--font-body); font-size:11px; line-height:1.5; }
+    html, body { margin:0; padding:0; background:var(--white); color:var(--ink); font-family:var(--font-body); font-size:11px; line-height:1.5; font-variant-numeric:tabular-nums; orphans:3; widows:3; }
     body { margin:0; padding:0; background:var(--white); color:var(--ink); font-family:var(--font-body); font-size:11px; line-height:1.5; }
-    .report-container { width:100%; padding:0.5in 0.55in 0.52in 0.55in; box-sizing:border-box; background:var(--white); }
+    .report-container { width:100%; padding:0; box-sizing:border-box; background:var(--white); }
     .cover-wrap { page-break-after:always; page-break-inside:avoid; margin:0; padding:0; width:100%; height:10.5in; overflow:hidden; position:relative; background:var(--cover-bg); }
     .cover-wrap::before { content:''; position:absolute; top:0; bottom:0; left:0.6in; width:1px; background:linear-gradient(to bottom, transparent 0%, rgba(201,168,76,0.45) 12%, rgba(201,168,76,0.45) 88%, transparent 100%); }
     .cover-wrap::after { content:''; position:absolute; top:0.6in; right:0.52in; width:1in; height:1in; border-top:1px solid rgba(201,168,76,0.1); border-right:1px solid rgba(201,168,76,0.1); }
@@ -1649,18 +1781,22 @@ export function renderCompleteAcquisitionMemoV2Html({
     .cover-footer-row { display:flex; justify-content:space-between; align-items:center; position:absolute; bottom:0; left:0; right:0; height:0.46in; padding:0 0.52in; background:rgba(0,0,0,0.2); border-top:1px solid rgba(201,168,76,0.07); }
     .cover-footer-text { font-family:var(--font-mono); font-size:6pt; color:rgba(255,255,255,0.12); letter-spacing:0.12em; text-transform:uppercase; }
     .cover-footer-row .cover-footer-text:last-child { color:rgba(201,168,76,0.25); letter-spacing:0.14em; }
-    .header-strip { position:relative; border-top:none; border-bottom:1px solid var(--hairline); padding:0 0 0.12in 0; margin:-0.5in -0.55in 0.38in -0.55in; background:var(--white); }
+    .header-strip { position:relative; border-top:none; border-bottom:1px solid var(--hairline); padding:0 0 0.12in 0; margin:0 0 0.2in 0; background:var(--white); }
     .header-strip::before { content:''; position:absolute; top:0; left:0; right:0; height:1.5px; background:var(--gold); opacity:0.55; }
     .header-top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0.12in 0.55in 0 0.55in; }
+    .report-running-property { string-set:report-property content(text); }
     .brand-mark { font-family:var(--font-display); font-size:8pt; font-weight:600; color:var(--ink); letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; hyphens:none; }
     .tagline { font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:var(--ink-4); margin-top:6px; }
-    .section { margin-top:18px; padding:24px 0; background:var(--white); }
-    .section-break { break-before:page; page-break-before:always; }
+    .institutional-chapter { break-before:auto; }
+    .institutional-chapter + .institutional-chapter { break-before:page; page-break-before:always; }
+    .chapter-heading { string-set:report-chapter content(text); margin:0 0 12px 0; padding:0 0 7px 0; border-bottom:2px solid var(--ink); font-family:var(--font-mono); font-size:7px; font-weight:500; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-3); break-after:avoid-page; page-break-after:avoid; }
+    .section { margin-top:10px; padding:10px 0; background:var(--white); }
+    .section-break { break-before:auto; page-break-before:auto; }
     .section-header { position:relative; margin-top:0; margin-bottom:0.38in; padding-bottom:0.14in; border-bottom:1px solid var(--hairline); break-after:avoid-page; page-break-after:avoid; }
     .section-header::after { content:''; position:absolute; left:0; bottom:-1px; width:0.28in; height:1.5px; background:var(--gold); opacity:0.8; }
     .section-header-title { display:block; font-family:var(--font-display); font-size:18pt; font-weight:500; letter-spacing:-0.025em; color:var(--ink); line-height:1.05; word-break:keep-all; overflow-wrap:normal; hyphens:none; margin-bottom:4pt; }
-    .card { background:var(--white); border:1px solid var(--border-soft, var(--hairline)); border-top:1px solid var(--hairline); padding:12px 14px; }
-    .no-break { break-inside:avoid; page-break-inside:avoid; }
+    .card { background:var(--white); border:1px solid var(--border-soft, var(--hairline)); border-top:1px solid var(--hairline); padding:12px 14px; break-inside:auto; page-break-inside:auto; }
+    .no-break { break-inside:auto; page-break-inside:auto; }
     .body-copy { margin:3px 0 8px 0; color:var(--ink-3); font-size:10px; line-height:1.6; }
     .subsection-block + .subsection-block { margin-top:14px; }
     .subsection-title { margin:0 0 8px 0; font-family:var(--font-body); font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-4); font-weight:600; break-after:avoid-page; page-break-after:avoid; }
@@ -1679,6 +1815,12 @@ export function renderCompleteAcquisitionMemoV2Html({
     .data-coverage-table-2col td:nth-child(1) { width:74%; }
     .data-coverage-table-2col td:nth-child(2) { width:26%; text-align:right; }
     .data-coverage-source-summary { margin-top:2px; }
+    .source-register-table { width:100%; table-layout:fixed; }
+    .source-register-table td { overflow-wrap:anywhere; word-break:break-word; hyphens:auto; }
+    .source-register-table th:nth-child(1), .source-register-table td:nth-child(1) { width:32%; }
+    .source-register-table th:nth-child(2), .source-register-table td:nth-child(2) { width:24%; }
+    .source-register-table th:nth-child(3), .source-register-table td:nth-child(3) { width:20%; }
+    .source-register-table th:nth-child(4), .source-register-table td:nth-child(4) { width:24%; }
     .unit-mix-table { width:100%; border-collapse:collapse; font-size:10px; table-layout:fixed; }
     .unit-mix-table th { font-family:var(--font-body); font-size:10px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--ink-3); border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline-mid); padding:0 8px 6px; text-align:left; background:var(--white); }
     .unit-mix-table td { border-bottom:1px solid var(--hairline); padding:6px 8px; vertical-align:top; }
@@ -1687,6 +1829,19 @@ export function renderCompleteAcquisitionMemoV2Html({
     .summary-strip div { border:1px solid var(--hairline); padding:10px 12px; background:var(--paper-warm); }
     .summary-strip span { display:block; font-family:var(--font-mono); font-size:6.5pt; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-4); margin-bottom:4px; }
     .summary-strip strong { font-family:var(--font-display); font-size:16pt; font-weight:500; color:var(--ink); }
+    .institutional-visual-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .evidence-chart { border:1px solid var(--hairline); padding:12px 14px; background:var(--paper-warm); break-inside:avoid; page-break-inside:avoid; }
+    .evidence-chart-row { display:grid; grid-template-columns:1.25fr 2fr 0.9fr; gap:8px; align-items:center; margin-top:7px; }
+    .evidence-chart-label { color:var(--ink-3); font-size:9px; line-height:1.25; }
+    .evidence-chart-track { height:8px; background:#E5E3DE; overflow:hidden; }
+    .evidence-chart-bar { height:100%; min-width:1px; }
+    .evidence-chart-bar-1 { background:var(--chart-1); }
+    .evidence-chart-bar-2 { background:var(--chart-2); }
+    .evidence-chart-bar-3 { background:var(--chart-3); }
+    .evidence-chart-value { font-family:var(--font-mono); font-size:8px; color:var(--ink); text-align:right; font-variant-numeric:tabular-nums; }
+    .evidence-chart-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid var(--hairline); }
+    .evidence-chart-stat span { display:block; color:var(--ink-4); font-size:7px; text-transform:uppercase; letter-spacing:0.08em; }
+    .evidence-chart-stat strong { display:block; margin-top:2px; font-family:var(--font-mono); font-size:10px; color:var(--ink); font-variant-numeric:tabular-nums; }
     .readiness-summary { margin-bottom:10px; font-size:10.5px; line-height:1.6; color:var(--ink-3); }
     .source-table { width:100%; border-collapse:collapse; font-size:10.5px; table-layout:fixed; margin-top:8px; }
     .source-table th { font-family:var(--font-body); font-size:10px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--ink-3); border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline-mid); padding:0 8px 6px; text-align:left; background:var(--white); }
@@ -1703,35 +1858,51 @@ export function renderCompleteAcquisitionMemoV2Html({
     .meta-value { font-weight:600; color:var(--ink); text-align:right; }
   </style>
 </head>
-<body>
+<body data-iq-visual-system="institutional-v1" data-iq-composition="content-driven-v1">
     ${coverSection}
     <div class="report-container">
     ${headerStrip}
-    <section class="section">
-      <div class="section-header"><span class="section-header-title">Executive Summary</span></div>
-      ${executiveSummarySection}
+    <section class="institutional-chapter" data-iq-chapter="committee-overview">
+      <div class="chapter-heading">Committee Overview</div>
+      <section class="section">
+        <div class="section-header"><span class="section-header-title">Executive Summary</span></div>
+        ${executiveSummarySection}
+      </section>
+      ${metricsSection}
+      ${keyUpsideDriversSection ? `<section class="section"><div class="section-header"><span class="section-header-title">Underwriting Observations</span></div>${keyUpsideDriversSection}</section>` : ""}
+      ${primaryConstraintSection ? `<section class="section"><div class="section-header"><span class="section-header-title">Primary Constraint / Review Disclosure</span></div>${primaryConstraintSection}</section>` : ""}
     </section>
-    ${metricsSection}
-    ${keyUpsideDriversSection ? `<section class="section section-break"><div class="section-header"><span class="section-header-title">Key Upside Drivers</span></div>${keyUpsideDriversSection}</section>` : ""}
-    ${primaryConstraintSection ? `<section class="section section-break"><div class="section-header"><span class="section-header-title">Primary Constraint / Review Disclosure</span></div>${primaryConstraintSection}</section>` : ""}
-    ${acquisitionMemoSummarySection}
-    ${operatingSection}
-    ${unitMixSection}
-    ${valueSensitivitySection}
-    ${capRateValueSection}
-    ${readinessSection}
-    ${acquisitionRequestContextSection}
-    ${operatingSupportSection}
-    ${rentValueSupportSection}
-    ${debtFinancingContextSection}
-    ${debtServiceCoverageSection}
-    ${debtTermAnalysisSection}
-    ${coreReconciliationAnalysisSection}
-    ${capitalPlanAnalysisSection}
-    ${operatingStatementSection}
-    ${dataCoverageSection}
-    ${treatmentSection}
-    ${methodologySection}
+    <section class="institutional-chapter" data-iq-chapter="operating-performance">
+      <div class="chapter-heading">Operating Performance</div>
+      ${operatingVisualsSection}
+      ${unitMixSection}
+      ${operatingStatementSection ? `<section class="section"><div class="section-header"><span class="section-header-title">Operating Statement / TTM Summary</span></div>${operatingStatementSection}</section>` : ""}
+      ${valueSensitivitySection}
+    </section>
+    <section class="institutional-chapter" data-iq-chapter="acquisition-context">
+      <div class="chapter-heading">Acquisition Context</div>
+      ${acquisitionRequestContextSection}
+      ${readinessSection}
+    </section>
+    <section class="institutional-chapter" data-iq-chapter="debt-capital-structure">
+      <div class="chapter-heading">Debt &amp; Capital Structure</div>
+      ${debtFinancingContextSection}
+      ${debtServiceCoverageSection}
+      ${debtVisualsSection}
+      ${debtTermAnalysisSection}
+      ${capitalPlanAnalysisSection}
+    </section>
+    <section class="institutional-chapter" data-iq-chapter="financial-analysis">
+      <div class="chapter-heading">Financial Analysis</div>
+      ${capRateValueSection ? `<section class="section"><div class="section-header"><span class="section-header-title">Cap-Rate Value Indication</span></div>${capRateValueSection}</section>` : ""}
+      ${coreReconciliationAnalysisSection}
+    </section>
+    <section class="institutional-chapter" data-iq-chapter="source-appendix">
+      <div class="chapter-heading">Source Appendix</div>
+      ${dataCoverageSection}
+      ${treatmentSection}
+      ${methodologySection}
+    </section>
     ${footerSection}
   </div>
 </body>

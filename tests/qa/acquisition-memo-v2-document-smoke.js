@@ -285,14 +285,14 @@ assert.match(finalHtml, /Executive Summary/i);
 assert.match(finalHtml, /Key Metrics Snapshot/i);
 assert.match(finalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(finalHtml, /Lender Diligence Checklist/i);
-assert.match(finalHtml, /Current debt context<\/td><td[^>]*>Document received; canonical fact completeness unavailable<\/td>/i);
-assert.match(finalHtml, /Current_Debt_Stonebridge\.pdf[\s\S]{0,2000}Debt Support Received \/ Contextual/i);
+assert.match(finalHtml, /Current debt context<\/td><td[^>]*>Received; detailed use limited<\/td>/i);
+assert.match(finalHtml, /Current_Debt_Stonebridge\.pdf/i);
 const assumptionsRowMatch = finalHtml.match(/<tr[^>]*>[\s\S]{0,1200}?Stonebridge_Assumptions\.pdf[\s\S]*?<\/tr>/i);
 assert.ok(assumptionsRowMatch, "Missing Stonebridge_Assumptions.pdf row");
-assert.match(assumptionsRowMatch[0], /Purchase Assumptions \/ Proposed Acquisition Financing Context/i);
-assert.match(assumptionsRowMatch[0], /Acquisition context received/i);
+assert.match(assumptionsRowMatch[0], /Acquisition Assumptions/i);
+assert.match(assumptionsRowMatch[0], /Accepted for related analysis|Retained as context/i);
 assert.equal(/Debt Support Received \/ Contextual/i.test(assumptionsRowMatch[0]), false);
-assert.match(finalHtml, /Stonebridge_Reno_Plan\.pdf[\s\S]{0,2000}Structured Renovation \/ CapEx Plan/i);
+assert.match(finalHtml, /Stonebridge_Reno_Plan\.pdf/i);
 
 const bodyStart = finalHtml.toLowerCase().indexOf("<body");
 const bodyEnd = finalHtml.toLowerCase().indexOf("</body>");
@@ -307,11 +307,11 @@ assert.equal(coverHtml.includes("Core Quantitative Sources"), false);
 assert.equal(coverHtml.includes("Trailing 12-Month Income Statement"), false);
 assert.equal(coverHtml.includes("Rent Roll"), false);
 assert.equal(coverHtml.includes('class="source-table"'), false);
-assert.match(finalHtml.slice(bodyStart, bodyEnd), /Document Treatment Summary/i);
-assert.equal(finalHtml.slice(bodyEnd).includes("Document Treatment Summary"), false);
+assert.match(finalHtml.slice(bodyStart, bodyEnd), /Source Register &amp; Document Treatment/i);
+assert.equal(finalHtml.slice(bodyEnd).includes("Source Register &amp; Document Treatment"), false);
 assert.equal(finalHtml.indexOf("Preliminary Financing Readiness Summary") < bodyEnd, true);
-assert.equal(finalHtml.indexOf("Document Treatment Summary") < bodyEnd, true);
-assert.equal(finalHtml.indexOf("</html>") > finalHtml.indexOf("Document Treatment Summary"), true);
+assert.equal(finalHtml.indexOf("Source Register &amp; Document Treatment") < bodyEnd, true);
+assert.equal(finalHtml.indexOf("</html>") > finalHtml.indexOf("Source Register &amp; Document Treatment"), true);
 assert.equal(/>v2</i.test(finalHtml), false);
 assert.equal(/authorityVersion/i.test(finalHtml), false);
 assert.equal(/canonical source package/i.test(finalHtml), false);
@@ -406,11 +406,11 @@ assert.equal(/report shell stays presentation-only/i.test(retest6FinalHtml), fal
 assert.equal(/canonical source package determines document roles/i.test(retest6FinalHtml), false);
 assert.equal(/V2 projection determines readiness/i.test(retest6FinalHtml), false);
 assert.equal(/Document-driven Acquisition Memo V2/i.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /Acquisition Memo Summary/i);
+assert.match(retest6FinalHtml, /Committee Overview/i);
 assert.equal(/64-Unit Multifamily/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /ACQUISITION MEMO/i);
 assert.match(retest6FinalHtml, /Key Metrics Snapshot/i);
-assert.match(retest6FinalHtml, /Key Upside Drivers/i);
+assert.match(retest6FinalHtml, /Underwriting Observations/i);
 assert.equal(/Primary Constraint \/ Review Disclosure/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Units<\/td><td style="font-weight:600;">64<\/td>/i);
 assert.match(retest6FinalHtml, /Annual In-Place Rent<\/td><td style="font-weight:600;">\$1,432,800<\/td>/i);
@@ -429,7 +429,7 @@ assert.match(retest6FinalHtml, /Price per Unit<\/td><td style="font-weight:600;"
 assert.match(retest6FinalHtml, /NOI per Unit<\/td><td style="font-weight:600;">\$14,766<\/td>/i);
 assert.equal(/Occupancy<\/td><td style="font-weight:600;">0\.9%<\/td>/i.test(retest6FinalHtml), false);
 assert.equal(/\$-0\b/.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /Operating Snapshot/i);
+assert.equal(/Operating Snapshot/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Unit Mix and Rent Positioning/i);
 assert.match(retest6FinalHtml, /Rent Positioning Summary/i);
 assert.match(retest6FinalHtml, /1BR[\s\S]{0,200}32[\s\S]{0,200}\$1,850[\s\S]{0,200}\$2,050[\s\S]{0,200}\$200/i);
@@ -441,8 +441,8 @@ assert.match(retest6FinalHtml, /Cap-Rate Value Indication/i);
 assert.equal(/\$5,712,000|\$4,760,000|\$4,080,000/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(retest6FinalHtml, /Acquisition Request Context/i);
-assert.match(retest6FinalHtml, /Operating Support/i);
-assert.match(retest6FinalHtml, /Rent Position Support/i);
+assert.equal(/Operating Support/i.test(retest6FinalHtml), false);
+assert.equal(/Rent Position Support/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Debt \/ Financing Context/i);
 assert.match(retest6FinalHtml, /Operating Statement \/ TTM Summary/i);
 assert.match(retest6FinalHtml, /Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
@@ -455,7 +455,7 @@ assert.match(retest6FinalHtml, /EGI per Unit/i);
 assert.match(retest6FinalHtml, /OpEx per Unit/i);
 assert.match(retest6FinalHtml, /NOI per Unit/i);
 assert.match(retest6FinalHtml, /Data Coverage &amp; Source Limitations/i);
-assert.match(retest6FinalHtml, /Source Context \/ Support Document Treatment/i);
+assert.match(retest6FinalHtml, /Source Register &amp; Document Treatment/i);
 assert.match(retest6FinalHtml, /Methodology &amp; Data Transparency/i);
 assert.match(retest6FinalHtml, /overflow-wrap:anywhere;/i);
 assert.match(retest6FinalHtml, /word-break:break-word;/i);
@@ -464,23 +464,24 @@ assert.match(retest6FinalHtml, /InvestorIQ does not assume or gap-fill missing d
 assert.match(retest6FinalHtml, /Document-Backed Acquisition Memo Outputs/i);
 assert.match(retest6FinalHtml, /Methodology Notes/i);
 assert.match(retest6FinalHtml, /Data Limitations &amp; Missing Inputs/i);
-const dataCoverageSectionMatch = retest6FinalHtml.match(/Data Coverage &amp; Source Limitations[\s\S]{0,5000}?<\/section>/i);
-assert.ok(dataCoverageSectionMatch, "Missing data coverage section");
-assert.match(dataCoverageSectionMatch[0], /T12_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
-assert.match(dataCoverageSectionMatch[0], /Rent_Roll_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
-assert.match(dataCoverageSectionMatch[0], /Core Quantitative Source/i);
-assert.match(dataCoverageSectionMatch[0], /data-coverage-table-3col/i);
-assert.equal(/white-space\s*:\s*nowrap/i.test(dataCoverageSectionMatch[0]), false);
+const sourceRegisterSectionMatch = retest6FinalHtml.match(/Source Register &amp; Document Treatment[\s\S]{0,8000}?<\/section>/i);
+assert.ok(sourceRegisterSectionMatch, "Missing source register section");
+assert.match(sourceRegisterSectionMatch[0], /T12_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
+assert.match(sourceRegisterSectionMatch[0], /Rent_Roll_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
+assert.match(sourceRegisterSectionMatch[0], /Core Quantitative Source/i);
+assert.match(sourceRegisterSectionMatch[0], /source-register-table/i);
 const requiredSectionOrder = [
   "Executive Summary",
-  "Key Upside Drivers",
-  "Acquisition Memo Summary",
-  "Operating Snapshot",
+  "Underwriting Observations",
   "Unit Mix and Rent Positioning",
+  "Operating Statement / TTM Summary",
   "Rent Position / Whole-Property Value Context",
+  "Acquisition Request Context",
   "Preliminary Financing Readiness Summary",
+  "Debt / Financing Context",
+  "Cap-Rate Value Indication",
   "Data Coverage & Source Limitations",
-  "Source Context / Support Document Treatment",
+  "Source Register & Document Treatment",
   "Methodology & Data Transparency",
 ];
 let lastSectionIndex = -1;
@@ -493,9 +494,9 @@ for (const sectionTitle of requiredSectionOrder) {
   assert.ok(sectionIndex > lastSectionIndex, `${sectionTitle} is out of order`);
   lastSectionIndex = sectionIndex;
 }
-assert.equal(/Acquisition Memo Summary[\s\S]{0,250}Acquisition Memo Summary/i.test(retest6FinalHtml), false);
+assert.equal(/Acquisition Memo Summary/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
-assert.match(retest6FinalHtml, /Current debt context<\/td><td[^>]*>Document received; canonical fact completeness unavailable<\/td>/i);
+assert.match(retest6FinalHtml, /Current debt context<\/td><td[^>]*>Received; detailed use limited<\/td>/i);
 const currentDebtSectionMatch = retest6FinalHtml.match(/Debt \/ Financing Context[\s\S]{0,2500}?<\/section>/i);
 assert.ok(currentDebtSectionMatch, "Missing debt / financing context section");
 assert.match(currentDebtSectionMatch[0], /Current Outstanding Balance/i);
@@ -518,11 +519,11 @@ assert.match(assumptionsSectionMatch[0], /LTV<\/td><td style="font-weight:600;">
 assert.match(assumptionsSectionMatch[0], /Interest Rate<\/td><td style="font-weight:600;">5\.95%<\/td>/i);
 assert.match(assumptionsSectionMatch[0], /Amortization<\/td><td style="font-weight:600;">30 years<\/td>/i);
 assert.match(assumptionsSectionMatch[0], /Lender \/ Origination Fee<\/td><td style="font-weight:600;">0\.85%<\/td>/i);
-assert.match(retest6FinalHtml, /Stonebridge_Appraisal_Summary\.pdf[\s\S]{0,2000}Appraisal \/ Valuation Context/i);
-assert.match(retest6FinalHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,2000}Market Rent Survey Context/i);
-assert.match(retest6FinalHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,2000}Environmental Due Diligence \/ Phase I ESA Context/i);
-assert.match(retest6FinalHtml, /Document Treatment Summary/i);
-assert.ok(retest6FinalHtml.indexOf("Document Treatment Summary") < retest6FinalHtml.toLowerCase().indexOf("</body>"));
+assert.match(retest6FinalHtml, /Stonebridge_Appraisal_Summary\.pdf[\s\S]{0,2000}Appraisal Context/i);
+assert.match(retest6FinalHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,2000}Market Survey Context/i);
+assert.match(retest6FinalHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,2000}Environmental Context/i);
+assert.match(retest6FinalHtml, /Source Register &amp; Document Treatment/i);
+assert.ok(retest6FinalHtml.indexOf("Source Register &amp; Document Treatment") < retest6FinalHtml.toLowerCase().indexOf("</body>"));
 assert.ok(retest6FinalHtml.toLowerCase().indexOf("</body>") < retest6FinalHtml.toLowerCase().indexOf("</html>"));
 const retest6CoverEnd = retest6FinalHtml.indexOf('<div class="report-container">');
 assert.ok(retest6CoverEnd > 0);
@@ -535,9 +536,8 @@ assert.equal(/>v2</i.test(retest6FinalHtml), false);
 assert.equal(/authorityVersion/i.test(retest6FinalHtml), false);
 assert.equal(/canonical source package/i.test(retest6FinalHtml), false);
 assert.equal(/V2 projection/i.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
-assert.match(retest6FinalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">\$15,750,000<\/td><td style="font-weight:600;">\$246,094<\/td><\/tr>/i);
-assert.match(retest6FinalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
+assert.match(retest6FinalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
+assert.doesNotMatch(retest6FinalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
 assert.match(retest6FinalHtml, /Value delta vs purchase price<\/td><td style="font-weight:600;">\$0<\/td>/i);
 assert.equal(/\$135,000\b/i.test(retest6FinalHtml), false);
 assert.equal(/Cap-Rate Value Indication[\s\S]{0,700}>-<\/td>/i.test(retest6FinalHtml), false);
@@ -587,9 +587,8 @@ assert.match(structuredFinalHtml, /Repairs &amp; Maintenance<\/td><td style="fon
 assert.match(structuredFinalHtml, /Utilities<\/td><td style="font-weight:600;">\$86,000<\/td>/i);
 assert.match(structuredFinalHtml, /Property Management<\/td><td style="font-weight:600;">\$60,000<\/td>/i);
 assert.match(structuredFinalHtml, /Payroll \/ Admin<\/td><td style="font-weight:600;">\$28,000<\/td>/i);
-assert.match(structuredFinalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
-assert.match(structuredFinalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">\$15,750,000<\/td><td style="font-weight:600;">\$246,094<\/td><\/tr>/i);
-assert.match(structuredFinalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
+assert.match(structuredFinalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
+assert.doesNotMatch(structuredFinalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
 assert.equal(/Cap-Rate Value Indication[\s\S]{0,700}>-<\/td>/i.test(structuredFinalHtml), false);
 assert.equal(/Going-In Cap Rate<\/td><td style="font-weight:600;">0\.0%<\/td>/i.test(retest6FinalHtml), false);
 assert.equal(/Going-In Cap Rate 0\.0%/i.test(retest6FinalHtml), false);
@@ -632,9 +631,8 @@ const capRateSevenFinalHtml = renderCompleteAcquisitionMemoV2Html({
   },
 });
 assert.match(capRateSevenFinalHtml, /Implied value at going-in cap rate<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
-assert.match(capRateSevenFinalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
-assert.match(capRateSevenFinalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">\$15,750,000<\/td><td style="font-weight:600;">\$246,094<\/td><\/tr>/i);
-assert.match(capRateSevenFinalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
+assert.match(capRateSevenFinalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
+assert.doesNotMatch(capRateSevenFinalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
 assert.match(capRateSevenFinalHtml, /Value delta vs purchase price<\/td><td style="font-weight:600;">\$0<\/td>/i);
 assert.equal(/Occupancy<\/td><td style="font-weight:600;">0\.9%<\/td>/i.test(capRateSevenFinalHtml), false);
 assert.equal(/\$-0\b/.test(capRateSevenFinalHtml), false);

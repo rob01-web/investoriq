@@ -1,7 +1,14 @@
 import pdfParse from "pdf-parse";
 import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
+import {
+  INSTITUTIONAL_PDF_CONSTITUTION,
+  isCanonicalInstitutionalPdfConstitution,
+} from "./institutional-pdf-constitution.js";
+import { buildInstitutionalPdfRepairPlan } from "./institutional-pdf-repair-plan.js";
 
-const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "p0c_final_pdf_publication_quality_boss_v1";
+const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10_final_pdf_publication_quality_boss_v2";
+const PAGE_CERTIFICATION_SCOPE = "institutional_page_by_page_certification";
+const TEST_WATERMARK_PATTERN = /\b(?:docraptor|test document|test mode)\b/i;
 
 function toBuffer(value) {
   if (Buffer.isBuffer(value)) return value;
@@ -60,6 +67,37 @@ function normalizeComparisonText(value = "") {
 
 function unique(values = []) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function attributeValue(tag = "", name = "") {
+  const escapedName = String(name || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(tag || "").match(new RegExp(`${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
+  return decodeHtml(match?.[1] ?? match?.[2] ?? "").trim();
+}
+
+function extractElementBlock(html = "", openIndex = -1, tagName = "div") {
+  if (openIndex < 0) return "";
+  const source = String(html || "");
+  const tagPattern = new RegExp(`<\\/?${tagName}\\b[^>]*>`, "gi");
+  tagPattern.lastIndex = openIndex;
+  let depth = 0;
+  let match;
+  while ((match = tagPattern.exec(source)) !== null) {
+    if (match[0].startsWith("</")) depth -= 1;
+    else depth += 1;
+    if (depth === 0) return source.slice(openIndex, tagPattern.lastIndex);
+  }
+  return source.slice(openIndex);
+}
+
+function extractDisplayedNumbers(value = "") {
+  const visibleText = stripHtml(value);
+  const matches = visibleText.match(/(?:[$€£]\s*)?\(?-?\d[\d,]*(?:\.\d+)?\)?(?:\s*%|\s*x|\s*years?)?/gi) || [];
+  return unique(matches.map((number) => number.replace(/\s+/g, " ").trim()));
+}
+
+function numberKey(value = "") {
+  return normalizeComparisonText(value).replace(/[()]/g, "").replace(/^-/, "negative");
 }
 
 function buildIssue(code, message, evidence = {}, path = "pdf") {
@@ -192,7 +230,105 @@ function extractApprovedHeadings(html = "") {
     const text = stripHtml(match[1]);
     if (text.length >= 4 && text.length <= 160) headings.push(text);
   }
+  const classHeadingPattern = /<(?:div|span|p)\b[^>]*class=(?:"[^"]*(?:chapter-heading|section-header-title|subsection-title)[^"]*"|'[^']*(?:chapter-heading|section-header-title|subsection-title)[^']*')[^>]*>([\s\S]*?)<\/(?:div|span|p)>/gi;
+  while ((match = classHeadingPattern.exec(String(html || ""))) !== null) {
+    const text = stripHtml(match[1]);
+    if (text.length >= 4 && text.length <= 160) headings.push(text);
+  }
   return unique(headings);
+}
+
+function extractApprovedChapters(html = "") {
+  const source = String(html || "");
+  const chapters = [];
+  const pattern = /<section\b[^>]*data-iq-chapter=(?:"[^"]+"|'[^']+')[^>]*>/gi;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    const block = extractElementBlock(source, match.index, "section");
+    const titleMatch = block.match(/<div\b[^>]*class=(?:"[^"]*chapter-heading[^"]*"|'[^']*chapter-heading[^']*')[^>]*>([\s\S]*?)<\/div>/i);
+    chapters.push({
+      id: attributeValue(match[0], "data-iq-chapter"),
+      title: stripHtml(titleMatch?.[1] || ""),
+    });
+  }
+  return chapters.filter((chapter) => chapter.id);
+}
+
+function extractApprovedTables(html = "") {
+  const source = String(html || "");
+  const tables = [];
+  const pattern = /<table\b[^>]*>([\s\S]*?)<\/table>/gi;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    const cells = [];
+    const headers = [];
+    const rowColumnCounts = [];
+    const rowPattern = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch;
+    while ((rowMatch = rowPattern.exec(match[1])) !== null) {
+      const rowCells = [];
+      const cellPattern = /<(t[dh])\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
+      let cellMatch;
+      while ((cellMatch = cellPattern.exec(rowMatch[1])) !== null) {
+        const text = stripHtml(cellMatch[2]);
+        if (!text) continue;
+        rowCells.push(text);
+        cells.push(text);
+        if (String(cellMatch[1]).toLowerCase() === "th") headers.push(text);
+      }
+      if (rowCells.length) rowColumnCounts.push(rowCells.length);
+    }
+    const openTag = match[0].match(/^<table\b[^>]*>/i)?.[0] || "";
+    const preceding = source.slice(Math.max(0, match.index - 600), match.index);
+    const precedingHeadings = extractApprovedHeadings(preceding);
+    const id = attributeValue(openTag, "data-iq-table") || `approved-table-${tables.length + 1}`;
+    tables.push({
+      id,
+      title: precedingHeadings.at(-1) || null,
+      headers: unique(headers),
+      cells,
+      columnCount: rowColumnCounts.length ? Math.max(...rowColumnCounts) : 0,
+      displayedNumbers: extractDisplayedNumbers(match[0]),
+    });
+  }
+  return tables;
+}
+
+function extractApprovedCharts(html = "") {
+  const source = String(html || "");
+  const charts = [];
+  const pattern = /<div\b[^>]*data-iq-chart=(?:"[^"]+"|'[^']+')[^>]*>/gi;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    const block = extractElementBlock(source, match.index, "div");
+    const titleMatch = block.match(/<(?:p|div|span)\b[^>]*class=(?:"[^"]*(?:subsection-title|evidence-chart-title)[^"]*"|'[^']*(?:subsection-title|evidence-chart-title)[^']*')[^>]*>([\s\S]*?)<\/(?:p|div|span)>/i);
+    const values = [];
+    const sourcePaths = [];
+    const labels = [];
+    const labelPattern = /<(?:div|span)\b[^>]*class=(?:"[^"]*evidence-chart-label[^"]*"|'[^']*evidence-chart-label[^']*')[^>]*>([\s\S]*?)<\/(?:div|span)>/gi;
+    let labelMatch;
+    while ((labelMatch = labelPattern.exec(block)) !== null) labels.push(stripHtml(labelMatch[1]));
+    const valuePattern = /<[^>]+data-iq-value=(?:"[^"]*"|'[^']*')[^>]*>/gi;
+    let valueMatch;
+    while ((valueMatch = valuePattern.exec(block)) !== null) {
+      values.push(attributeValue(valueMatch[0], "data-iq-value"));
+      sourcePaths.push(attributeValue(valueMatch[0], "data-iq-source-path"));
+    }
+    charts.push({
+      id: attributeValue(match[0], "data-iq-chart"),
+      receipt: attributeValue(match[0], "data-iq-chart-receipt"),
+      title: stripHtml(titleMatch?.[1] || ""),
+      labels: unique(labels),
+      visibleText: stripHtml(block),
+      displayedNumbers: extractDisplayedNumbers(block),
+      values: unique(values),
+      sourcePaths: unique([
+        ...sourcePaths,
+        ...attributeValue(match[0], "data-iq-source-paths").split("|").map((value) => value.trim()),
+      ]),
+    });
+  }
+  return charts.filter((chart) => chart.id);
 }
 
 export function buildApprovedPdfSurfaceManifest({
@@ -221,6 +357,10 @@ export function buildApprovedPdfSurfaceManifest({
     approvedText: stripHtml(approvedHtml),
     financialRows: extractApprovedFinancialRows(approvedHtml),
     headings: extractApprovedHeadings(approvedHtml),
+    chapters: extractApprovedChapters(approvedHtml),
+    tables: extractApprovedTables(approvedHtml),
+    charts: extractApprovedCharts(approvedHtml),
+    displayedNumbers: extractDisplayedNumbers(approvedHtml),
     requiredTextAnchors: unique(requiredTextAnchors.map((value) => String(value || "").trim())),
     reconciliation: {
       required: reconciliationRequired,
@@ -236,14 +376,23 @@ export function buildApprovedPdfSurfaceManifest({
   };
 }
 
+function isTestWatermarkText(value = "") {
+  return TEST_WATERMARK_PATTERN.test(String(value || ""));
+}
+
+function pageTextWithoutExcludedArtifacts(page = {}) {
+  const lines = Array.isArray(page?.lines) ? page.lines : [];
+  if (lines.length) return lines.filter((line) => !isTestWatermarkText(line?.text)).map((line) => line.text).join("\n");
+  return String(page?.text || "").split(/\r?\n/).filter((line) => !isTestWatermarkText(line)).join("\n");
+}
+
 function meaningfulPageText(page = {}) {
-  return normalizeText(page?.text || "")
+  return normalizeText(pageTextWithoutExcludedArtifacts(page))
     .replace(/\bpage\s+\d+(?:\s+(?:of|\/)\s+\d+)?\b/gi, " ")
     .replace(/\binvestoriq(?: technologies inc\.)?\b/gi, " ")
     .replace(/\bcapital intelligence memorandum\b/gi, " ")
     .replace(/\bconfidential\b/gi, " ")
     .replace(/\bcopyright\b|©/gi, " ")
-    .replace(/\bdocraptor\b|\btest document\b|\btest mode\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -283,6 +432,10 @@ function inspectLayout(analysis = {}) {
   const separatedTableHeadings = [];
   const unreadableTableRows = [];
   const duplicatedHeaders = [];
+  const missingRunningHeaders = [];
+  const missingRunningFooters = [];
+  const spacingOverlaps = [];
+  const numericColumnMisalignments = [];
   const topLinePresence = new Map();
 
   for (const page of pages) {
@@ -293,13 +446,13 @@ function inspectLayout(analysis = {}) {
 
     const width = Number(page?.width) || 612;
     const height = Number(page?.height) || 792;
-    for (const item of Array.isArray(page?.items) ? page.items : []) {
+    for (const item of (Array.isArray(page?.items) ? page.items : []).filter((candidate) => !isTestWatermarkText(candidate?.text))) {
       if (item.x < -2 || item.y < -2 || item.x + item.width > width + 2 || item.y + item.height > height + 2) {
         overflow.push({ page: page.pageNumber, text: item.text, x: item.x, y: item.y, width: item.width, height: item.height });
       }
     }
 
-    const lines = Array.isArray(page?.lines) ? page.lines : [];
+    const lines = (Array.isArray(page?.lines) ? page.lines : []).filter((line) => !isTestWatermarkText(line?.text));
     const topLines = lines.filter((line) => Number(line?.y) >= height * 0.88 && normalizeText(line?.text).length >= 5);
     const pageTopCounts = new Map();
     for (const line of topLines) {
@@ -314,16 +467,72 @@ function inspectLayout(analysis = {}) {
 
     for (const line of lines) {
       const below = lines.filter((candidate) => candidate.y < line.y - 3 && candidate.y > height * 0.1 && normalizeText(candidate.text).length >= 3);
-      if (isHeadingLine(line) && line.y < height * 0.16 && below.length === 0) {
+      if (isHeadingLine(line) && line.y > height * 0.08 && line.y < height * 0.16 && below.length === 0) {
         orphanedHeadings.push({ page: page.pageNumber, heading: line.text, y: line.y });
       }
-      if (tableHeadingLine(line) && line.y < height * 0.22 && below.length < 2) {
+      if (tableHeadingLine(line) && line.y > height * 0.08 && line.y < height * 0.22 && below.length < 2) {
         separatedTableHeadings.push({ page: page.pageNumber, heading: line.text, y: line.y, following_lines: below.length });
       }
       const numericTokens = String(line?.text || "").match(/(?:[$€£]?\(?\d[\d,.]*\)?%?)/g) || [];
       const pageNumberLine = isPageNumberLine(line, page, Number(analysis?.pageCount) || pages.length);
       if (!pageNumberLine && numericTokens.length >= 2 && Number(line?.fontSize) > 0 && Number(line.fontSize) < 6) {
         unreadableTableRows.push({ page: page.pageNumber, text: line.text, font_size: line.fontSize });
+      }
+    }
+
+    if (Number(page?.pageNumber) > 1 && meaningful) {
+      const runningHeaders = lines.filter((line) => Number(line?.y) >= height * 0.95 && normalizeText(line?.text).length >= 4);
+      const runningFooters = lines.filter((line) =>
+        Number(line?.y) <= height * 0.08 &&
+        normalizeText(line?.text).length >= 4 &&
+        !isPageNumberLine(line, page, Number(analysis?.pageCount) || pages.length)
+      );
+      if (page?.hasRunningHeader !== true && runningHeaders.length === 0) missingRunningHeaders.push(page.pageNumber);
+      if (page?.hasRunningFooter !== true && runningFooters.length === 0) missingRunningFooters.push(page.pageNumber);
+    }
+
+    const bodyLines = lines
+      .filter((line) => Number(line?.y) > height * 0.1 && Number(line?.y) < height * 0.92)
+      .sort((left, right) => right.y - left.y);
+    for (let index = 0; index < bodyLines.length - 1; index += 1) {
+      const current = bodyLines[index];
+      const next = bodyLines[index + 1];
+      const verticalDistance = Number(current.y) - Number(next.y);
+      const requiredDistance = Math.max(Number(current.fontSize) || 0, Number(next.fontSize) || 0) * 0.55;
+      if (requiredDistance > 0 && verticalDistance < requiredDistance) {
+        spacingOverlaps.push({
+          page: page.pageNumber,
+          upper_line: current.text,
+          lower_line: next.text,
+          vertical_distance: verticalDistance,
+          required_distance: requiredDistance,
+        });
+      }
+    }
+
+    const numericRows = bodyLines.map((line) => ({
+      line,
+      cells: (Array.isArray(line?.items) ? line.items : [])
+        .filter((item) => /(?:[$€£]?\(?-?\d[\d,.]*\)?%?|\d+(?:\.\d+)?x)/i.test(String(item?.text || "")))
+        .map((item) => Number(item.x) + Number(item.width)),
+    })).filter((row) => row.cells.length > 0 && (Array.isArray(row.line?.items) ? row.line.items.length : 0) >= 2);
+    const numericGroups = [];
+    for (const row of numericRows) {
+      const group = numericGroups.at(-1);
+      if (!group || Number(group.at(-1).line.y) - Number(row.line.y) > 32) numericGroups.push([row]);
+      else group.push(row);
+    }
+    for (const group of numericGroups.filter((candidate) => candidate.length >= 3)) {
+      const ordinalCount = Math.max(...group.map((row) => row.cells.length));
+      for (let ordinal = 0; ordinal < ordinalCount; ordinal += 1) {
+        const rightEdges = group.map((row) => row.cells[ordinal]).filter(Number.isFinite);
+        if (rightEdges.length < 3 || Math.max(...rightEdges) - Math.min(...rightEdges) <= 8) continue;
+        numericColumnMisalignments.push({
+          page: page.pageNumber,
+          column_ordinal: ordinal + 1,
+          right_edges: rightEdges,
+          spread: Math.max(...rightEdges) - Math.min(...rightEdges),
+        });
       }
     }
   }
@@ -344,6 +553,10 @@ function inspectLayout(analysis = {}) {
   if (unreadableTableRows.length) issues.push(buildIssue("PDF_UNREADABLE_TABLE", "One or more rendered table rows use unreadably small text.", { occurrences: unreadableTableRows.slice(0, 25) }, "pdf.tables"));
   if (duplicatedHeaders.length) issues.push(buildIssue("PDF_DUPLICATED_RUNNING_HEADER", "A running header is duplicated on the same page.", { occurrences: duplicatedHeaders }, "pdf.headers"));
   if (brokenHeaders.length) issues.push(buildIssue("PDF_BROKEN_RUNNING_HEADER", "A recurring running header disappears on one or more content pages.", { occurrences: brokenHeaders }, "pdf.headers"));
+  if (missingRunningHeaders.length) issues.push(buildIssue("PDF_RUNNING_HEADER_MISSING", "One or more content pages are missing institutional running navigation.", { pages: missingRunningHeaders }, "pdf.headers"));
+  if (missingRunningFooters.length) issues.push(buildIssue("PDF_RUNNING_FOOTER_MISSING", "One or more content pages are missing the institutional running footer.", { pages: missingRunningFooters }, "pdf.footers"));
+  if (spacingOverlaps.length) issues.push(buildIssue("PDF_SPACING_OVERLAP", "Rendered lines overlap or violate the approved minimum readable spacing.", { occurrences: spacingOverlaps.slice(0, 25) }, "pdf.spacing"));
+  if (numericColumnMisalignments.length) issues.push(buildIssue("PDF_NUMERIC_COLUMN_MISALIGNMENT", "One or more numeric table columns are not consistently aligned.", { occurrences: numericColumnMisalignments.slice(0, 25) }, "pdf.alignment"));
   return issues;
 }
 
@@ -405,6 +618,277 @@ function inspectApprovedSurface(analysis = {}, manifest = {}) {
   return issues;
 }
 
+function inspectInstitutionalCoverage(analysis = {}, manifest = {}) {
+  const issues = [];
+  const pdfText = normalizeComparisonText(analysis?.text || "");
+  const pdfNumberKeys = new Set(extractDisplayedNumbers(analysis?.text || "").map(numberKey));
+  const tableCoverage = (Array.isArray(manifest?.tables) ? manifest.tables : []).map((table) => {
+    const missingCells = table.cells.filter((cell) => !pdfText.includes(normalizeComparisonText(cell)));
+    return {
+      id: table.id,
+      title: table.title,
+      columnCount: table.columnCount,
+      certified: missingCells.length === 0,
+      certifiedCellCount: table.cells.length - missingCells.length,
+      totalCellCount: table.cells.length,
+      missingCells,
+    };
+  });
+  const chartCoverage = (Array.isArray(manifest?.charts) ? manifest.charts : []).map((chart) => {
+    const requiredVisibleValues = unique([chart.title, ...chart.labels, ...chart.displayedNumbers]).filter(Boolean);
+    const missingVisibleValues = requiredVisibleValues.filter((value) => !pdfText.includes(normalizeComparisonText(value)));
+    return {
+      id: chart.id,
+      receipt: chart.receipt,
+      title: chart.title,
+      sourcePaths: chart.sourcePaths,
+      exactValues: chart.values,
+      certified: missingVisibleValues.length === 0 && chart.receipt === chart.id && chart.sourcePaths.length > 0,
+      missingVisibleValues,
+      receiptValid: chart.receipt === chart.id && chart.sourcePaths.length > 0,
+    };
+  });
+  const numberCoverage = (Array.isArray(manifest?.displayedNumbers) ? manifest.displayedNumbers : []).map((value) => ({
+    value,
+    key: numberKey(value),
+    certified: pdfNumberKeys.has(numberKey(value)),
+  }));
+
+  const failedTables = tableCoverage.filter((table) => !table.certified);
+  if (failedTables.length) {
+    issues.push(buildIssue(
+      "PDF_APPROVED_TABLE_NOT_CERTIFIED",
+      "One or more approved tables did not survive the final PDF with every cell and column intact.",
+      { tables: failedTables.slice(0, 25) },
+      "pdf.certification.tables"
+    ));
+  }
+  const failedCharts = chartCoverage.filter((chart) => !chart.certified);
+  if (failedCharts.length) {
+    issues.push(buildIssue(
+      "PDF_APPROVED_CHART_NOT_CERTIFIED",
+      "One or more approved source-backed charts did not survive the final PDF with its receipt, labels, and exact displayed values intact.",
+      { charts: failedCharts.slice(0, 25) },
+      "pdf.certification.charts"
+    ));
+  }
+  const failedNumbers = numberCoverage.filter((number) => !number.certified);
+  if (failedNumbers.length) {
+    issues.push(buildIssue(
+      "PDF_APPROVED_NUMBER_NOT_CERTIFIED",
+      "One or more approved displayed numbers did not survive the final PDF.",
+      { numbers: failedNumbers.slice(0, 100) },
+      "pdf.certification.numbers"
+    ));
+  }
+  return { issues, tableCoverage, chartCoverage, numberCoverage };
+}
+
+function inspectInstitutionalLanguage(analysis = {}) {
+  const text = pageTextWithoutExcludedArtifacts({
+    text: analysis?.text || "",
+    lines: (Array.isArray(analysis?.pages) ? analysis.pages : []).flatMap((page) => page?.lines || []),
+  });
+  const issues = [];
+  const internalTerms = unique((text.match(/\b(?:customer_document_failure|internal_system_failure|deterministic_contract_qa|sourceauthority|publishallowed|delivery_gate|repair_plan|data-iq-[a-z-]+)\b/gi) || []));
+  if (internalTerms.length) {
+    issues.push(buildIssue(
+      "PDF_INTERNAL_IMPLEMENTATION_LANGUAGE",
+      "The final PDF exposes internal implementation or authority terminology to the customer surface.",
+      { matches: internalTerms },
+      "pdf.language"
+    ));
+  }
+  const buySellTerms = unique((text.match(/\b(?:buy|sell)\b/gi) || []));
+  if (buySellTerms.length) {
+    issues.push(buildIssue(
+      "PDF_BUY_SELL_LANGUAGE",
+      "The final PDF contains prohibited BUY or SELL language.",
+      { matches: buySellTerms },
+      "pdf.language"
+    ));
+  }
+  return issues;
+}
+
+function issuePageNumbers(issue = {}) {
+  const evidence = issue?.evidence && typeof issue.evidence === "object" ? issue.evidence : {};
+  return unique([
+    ...(Array.isArray(evidence.pages) ? evidence.pages : []),
+    ...(Array.isArray(evidence.missing_pages) ? evidence.missing_pages : []),
+    ...(Array.isArray(evidence.occurrences) ? evidence.occurrences.flatMap((occurrence) => [
+      occurrence?.page,
+      occurrence?.pageNumber,
+      ...(Array.isArray(occurrence?.missing_pages) ? occurrence.missing_pages : []),
+    ]) : []),
+  ].map(Number).filter((value) => Number.isInteger(value) && value > 0));
+}
+
+function dimensionsForIssue(issue = {}) {
+  const code = String(issue?.code || "");
+  const dimensions = [];
+  if (/BLANK|DENSITY/.test(code)) dimensions.push("content_density");
+  if (/OVERFLOW|BYTES_INVALID/.test(code)) dimensions.push("geometry");
+  if (/HEADING/.test(code)) dimensions.push("heading_hierarchy", "page_breaks");
+  if (/TABLE/.test(code)) dimensions.push("tables");
+  if (/CHART/.test(code)) dimensions.push("charts");
+  if (/NUMBER|FINANCIAL_FACT/.test(code)) dimensions.push("numbers");
+  if (/PAGE_NUMBERS|RUNNING_HEADER|RUNNING_FOOTER/.test(code)) dimensions.push("running_navigation");
+  if (/SPACING/.test(code)) dimensions.push("spacing");
+  if (/ALIGNMENT/.test(code)) dimensions.push("alignment");
+  if (/LANGUAGE|PUNCTUATION/.test(code)) dimensions.push("customer_language");
+  if (/APPROVED|CONTENT_DISAGREES|RECONCILIATION|FINANCIAL_INTELLIGENCE/.test(code)) dimensions.push("approved_surface_parity");
+  return unique(dimensions.length ? dimensions : ["approved_surface_parity"]);
+}
+
+function pageGeometry(page = {}) {
+  const width = Number(page?.width) || 612;
+  const height = Number(page?.height) || 792;
+  const items = (Array.isArray(page?.items) ? page.items : []).filter((item) => !isTestWatermarkText(item?.text));
+  const minX = items.length ? Math.min(...items.map((item) => Number(item.x) || 0)) : null;
+  const minY = items.length ? Math.min(...items.map((item) => Number(item.y) || 0)) : null;
+  const maxX = items.length ? Math.max(...items.map((item) => (Number(item.x) || 0) + (Number(item.width) || 0))) : null;
+  const maxY = items.length ? Math.max(...items.map((item) => (Number(item.y) || 0) + (Number(item.height) || 0))) : null;
+  return {
+    pageWidth: width,
+    pageHeight: height,
+    contentBounds: { minX, minY, maxX, maxY },
+    edgeClearance: {
+      left: minX,
+      right: maxX == null ? null : width - maxX,
+      bottom: minY,
+      top: maxY == null ? null : height - maxY,
+    },
+    itemCount: items.length,
+  };
+}
+
+function pageSpacingEvidence(page = {}) {
+  const height = Number(page?.height) || 792;
+  const lines = (Array.isArray(page?.lines) ? page.lines : [])
+    .filter((line) => !isTestWatermarkText(line?.text) && Number(line?.y) > height * 0.1 && Number(line?.y) < height * 0.92)
+    .sort((left, right) => right.y - left.y);
+  const gaps = [];
+  for (let index = 0; index < lines.length - 1; index += 1) gaps.push(Number(lines[index].y) - Number(lines[index + 1].y));
+  return {
+    inspectedLineCount: lines.length,
+    minimumBaselineGap: gaps.length ? Math.min(...gaps) : null,
+    maximumBaselineGap: gaps.length ? Math.max(...gaps) : null,
+  };
+}
+
+function pageAlignmentEvidence(page = {}) {
+  const numericRightEdges = (Array.isArray(page?.lines) ? page.lines : []).flatMap((line) =>
+    (Array.isArray(line?.items) ? line.items : [])
+      .filter((item) => /(?:[$€£]?\(?-?\d[\d,.]*\)?%?|\d+(?:\.\d+)?x)/i.test(String(item?.text || "")))
+      .map((item) => Number((Number(item.x) + Number(item.width)).toFixed(3)))
+  );
+  return { inspectedNumericCellCount: numericRightEdges.length, numericRightEdges };
+}
+
+function buildPageCertificationReceipts({ analysis = {}, manifest = {}, issues = [], coverage = {}, artifactMode = "" } = {}) {
+  const pages = Array.isArray(analysis?.pages) ? analysis.pages : [];
+  const pageCount = Number(analysis?.pageCount) || pages.length;
+  let activeChapter = null;
+  return pages.map((page) => {
+    const pageText = normalizeComparisonText(pageTextWithoutExcludedArtifacts(page));
+    const chapterOnPage = (manifest.chapters || []).find((chapter) => chapter.title && pageText.includes(normalizeComparisonText(chapter.title)));
+    if (chapterOnPage) activeChapter = chapterOnPage.id;
+    const mappedIssues = issues.filter((issue) => issuePageNumbers(issue).includes(Number(page.pageNumber)));
+    const headings = (Array.isArray(page?.lines) ? page.lines : [])
+      .filter((line) => !isTestWatermarkText(line?.text) && isHeadingLine(line) && !isPageNumberLine(line, page, pageCount))
+      .map((line) => line.text);
+    const tables = (coverage.tableCoverage || []).filter((table) => {
+      const approved = (manifest.tables || []).find((candidate) => candidate.id === table.id);
+      return approved?.cells?.some((cell) => normalizeComparisonText(cell).length >= 2 && pageText.includes(normalizeComparisonText(cell)));
+    }).map((table) => ({
+      id: table.id,
+      title: table.title,
+      columnCount: table.columnCount,
+      certifiedCellCount: table.certifiedCellCount,
+      totalCellCount: table.totalCellCount,
+      status: table.certified ? "pass" : "internal_delivery_failure",
+    }));
+    const charts = (coverage.chartCoverage || []).filter((chart) => {
+      const approved = (manifest.charts || []).find((candidate) => candidate.id === chart.id);
+      if (approved?.title) return pageText.includes(normalizeComparisonText(approved.title));
+      return [...(approved?.labels || []), ...(approved?.displayedNumbers || [])]
+        .filter(Boolean)
+        .some((value) => pageText.includes(normalizeComparisonText(value)));
+    }).map((chart) => ({
+      id: chart.id,
+      receipt: chart.receipt,
+      sourcePaths: chart.sourcePaths,
+      exactValues: chart.exactValues,
+      status: chart.certified ? "pass" : "internal_delivery_failure",
+    }));
+    const displayedNumbers = extractDisplayedNumbers(pageTextWithoutExcludedArtifacts(page)).map((value) => ({
+      value,
+      approved: (coverage.numberCoverage || []).some((number) => number.key === numberKey(value)),
+    }));
+    const dimensions = Object.fromEntries(INSTITUTIONAL_PDF_CONSTITUTION.certification.certificationDimensions.map((dimension) => [
+      dimension,
+      {
+        status: mappedIssues.some((issue) => dimensionsForIssue(issue).includes(dimension)) ? "fail" : "pass",
+        issueCodes: mappedIssues.filter((issue) => dimensionsForIssue(issue).includes(dimension)).map((issue) => issue.code),
+      },
+    ]));
+    const status = mappedIssues.length === 0
+      ? "pass"
+      : mappedIssues.some((issue) => /(?:NUMBER|FINANCIAL_FACT|APPROVED|RECONCILIATION|REQUIRED|CONSTITUTION)/.test(issue.code))
+        ? "internal_delivery_failure"
+        : "repair_required";
+    return {
+      pageNumber: Number(page.pageNumber),
+      sectionIds: unique([Number(page.pageNumber) === 1 ? "cover" : activeChapter || "approved-surface"]),
+      headings,
+      tables,
+      charts,
+      displayedNumbers,
+      geometry: pageGeometry(page),
+      defects: mappedIssues.map((issue) => ({ code: issue.code, dimensions: dimensionsForIssue(issue), path: issue.path })),
+      status,
+      dimensions,
+      pageBreak: {
+        precedingPageNumber: Number(page.pageNumber) > 1 ? Number(page.pageNumber) - 1 : null,
+        headingOrphanDetected: mappedIssues.some((issue) => issue.code === "PDF_ORPHANED_HEADINGS"),
+        tableHeadingSeparated: mappedIssues.some((issue) => issue.code === "PDF_TABLE_SEPARATED_FROM_HEADING"),
+      },
+      spacing: pageSpacingEvidence(page),
+      alignment: pageAlignmentEvidence(page),
+      runningNavigation: {
+        coverExempt: Number(page.pageNumber) === 1,
+        pageNumberPresent: Number(page.pageNumber) === 1 || hasPageNumber(page, pageCount),
+        runningHeaderPresent: Number(page.pageNumber) === 1 || !mappedIssues.some((issue) => issue.code === "PDF_RUNNING_HEADER_MISSING"),
+        runningFooterPresent: Number(page.pageNumber) === 1 || !mappedIssues.some((issue) => issue.code === "PDF_RUNNING_FOOTER_MISSING"),
+      },
+      excludedArtifacts: String(artifactMode || "").includes("test") ? ["docraptor_test_watermark"] : [],
+    };
+  });
+}
+
+function repairDefectsFromIssues(issues = []) {
+  return issues.map((issue) => {
+    const pages = issuePageNumbers(issue);
+    const required = /(?:NUMBER|FINANCIAL_FACT|APPROVED|RECONCILIATION|REQUIRED|CONSTITUTION|SOURCE)/.test(issue.code);
+    const category = /NUMBER|FINANCIAL_FACT/.test(issue.code)
+      ? "number"
+      : /RECONCILIATION|SOURCE|CONSTITUTION/.test(issue.code)
+        ? "source"
+        : required
+          ? "required_content"
+          : "composition";
+    return {
+      code: issue.code,
+      category,
+      surfaceId: issue.path,
+      pageNumber: pages[0] || null,
+      required,
+      optional: false,
+    };
+  });
+}
+
 export async function inspectFinalPdfPublicationQuality({
   pdfBytes,
   approvedHtml = "",
@@ -416,8 +900,17 @@ export async function inspectFinalPdfPublicationQuality({
   publicationTarget = "internal_test",
   pdfAnalysis = null,
   pdfParser = pdfParse,
+  institutionalPdfConstitution = INSTITUTIONAL_PDF_CONSTITUTION,
 } = {}) {
   const issues = [];
+  if (!isCanonicalInstitutionalPdfConstitution(institutionalPdfConstitution)) {
+    issues.push(buildIssue(
+      "PDF_CONSTITUTION_TAMPERING_REJECTED",
+      "The Final PDF Publication Quality Boss rejected a non-canonical institutional PDF constitution.",
+      { received_source: institutionalPdfConstitution?.source || null },
+      "pdf.constitution"
+    ));
+  }
   let analysis = pdfAnalysis;
   try {
     analysis = analysis || await analyzeFinalPdfBytes(pdfBytes, { pdfParser });
@@ -446,6 +939,7 @@ export async function inspectFinalPdfPublicationQuality({
     financialIntelligence,
   });
   const internalStub = normalizedArtifactMode === "stub_pdf" && !externalTarget;
+  let coverage = { tableCoverage: [], chartCoverage: [], numberCoverage: [] };
   if (!internalStub) {
     if (deterministicContractQaSeal && deterministicContractQaSeal.ok !== true) {
       issues.push(buildIssue(
@@ -457,6 +951,9 @@ export async function inspectFinalPdfPublicationQuality({
     }
     issues.push(...inspectLayout(analysis));
     issues.push(...inspectApprovedSurface(analysis, manifest));
+    coverage = inspectInstitutionalCoverage(analysis, manifest);
+    issues.push(...coverage.issues);
+    issues.push(...inspectInstitutionalLanguage(analysis));
 
     const pageCount = Number(analysis?.pageCount) || 0;
     if (pageCount > 1) {
@@ -474,17 +971,39 @@ export async function inspectFinalPdfPublicationQuality({
     }
   }
 
+  const pageReceipts = internalStub ? [] : buildPageCertificationReceipts({
+    analysis,
+    manifest,
+    issues,
+    coverage,
+    artifactMode: normalizedArtifactMode,
+  });
+  const reportDefects = issues.filter((issue) => issuePageNumbers(issue).length === 0).map((issue) => ({
+    code: issue.code,
+    dimensions: dimensionsForIssue(issue),
+    path: issue.path,
+  }));
+  const repairPlan = buildInstitutionalPdfRepairPlan({ defects: repairDefectsFromIssues(issues) });
+  const ok = issues.length === 0;
+
   return {
     version: FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION,
     authority: "final_pdf_publication_quality_boss",
-    scope: "rendering_survival_only",
-    ok: issues.length === 0,
-    status: issues.length === 0 ? (internalStub ? "internal_test_artifact_only" : "certified") : "internal_pdf_publication_quality_failure",
-    failure_class: issues.length === 0 ? null : "internal_system_failure",
+    scope: PAGE_CERTIFICATION_SCOPE,
+    ok,
+    status: ok ? (internalStub ? "internal_test_artifact_only" : "certified") : "internal_pdf_publication_quality_failure",
+    failure_class: ok ? null : "internal_system_failure",
     customer_document_failure: false,
-    external_publication_allowed: issues.length === 0 && normalizedArtifactMode === "production_pdf",
+    external_publication_allowed: ok && normalizedArtifactMode === "production_pdf",
     artifact_mode: normalizedArtifactMode || null,
     publication_target: normalizedTarget || null,
+    constitution: {
+      source: INSTITUTIONAL_PDF_CONSTITUTION.source,
+      version: INSTITUTIONAL_PDF_CONSTITUTION.constitutionVersion,
+      valid: isCanonicalInstitutionalPdfConstitution(institutionalPdfConstitution),
+      page_count_hardcoded: false,
+      test_watermark_excluded_from_scoring: INSTITUTIONAL_PDF_CONSTITUTION.publication.testWatermarkExcludedFromInstitutionalScoring,
+    },
     analysis: {
       valid_pdf: analysis?.validPdf === true,
       byte_length: Number(analysis?.byteLength) || null,
@@ -497,7 +1016,27 @@ export async function inspectFinalPdfPublicationQuality({
       contract_qa_sealed: manifest.deterministicContractQaSealOk,
       financial_intelligence_receipt_present: manifest.financialIntelligence.present,
       financial_intelligence_required_section_count: manifest.financialIntelligence.requiredHeadings.length,
+      chapter_count: manifest.chapters.length,
+      table_count: manifest.tables.length,
+      chart_count: manifest.charts.length,
+      displayed_number_count: manifest.displayedNumbers.length,
     },
+    institutional_certification: {
+      required: !internalStub,
+      page_by_page: !internalStub,
+      dimensions: [...INSTITUTIONAL_PDF_CONSTITUTION.certification.certificationDimensions],
+      page_receipt_count: pageReceipts.length,
+      page_receipts: pageReceipts,
+      every_page_receipt_present: internalStub || pageReceipts.length === (Number(analysis?.pageCount) || 0),
+      every_table_certified: coverage.tableCoverage.every((table) => table.certified),
+      every_chart_certified: coverage.chartCoverage.every((chart) => chart.certified),
+      every_number_certified: coverage.numberCoverage.every((number) => number.certified),
+      table_coverage: coverage.tableCoverage,
+      chart_coverage: coverage.chartCoverage,
+      number_coverage: coverage.numberCoverage,
+      report_defects: reportDefects,
+    },
+    repair_plan: repairPlan,
     issues,
   };
 }
@@ -519,5 +1058,9 @@ export async function assertFinalPdfPublicationQuality(args = {}) {
 
 export const FINAL_PDF_PUBLICATION_QUALITY_CONTRACT = Object.freeze({
   version: FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION,
-  scope: "rendering_survival_only",
+  scope: PAGE_CERTIFICATION_SCOPE,
+  constitutionSource: INSTITUTIONAL_PDF_CONSTITUTION.source,
+  constitutionVersion: INSTITUTIONAL_PDF_CONSTITUTION.constitutionVersion,
+  pageByPageCertificationRequired: true,
+  pageCountHardcoded: false,
 });

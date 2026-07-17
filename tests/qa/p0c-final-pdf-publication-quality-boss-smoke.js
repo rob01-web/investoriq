@@ -60,8 +60,10 @@ function makeLine(text, y, { x = 40, fontSize = 9, width = null } = {}) {
 
 function makePage(pageNumber, bodyLines, { includePageNumber = pageNumber > 1, extraLines = [], extraItems = [] } = {}) {
   const lines = [
+    ...(pageNumber > 1 ? [makeLine("InvestorIQ", 770, { fontSize: 7 })] : []),
     ...bodyLines.map((text, index) => makeLine(text, 740 - index * 22, { fontSize: index === 0 ? 15 : 9 })),
     ...extraLines,
+    ...(pageNumber > 1 ? [makeLine("Confidential", 38, { x: 40, fontSize: 7 })] : []),
     ...(includePageNumber ? [makeLine(`Page ${pageNumber} of 3`, 24, { x: 500, fontSize: 7 })] : []),
   ];
   return {
@@ -139,6 +141,20 @@ assert.equal(valid.ok, true);
 assert.equal(valid.status, "certified");
 assert.equal(valid.customer_document_failure, false);
 assert.equal(valid.external_publication_allowed, false);
+assert.equal(valid.scope, "institutional_page_by_page_certification");
+assert.equal(valid.constitution.valid, true);
+assert.equal(valid.constitution.page_count_hardcoded, false);
+assert.equal(valid.institutional_certification.page_receipt_count, 3);
+assert.equal(valid.institutional_certification.every_page_receipt_present, true);
+assert.equal(valid.institutional_certification.every_table_certified, true);
+assert.equal(valid.institutional_certification.every_number_certified, true);
+for (const receipt of valid.institutional_certification.page_receipts) {
+  for (const field of ["pageNumber", "sectionIds", "headings", "tables", "charts", "displayedNumbers", "geometry", "defects", "status"]) {
+    assert.ok(Object.hasOwn(receipt, field), `${field} page receipt`);
+  }
+  assert.equal(receipt.status, "pass");
+  assert.equal(Object.keys(receipt.dimensions).length, 12);
+}
 
 async function assertIssue(code, mutate, overrides = {}) {
   const analysis = validAnalysis();
@@ -207,6 +223,12 @@ assert.equal(
 await assertIssue("PDF_PAGE_NUMBERS_MISSING", (analysis) => {
   analysis.pages[2].lines = analysis.pages[2].lines.filter((line) => !/^Page 3/.test(line.text));
 });
+await assertIssue("PDF_RUNNING_HEADER_MISSING", (analysis) => {
+  analysis.pages[2].lines = analysis.pages[2].lines.filter((line) => line.text !== "InvestorIQ");
+});
+await assertIssue("PDF_RUNNING_FOOTER_MISSING", (analysis) => {
+  analysis.pages[2].lines = analysis.pages[2].lines.filter((line) => line.text !== "Confidential");
+});
 await assertIssue("PDF_PROHIBITED_PUNCTUATION", (analysis) => {
   analysis.pages[2].lines.push(makeLine("Approved surface — prohibited punctuation", 200));
 });
@@ -216,6 +238,21 @@ await assertIssue("PDF_CONTENT_DISAGREES_WITH_APPROVED_SURFACE", null, {
 await assertIssue("TEST_MODE_PDF_EXTERNAL_PUBLICATION_BLOCKED", null, {
   publicationTarget: "external_customer",
 });
+await assertIssue("PDF_CONSTITUTION_TAMPERING_REJECTED", null, {
+  institutionalPdfConstitution: { source: "caller_override", pageCountHardcoded: true },
+});
+
+const watermarkedAnalysis = validAnalysis();
+for (const page of watermarkedAnalysis.pages) {
+  page.lines.push(makeLine("DocRaptor Test Document", 410, { x: -30, fontSize: 42, width: 720 }));
+}
+refreshText(watermarkedAnalysis);
+const watermarked = await inspect(watermarkedAnalysis);
+assert.equal(watermarked.ok, true);
+assert.equal(watermarked.issues.length, 0);
+assert.ok(watermarked.institutional_certification.page_receipts.every((receipt) =>
+  receipt.excludedArtifacts.includes("docraptor_test_watermark")
+));
 
 const internalStub = await inspectFinalPdfPublicationQuality({
   pdfBytes: Buffer.from("%PDF-test"),

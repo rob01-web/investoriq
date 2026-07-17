@@ -1349,3 +1349,34 @@ The bounded repair restores canonical Source Truth disclosure precedence and tru
 Permanent proof: `tests/qa/retest29-publish-or-collapse-regression-smoke.js`. Dedicated smoke `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` and production build `PASS`; diff integrity `PASS`. Status: `UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`.
 
 Gates 10 through 11 remain preserved. Gate 10 still requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 10A through 10F Admin and customer-remedy doctrine checkpoint
+
+```text
+Gate 10A through 10F: COMPLETE / PASS LOCALLY
+Base commit: 424f1cb
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Billing or credit doctrine change: NONE
+Screening change: NONE
+Delivery Gate change: NONE
+Core publication threshold change: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 10 changes report composition and Final PDF certification only. It creates no Admin row, customer lifecycle state, customer message, replacement-document request, credit action, billing action, refund action, or retry authorization.
+
+Presentation defects remain platform-owned. A collapsed optional surface must not become a failed customer report. A layout defect requires deterministic recomposition and rerender. Loss of required approved content remains an internal system failure. Neither condition is evidence that the customer's T12 or Rent Roll is damaged, and neither may create `customer_document_failure` or document-replacement blame.
+
+The Final PDF Boss now produces a receipt for every page and certifies every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice. External publication remains blocked unless certification passes and the artifact is production mode. The DocRaptor test watermark is excluded from institutional scoring only; this does not authorize test-mode external publication.
+
+The mandatory Gate 10 suite, `qa:financial-intelligence`, `qa:full`, production build, diff integrity, and the extra Acquisition Memo final-PDF handoff smoke all `PASS`. Status: `UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`.
+
+Gate 11 remains preserved exactly and is not authorized by this checkpoint:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

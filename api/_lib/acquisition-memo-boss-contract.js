@@ -890,11 +890,11 @@ function getCollapseTargetSectionTitleByViolationCode(code) {
     case "T12_EXPENSE_LINES_REQUIRED_WHEN_PRESENT":
       return "Operating Statement / TTM Summary";
     case "DOCUMENT_TREATMENT_CORE_SOURCES_REQUIRED":
-      return "Source Context / Support Document Treatment";
+      return "Source Register & Document Treatment";
     case "NO_FORBIDDEN_SURFACES":
       return "Debt / Financing Context";
     case "UNSUPPORTED_RENOVATION_MODELING_SURFACE":
-      return "Key Upside Drivers";
+      return "Underwriting Observations";
     case "UNSUPPORTED_APPRAISAL_MARKET_SURVEY_QUANT_RELIANCE":
       return "Primary Constraint / Review Disclosure";
     default:
@@ -1937,12 +1937,8 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
   }
 
   if (Number.isFinite(totalUnits) && totalUnits > 0 && sourceBackedCapRate) {
-    const perUnitDashPatterns = [
-      /<tr><td>5\.0%<\/td><td style="font-weight:600;">[\s\S]*?<\/td><td style="font-weight:600;">-<\/td><\/tr>/i,
-      /<tr><td>6\.0%<\/td><td style="font-weight:600;">[\s\S]*?<\/td><td style="font-weight:600;">-<\/td><\/tr>/i,
-      /<tr><td>7\.0%<\/td><td style="font-weight:600;">[\s\S]*?<\/td><td style="font-weight:600;">-<\/td><\/tr>/i,
-    ];
-    if (perUnitDashPatterns.some((pattern) => pattern.test(htmlString))) {
+    const acceptedCapRateRow = htmlString.match(/<tr[^>]*data-iq-cap-rate-row="accepted"[^>]*>[\s\S]*?<\/tr>/i)?.[0] || "";
+    if (acceptedCapRateRow && /<td[^>]*>\s*(?:-|Not available)\s*<\/td>\s*<\/tr>/i.test(acceptedCapRateRow)) {
       addRenderViolation(
         violations,
         "NO_PER_UNIT_DASH_WITH_UNITS",

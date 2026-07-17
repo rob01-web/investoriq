@@ -9096,3 +9096,40 @@ The projection now mirrors canonical Source Truth reconciliation whenever canoni
 Permanent proof is `tests/qa/retest29-publish-or-collapse-regression-smoke.js`: adversarial pre-repair failure reproduced; post-repair exact canonical precedence, omission, and deterministic downstream agreement `PASS`. `qa:financial-intelligence` `PASS`; `qa:full` and build `PASS`; diff integrity `PASS`. Status: `UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`.
 
 Gates 10 through 11 remain preserved. Gate 10 still requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 10A through 10F semantic authority and evidence closure
+
+Gate 10 is a presentation consumer, not a semantic authority creator. Its immutable constitution accepts only the approved customer surface and canonical receipts. It cannot accept a caller value, create a fact, select a source, infer a benchmark, authorize a scenario, change a disclosure, or reinterpret a calculation.
+
+Permanent semantic boundary:
+
+```text
+presentation eligibility is not source authority
+chart geometry is not a financial calculation
+chart receipt is not permission to replace its canonical value
+page certification is not factual acceptance
+table survival is not permission to alter a table cell
+unit count is property scale, not inferred asset class
+content density is not permission to invent narrative
+missing visual input means collapse, not estimation
+missing optional section is not zero and is not report failure
+page count is content outcome, not publication authority
+layout repair is not semantic repair
+test watermark is not institutional content
+institutional appearance is not investment recommendation
+```
+
+Four deterministic charts render only when exact accepted values and source paths are present. The accepted cap-rate row renders only from the exact approved cap rate. No 5 / 6 / 7 percent scenario series, benchmark, threshold, traffic-light classification, or stress case is created. Missing values collapse the affected visual.
+
+The approved-surface manifest inventories chapters, headings, tables, columns, chart receipts, chart source paths, exact values, displayed numbers, required anchors, Source Truth reconciliation disclosure, and Financial Intelligence section headings. The Final PDF Boss then proves those approved semantics survived rendering. It cannot bless a number that was not already present on the approved surface.
+
+Every PDF page receives a twelve-dimension certification receipt for geometry, content density, heading hierarchy, tables, charts, numbers, page breaks, spacing, alignment, running navigation, customer language, and approved-surface parity. Report-wide coverage requires every approved table, chart, number, and heading to survive. Constitution tampering or required-content loss fails closed as an internal system defect with `customer_document_failure: false`.
+
+Permanent proof: all seven `qa:institutional-pdf` smokes `PASS`; Acquisition Memo final-PDF handoff smoke `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` and build `PASS`; diff integrity `PASS`. Status: `GATE 10 COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`.
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

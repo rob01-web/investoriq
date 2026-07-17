@@ -202,8 +202,8 @@ assert.match(finalHtml, /INVESTORIQ/i);
 assert.match(finalHtml, /ACQUISITION MEMO/i);
 assert.match(finalHtml, /64-Unit Multifamily/i);
 assert.match(finalHtml, /Executive Summary/i);
-assert.match(finalHtml, /Acquisition Memo Summary/i);
-assert.match(finalHtml, /Operating Snapshot/i);
+assert.match(finalHtml, /Committee Overview/i);
+assert.match(finalHtml, /Underwriting Observations/i);
 assert.match(finalHtml, /Unit Mix and Rent Positioning/i);
 assert.match(finalHtml, /Rent Position \/ Whole-Property Value Context/i);
 assert.match(finalHtml, /Cap-Rate Value Indication/i);
@@ -211,7 +211,7 @@ assert.match(finalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(finalHtml, /Debt \/ Financing Context/i);
 assert.match(finalHtml, /Operating Statement \/ TTM Summary/i);
 assert.match(finalHtml, /Data Coverage &amp; Source Limitations/i);
-assert.match(finalHtml, /Source Context \/ Support Document Treatment/i);
+assert.match(finalHtml, /Source Register &amp; Document Treatment/i);
 assert.match(finalHtml, /Methodology &amp; Data Transparency/i);
 
 assert.match(finalHtml, /<td>Units<\/td><td style="font-weight:600;">64<\/td>/i);
@@ -229,9 +229,8 @@ assert.match(finalHtml, /<td>Break-Even Occupancy<\/td><td style="font-weight:60
 assert.equal(/Implied Value Sensitivity at Stabilization|\$5,712,000|\$4,760,000|\$4,080,000/i.test(finalHtml), false);
 assert.match(finalHtml, /<td>Purchase Price<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
 assert.match(finalHtml, /<td>Going-In Cap Rate<\/td><td style="font-weight:600;">7\.0%<\/td>/i);
-assert.match(finalHtml, /<tr><td>5\.0%<\/td><td style="font-weight:600;">\$18,900,000<\/td><td style="font-weight:600;">\$295,313<\/td><\/tr>/i);
-assert.match(finalHtml, /<tr><td>6\.0%<\/td><td style="font-weight:600;">\$15,750,000<\/td><td style="font-weight:600;">\$246,094<\/td><\/tr>/i);
-assert.match(finalHtml, /<tr><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,937<\/td><\/tr>/i);
+assert.match(finalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
+assert.doesNotMatch(finalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
 
 assert.match(finalHtml, /1BR/i);
 assert.match(finalHtml, /2BR/i);
@@ -280,7 +279,7 @@ const badHtml = `
 <html><body>
 <p>No parsed unit mix rows were available from the canonical rent roll evidence.</p>
 <table><tbody>
-<tr><td>5.0%</td><td style="font-weight:600;">$18,900,000</td><td style="font-weight:600;">-</td></tr>
+<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0.07"><td>7.0%</td><td style="font-weight:600;">$13,500,000</td><td style="font-weight:600;">-</td></tr>
 </tbody></table>
 <p>Current Debt Maturity Not available</p>
 <p>Proposed Acquisition Financing Context</p>

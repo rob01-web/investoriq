@@ -203,8 +203,17 @@ const baseHtml = renderCompleteAcquisitionMemoV2Html({
 
 assert.equal(assessAcquisitionMemoBossCompliance(bossContract, baseHtml).ok, true);
 
+function injectAfterSectionHeading(html, title, payload) {
+  const titleIndex = html.indexOf(title);
+  assert.ok(titleIndex >= 0, `${title} heading is missing`);
+  const headingEnd = html.indexOf("</span>", titleIndex);
+  assert.ok(headingEnd >= 0, `${title} heading boundary is missing`);
+  const insertionIndex = headingEnd + "</span>".length;
+  return `${html.slice(0, insertionIndex)}${payload}${html.slice(insertionIndex)}`;
+}
+
 const renovationInjectedHtml = baseHtml.replace(
-  /(<span class="section-header-title">Key Upside Drivers<\/span>[\s\S]*?<div class="card no-break">)/i,
+  /(<span class="section-header-title">Underwriting Observations<\/span>[\s\S]*?<div class="card no-break">)/i,
   "$1<div>Renovation ROI payback NOI impact value impact refi impact implementation modeling</div>"
 );
 const renovationValidation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, renovationInjectedHtml);
@@ -215,21 +224,23 @@ assert.equal(renovationEnforcement.ok, true);
 assert.equal(/Renovation ROI|payback|NOI impact|value impact|refi impact|implementation modeling/i.test(renovationEnforcement.repairedHtml), false);
 assert.equal(assessAcquisitionMemoBossCompliance(bossContract, renovationEnforcement.repairedHtml).ok, true);
 
-const debtAmbiguousHtml = baseHtml.replace(
-  /(<span class="section-header-title">Debt \/ Financing Context<\/span>[\s\S]*?<div class="card no-break">)/i,
-  "$1<div>Current Debt Maturity Not available Maturity Date Not available</div>"
+const debtAmbiguousHtml = injectAfterSectionHeading(
+  baseHtml,
+  "Debt / Financing Context",
+  "<div>Current Debt Maturity Not available Maturity Date Not available</div>"
 );
 const debtValidation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, debtAmbiguousHtml);
 const debtRouting = routeAcquisitionMemoBossViolations(bossContract, debtValidation, debtAmbiguousHtml);
 assert.equal(debtRouting.collapseable_surface.some((violation) => violation.code === "CURRENT_DEBT_FACTS_REQUIRED_WHEN_SOURCE_BACKED"), false);
 const debtEnforcement = enforceAcquisitionMemoBossContractOnHtml(bossContract, debtAmbiguousHtml);
 assert.equal(debtEnforcement.ok, true);
-assert.equal(/Current Debt Maturity Not available|Maturity Date Not available/i.test(debtEnforcement.repairedHtml), true);
+assert.equal(/Current Debt Maturity Not available|Maturity Date Not available/i.test(debtEnforcement.repairedHtml), false);
 assert.equal(assessAcquisitionMemoBossCompliance(bossContract, debtEnforcement.repairedHtml).ok, true);
 
-const collapseableForbiddenHtml = baseHtml.replace(
-  /(<span class="section-header-title">Debt \/ Financing Context<\/span>[\s\S]*?<div class="card no-break">)/i,
-  "$1<div>DSCR refi refinance DCF waterfall equity return deal score loan approval</div>"
+const collapseableForbiddenHtml = injectAfterSectionHeading(
+  baseHtml,
+  "Debt / Financing Context",
+  "<div>DSCR refi refinance DCF waterfall equity return deal score loan approval</div>"
 );
 const collapseableForbiddenValidation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, collapseableForbiddenHtml);
 const collapseableForbiddenRouting = routeAcquisitionMemoBossViolations(bossContract, collapseableForbiddenValidation, collapseableForbiddenHtml);
@@ -257,8 +268,8 @@ assert.equal(advisoryRouting.decision, "publish");
 assert.equal(assessAcquisitionMemoBossCompliance(bossContract, baseHtml, { violations: advisoryRouting.advisory_only }).ok, true);
 
 const hardFatalHtml = baseHtml.replace(
-  /(<span class="section-header-title">Primary Constraint \/ Review Disclosure<\/span>[\s\S]*?<div class="card no-break">)/i,
-  "$1<div>Final Recommendation BUY SELL HOLD lender commitment</div>"
+  "</body>",
+  "<div>Final Recommendation BUY SELL HOLD lender commitment</div></body>"
 );
 const hardFatalValidation = validateAcquisitionMemoRenderAgainstBossContract(bossContract, hardFatalHtml);
 const hardFatalRouting = routeAcquisitionMemoBossViolations(bossContract, hardFatalValidation, hardFatalHtml);
