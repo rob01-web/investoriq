@@ -980,3 +980,38 @@ The dashboard may not display a return metric, return range, investment classifi
 Gate 5E verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 12 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
 
 Gate 5E is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5F exact optional return-input source authority. Gate 5F remains upstream and may not create customer remedies, publication authority, or calculated returns.
+
+## July 17 Gate 5F checkpoint
+
+```text
+Gate 5E: COMMITTED AT 61cc453
+Gate 5F: PASS locally / exact quarantined optional return-input authority
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Return calculation: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 5F creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, return value, or Screening behavior. The new exact `closing_costs_percent` fact is quarantined under Source Truth return-only authority and is absent from customer-compatible accepted facts.
+
+Missing, non-quantified, ambiguous, conflicting, or non-authoritative optional return inputs remain analysis limitations. They do not become a catastrophic core failure, customer replacement-document workflow, publication hold, refund or credit remedy, or delivery incident. An explicit percentage does not become dollar closing costs, total acquisition uses, initial equity, or a return metric.
+
+Permitted future administrative states remain factual and unavailable to the current dashboard until a later atomic downstream gate explicitly maps them:
+
+```text
+exact optional closing-cost percentage available
+optional closing-cost percentage unavailable
+optional closing-cost percentage conflicted
+closing-cost dollar authority not established
+acquisition uses incomplete
+return readiness not established
+```
+
+Gate 5F verification: dedicated smoke `PASS`; Source Truth cutover `PASS`; authority matrix `38 / 38`; Financial Intelligence `12 / 12`; full QA and production build `PASS`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 5F is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 6 Investment Committee Memo. Gates 6 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

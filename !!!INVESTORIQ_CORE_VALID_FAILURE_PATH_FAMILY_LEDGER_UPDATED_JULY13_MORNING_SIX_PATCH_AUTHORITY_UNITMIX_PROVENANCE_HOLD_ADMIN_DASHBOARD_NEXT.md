@@ -19554,3 +19554,35 @@ Every optional readiness failure is non-blocking. Valid core publication remains
 Verification: dedicated Gate 5E smoke `PASS`; Financial Intelligence `PASS` with 12 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
 
 Status: Gate 5E `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5F exact optional return-input source authority. Gate 5F may accept only exact source-evidenced acquisition costs, funding treatments, timing, cash flows, exit value, exit costs, and debt payoff facts. It cannot infer missing values or calculate returns.
+
+## July 17 Gate 5F CVF closure
+
+Gate 5F adds one quarantined, exact optional-return failure family for `closing_costs_percent` without creating customer output or a return calculation.
+
+Closed Gate 5F failure families:
+
+```text
+unlabeled or non-quantified closing-cost language becomes a number -> prohibited
+two different closing-cost percentages in one source select a winner -> prohibited
+two accepted sources with different percentages reject the entire purchase role -> prohibited
+missing closing-cost percentage becomes zero -> prohibited
+accepted exact zero becomes missing -> prohibited
+AI, parser, filename, artifact type, caller override, or prior report independently creates authority -> prohibited
+evidence value and accepted value disagree but survive -> prohibited
+Source Truth and adjudication values disagree but survive -> prohibited
+non-authoritative or role-conflicted source creates return authority -> prohibited
+return-only closing-cost percentage leaks into customer-compatible accepted facts -> prohibited
+closing-cost percentage becomes closing-cost dollars -> prohibited
+closing-cost percentage creates a funding treatment -> prohibited
+one optional percentage makes acquisition uses or returns eligible -> prohibited
+optional return-input failure blocks validated core publication -> prohibited
+Gate 5F changes Screening, rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+```
+
+The Support Document Authority Adjudicator binds the field only to exact labeled source text. Source Truth stores it under `accepted_return_input_facts`, separate from customer-compatible `accepted_facts`. Cross-source disagreement is a narrow fact conflict: ordinary accepted purchase and financing facts remain available while only the optional return field collapses.
+
+Gate 5A requires exact primary-role authority, exact Source Truth and adjudication value agreement, matching evidence on both receipts, and `returnInputSourceBacked: true`. Gate 5F then exposes only the percentage reference with provenance. Dollar closing costs remain null, every readiness bundle remains incomplete, and every return output remains uncalculated.
+
+Verification: dedicated Gate 5F smoke `PASS`; Source Truth cutover smoke `PASS`; support-authority matrix `PASS` with 38 scenarios; Financial Intelligence `PASS` with 12 smokes; full QA and production build `PASS`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 5F `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 6 Investment Committee Memo. Gates 6 through 11 remain unchanged. Gate 10 retains mandatory page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

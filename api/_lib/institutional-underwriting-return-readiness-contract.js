@@ -146,6 +146,15 @@ function assembleContract({ sourceCaseAnalysis, valuationAnalysis, capitalStruct
     units: 'currency',
     semanticRestrictionCodes: ['PURCHASE_PRICE_IS_NOT_TOTAL_ACQUISITION_USES'],
   });
+  const closingCostsPercent = factReference({
+    referenceKey: 'closing_costs_percent',
+    fact: inputContract.acceptedInputs.valuation.purchaseAssumptions.facts.closing_costs_percent,
+    units: 'rate',
+    semanticRestrictionCodes: [
+      'CLOSING_COSTS_PERCENT_IS_NOT_CLOSING_COST_DOLLARS',
+      'CLOSING_COSTS_FUNDING_TREATMENT_NOT_ESTABLISHED',
+    ],
+  });
   const appraisedValue = factReference({
     referenceKey: 'appraised_value',
     fact: inputContract.acceptedInputs.valuation.appraisal.facts.appraised_value,
@@ -197,6 +206,7 @@ function assembleContract({ sourceCaseAnalysis, valuationAnalysis, capitalStruct
   const acceptedReferences = {
     sourceCaseNetOperatingIncome: sourceCaseNoi,
     purchasePrice,
+    closingCostsPercent,
     proposedLoanAmount,
     purchasePriceLessProposedLoan: unfinancedPurchasePrice,
     proposedLenderFeeDollars: lenderFeeDollars,

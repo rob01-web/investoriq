@@ -17,6 +17,7 @@ const completeAcquisition = [
   "Loan Term 5 years",
   "Maturity Date 2031-07-15",
   "Lender Fee 0.85%",
+  "Closing Costs 2.00%",
 ].join("\n");
 
 const completeCurrentDebt = [
@@ -195,7 +196,13 @@ const acquisitionDecision = scenarios.find((scenario) => scenario.name === "affi
 assert.equal(acquisitionDecision?.acceptedFacts?.rate_structure, "fixed");
 assert.equal(acquisitionDecision?.acceptedFacts?.loan_term_years, 5);
 assert.equal(acquisitionDecision?.acceptedFacts?.maturity_date, "2031-07-15");
+assert.equal(acquisitionDecision?.acceptedReturnInputFacts?.closing_costs_percent, 0.02);
+assert.equal(acquisitionDecision?.returnInputSourceBacked, true);
 assert.equal(acquisitionDecision?.acceptedFactEvidence?.rate_structure?.normalizedValue, "fixed");
+assert.equal(
+  acquisitionDecision?.acceptedReturnInputFactEvidence?.closing_costs_percent?.normalizedValue,
+  0.02
+);
 assert.match(acquisitionDecision?.acceptedFactEvidence?.rate_structure?.excerpt || "", /fixed/i);
 
 const floatingDecision = decision(
@@ -311,4 +318,28 @@ assert.equal(
 );
 assert.equal(rateConflictDebtContract.proposedFinancing.facts.rate_structure.value, null);
 
-console.log(`support-document authority adversarial matrix PASS (${scenarios.length + 11} scenarios)`);
+const closingCostsConflictPackage = packageForTexts([
+  { id: "closing-costs-conflict-a", filename: "Costs 2 Percent.pdf", text: completeAcquisition },
+  {
+    id: "closing-costs-conflict-b",
+    filename: "Costs 3 Percent.pdf",
+    text: completeAcquisition.replace("Closing Costs 2.00%", "Closing Costs 3.00%"),
+  },
+]);
+const acceptedClosingCostsConflictEntries = closingCostsConflictPackage.support.accepted
+  .filter((entry) => entry.canonical_role === "purchase_assumptions");
+assert.equal(acceptedClosingCostsConflictEntries.length, 2);
+assert.equal(acceptedClosingCostsConflictEntries.filter((entry) => entry.primary_for_role).length, 1);
+assert.equal(
+  acceptedClosingCostsConflictEntries.every((entry) => entry.accepted_return_input_facts.closing_costs_percent === undefined),
+  true
+);
+assert.equal(acceptedClosingCostsConflictEntries.every((entry) => entry.accepted_facts.purchase_price === 13500000), true);
+assert.deepEqual(
+  closingCostsConflictPackage.support.fact_conflicts.map((entry) => entry.fact_name),
+  ["closing_costs_percent"]
+);
+assert.equal(closingCostsConflictPackage.support.conflicts.length, 0);
+assert.equal(closingCostsConflictPackage.true_blockers.some((entry) => /support/i.test(entry)), false);
+
+console.log(`support-document authority adversarial matrix PASS (${scenarios.length + 12} scenarios)`);

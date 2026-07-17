@@ -8688,3 +8688,38 @@ All total-use, equity-basis, annual equity-cash-flow, exit-proceeds, cash-on-cas
 Permanent proof is `tests/qa/institutional-underwriting-return-readiness-contract-smoke.js`, registered in `qa:financial-intelligence`. Gate 5E verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `12 / 12`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
 
 Gate 5E is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5F may expand deterministic semantic evidence and canonical adjudication for explicit optional return inputs. Filename, artifact type, parser route, AI output, prior report, appraisal, current debt, or a lone extracted number cannot independently create those facts.
+
+## July 17 Gate 5F return-only semantic authority receipt
+
+Gate 5F establishes one new exact semantic fact family:
+
+```text
+canonical role: purchase_assumptions
+field: closing_costs_percent
+required evidence: explicit closing-cost label plus exact percentage on the same source line
+accepted zero: yes, when explicitly stated
+missing or non-quantified language: null
+multiple distinct exact values: ambiguous and null
+non-authoritative source: not source-backed
+customer-compatible accepted fact: no
+return-only accepted fact: yes
+```
+
+The authority decision stores `acceptedReturnInputFacts`, `acceptedReturnInputFactEvidence`, `returnInputFactAmbiguities`, and `returnInputSourceBacked` separately from ordinary accepted facts. Source Truth preserves the same separation as `accepted_return_input_facts` and `accepted_return_input_fact_evidence`. The customer-compatible canonical support package continues to receive only `accepted_facts` and `accepted_fact_evidence`.
+
+Gate 5A accepts the return-only fact only when the accepted primary role is conflict-free, Source Truth and the adjudication decision contain the same normalized value, both evidence receipts match that value, and the adjudicator explicitly marks the return input source-backed. A narrow fact conflict, role conflict, duplicate primary, evidence mismatch, or decision mismatch collapses the value to null.
+
+Gate 5F preserves semantic meaning:
+
+```text
+closing-cost percentage is a source reference
+closing-cost percentage is not closing-cost dollars
+closing-cost percentage does not identify who funds the cost
+closing-cost percentage does not complete acquisition uses
+closing-cost percentage does not complete initial equity
+closing-cost percentage does not authorize any return calculation
+```
+
+Permanent proof remains `tests/qa/institutional-underwriting-return-readiness-contract-smoke.js`, with end-to-end quarantine proof in `tests/qa/support-document-authority-cutover-smoke.js` and narrow-conflict proof in the 38-scenario support-authority matrix.
+
+Gate 5F is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 6 Investment Committee Memo. The complete Gates 6 through 11 ELITE roadmap is unchanged. Gate 10 includes page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

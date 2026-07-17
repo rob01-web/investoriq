@@ -4,6 +4,13 @@ import { buildAcquisitionMemoProjection } from "../../api/_lib/acquisition-memo-
 import { buildAcquisitionMemoBossContract } from "../../api/_lib/acquisition-memo-boss-contract.js";
 import { buildAcquisitionMemoV2CustomerSurfaceModel } from "../../api/_lib/acquisition-memo-v2-customer-surface-model.js";
 import { renderCompleteAcquisitionMemoV2Html } from "../../api/_lib/acquisition-memo-v2-document.js";
+import { buildCanonicalInstitutionalFinancialIntelligence } from "../../api/_lib/institutional-financial-intelligence.js";
+import { buildCanonicalInstitutionalUnderwritingScenarioPolicyContract } from "../../api/_lib/institutional-underwriting-scenario-policy-contract.js";
+import { buildCanonicalInstitutionalUnderwritingInputContract } from "../../api/_lib/institutional-underwriting-input-contract.js";
+import { buildDeterministicSourceCaseUnderwritingAnalysis } from "../../api/_lib/deterministic-source-case-underwriting-analysis.js";
+import { buildDeterministicAcquisitionValuationAnalysis } from "../../api/_lib/deterministic-acquisition-valuation-analysis.js";
+import { buildDeterministicAcquisitionCapitalStructureAnalysis } from "../../api/_lib/deterministic-acquisition-capital-structure-analysis.js";
+import { buildCanonicalInstitutionalUnderwritingReturnReadinessContract } from "../../api/_lib/institutional-underwriting-return-readiness-contract.js";
 
 const fileId = "assumptions-file";
 const sourceText = [
@@ -16,6 +23,7 @@ const sourceText = [
   "Interest Rate 5.95%",
   "Amortization 30 years",
   "Lender Fee 0.85%",
+  "Closing Costs 2.00%",
   "This is not a current mortgage statement.",
 ].join("\n");
 
@@ -80,19 +88,43 @@ const artifacts = [
   },
 ];
 
-const sourceTruth = buildCanonicalSourceTruthPackage({ artifacts });
+const sourceTruth = buildCanonicalSourceTruthPackage({ jobId: "gate-5f-cutover", artifacts });
 assert.equal(sourceTruth.support.accepted.length, 1);
 assert.equal(sourceTruth.support.accepted[0].canonical_role, "purchase_assumptions");
 assert.equal(sourceTruth.support.accepted[0].accepted_facts.purchase_price, 13500000);
 assert.equal(sourceTruth.support.accepted[0].accepted_facts.proposed_loan_amount, 9450000);
+assert.equal(sourceTruth.support.accepted[0].accepted_facts.closing_costs_percent, undefined);
+assert.equal(sourceTruth.support.accepted[0].accepted_return_input_facts.closing_costs_percent, 0.02);
 assert.equal(sourceTruth.support.accepted[0].authority_decision.roleAccepted, true);
+assert.equal(sourceTruth.support.accepted[0].authority_decision.returnInputSourceBacked, true);
 assert.equal(sourceTruth.support.accepted[0].authority_decision.sectionEligibility.proposedFinancing, true);
+
+const financialIntelligence = buildCanonicalInstitutionalFinancialIntelligence({
+  sourceTruthPackage: sourceTruth,
+  asOfDate: "2026-07-17",
+});
+const underwritingInputContract = buildCanonicalInstitutionalUnderwritingInputContract({
+  sourceTruthPackage: sourceTruth,
+  financialIntelligence,
+  scenarioPolicyContract: buildCanonicalInstitutionalUnderwritingScenarioPolicyContract(),
+});
+const gate5Analyses = {
+  sourceCaseAnalysis: buildDeterministicSourceCaseUnderwritingAnalysis({ underwritingInputContract }),
+  valuationAnalysis: buildDeterministicAcquisitionValuationAnalysis({ underwritingInputContract }),
+  capitalStructureAnalysis: buildDeterministicAcquisitionCapitalStructureAnalysis({ underwritingInputContract }),
+};
+const returnReadiness = buildCanonicalInstitutionalUnderwritingReturnReadinessContract(gate5Analyses);
+assert.equal(returnReadiness.acceptedReferences.closingCostsPercent.value, 0.02);
+assert.equal(returnReadiness.requiredAuthority.closingCosts.value, null);
+assert.equal(returnReadiness.readiness.acquisitionUses.calculationEligible, false);
+assert.equal(returnReadiness.returnOutputs.totalAcquisitionUses.value, null);
 
 const canonical = constrainCanonicalSourcePackageToSourceTruth(null, sourceTruth);
 const acceptedDoc = canonical.supportDocs.get(fileId);
 assert.equal(acceptedDoc.canonicalRole, "purchase_assumptions");
 assert.equal(acceptedDoc.acceptedPurchaseAssumptionsTruth, true);
 assert.equal(acceptedDoc.extractedFacts.lender_fee_percent, 0.0085);
+assert.equal(acceptedDoc.extractedFacts.closing_costs_percent, undefined);
 
 const projection = buildAcquisitionMemoProjection(canonical);
 const coreMetrics = {
@@ -144,6 +176,7 @@ assert.match(html, /LTV<\/td><td style="font-weight:600;">70\.0%/i);
 assert.match(html, /Interest Rate<\/td><td style="font-weight:600;">5\.95%/i);
 assert.match(html, /Amortization<\/td><td style="font-weight:600;">30 years/i);
 assert.match(html, /Lender \/ Origination Fee<\/td><td style="font-weight:600;">0\.85%/i);
+assert.equal(/Closing Costs<\/td><td[^>]*>2\.00%/i.test(html), false);
 assert.equal(/<tr><td>Purchase Price<\/td><td style="font-weight:600;">\$0<\/td>/i.test(html), false);
 
 console.log("support-document authority cutover smoke PASS");

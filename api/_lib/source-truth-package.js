@@ -11,6 +11,7 @@ import {
 
 const SOURCE_TRUTH_MARKER = "canonical_source_truth_package";
 const SOURCE_TRUTH_SCHEMA_VERSION = 1;
+const RETURN_INPUT_FACT_NAMES = new Set(["closing_costs_percent"]);
 
 function toArray(value) {
   return Array.isArray(value) ? value : [];
@@ -256,6 +257,7 @@ function buildSupportAuthority(artifacts, coreFileIds) {
 
   const conflictingFileIds = new Set();
   const narrowFactConflictFields = new Set([
+    "closing_costs_percent",
     "rate_structure",
     "loan_term_years",
     "maturity_date",
@@ -283,9 +285,17 @@ function buildSupportAuthority(artifacts, coreFileIds) {
       for (let rightIndex = leftIndex + 1; rightIndex < roleDecisions.length; rightIndex += 1) {
         const left = roleDecisions[leftIndex];
         const right = roleDecisions[rightIndex];
-        for (const field of Object.keys(left.acceptedFacts || {})) {
-          if (!(field in (right.acceptedFacts || {}))) continue;
-          if (String(left.acceptedFacts[field]) !== String(right.acceptedFacts[field])) {
+        const leftFacts = {
+          ...(left.acceptedFacts || {}),
+          ...(left.acceptedReturnInputFacts || {}),
+        };
+        const rightFacts = {
+          ...(right.acceptedFacts || {}),
+          ...(right.acceptedReturnInputFacts || {}),
+        };
+        for (const field of Object.keys(leftFacts)) {
+          if (!(field in rightFacts)) continue;
+          if (String(leftFacts[field]) !== String(rightFacts[field])) {
             if (narrowFactConflictFields.has(field)) {
               const key = `${left.canonicalRole}:${field}`;
               const conflict = narrowFactConflictsByRole.get(key) || {
@@ -294,10 +304,17 @@ function buildSupportAuthority(artifacts, coreFileIds) {
                 decisions: new Map(),
               };
               for (const decision of [left, right]) {
+                const decisionFacts = {
+                  ...(decision.acceptedFacts || {}),
+                  ...(decision.acceptedReturnInputFacts || {}),
+                };
                 conflict.decisions.set(decision.fileId, {
                   file_id: decision.fileId,
-                  value: decision.acceptedFacts[field],
-                  evidence: decision.acceptedFactEvidence?.[field] || null,
+                  value: decisionFacts[field],
+                  evidence:
+                    decision.acceptedFactEvidence?.[field] ||
+                    decision.acceptedReturnInputFactEvidence?.[field] ||
+                    null,
                 });
               }
               narrowFactConflictsByRole.set(key, conflict);
@@ -329,7 +346,8 @@ function buildSupportAuthority(artifacts, coreFileIds) {
       .filter((decision) => !duplicateFileIds.has(decision.fileId) && !conflictingFileIds.has(decision.fileId))
       .sort((left, right) =>
         Object.values(right.sectionEligibility || {}).filter(Boolean).length - Object.values(left.sectionEligibility || {}).filter(Boolean).length ||
-        Object.keys(right.acceptedFacts || {}).length - Object.keys(left.acceptedFacts || {}).length ||
+        Object.keys(right.acceptedFacts || {}).length + Object.keys(right.acceptedReturnInputFacts || {}).length -
+          Object.keys(left.acceptedFacts || {}).length - Object.keys(left.acceptedReturnInputFacts || {}).length ||
         String(left.fileId).localeCompare(String(right.fileId))
       )[0] || null;
     if (primary) primaryFileByRole.set(role, primary.fileId);
@@ -342,10 +360,24 @@ function buildSupportAuthority(artifacts, coreFileIds) {
         .map((conflict) => conflict.factName);
       const disputedFieldSet = new Set(disputedFields);
       const acceptedFacts = Object.fromEntries(
-        Object.entries(decision.acceptedFacts || {}).filter(([field]) => !disputedFieldSet.has(field))
+        Object.entries(decision.acceptedFacts || {}).filter(([field]) => (
+          !RETURN_INPUT_FACT_NAMES.has(field) && !disputedFieldSet.has(field)
+        ))
       );
       const acceptedFactEvidence = Object.fromEntries(
-        Object.entries(decision.acceptedFactEvidence || {}).filter(([field]) => !disputedFieldSet.has(field))
+        Object.entries(decision.acceptedFactEvidence || {}).filter(([field]) => (
+          !RETURN_INPUT_FACT_NAMES.has(field) && !disputedFieldSet.has(field)
+        ))
+      );
+      const acceptedReturnInputFacts = Object.fromEntries(
+        Object.entries(decision.acceptedReturnInputFacts || {}).filter(([field]) => (
+          RETURN_INPUT_FACT_NAMES.has(field) && !disputedFieldSet.has(field)
+        ))
+      );
+      const acceptedReturnInputFactEvidence = Object.fromEntries(
+        Object.entries(decision.acceptedReturnInputFactEvidence || {}).filter(([field]) => (
+          RETURN_INPUT_FACT_NAMES.has(field) && !disputedFieldSet.has(field)
+        ))
       );
       const sectionEligibility = { ...(decision.sectionEligibility || {}) };
       if (decision.canonicalRole === "current_debt_context" && disputedFieldSet.has("maturity_date")) {
@@ -359,6 +391,8 @@ function buildSupportAuthority(artifacts, coreFileIds) {
         artifact_id: null,
         accepted_facts: acceptedFacts,
         accepted_fact_evidence: acceptedFactEvidence,
+        accepted_return_input_facts: acceptedReturnInputFacts,
+        accepted_return_input_fact_evidence: acceptedReturnInputFactEvidence,
         fact_conflicts: disputedFields,
         section_eligibility: sectionEligibility,
         primary_for_role: primaryFileByRole.get(decision.canonicalRole) === decision.fileId,

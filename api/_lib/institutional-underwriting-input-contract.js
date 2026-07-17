@@ -26,6 +26,7 @@ const SUPPORT_FACT_SPECS = Object.freeze({
     purchase_price: { kind: 'positive_number' },
     going_in_cap_rate: { kind: 'positive_rate' },
     noi_basis: { kind: 'number' },
+    closing_costs_percent: { kind: 'rate', returnInputOnly: true },
   },
   appraisal_context: {
     appraised_value: { kind: 'positive_number' },
@@ -226,26 +227,44 @@ function supportFactConflict(sourceTruthPackage, canonicalRole, factName) {
 function buildSupportFact(sourceTruthPackage, authorityState, canonicalRole, factName) {
   const entry = authorityState.primary;
   const spec = SUPPORT_FACT_SPECS[canonicalRole]?.[factName];
+  const acceptedFacts = spec?.returnInputOnly
+    ? entry?.accepted_return_input_facts
+    : entry?.accepted_facts;
+  const acceptedFactEvidence = spec?.returnInputOnly
+    ? entry?.accepted_return_input_fact_evidence
+    : entry?.accepted_fact_evidence;
+  const decisionFacts = spec?.returnInputOnly
+    ? entry?.authority_decision?.acceptedReturnInputFacts
+    : entry?.authority_decision?.acceptedFacts;
+  const decisionFactEvidence = spec?.returnInputOnly
+    ? entry?.authority_decision?.acceptedReturnInputFactEvidence
+    : entry?.authority_decision?.acceptedFactEvidence;
+  const decisionSourceBacked = spec?.returnInputOnly
+    ? entry?.authority_decision?.returnInputSourceBacked
+    : entry?.authority_decision?.sourceBacked;
+  const decisionFactAccepted = spec?.returnInputOnly
+    ? entry?.authority_decision?.returnInputSourceBacked === true
+    : entry?.authority_decision?.factAccepted === true;
   const conflicted = supportFactConflict(sourceTruthPackage, canonicalRole, factName);
-  const value = normalizedFactValue(entry?.accepted_facts?.[factName], spec);
-  const decisionValue = normalizedFactValue(entry?.authority_decision?.acceptedFacts?.[factName], spec);
-  const decisionFactMatches = hasOwn(entry?.authority_decision?.acceptedFacts, factName) &&
+  const value = normalizedFactValue(acceptedFacts?.[factName], spec);
+  const decisionValue = normalizedFactValue(decisionFacts?.[factName], spec);
+  const decisionFactMatches = hasOwn(decisionFacts, factName) &&
     value !== null &&
     decisionValue !== null &&
     valuesMatch(value, decisionValue);
   const factAccepted = Boolean(
     authorityState.primaryAccepted &&
     authorityState.conflictState === 'none' &&
-    entry?.authority_decision?.factAccepted === true &&
+    decisionFactAccepted &&
     decisionFactMatches &&
     !conflicted &&
-    hasOwn(entry?.accepted_facts, factName) &&
+    hasOwn(acceptedFacts, factName) &&
     value !== null
   );
-  const evidence = factAccepted ? entry?.accepted_fact_evidence?.[factName] || null : null;
-  const decisionEvidence = factAccepted ? entry?.authority_decision?.acceptedFactEvidence?.[factName] || null : null;
+  const evidence = factAccepted ? acceptedFactEvidence?.[factName] || null : null;
+  const decisionEvidence = factAccepted ? decisionFactEvidence?.[factName] || null : null;
   const sourceBacked = factAccepted &&
-    entry?.authority_decision?.sourceBacked === true &&
+    decisionSourceBacked === true &&
     evidenceMatchesAcceptedFact(evidence, value) &&
     evidenceMatchesAcceptedFact(decisionEvidence, value);
   return {
@@ -272,7 +291,9 @@ function buildSupportFact(sourceTruthPackage, authorityState, canonicalRole, fac
           fileId: text(entry.file_id) || null,
           artifactId: entry.artifact_id || null,
           canonicalRole,
-          factPath: `support.accepted_facts.${factName}`,
+          factPath: spec?.returnInputOnly
+            ? `support.accepted_return_input_facts.${factName}`
+            : `support.accepted_facts.${factName}`,
           evidenceExcerpt: text(evidence.excerpt),
           evidenceMethod: text(evidence.method),
           sourceValue: evidence.sourceValue ?? null,

@@ -1558,6 +1558,7 @@ Gate 9: Institutional Scoring
   operational, financial, debt, income-stability, value-add, and execution risk
 Gate 10: ELITE Presentation and PDF System
   institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
@@ -2543,6 +2544,76 @@ git diff --check: PASS before ledger update
 ```
 
 Gate 5F is bounded to exact optional return-input source authority. It may add reusable semantic evidence and canonical adjudication fields for explicit closing costs, other acquisition costs, funding sources, lender-fee treatment, hold timing, dated interim cash flows, exit value authority, exit costs, and payoff timing only when exact source evidence exists. Missing or ambiguous values must remain null. Gate 5F must not calculate a return, infer a scenario, weaken Source Truth, change customer output, or special-case a document.
+
+## July 17 Gate 5F exact optional return-input authority closure
+
+Gate 5F starts from committed Gate 5E at `61cc453` and adds one generic, quarantined optional-return authority fact: explicit closing-cost percentage. The fact is accepted only from exact labeled source text under an accepted purchase-assumptions role. Zero remains an explicit accepted value. Missing, non-quantified, conflicting, non-authoritative, role-conflicted, evidence-mismatched, or adjudication-mismatched values remain null.
+
+The authority chain is intentionally isolated:
+
+```text
+exact labeled source percentage
+-> Support Document Authority Adjudicator return-only fact and evidence
+-> Source Truth accepted_return_input_facts quarantine
+-> Gate 5A immutable source and provenance receipt
+-> Gate 5F closing-cost percentage reference
+-> no customer-compatible accepted_facts field
+-> no dollar closing-cost calculation
+-> no readiness promotion
+-> no return calculation
+```
+
+`accepted_return_input_facts` is separate from customer-compatible `accepted_facts`. `constrainCanonicalSourcePackageToSourceTruth(...)` continues to expose only `accepted_facts`, and the cutover smoke proves that the 2.00% return-only source fact is absent from the canonical customer support document and rendered HTML. Screening, CustomerSurfaceModel, Boss, Contract QA, Delivery Seal, Final PDF Publication Quality Boss, Admin projection, terminal taxonomy, and publication doctrine are unchanged.
+
+Gate 5F adds a seventh accepted reference, `closing_costs_percent`. Its semantic restrictions state that a rate is not closing-cost dollars and does not establish funding treatment. The existing `requiredAuthority.closingCosts` currency field remains null, all seventeen required authority fields remain unestablished, all seven readiness bundles remain ineligible, and all seven return outputs remain null and `not_calculated`.
+
+Adversarial proof covers exact labeled authority, accepted zero, missing value, non-quantified language, conflicting values in one source, narrow cross-source conflict, non-authoritative language, evidence mismatch, adjudication mismatch, role conflict, caller override rejection, source-to-Gate-5F integration, Source Truth quarantine, customer-render isolation, no false dollar conversion, no readiness promotion, and no return output.
+
+Exact Gate 5F verification:
+
+```text
+node tests/qa/institutional-underwriting-return-readiness-contract-smoke.js: PASS
+node tests/qa/support-document-authority-cutover-smoke.js: PASS
+node tests/qa/support-document-authority-adversarial-matrix-smoke.js: PASS, 38 scenarios
+npm.cmd run qa:financial-intelligence: PASS, 12 smokes
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+Vercel function budget: PASS, 12 / 12 through qa:full
+git diff --check: PASS through qa:full before ledger update
+```
+
+```text
+GATE 5F EXACT OPTIONAL RETURN-INPUT SOURCE AUTHORITY: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+RETURN CALCULATIONS CREATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION CHANGED: NO
+NEXT: Gate 6 Investment Committee Memo under the preserved ELITE sequence
+```
+
+## Preserved Gates 6 through 11 ELITE roadmap
+
+```text
+Gate 6: Investment Committee Memo
+  thesis, strengths, weaknesses, risks, diligence, recommendation, and confidence
+Gate 7: Scenario Engine
+  source-bound rent, occupancy, rate, tax, expense, cap-rate, and exit stresses
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+No Gate 6 through Gate 11 work may bypass Source Truth, the Support Document Authority Adjudicator, deterministic calculations, CustomerSurfaceModel, Boss, Contract QA, Delivery Seal, or the Final PDF Publication Quality Boss.
 
 ---
 # End of Active Master Context

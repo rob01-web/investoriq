@@ -297,6 +297,17 @@ const FACT_SPECS = Object.freeze({
   annual_tax: { labels: [/annual tax/i, /property tax/i, /tax amount/i, /total taxes/i] },
 });
 
+const RETURN_INPUT_FACT_SPECS = Object.freeze({
+  purchase_assumptions: {
+    closing_costs_percent: {
+      labels: [/closing\s+costs?(?:\s+percent)?/i, /acquisition\s+closing\s+costs?/i],
+      percent: true,
+      allowZero: true,
+      sameLine: true,
+    },
+  },
+});
+
 function labeledValueWindow(rawSourceText, labelIndex, labelLength, spec) {
   const afterLabel = rawSourceText.slice(labelIndex + labelLength, Math.min(rawSourceText.length, labelIndex + labelLength + 160));
   if (!spec?.sameLine) return afterLabel;
@@ -732,6 +743,57 @@ function acceptedFactsForRole(role, artifacts, rawSourceText) {
   return { acceptedFacts, factEvidence, factAmbiguities };
 }
 
+function exactReturnInputFactsForRole(role, rawSourceText) {
+  const acceptedReturnInputFacts = {};
+  const acceptedReturnInputFactEvidence = {};
+  const returnInputFactAmbiguities = {};
+  for (const [field, spec] of Object.entries(RETURN_INPUT_FACT_SPECS[role] || {})) {
+    const candidates = [];
+    for (const label of spec.labels) {
+      const flags = label.flags.includes("g") ? label.flags : `${label.flags}g`;
+      const matcher = new RegExp(label.source, flags);
+      for (const match of rawSourceText.matchAll(matcher)) {
+        const index = match.index || 0;
+        const valueWindow = labeledValueWindow(rawSourceText, index, match[0].length, spec);
+        const excerpt = text(rawSourceText.slice(
+          Math.max(0, index - 20),
+          Math.min(rawSourceText.length, index + match[0].length + valueWindow.length)
+        ));
+        for (const sourceValue of factNumericValues(valueWindow, spec)) {
+          if (spec.allowZero ? sourceValue < 0 : sourceValue <= 0) continue;
+          candidates.push({
+            sourceValue,
+            normalizedValue: spec.percent ? sourceValue / 100 : sourceValue,
+            excerpt,
+          });
+        }
+      }
+    }
+    const distinctValues = [...new Set(candidates.map((candidate) => candidate.normalizedValue))];
+    if (distinctValues.length > 1) {
+      returnInputFactAmbiguities[field] = {
+        reason: "conflicting_exact_source_values",
+        excerpts: [...new Set(candidates.map((candidate) => candidate.excerpt))],
+      };
+      continue;
+    }
+    if (distinctValues.length !== 1) continue;
+    const accepted = candidates.find((candidate) => candidate.normalizedValue === distinctValues[0]);
+    acceptedReturnInputFacts[field] = accepted.normalizedValue;
+    acceptedReturnInputFactEvidence[field] = {
+      excerpt: accepted.excerpt,
+      method: "deterministic_exact_return_input_label_value_binding",
+      sourceValue: accepted.sourceValue,
+      normalizedValue: accepted.normalizedValue,
+    };
+  }
+  return {
+    acceptedReturnInputFacts,
+    acceptedReturnInputFactEvidence,
+    returnInputFactAmbiguities,
+  };
+}
+
 function sectionEligibilityFor(role, acceptedFacts, roleAccepted) {
   const has = (field) => acceptedFacts[field] !== null && acceptedFacts[field] !== undefined && acceptedFacts[field] !== "";
   return {
@@ -790,11 +852,21 @@ export function buildSupportDocumentAuthorityDecision({ file = {}, artifacts = [
           ? "candidate_supported"
           : "unclassified";
   const { acceptedFacts, factEvidence, factAmbiguities } = acceptedFactsForRole(canonicalRole, artifacts, rawSourceText);
+  const {
+    acceptedReturnInputFacts,
+    acceptedReturnInputFactEvidence,
+    returnInputFactAmbiguities,
+  } = exactReturnInputFactsForRole(canonicalRole, rawSourceText);
   const contextualRole = ["market_survey_context", "environmental_context", "historical_debt_context", "historical_capital_context"].includes(canonicalRole);
   const financingDisclaimed = canonicalRole === "purchase_assumptions" && hasNonAuthoritativeFinancingDisclaimer(rawSourceText);
-  const roleAccepted = mode === "active" && Boolean(canonicalRole) && !ambiguous && !financingDisclaimed && (contextualRole || Object.keys(acceptedFacts).length > 0);
+  const roleAccepted = mode === "active" && Boolean(canonicalRole) && !ambiguous && !financingDisclaimed && (
+    contextualRole ||
+    Object.keys(acceptedFacts).length > 0 ||
+    Object.keys(acceptedReturnInputFacts).length > 0
+  );
   const sectionEligibility = sectionEligibilityFor(canonicalRole, acceptedFacts, roleAccepted);
   const sourceBacked = roleAccepted && Object.values(sectionEligibility).some(Boolean);
+  const returnInputSourceBacked = roleAccepted && Object.keys(acceptedReturnInputFacts).length > 0;
   const adjudicationState = mode !== "active"
     ? candidateState
     : ambiguous
@@ -818,6 +890,10 @@ export function buildSupportDocumentAuthorityDecision({ file = {}, artifacts = [
     acceptedFacts,
     acceptedFactEvidence: factEvidence,
     factAmbiguities,
+    acceptedReturnInputFacts,
+    acceptedReturnInputFactEvidence,
+    returnInputFactAmbiguities,
+    returnInputSourceBacked,
     sourceBacked,
     sectionDisplayReady: sourceBacked,
     sectionEligibility,
