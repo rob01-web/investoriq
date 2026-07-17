@@ -8723,3 +8723,38 @@ closing-cost percentage does not authorize any return calculation
 Permanent proof remains `tests/qa/institutional-underwriting-return-readiness-contract-smoke.js`, with end-to-end quarantine proof in `tests/qa/support-document-authority-cutover-smoke.js` and narrow-conflict proof in the 38-scenario support-authority matrix.
 
 Gate 5F is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 6 Investment Committee Memo. The complete Gates 6 through 11 ELITE roadmap is unchanged. Gate 10 includes page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6A memo authority receipt
+
+Gate 6A consumes the complete canonical Gate 5F return-readiness contract as one immutable upstream authority chain. It does not consume raw source packages, parser artifacts, filenames, prior reports, customer copy, legacy underwriting, or caller-authored narrative.
+
+Gate 6A creates an objective evidence inventory only:
+
+```text
+source-case calculation keys remain objective calculations
+valuation calculation keys remain objective arithmetic references
+capital-structure calculation keys remain objective arithmetic references
+return-readiness reference keys remain constrained references
+```
+
+The semantic boundary is permanent:
+
+```text
+objective evidence is not an investment thesis
+positive arithmetic is not a strength classification
+negative arithmetic is not a weakness or risk classification
+missing evidence is not automatically a diligence priority
+available evidence is not a recommendation
+evidence quantity is not confidence
+appraisal is not future value
+NOI is not equity cash flow
+purchase price less loan is not total equity
+```
+
+Seven component authority receipts separately cover thesis, strengths, weaknesses, risks, diligence, recommendation, and confidence. Each remains null and `not_authorized` until complete canonical fact-selection authority and the applicable approved methodology exist. Recommendation also requires all five preceding substantive components. Confidence requires an authorized recommendation and an approved confidence methodology.
+
+The validator reconstructs the exact contract from the full Gate 5F receipt. Marker-only, partial, copied, or tampered upstream objects fail. Caller-supplied content and policies are ignored. Tampering with an evidence key, memo component, recommendation, or confidence output invalidates the contract.
+
+Permanent proof is `tests/qa/institutional-investment-committee-memo-authority-contract-smoke.js`, registered in `qa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `13 / 13`; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 6A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 6B may create canonical memo fact-selection and component-methodology authority only. It may not generate narrative, classify evidence, prioritize diligence, recommend action, assign confidence, or connect customer output. Gates 7 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

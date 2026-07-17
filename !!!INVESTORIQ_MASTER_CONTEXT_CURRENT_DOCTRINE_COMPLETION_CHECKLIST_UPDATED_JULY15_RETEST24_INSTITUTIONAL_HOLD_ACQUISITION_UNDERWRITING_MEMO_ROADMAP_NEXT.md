@@ -2615,5 +2615,94 @@ Gate 11: Launch Operations and Certification
 
 No Gate 6 through Gate 11 work may bypass Source Truth, the Support Document Authority Adjudicator, deterministic calculations, CustomerSurfaceModel, Boss, Contract QA, Delivery Seal, or the Final PDF Publication Quality Boss.
 
+## July 17 Gate 6A Investment Committee Memo authority closure
+
+Gate 6A starts from Gate 5F committed at `393b196`, with exact `origin/main` parity confirmed before implementation. It creates one new internal-only production owner:
+
+```text
+api/_lib/institutional-investment-committee-memo-authority-contract.js
+```
+
+The contract accepts only a complete canonical Gate 5F return-readiness receipt. The validator reconstructs the entire expected Gate 6A object from the embedded Gate 5F receipt. A source marker, copied job identifier, partial receipt, caller override, or tampered upstream calculation cannot create memo authority.
+
+Gate 6A inventories objective evidence keys across four families:
+
+```text
+source-case underwriting
+acquisition valuation
+acquisition capital structure
+return-readiness references
+```
+
+This inventory creates no narrative or judgment. A source-bound calculation is not an investment thesis. An arithmetic difference is not a strength, weakness, or risk classification. A missing field is not a diligence priority. An available return reference is not a complete return, recommendation, or confidence label.
+
+Seven memo components are explicit and independently auditable:
+
+```text
+investment thesis
+investment strengths
+investment weaknesses
+principal risks
+required diligence
+investment recommendation
+recommendation confidence
+```
+
+All seven remain `not_authorized`, with null content, exact missing-authority fields, exact reason codes, no customer-surface authority, and no publication-blocking authority. The memo output remains `not_generated_authority_not_established`. No narrative, recommendation, confidence label, classification, BUY/SELL language, hype, report section, CustomerSurfaceModel field, Admin state, Screening behavior, Delivery Gate behavior, or publication decision is created.
+
+Permanent proof owner:
+
+```text
+tests/qa/institutional-investment-committee-memo-authority-contract-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+Adversarial proof covers complete Gate 5F reconstruction, immutable receipt validation, marker-only rejection, upstream tamper rejection, caller-supplied thesis/strength/weakness/risk/diligence/recommendation/confidence rejection, classification-policy override rejection, memo-component promotion rejection, fabricated recommendation rejection, fabricated confidence rejection, evidence-inventory tamper rejection, core-only optional-support collapse, no customer imports, no legacy imports, no em dash, and no literal BUY/SELL output.
+
+Exact Gate 6A verification:
+
+```text
+node tests/qa/institutional-investment-committee-memo-authority-contract-smoke.js: PASS
+npm.cmd run qa:financial-intelligence: PASS, 13 smokes
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+support-document authority adversarial matrix: PASS, 38 scenarios
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS through qa:full before ledger update
+```
+
+```text
+GATE 6A CANONICAL INVESTMENT COMMITTEE MEMO AUTHORITY: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+MEMO NARRATIVE CREATED: NO
+RECOMMENDATION CREATED: NO
+CONFIDENCE LABEL CREATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION CHANGED: NO
+NEXT: Gate 6B canonical memo fact-selection and component-methodology authority
+```
+
+## Preserved Gates 7 through 11 ELITE roadmap after Gate 6A
+
+```text
+Gate 7: Scenario Engine
+  source-bound rent, occupancy, rate, tax, expense, cap-rate, and exit stresses
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 6B may establish only explicit fact-selection and component-methodology authority. It may not generate prose, infer a thesis, classify a strength, weakness, or risk, prioritize diligence, recommend action, assign confidence, connect customer output, or bypass any protected authority owner.
+
 ---
 # End of Active Master Context

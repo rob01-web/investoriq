@@ -1015,3 +1015,42 @@ return readiness not established
 Gate 5F verification: dedicated smoke `PASS`; Source Truth cutover `PASS`; authority matrix `38 / 38`; Financial Intelligence `12 / 12`; full QA and production build `PASS`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 5F is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 6 Investment Committee Memo. Gates 6 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6A checkpoint
+
+```text
+Gate 5F: COMMITTED AT 393b196 / ORIGIN MAIN MATCH CONFIRMED
+Gate 6A: PASS locally / internal-only memo authority receipt
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Memo narrative: NONE
+Recommendation: NONE
+Confidence label: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 6A creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, investment thesis, classification, recommendation, confidence label, or Screening behavior.
+
+The objective evidence inventory is internal and non-authoritative for customer or administrative messaging. An unavailable memo component is an analysis limitation, not a catastrophic core failure, customer document failure, publication hold, replacement-document workflow, refund or credit remedy, or platform incident.
+
+Permitted future administrative states remain unavailable to the current dashboard until a later atomic downstream gate explicitly maps them:
+
+```text
+canonical memo fact selection unavailable
+investment thesis authority unavailable
+strength or weakness classification authority unavailable
+principal risk authority unavailable
+diligence prioritization authority unavailable
+investment recommendation authority unavailable
+recommendation confidence authority unavailable
+memo not generated because authority is not established
+```
+
+Gate 6A verification: dedicated smoke `PASS`; Financial Intelligence `13 / 13`; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 6A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 6B canonical memo fact-selection and component-methodology authority. Gates 7 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

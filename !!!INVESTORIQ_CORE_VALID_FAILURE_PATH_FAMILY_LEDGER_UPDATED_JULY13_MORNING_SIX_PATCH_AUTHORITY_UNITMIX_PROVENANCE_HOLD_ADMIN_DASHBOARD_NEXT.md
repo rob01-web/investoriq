@@ -19586,3 +19586,32 @@ Gate 5A requires exact primary-role authority, exact Source Truth and adjudicati
 Verification: dedicated Gate 5F smoke `PASS`; Source Truth cutover smoke `PASS`; support-authority matrix `PASS` with 38 scenarios; Financial Intelligence `PASS` with 12 smokes; full QA and production build `PASS`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 5F `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 6 Investment Committee Memo. Gates 6 through 11 remain unchanged. Gate 10 retains mandatory page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6A CVF closure
+
+Gate 5F is committed at `393b196`, with exact `origin/main` parity confirmed. Gate 6A adds one immutable Investment Committee Memo authority receipt and no downstream behavior.
+
+Closed Gate 6A failure families:
+
+```text
+marker-only or partial Gate 5F object creates memo authority -> prohibited
+tampered Gate 5 calculation or return-readiness receipt survives -> prohibited
+caller-supplied thesis becomes accepted content -> prohibited
+caller-supplied strength, weakness, or risk becomes a classification -> prohibited
+caller-supplied diligence item becomes a priority -> prohibited
+caller-supplied recommendation or confidence becomes output -> prohibited
+objective calculation key becomes narrative authority -> prohibited
+arithmetic difference becomes investment judgment -> prohibited
+available return reference becomes a complete return conclusion -> prohibited
+missing optional support blocks validated core publication -> prohibited
+memo authority failure changes Screening, rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting or customer renderer becomes a Gate 6A dependency -> prohibited
+```
+
+The sole Gate 6A production owner is `api/_lib/institutional-investment-committee-memo-authority-contract.js`. It requires the full canonical Gate 5F receipt, inventories four objective evidence families, and records seven memo components as null and `not_authorized`. Every component carries exact required authority, missing authority, reason code, customer-surface prohibition, and non-blocking state.
+
+No thesis, strength, weakness, principal risk, diligence priority, recommendation, confidence label, classification, narrative, customer output, or publication authority is created. Core-only evidence remains valid and optional memo incompleteness remains non-blocking.
+
+Verification: dedicated Gate 6A smoke `PASS`; Financial Intelligence `PASS` with 13 smokes; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 6A `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded slice is Gate 6B canonical memo fact-selection and component-methodology authority. Gates 7 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
