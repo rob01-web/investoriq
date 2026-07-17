@@ -1085,3 +1085,35 @@ The publish-or-collapse constitution remains unchanged. Accepted complete or con
 Gate 6B verification: dedicated smoke `PASS`; Financial Intelligence with 14 total smokes including Gate 6B; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 6B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 6C component evidence adjudication authority slice. Gates 7 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6C Admin doctrine checkpoint
+
+```text
+Gate 6B: COMMITTED AT 0112536 / ORIGIN MAIN MATCH CONFIRMED
+Gate 6C: PASS locally / internal-only component-evidence adjudication
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Thesis evidence lineage receipt: INTERNAL ONLY
+Memo methodology execution: NONE
+Memo narrative: NONE
+Strength / weakness / risk classification: NONE
+Diligence gap or priority: NONE
+Recommendation: NONE
+Confidence label: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 6C creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, investment thesis, classification, recommendation, confidence label, or Screening behavior.
+
+The thesis evidence receipt is an internal lineage catalog. It contains no copied values and is non-authoritative for customer or administrative messaging. An unavailable strength, weakness, risk, diligence, recommendation, or confidence component is an optional analysis limitation, not a catastrophic core failure, customer document failure, publication hold, replacement-document workflow, refund or credit remedy, or platform incident.
+
+The publish-or-collapse constitution remains unchanged. Accepted complete or constrained T12 and Rent Roll evidence publishes while unsupported dependent sections collapse, omit, qualify, or disclose. Optional Gate 6C limitations cannot block validated core publication. The deferred quantified catastrophic-core threshold remains inactive and unchanged.
+
+Gate 6C verification: dedicated smoke `PASS`; Financial Intelligence with 15 total smokes including Gates 6B and 6C; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 6C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. No Gate 6D scope is authorized; it requires a separately bounded authority review. Gates 7 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

@@ -8797,3 +8797,47 @@ The validator reconstructs the exact Gate 6B contract from the canonical Gate 6A
 Permanent proof is `tests/qa/institutional-investment-committee-memo-methodology-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 14 total smokes including Gate 6B; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 6B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: a separately bounded Gate 6C may establish component evidence adjudication authority only. It may not generate prose or connect customer output. Gates 7 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6C component-evidence adjudication receipt
+
+Gate 6C consumes one exact, complete canonical Gate 6B receipt. It does not consume raw source documents, parser artifacts, filenames, copied values, caller evidence, prior reports, customer copy, legacy underwriting, renderer state, or Delivery Gate state.
+
+The thesis evidence adjudication is neutral and reference-only:
+
+```text
+consume every selected Gate 6B evidence reference
+preserve its family, evidence key, and canonical source
+preserve the exact Gate 6B selection pointer
+preserve the original upstream evidence pointer
+copy no value
+assign only neutral investment-case evidence semantics
+perform no positive, negative, risk, or priority classification
+```
+
+The remaining component receipts stay unavailable:
+
+```text
+strengths -> missing separate deterministic strength-classification receipt
+weaknesses -> missing separate deterministic weakness-classification receipt
+risks -> missing separate deterministic risk-classification receipt
+diligence -> missing canonical due-diligence-gap receipt
+recommendation -> missing authorized substantive component receipts
+confidence -> missing authorized recommendation receipt
+```
+
+The semantic boundary is permanent:
+
+```text
+neutral thesis evidence is not thesis prose
+component evidence adjudication is not methodology execution
+evidence sign or magnitude is not classification authority
+missing optional evidence is not risk, diligence priority, or core failure
+complete neutral evidence lineage is not a recommendation
+evidence quantity is not confidence
+```
+
+The validator reconstructs the exact Gate 6C contract from the canonical Gate 6B receipt. Marker-only, partial, copied, or tampered upstream objects fail. Invented references, copied values, classifications, diligence priorities, narrative, recommendations, confidence, and publication blocking invalidate the contract. Caller overrides are ignored.
+
+Permanent proof is `tests/qa/institutional-investment-committee-memo-component-evidence-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 15 total smokes including Gates 6B and 6C; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 6C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. No Gate 6D scope is authorized. Any next slice requires a separate authority review and may not generate prose or connect customer output. Gates 7 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

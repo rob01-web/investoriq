@@ -2784,5 +2784,86 @@ Gate 11: Launch Operations and Certification
 
 Gate 6C may not begin without a separately bounded review. It may not generate prose, connect customer output, or change Screening, publication, Delivery Gate, Admin, or terminal-state doctrine.
 
+## July 17 Gate 6C canonical component-evidence adjudication closure
+
+Gate 6B is committed at `0112536` with exact `origin/main` parity confirmed before Gate 6C began.
+
+Gate 6C adds one internal-only authority owner:
+
+```text
+api/_lib/institutional-investment-committee-memo-component-evidence-contract.js
+```
+
+The owner accepts only the exact complete canonical Gate 6B receipt. It adjudicates Gate 6B's complete neutral evidence-reference pool into the thesis component because that assignment requires no positive, negative, risk, or priority classification. Each adjudicated reference preserves the Gate 6B selection pointer and original upstream evidence pointer. It copies no numeric value and creates no new fact.
+
+Gate 6C does not adjudicate strengths, weaknesses, risks, diligence, recommendation, or confidence. Those components remain empty and unavailable because their separate deterministic classification, due-diligence-gap, authorized-component, or recommendation receipts do not exist. Methodology approval remains distinct from methodology execution.
+
+Permanent Gate 6C prohibitions:
+
+```text
+marker-only or tampered Gate 6B receipt -> rejected
+invented thesis evidence reference -> rejected
+copied or caller-supplied number -> rejected
+arithmetic promoted to a strength, weakness, or risk -> rejected
+missing optional evidence promoted to risk or core failure -> rejected
+diligence gap or priority inferred -> rejected
+thesis prose or any other narrative generated -> rejected
+recommendation or confidence generated -> rejected
+optional component-evidence limitation blocks validated core publication -> rejected
+Screening, CustomerSurfaceModel, renderer, Delivery Gate, Admin, or terminal taxonomy changed -> rejected
+legacy underwriting reused -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes, with unsupported dependent sections collapsed, omitted, qualified, or disclosed. Optional Gate 6C evidence limitations cannot block the whole report. The deferred deterministic catastrophic-core usability threshold remains a separate constitutional TODO; no percentage is adopted or changed by Gate 6C.
+
+Verification completed after production and smoke changes:
+
+```text
+dedicated Gate 6C adversarial smoke: PASS
+Financial Intelligence: PASS, 15 total smokes including Gates 6B and 6C
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 6C CANONICAL COMPONENT-EVIDENCE ADJUDICATION AUTHORITY: PASS LOCALLY
+BASE GATE 6B COMMIT: 0112536
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+THESIS EVIDENCE POOL ADJUDICATED: YES, REFERENCE-ONLY
+VALUES COPIED OR CREATED: NO
+STRENGTH / WEAKNESS / RISK CLASSIFIED: NO
+DILIGENCE GAP OR PRIORITY CREATED: NO
+MEMO NARRATIVE CREATED: NO
+RECOMMENDATION CREATED: NO
+CONFIDENCE LABEL CREATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: separately bounded Gate 6D authority review; exact scope not authorized or begun
+```
+
+## Preserved Gates 7 through 11 ELITE roadmap after Gate 6C
+
+```text
+Gate 7: Scenario Engine
+  source-bound rent, occupancy, rate, tax, expense, cap-rate, and exit stresses
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+No Gate 6D scope is approved by Gate 6C. Any next slice must separately resolve which remaining component authorities belong before or after the Scenario, Due Diligence, and Institutional Scoring engines. It may not infer classification criteria, generate prose, connect customer output, or change protected publication doctrine.
+
 ---
 # End of Active Master Context

@@ -19645,3 +19645,34 @@ The core-valid failure doctrine remains publish-or-collapse. Missing or unusable
 Verification: dedicated Gate 6B smoke `PASS`; Financial Intelligence `PASS` with 14 total smokes including Gate 6B; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 6B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 6C component evidence adjudication authority slice. Gates 7 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6C CVF closure
+
+Gate 6B is committed at `0112536` with `origin/main` parity. Gate 6C adds one canonical internal component-evidence receipt and no report, customer, Admin, Screening, Delivery Gate, or publication behavior.
+
+Closed Gate 6C failure families:
+
+```text
+marker-only or partial Gate 6B object creates component evidence authority -> prohibited
+tampered Gate 6B selection survives -> prohibited
+caller-supplied evidence reference or number enters adjudication -> prohibited
+adjudicated thesis reference copies an upstream numeric value -> prohibited
+unavailable evidence becomes thesis evidence -> prohibited
+neutral evidence becomes strength, weakness, or risk classification -> prohibited
+missing optional evidence becomes risk or catastrophic core failure -> prohibited
+missing optional evidence becomes diligence gap or priority -> prohibited
+component evidence adjudication becomes methodology execution -> prohibited
+component evidence adjudication becomes thesis or narrative -> prohibited
+component evidence adjudication becomes recommendation or confidence -> prohibited
+optional Gate 6C limitation becomes a validated-core publication blocker -> prohibited
+Gate 6C changes Screening, customer rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes a Gate 6C dependency -> prohibited
+```
+
+The sole Gate 6C production owner is `api/_lib/institutional-investment-committee-memo-component-evidence-contract.js`. It requires the exact complete Gate 6B contract, preserves every neutral evidence reference and its exact lineage in the thesis evidence pool, and copies no values. All classified, diligence, recommendation, confidence, narrative, and customer outputs remain false, empty, or null.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing or unusable optional component evidence cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. The future deterministic catastrophic-core usability threshold remains a separate TODO and is unchanged.
+
+Verification: dedicated Gate 6C smoke `PASS`; Financial Intelligence `PASS` with 15 total smokes including Gates 6B and 6C; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 6C `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. No Gate 6D scope is authorized; it requires a separately bounded authority review. Gates 7 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
