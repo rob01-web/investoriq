@@ -3295,5 +3295,135 @@ Gate 11: Launch Operations and Certification
 
 Gate 8 is not authorized by Gate 7 completion. Its exact Due Diligence Engine authority, source-gap semantics, priority rules, memo dependency, and non-blocking publication behavior require a separately bounded doctrine review.
 
+## July 17 Gates 8A through 8D Due Diligence Engine completion
+
+Gate 7 is committed at `27ce77e` with exact `origin/main` parity confirmed before the bounded Gate 8 sequence began.
+
+Gate 8 was completed in four independently verified stages:
+
+```text
+Gate 8A: canonical diligence evidence inventory
+Gate 8B: neutral evidence-coverage and gap classification
+Gate 8C: deterministic diligence-priority eligibility
+Gate 8D: canonical Gate 8 completion receipt and non-executing Gate 6 handoff
+```
+
+### Gate 8A evidence inventory
+
+Gate 8A adds `api/_lib/institutional-due-diligence-evidence-inventory-contract.js`. It requires both the exact canonical Gate 7 completion receipt and a structurally complete canonical Source Truth package with matching job identity and core publication authority.
+
+It inventories seven roadmap categories:
+
+```text
+document gaps
+leases and estoppels
+insurance
+utilities
+environmental
+tax
+reserves
+```
+
+Only exact Source Truth accepted primary support roles establish diligence evidence. Environmental context, property-tax support, property-condition context, historical-capital context, and renovation-capex context remain role-bounded. Rent Roll may supply lease operating context only. T12 may supply insurance, utilities, and tax operating context only. Core context is never promoted to accepted diligence-document authority. Advisory, rejected, conflicting, duplicate, or candidate support material is never promoted.
+
+### Gate 8B neutral coverage classification
+
+Gate 8B adds `api/_lib/institutional-due-diligence-coverage-classification-contract.js`. It classifies each category only as accepted evidence available, core context only, source present but not authority-accepted, inventory-only, or not evidenced.
+
+No approved diligence-requirement policy exists. Therefore absence of optional evidence does not establish a required-document gap, adverse property condition, deficiency, risk, or action. In the adversarial accepted-evidence fixture, environmental and tax evidence are accepted, leases, insurance, utilities, and tax retain exact context boundaries, reserves are not evidenced, and established document gaps remain zero. A separate core-only proof carries zero accepted diligence-evidence categories and remains canonical and non-blocking.
+
+### Gate 8C priority eligibility
+
+Gate 8C adds `api/_lib/institutional-due-diligence-priority-eligibility-contract.js`. A diligence priority requires both an established canonical diligence issue and an approved priority policy. Neither exists. Accepted evidence is not a priority, and an evidence limitation is not a priority or action.
+
+```text
+eligible priorities: 0
+assigned priorities: 0
+assigned actions: 0
+assigned owners: 0
+assigned deadlines: 0
+risk classifications: 0
+memo components executed: 0
+```
+
+### Gate 8D completion receipt and Gate 6 handoff
+
+Gate 8D adds `api/_lib/institutional-due-diligence-completion-handoff-contract.js`. It establishes a canonical Gate 8 architecture-completion receipt in state `established_neutral_coverage_no_approved_requirement_or_priority_policy`.
+
+Architecture completion does not manufacture diligence findings. The internal Gate 6 handoff carries only neutral coverage state and accepted evidence-category identities. It carries no established document gap, adverse finding, priority, action, risk classification, or customer claim. The Gate 6 diligence component and final memo remain non-executable. The embedded Gate 6D sequence remains unmodified, and Gate 9 remains required.
+
+Permanent Gate 8 prohibitions:
+
+```text
+marker-only Source Truth or Gate 7 receipt -> rejected
+Gate 7 and Source Truth job or core-authority mismatch -> rejected
+counterfeit accepted support evidence -> rejected
+core operating context promoted to diligence-document authority -> rejected
+advisory, rejected, conflicting, duplicate, or candidate support promoted -> rejected
+optional evidence absence becomes a required-document gap -> rejected
+evidence coverage becomes an adverse property condition -> rejected
+accepted evidence or limitation becomes a priority or action -> rejected
+caller requirement policy, gap, finding, priority, action, receipt, or handoff -> ignored
+risk classification or memo execution created -> rejected
+embedded Gate 6 sequencing mutated -> rejected
+customer surface, Screening, Delivery Gate, Admin, or publication behavior changed -> rejected
+optional diligence limitation blocks validated core publication -> rejected
+legacy underwriting reused -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes. Unsupported diligence and memo sections collapse, omit, qualify, or disclose. Optional diligence evidence absence cannot create a whole-report customer-document failure. The deferred catastrophic-core usability threshold remains a separate constitutional TODO and is unchanged.
+
+Verification completed after all four stages:
+
+```text
+dedicated Gate 8A adversarial smoke: PASS
+dedicated Gate 8B adversarial smoke: PASS
+dedicated Gate 8C adversarial smoke: PASS
+dedicated Gate 8D adversarial smoke: PASS
+Financial Intelligence: PASS, 25 total smokes including Gates 7A through 8D
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 8 DUE DILIGENCE ENGINE ARCHITECTURE: COMPLETE / PASS LOCALLY
+BASE GATE 7 COMMIT: 27ce77e
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+DILIGENCE CATEGORIES INVENTORIED: 7 / 7
+APPROVED REQUIREMENT POLICY AVAILABLE: NO
+ESTABLISHED DOCUMENT GAPS: 0
+ESTABLISHED ADVERSE FINDINGS: 0
+APPROVED PRIORITY POLICY AVAILABLE: NO
+AUTHORIZED PRIORITIES: 0
+AUTHORIZED ACTIONS: 0
+RISK CLASSIFICATIONS CREATED: 0
+GATE 8 COMPLETION RECEIPT ESTABLISHED: YES, NEUTRAL COVERAGE ONLY
+MEMO COMPONENT EXECUTED: NO
+GATE 6 SEQUENCING MUTATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: Gate 9 Institutional Scoring under a separately bounded authority review
+```
+
+## Preserved Gates 9 through 11 ELITE roadmap after Gate 8 completion
+
+```text
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 9 is not authorized by Gate 8 completion. Its exact scoring inputs, dimensions, weights, thresholds, missing-dimension behavior, Gate 6 dependencies, and non-blocking publication behavior require a separately bounded doctrine review.
+
 ---
 # End of Active Master Context

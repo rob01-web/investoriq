@@ -1248,3 +1248,40 @@ The publish-or-collapse constitution remains unchanged. Accepted complete or con
 Verification: dedicated Gates 7C, 7D, and 7E smokes `PASS`; Financial Intelligence with 21 total smokes including Gates 7A through 7E; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 7 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 8 Due Diligence Engine authority review. Gates 8 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 8A through 8D Admin doctrine checkpoint and Gate 8 completion
+
+```text
+Gate 7: COMMITTED AT 27ce77e / ORIGIN MAIN MATCH CONFIRMED
+Gate 8A: PASS locally / canonical diligence evidence inventory
+Gate 8B: PASS locally / neutral evidence-coverage classification
+Gate 8C: PASS locally / deterministic priority eligibility
+Gate 8D: PASS locally / neutral completion receipt and internal Gate 6 handoff
+Gate 8 architecture: COMPLETE
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Diligence categories inventoried: 7 / 7
+Established document gaps: 0
+Established adverse findings: 0
+Eligible priorities: 0
+Authorized actions: 0
+Risk classifications: 0
+Memo components executed: 0
+Gate 6 sequencing mutation: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gates 8A through 8D create no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, diligence finding, risk classification, memo component, or Screening behavior.
+
+The Gate 8 completion receipt is internal-only and non-authoritative for customer or administrative messaging. `established_neutral_coverage_no_approved_requirement_or_priority_policy` means the Due Diligence Engine architecture completed safely while retaining exact evidence limitations. It is not an adverse result, customer document failure, publication hold, replacement-document workflow, refund or credit remedy, or platform incident.
+
+The publish-or-collapse constitution remains unchanged. Accepted complete or constrained T12 and Rent Roll evidence publishes while unsupported diligence and memo sections collapse, omit, qualify, or disclose. Optional diligence evidence absence cannot block validated core publication. The deferred quantified catastrophic-core threshold remains inactive and unchanged.
+
+Verification: dedicated Gates 8A through 8D smokes `PASS`; Financial Intelligence with 25 total smokes including Gates 7A through 8D; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 8 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 9 Institutional Scoring authority review. Gates 9 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

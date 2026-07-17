@@ -14,8 +14,9 @@ import { buildCanonicalInstitutionalScenarioEngineInputAuthorityContract } from 
 import { buildCanonicalInstitutionalScenarioEngineStressSetAuthorityContract } from '../../../api/_lib/institutional-scenario-engine-stress-set-authority-contract.js';
 import { buildCanonicalInstitutionalScenarioEngineFormulaEligibilityContract } from '../../../api/_lib/institutional-scenario-engine-formula-eligibility-contract.js';
 import { buildCanonicalInstitutionalScenarioEngineExecutionContract } from '../../../api/_lib/institutional-scenario-engine-execution-contract.js';
+import { buildCanonicalInstitutionalScenarioEngineCompletionHandoffContract } from '../../../api/_lib/institutional-scenario-engine-completion-handoff-contract.js';
 
-export function buildGate7SourceTruth(jobId = 'gate-7-chain-job') {
+export function buildGate7SourceTruth(jobId = 'gate-7-chain-job', extraArtifacts = []) {
   return buildCanonicalSourceTruthPackage({
     jobId,
     propertyName: 'Gate 7 Chain Property',
@@ -50,12 +51,17 @@ export function buildGate7SourceTruth(jobId = 'gate-7-chain-job') {
           units: [{ unit_number: '101', current_rent: 1865.625, market_rent: 2237.5 }],
         },
       },
+      ...extraArtifacts,
     ],
   });
 }
 
 export function buildCanonicalGate7B(jobId = 'gate-7-chain-job') {
   const sourceTruthPackage = buildGate7SourceTruth(jobId);
+  return buildCanonicalGate7BFromSourceTruth(sourceTruthPackage);
+}
+
+export function buildCanonicalGate7BFromSourceTruth(sourceTruthPackage) {
   const financialIntelligence = buildCanonicalInstitutionalFinancialIntelligence({
     sourceTruthPackage,
     asOfDate: '2026-07-17',
@@ -100,5 +106,18 @@ export function buildCanonicalGate7C(jobId = 'gate-7-chain-job') {
 export function buildCanonicalGate7D(jobId = 'gate-7-chain-job') {
   return buildCanonicalInstitutionalScenarioEngineExecutionContract({
     formulaEligibilityContract: buildCanonicalGate7C(jobId),
+  });
+}
+
+export function buildCanonicalGate7EFromSourceTruth(sourceTruthPackage) {
+  const stressSetAuthorityContract = buildCanonicalGate7BFromSourceTruth(sourceTruthPackage);
+  const formulaEligibilityContract = buildCanonicalInstitutionalScenarioEngineFormulaEligibilityContract({
+    stressSetAuthorityContract,
+  });
+  const executionContract = buildCanonicalInstitutionalScenarioEngineExecutionContract({
+    formulaEligibilityContract,
+  });
+  return buildCanonicalInstitutionalScenarioEngineCompletionHandoffContract({
+    executionContract,
   });
 }

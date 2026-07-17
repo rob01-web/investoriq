@@ -8998,3 +8998,46 @@ The exact validators reconstruct each contract from its canonical predecessor. C
 Permanent proof is carried by `tests/qa/institutional-scenario-engine-formula-eligibility-contract-smoke.js`, `tests/qa/institutional-scenario-engine-execution-contract-smoke.js`, and `tests/qa/institutional-scenario-engine-completion-handoff-contract-smoke.js`. Verification is `PASS`: all three dedicated adversarial smokes; Financial Intelligence with 21 total smokes including Gates 7A through 7E; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 7 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scenario analysis remains correctly collapsed with zero outputs until exact source-backed stress inputs or an exact approved scenario policy exists. Next is a separately bounded Gate 8 Due Diligence Engine authority review. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 8A through 8D diligence evidence, coverage, priority, and completion receipts
+
+Gate 8A consumes the exact canonical Gate 7 completion receipt plus a structurally complete canonical Source Truth package with exact job and core-authority parity. It inventories accepted evidence identity and role only. It does not reinterpret source roles or copy unsupported facts.
+
+Canonical role boundaries:
+
+```text
+environmental_context -> environmental evidence only
+property_tax_support -> property-tax evidence only
+property_condition_context -> property-condition and reserve context only
+historical_capital_context -> historical-capital and reserve context only
+renovation_capex_context -> renovation and reserve context only
+core_rent_roll -> lease operating context only, not lease or estoppel document authority
+core_t12 -> insurance, utility, and tax operating context only, not supporting-document authority
+```
+
+Gate 8B classifies coverage neutrally. Accepted evidence, core context, source-present-but-unaccepted material, inventory-only state, and not-evidenced state remain distinct. No approved requirement policy exists, so no optional-document absence is a canonical document gap. Evidence coverage does not establish property condition, compliance, deficiency, or adverse finding.
+
+Gate 8C requires both an established canonical diligence issue and approved priority policy before a priority or action may exist. Neither exists. All priorities, actions, owners, and deadlines remain null.
+
+Gate 8D establishes `established_neutral_coverage_no_approved_requirement_or_priority_policy`. This receipt certifies complete architecture and neutral evidence coverage, not complete diligence findings. Its Gate 6 handoff contains no document gaps, adverse findings, priorities, actions, risk classifications, or memo-execution authority.
+
+Permanent semantic boundary:
+
+```text
+source presence is not accepted evidence
+accepted role is not permission to cross-use evidence
+core operating context is not diligence-document authority
+not evidenced is not missing required
+missing optional evidence is not an adverse property condition
+accepted evidence is not a positive or negative finding
+evidence limitation is not a priority or action
+Gate 8 architecture completion is not diligence-component execution
+Gate 8 receipt is not Gate 9 risk classification
+optional diligence limitation is not core failure or publication authority
+```
+
+Exact validators reconstruct each contract from its canonical predecessor. Gate 8A additionally validates Source Truth structure, accepted-entry coherence, job identity, and core-authority parity. Caller requirements, gaps, findings, priorities, actions, receipts, and handoffs are ignored. Counterfeit evidence, promoted core context, inferred gaps, adverse findings, priorities, risk classifications, memo execution, Gate 6 sequencing mutation, customer authorization, and publication blocking invalidate the applicable contract.
+
+Permanent proof is carried by `tests/qa/institutional-due-diligence-evidence-inventory-contract-smoke.js`, `tests/qa/institutional-due-diligence-coverage-classification-contract-smoke.js`, `tests/qa/institutional-due-diligence-priority-eligibility-contract-smoke.js`, and `tests/qa/institutional-due-diligence-completion-handoff-contract-smoke.js`. Verification is `PASS`: all four dedicated adversarial smokes; Financial Intelligence with 25 total smokes including Gates 7A through 8D; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 8 architecture is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 9 Institutional Scoring authority review. Gates 9 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

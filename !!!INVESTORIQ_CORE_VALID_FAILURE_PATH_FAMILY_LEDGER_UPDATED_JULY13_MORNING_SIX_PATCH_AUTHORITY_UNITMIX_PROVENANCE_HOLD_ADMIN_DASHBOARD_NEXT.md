@@ -19798,3 +19798,33 @@ The core-valid failure doctrine remains publish-or-collapse. Missing optional sc
 Verification: dedicated Gates 7C, 7D, and 7E smokes `PASS`; Financial Intelligence `PASS` with 21 total smokes including Gates 7A through 7E; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 7 architecture `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Scenario analysis is canonically collapsed with zero outputs because exact stress authority is unavailable. Next is a separately bounded Gate 8 Due Diligence Engine authority review. Gates 8 through 11 remain preserved. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gates 8A through 8D CVF closure and Gate 8 completion
+
+Gate 7 is committed at `27ce77e` with `origin/main` parity. Gates 8A through 8D complete the internal Due Diligence Engine architecture without inventing document requirements, gaps, adverse findings, priorities, actions, risk classifications, customer claims, Admin behavior, Screening behavior, Delivery Gate behavior, or publication control.
+
+Closed failure families:
+
+```text
+marker-only, malformed, job-mismatched, or core-authority-mismatched Source Truth becomes Gate 8 authority -> prohibited
+counterfeit support entry becomes accepted diligence evidence -> prohibited
+Rent Roll lease context becomes lease or estoppel document authority -> prohibited
+T12 expense context becomes insurance, utility, or tax document authority -> prohibited
+advisory, rejected, duplicate, conflicting, or candidate source becomes accepted evidence -> prohibited
+optional evidence absence becomes a required-document gap -> prohibited
+evidence coverage or limitation becomes an adverse property finding -> prohibited
+accepted evidence or evidence limitation becomes a priority, action, owner, or deadline -> prohibited
+Gate 8 receipt becomes risk classification or memo execution authority -> prohibited
+Gate 8 handoff mutates Gate 6D sequencing -> prohibited
+optional diligence limitation becomes a validated-core publication blocker -> prohibited
+Gate 8 completion changes customer rendering, Screening, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes a Gate 8 dependency -> prohibited
+```
+
+Gate 8A inventories seven diligence categories from exact Source Truth authority. Gate 8B records neutral evidence coverage with zero established gaps or adverse findings because no approved requirement policy exists. Gate 8C records zero eligible priorities or actions because neither an established issue nor approved priority policy exists. Gate 8D establishes a truthful architecture-completion receipt and a non-executing Gate 6 handoff containing no diligence priorities or memo authority.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing optional diligence evidence collapses dependent diligence and memo components only. It cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. The deferred catastrophic-core usability threshold remains unchanged.
+
+Verification: dedicated Gates 8A through 8D smokes `PASS`; Financial Intelligence `PASS` with 25 total smokes including Gates 7A through 8D; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 8 architecture `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Diligence analysis is neutral coverage only with zero inferred gaps, findings, priorities, or actions. Next is a separately bounded Gate 9 Institutional Scoring authority review. Gates 9 through 11 remain preserved. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
