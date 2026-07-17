@@ -1054,3 +1054,34 @@ memo not generated because authority is not established
 Gate 6A verification: dedicated smoke `PASS`; Financial Intelligence `13 / 13`; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 6A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 6B canonical memo fact-selection and component-methodology authority. Gates 7 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6B Admin doctrine checkpoint
+
+```text
+Gate 6A: COMMITTED AT 0a5060e / ORIGIN MAIN MATCH CONFIRMED
+Gate 6B: PASS locally / internal-only fact-selection and methodology authority
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Memo methodology execution: NONE
+Memo narrative: NONE
+Classification: NONE
+Diligence priority: NONE
+Recommendation: NONE
+Confidence label: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 6B creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, investment thesis, classification, recommendation, confidence label, or Screening behavior.
+
+The fact-selection receipt is an internal reference catalog. It contains no copied values and is non-authoritative for customer or administrative messaging. An absent memo fact or unexecuted methodology is an optional analysis limitation, not a catastrophic core failure, customer document failure, publication hold, replacement-document workflow, refund or credit remedy, or platform incident.
+
+The publish-or-collapse constitution remains unchanged. Accepted complete or constrained T12 and Rent Roll evidence publishes while unsupported dependent sections collapse, omit, qualify, or disclose. Optional Gate 6B limitations cannot block validated core publication. Any future quantified catastrophic-core threshold requires a separate constitutional gate and proof; the illustrative 50% concept is not active doctrine.
+
+Gate 6B verification: dedicated smoke `PASS`; Financial Intelligence with 14 total smokes including Gate 6B; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 6B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 6C component evidence adjudication authority slice. Gates 7 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

@@ -8758,3 +8758,42 @@ The validator reconstructs the exact contract from the full Gate 5F receipt. Mar
 Permanent proof is `tests/qa/institutional-investment-committee-memo-authority-contract-smoke.js`, registered in `qa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `13 / 13`; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 6A is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 6B may create canonical memo fact-selection and component-methodology authority only. It may not generate narrative, classify evidence, prioritize diligence, recommend action, assign confidence, or connect customer output. Gates 7 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6B fact-selection and methodology authority receipt
+
+Gate 6B consumes one exact, complete canonical Gate 6A receipt. It does not consume raw source documents, parser artifacts, filenames, caller values, prior reports, customer copy, legacy underwriting, or renderer state.
+
+The canonical fact selection is neutral and reference-only:
+
+```text
+select every available Gate 6A objective-evidence key
+preserve its evidence family and canonical source
+preserve an exact pointer to the upstream key
+copy no value
+claim no document completeness
+select no unavailable or unsupported evidence
+create no narrative or classification authority
+```
+
+`complete_canonical_investment_case_fact_selection` means complete for the available Gate 6A evidence inventory only. It does not mean every desired investment fact exists, every uploaded document is complete, or any absent number may be inferred.
+
+Seven component methodology receipts cover thesis, strengths, weaknesses, risks, diligence, recommendation, and confidence. Each methodology is approved only for future bounded execution. Assigned evidence remains empty. Content remains null. Classification, diligence prioritization, recommendation, confidence assignment, rendering, and customer surface remain unauthorized.
+
+The semantic boundary is permanent:
+
+```text
+evidence reference is not a copied value
+fact selection is not a thesis
+methodology approval is not methodology execution
+positive evidence is not automatically a strength
+negative evidence is not automatically a weakness or risk
+missing optional evidence is not automatically diligence priority or core failure
+component availability is not a recommendation
+evidence count is not confidence
+```
+
+The validator reconstructs the exact Gate 6B contract from the canonical Gate 6A receipt. Marker-only, partial, copied, or tampered upstream objects fail. Invented references, copied values, classifications, narrative, recommendations, confidence, and publication blocking invalidate the contract. Caller overrides are ignored.
+
+Permanent proof is `tests/qa/institutional-investment-committee-memo-methodology-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 14 total smokes including Gate 6B; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 6B is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: a separately bounded Gate 6C may establish component evidence adjudication authority only. It may not generate prose or connect customer output. Gates 7 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

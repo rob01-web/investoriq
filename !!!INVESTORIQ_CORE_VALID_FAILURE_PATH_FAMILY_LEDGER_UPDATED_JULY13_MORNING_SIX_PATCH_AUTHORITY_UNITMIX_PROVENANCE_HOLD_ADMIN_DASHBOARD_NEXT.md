@@ -19615,3 +19615,33 @@ No thesis, strength, weakness, principal risk, diligence priority, recommendatio
 Verification: dedicated Gate 6A smoke `PASS`; Financial Intelligence `PASS` with 13 smokes; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 6A `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded slice is Gate 6B canonical memo fact-selection and component-methodology authority. Gates 7 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6B CVF closure
+
+Gate 6A is committed at `0a5060e` with `origin/main` parity. Gate 6B adds one canonical internal contract and no report, customer, Admin, Screening, Delivery Gate, or publication behavior.
+
+Closed Gate 6B failure families:
+
+```text
+marker-only or partial Gate 6A object creates fact-selection authority -> prohibited
+tampered Gate 6A evidence inventory survives -> prohibited
+caller-supplied evidence reference or number enters selection -> prohibited
+selected reference copies an upstream numeric value -> prohibited
+unavailable evidence becomes selected evidence -> prohibited
+evidence sign or magnitude becomes strength, weakness, or risk classification -> prohibited
+methodology approval becomes methodology execution -> prohibited
+methodology approval becomes thesis or narrative -> prohibited
+methodology approval becomes diligence priority -> prohibited
+methodology approval becomes recommendation or confidence -> prohibited
+optional Gate 6B limitation becomes a validated-core publication blocker -> prohibited
+Gate 6B changes Screening, customer rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes a Gate 6B dependency -> prohibited
+```
+
+The sole Gate 6B production owner is `api/_lib/institutional-investment-committee-memo-methodology-contract.js`. It requires the exact complete Gate 6A contract, selects references to all available objective evidence without copying values, and establishes seven deterministic component methodologies for future bounded execution. All component execution and output states remain false or null.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing or unusable optional memo evidence cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. A future deterministic catastrophic-core usability threshold remains a separate TODO; the illustrative 50% concept is not adopted here.
+
+Verification: dedicated Gate 6B smoke `PASS`; Financial Intelligence `PASS` with 14 total smokes including Gate 6B; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 6B `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is a separately bounded Gate 6C component evidence adjudication authority slice. Gates 7 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

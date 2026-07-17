@@ -2704,5 +2704,85 @@ Gate 11: Launch Operations and Certification
 
 Gate 6B may establish only explicit fact-selection and component-methodology authority. It may not generate prose, infer a thesis, classify a strength, weakness, or risk, prioritize diligence, recommend action, assign confidence, connect customer output, or bypass any protected authority owner.
 
+## July 17 Gate 6B canonical fact-selection and component-methodology closure
+
+Gate 6A is committed at `0a5060e` with exact `origin/main` parity confirmed before Gate 6B began.
+
+Gate 6B adds one internal-only authority owner:
+
+```text
+api/_lib/institutional-investment-committee-memo-methodology-contract.js
+```
+
+The owner accepts only the exact complete canonical Gate 6A receipt. It creates a neutral selection of every available Gate 6A objective-evidence reference. It copies no value. Each selected item contains only the upstream evidence family, evidence key, canonical source, exact upstream pointer, and preservation receipt. The selection is complete only for the evidence already available in Gate 6A and never claims that an uploaded document is complete.
+
+Gate 6B approves bounded future-execution methodologies for thesis, strengths, weaknesses, risks, diligence, recommendation, and confidence. Methodology approval is not component execution. Every component keeps assigned evidence empty, content null, execution unauthorized, classification false, diligence priority false, recommendation false, confidence false, customer surface false, and publication blocker false.
+
+Permanent Gate 6B prohibitions:
+
+```text
+invented evidence reference -> rejected
+copied or caller-supplied number -> rejected
+unavailable evidence promoted into selection -> rejected
+positive or negative arithmetic classified -> rejected
+thesis or other prose generated -> rejected
+diligence priority assigned -> rejected
+recommendation or confidence generated -> rejected
+optional memo limitation blocks validated core publication -> rejected
+Screening, CustomerSurfaceModel, renderer, Delivery Gate, Admin, or terminal taxonomy changed -> rejected
+legacy underwriting reused -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes, with unsupported dependent sections collapsed, omitted, qualified, or disclosed. Optional evidence cannot block the whole report. Report-level customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability; technical delivery failure remains a separate internal-system outcome.
+
+Deferred constitutional calibration TODO: define a deterministic, evidence-based catastrophic-core usability threshold for T12 and Rent Roll validation. The suggested `over 50% absolutely unusable` concept is illustrative only and is not adopted by Gate 6B. The future rule must measure trustworthy operating-evidence usability, distinguish missing detail from catastrophic damage, preserve constrained publication, and receive adversarial proof before changing core publication authority.
+
+Verification completed after production and smoke changes:
+
+```text
+dedicated Gate 6B adversarial smoke: PASS
+Financial Intelligence: PASS, 14 total smokes including Gate 6B
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 6B CANONICAL FACT-SELECTION AND COMPONENT-METHODOLOGY AUTHORITY: PASS LOCALLY
+BASE GATE 6A COMMIT: 0a5060e
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+VALUES COPIED OR CREATED: NO
+MEMO NARRATIVE CREATED: NO
+CLASSIFICATION PERFORMED: NO
+RECOMMENDATION CREATED: NO
+CONFIDENCE LABEL CREATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: separately bounded Gate 6C component evidence adjudication authority; not begun
+```
+
+## Preserved Gates 7 through 11 ELITE roadmap after Gate 6B
+
+```text
+Gate 7: Scenario Engine
+  source-bound rent, occupancy, rate, tax, expense, cap-rate, and exit stresses
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 6C may not begin without a separately bounded review. It may not generate prose, connect customer output, or change Screening, publication, Delivery Gate, Admin, or terminal-state doctrine.
+
 ---
 # End of Active Master Context
