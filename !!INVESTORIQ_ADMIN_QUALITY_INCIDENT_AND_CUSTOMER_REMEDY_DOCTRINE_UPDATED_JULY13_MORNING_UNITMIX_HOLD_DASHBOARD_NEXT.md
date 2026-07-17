@@ -1117,3 +1117,36 @@ The publish-or-collapse constitution remains unchanged. Accepted complete or con
 Gate 6C verification: dedicated smoke `PASS`; Financial Intelligence with 15 total smokes including Gates 6B and 6C; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Gate 6C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. No Gate 6D scope is authorized; it requires a separately bounded authority review. Gates 7 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6D Admin doctrine checkpoint
+
+```text
+Gate 6C: COMMITTED AT f418c45 / ORIGIN MAIN MATCH CONFIRMED
+Gate 6D: PASS locally / internal-only memo dependency sequencing
+Gate 6 pre-downstream authority scaffold: COMPLETE
+Final memo execution: DEFERRED UNTIL GATES 7 THROUGH 9
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+Future Gate 7 / 8 / 9 receipt: NONE
+Memo narrative: NONE
+Classification: NONE
+Diligence gap or priority: NONE
+Recommendation: NONE
+Confidence label: NONE
+Deployment: NONE
+Live retest: NONE
+```
+
+Gate 6D creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, investment thesis, classification, recommendation, confidence label, or Screening behavior.
+
+The dependency-sequencing receipt is internal-only and non-authoritative for customer or administrative messaging. Missing future Gate 7, Gate 8, Gate 9, or final memo authority is an optional analysis limitation, not a catastrophic core failure, customer document failure, publication hold, replacement-document workflow, refund or credit remedy, or platform incident.
+
+The publish-or-collapse constitution remains unchanged. Accepted complete or constrained T12 and Rent Roll evidence publishes while unsupported dependent sections collapse, omit, qualify, or disclose. Optional downstream authority absence cannot block validated core publication. The deferred quantified catastrophic-core threshold remains inactive and unchanged.
+
+Gate 6D verification: dedicated smoke `PASS`; Financial Intelligence with 16 total smokes including Gates 6B through 6D; full QA and production build `PASS`; authority matrix `38 / 38`; Vercel function budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Gate 6D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gate 6's pre-downstream authority scaffold is complete. Next is Gate 7A Scenario Engine authority and source-bound stress-input contract. Gates 8 through 11 remain preserved. Gate 10 requires page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

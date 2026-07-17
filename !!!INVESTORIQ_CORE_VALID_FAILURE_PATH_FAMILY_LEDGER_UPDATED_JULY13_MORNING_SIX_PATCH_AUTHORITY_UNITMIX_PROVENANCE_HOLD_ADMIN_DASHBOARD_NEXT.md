@@ -19676,3 +19676,36 @@ The core-valid failure doctrine remains publish-or-collapse. Missing or unusable
 Verification: dedicated Gate 6C smoke `PASS`; Financial Intelligence `PASS` with 15 total smokes including Gates 6B and 6C; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
 
 Status: Gate 6C `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. No Gate 6D scope is authorized; it requires a separately bounded authority review. Gates 7 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6D CVF closure
+
+Gate 6C is committed at `f418c45` with `origin/main` parity. Gate 6D resolves the authority sequence for every remaining memo component and adds no report, customer, Admin, Screening, Delivery Gate, or publication behavior.
+
+Closed Gate 6D failure families:
+
+```text
+marker-only or partial Gate 6C object creates sequencing authority -> prohibited
+tampered Gate 6C component evidence survives -> prohibited
+caller-supplied Gate 7, Gate 8, or Gate 9 receipt becomes accepted -> prohibited
+Gate 6D synthesizes future-gate authority -> prohibited
+required component dependency is removed or reordered -> prohibited
+strength or weakness executes without Gate 9 -> prohibited
+risk executes without Gates 7 through 9 -> prohibited
+diligence executes without Gate 8 -> prohibited
+recommendation executes without all substantive components -> prohibited
+confidence executes without authorized recommendation and evidence coverage -> prohibited
+sequencing becomes thesis, narrative, recommendation, or confidence -> prohibited
+optional downstream authority absence becomes a validated-core publication blocker -> prohibited
+Gate 6D changes Screening, customer rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes a Gate 6D dependency -> prohibited
+```
+
+The sole Gate 6D production owner is `api/_lib/institutional-investment-committee-memo-dependency-sequencing-contract.js`. It requires the exact complete Gate 6C contract, records future Gate 7 through 9 receipts as null and unavailable, and sequences all seven memo components without executing any component.
+
+Gate 6's pre-downstream authority scaffold is complete. Final memo execution remains deferred until canonical Gates 7 through 9 receipts exist. This sequencing absence is an optional analysis limitation and cannot become a core-valid publication failure.
+
+The core-valid failure doctrine remains publish-or-collapse. Missing future scenario, diligence, scoring, or memo authority cannot fail a report backed by accepted T12 and Rent Roll evidence. Whole-report customer-document failure remains limited to validated catastrophic core failure or fundamental core irreconcilability. The deferred catastrophic-core usability threshold remains unchanged.
+
+Verification: dedicated Gate 6D smoke `PASS`; Financial Intelligence `PASS` with 16 total smokes including Gates 6B through 6D; full QA and production build `PASS`; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity `PASS` through `qa:full` before ledger update.
+
+Status: Gate 6D `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 7A Scenario Engine authority and source-bound stress-input contract. Gates 8 through 11 remain unchanged. Gate 10 retains page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.

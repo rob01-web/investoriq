@@ -2865,5 +2865,110 @@ Gate 11: Launch Operations and Certification
 
 No Gate 6D scope is approved by Gate 6C. Any next slice must separately resolve which remaining component authorities belong before or after the Scenario, Due Diligence, and Institutional Scoring engines. It may not infer classification criteria, generate prose, connect customer output, or change protected publication doctrine.
 
+## July 17 Gate 6D dependency-sequencing authority closure
+
+Gate 6C is committed at `f418c45` with exact `origin/main` parity confirmed before Gate 6D began.
+
+The Gate 6D authority review resolves the remaining Investment Committee Memo dependency order without fabricating any downstream authority:
+
+```text
+thesis claim composition -> separate source-bound Gate 6 execution receipt
+strength classification -> canonical Gate 9 Institutional Scoring receipt
+weakness classification -> canonical Gate 9 Institutional Scoring receipt
+principal risks -> canonical Gate 7 Scenario, Gate 8 Due Diligence, and Gate 9 Institutional Scoring receipts
+required diligence -> canonical Gate 8 Due Diligence receipt
+recommendation -> all five authorized substantive memo components plus Gates 7 through 9 receipts
+confidence -> authorized recommendation plus deterministic evidence-coverage receipt after Gates 7 through 9
+```
+
+Gate 6D adds one internal-only sequencing owner:
+
+```text
+api/_lib/institutional-investment-committee-memo-dependency-sequencing-contract.js
+```
+
+The owner accepts only the exact complete canonical Gate 6C receipt. It records Gates 7, 8, and 9 as future unavailable authority owners, keeps their canonical receipts null, and prohibits Gate 6D from synthesizing or accepting caller-supplied substitutes. It sequences all seven memo components while leaving every component non-executable, empty, null, non-customer-facing, and non-blocking.
+
+Gate 6 pre-downstream authority scaffold status:
+
+```text
+source-bound objective evidence inventory: complete for available canonical evidence
+canonical reference-only fact selection: complete for available canonical evidence
+component methodologies: established for bounded future execution
+neutral thesis evidence lineage: adjudicated
+remaining component dependencies: canonically sequenced
+final memo execution: deferred
+resume condition: exact canonical Gate 9 receipt after Gates 7 and 8
+```
+
+Permanent Gate 6D prohibitions:
+
+```text
+marker-only or tampered Gate 6C receipt -> rejected
+caller-supplied Gate 7, Gate 8, or Gate 9 receipt -> ignored
+fabricated future-gate authority -> rejected
+required future dependency removed or reordered -> rejected
+component classified or executed before required receipts -> rejected
+diligence gap or priority inferred -> rejected
+thesis prose or any other narrative generated -> rejected
+recommendation or confidence generated -> rejected
+optional future-gate absence blocks validated core publication -> rejected
+Screening, CustomerSurfaceModel, renderer, Delivery Gate, Admin, or terminal taxonomy changed -> rejected
+legacy underwriting reused -> rejected
+```
+
+The Core-Gated Publish-or-Collapse Constitution remains unchanged. Accepted complete or accepted constrained T12 and Rent Roll evidence publishes, with unsupported dependent sections collapsed, omitted, qualified, or disclosed. Missing Gate 7 through 9 authority collapses only dependent memo components and cannot block the whole report. The deferred catastrophic-core usability threshold remains a separate constitutional TODO and is not changed by Gate 6D.
+
+Verification completed after production and smoke changes:
+
+```text
+dedicated Gate 6D adversarial smoke: PASS
+Financial Intelligence: PASS, 16 total smokes including Gates 6B through 6D
+full QA and production build: PASS
+support authority adversarial matrix: PASS, 38 / 38
+Vercel function budget: PASS, 12 / 12
+diff integrity through qa:full: PASS
+```
+
+```text
+GATE 6D CANONICAL MEMO DEPENDENCY-SEQUENCING AUTHORITY: PASS LOCALLY
+BASE GATE 6C COMMIT: f418c45
+GATE 6 PRE-DOWNSTREAM AUTHORITY SCAFFOLD: COMPLETE
+FINAL MEMO EXECUTION: DEFERRED UNTIL GATES 7 THROUGH 9
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+FUTURE-GATE RECEIPTS ACCEPTED OR CREATED: NO
+VALUES COPIED OR CREATED: NO
+CLASSIFICATION PERFORMED: NO
+DILIGENCE GAP OR PRIORITY CREATED: NO
+MEMO NARRATIVE CREATED: NO
+RECOMMENDATION CREATED: NO
+CONFIDENCE LABEL CREATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+NEXT: Gate 7A Scenario Engine authority and source-bound stress-input contract
+```
+
+## Preserved Gates 7 through 11 ELITE roadmap after Gate 6D
+
+```text
+Gate 7: Scenario Engine
+  source-bound rent, occupancy, rate, tax, expense, cap-rate, and exit stresses
+Gate 8: Due Diligence Engine
+  document gaps, leases/estoppels, insurance, utilities, environmental, tax, and reserves
+Gate 9: Institutional Scoring
+  operational, financial, debt, income-stability, value-add, and execution risk
+Gate 10: ELITE Presentation and PDF System
+  institutional composition, deterministic visual system, charts, tables, and committee-ready PDF
+  page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+Gate 7A may establish only exact Scenario Engine authority and source-bound stress-input eligibility. It may not invent stress assumptions, accept caller overrides, perform scenario calculations without separately authorized policy and formulas, classify risk, execute memo components, connect customer output, or change protected publication doctrine.
+
 ---
 # End of Active Master Context

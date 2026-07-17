@@ -8841,3 +8841,46 @@ The validator reconstructs the exact Gate 6C contract from the canonical Gate 6B
 Permanent proof is `tests/qa/institutional-investment-committee-memo-component-evidence-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 15 total smokes including Gates 6B and 6C; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
 
 Gate 6C is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. No Gate 6D scope is authorized. Any next slice requires a separate authority review and may not generate prose or connect customer output. Gates 7 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
+
+## July 17 Gate 6D dependency-sequencing authority receipt
+
+Gate 6D consumes one exact, complete canonical Gate 6C receipt. It does not consume or accept caller-authored Gate 7, Gate 8, Gate 9, component, recommendation, confidence, customer, renderer, Delivery Gate, or legacy receipts.
+
+Canonical future-gate dependencies:
+
+```text
+Gate 7 Scenario Engine -> principal risks, recommendation, confidence
+Gate 8 Due Diligence Engine -> principal risks, diligence, recommendation, confidence
+Gate 9 Institutional Scoring -> strengths, weaknesses, principal risks, recommendation, confidence
+```
+
+Canonical component execution dependencies:
+
+```text
+thesis -> neutral thesis evidence plus separate source-bound claim-composition receipt
+strengths -> Gate 9 plus deterministic strength-classification receipt
+weaknesses -> Gate 9 plus deterministic weakness-classification receipt
+risks -> Gates 7 through 9 plus deterministic principal-risk receipt
+diligence -> Gate 8 plus deterministic diligence-priority receipt
+recommendation -> all five authorized substantive components plus deterministic execution receipt
+confidence -> authorized recommendation plus deterministic evidence-coverage receipt
+```
+
+Every future-gate receipt remains null, unavailable, and non-synthesizable by Gate 6D. Every memo component remains non-executable, unclassified, empty, null, non-customer-facing, and non-blocking.
+
+The semantic boundary is permanent:
+
+```text
+dependency sequencing is not future-gate authority
+roadmap order is not an assumption value
+future receipt absence is not a negative fact or core failure
+component dependency is not component execution
+scaffold completion is not memo completion
+memo completion is not publication authority
+```
+
+The validator reconstructs the exact Gate 6D contract from the canonical Gate 6C receipt. Marker-only, partial, copied, or tampered upstream objects fail. Fabricated future receipts, removed dependencies, premature classification, diligence priority, narrative, recommendation, confidence, and publication blocking invalidate the contract. Caller overrides are ignored.
+
+Permanent proof is `tests/qa/institutional-investment-committee-memo-dependency-sequencing-contract-smoke.js`, registered through `preqa:financial-intelligence`. Verification is `PASS`: dedicated adversarial smoke; Financial Intelligence with 16 total smokes including Gates 6B through 6D; full QA and build; support authority `38 / 38`; Vercel budget `12 / 12`; diff integrity through `qa:full` before ledger update.
+
+Gate 6D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Gate 6's pre-downstream authority scaffold is complete and final execution is deferred until Gates 7 through 9. NEXT: Gate 7A Scenario Engine authority and source-bound stress-input contract. Gates 8 through 11 remain preserved, including Gate 10 page-by-page institutional PDF certification covering every table, chart, column, number, heading, page break, spacing rule, and alignment defect that a sophisticated institutional investor would notice.
