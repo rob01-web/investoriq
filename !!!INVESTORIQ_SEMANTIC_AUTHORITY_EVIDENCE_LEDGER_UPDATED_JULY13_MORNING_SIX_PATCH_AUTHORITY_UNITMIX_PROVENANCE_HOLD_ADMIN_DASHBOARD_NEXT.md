@@ -8641,3 +8641,50 @@ Missing or rejected facts collapse only dependent measures. Zero lender fee rema
 Permanent proof is `tests/qa/deterministic-acquisition-capital-structure-analysis-smoke.js`, registered in `qa:financial-intelligence`. Gate 5D verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `11 / 11`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
 
 Gate 5D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5E canonical acquisition-cost, equity-basis, and return-readiness authority contract. No return metric may exist until its full source and policy bundle is explicitly eligible.
+
+## July 16 Gate 5E return-readiness authority receipt
+
+Gate 5D is committed at `80974e0`, with exact `origin/main` parity confirmed. Gate 5E extends the protected authority chain without creating source truth or a return result:
+
+```text
+canonical Gate 5B source-case receipt
+canonical Gate 5C valuation receipt
+canonical Gate 5D capital-structure receipt
+-> each full receipt independently validated
+-> exact common embedded Gate 5A input contract required
+-> immutable Gate 5E eligibility-only return-readiness receipt
+-> no downstream consumer and no customer surface yet
+```
+
+`api/_lib/institutional-underwriting-return-readiness-contract.js` is the sole Gate 5E owner. Its validator reconstructs the complete expected receipt from the three embedded canonical analyses. A matching marker, copied job identifier, local value, partial object, or caller-supplied override cannot create readiness.
+
+The accepted semantic references remain narrow:
+
+```text
+source-case NOI = accepted operating reference, not equity cash flow
+purchase price = accepted acquisition price, not total uses
+proposed loan = accepted acquisition funding reference, not refinance proceeds
+purchase price less proposed loan = arithmetic reference, not total equity
+lender-fee dollars = deterministic fee reference, funding treatment unknown
+appraised value = accepted present value reference, not exit or future value
+```
+
+Each reference preserves its exact source or calculation provenance and is explicitly marked ineligible as a complete return input. The appraised-value reference is not listed as available exit authority. Current debt is excluded from acquisition and exit authority.
+
+Gate 5E separately records seventeen authority gaps and seven readiness bundles. A missing authority value remains null with its exact reason code and empty provenance. Readiness requires the complete bundle, not provenance alone and not one available reference.
+
+```text
+sourcePresent does not mean sourceBacked
+sourceBacked does not mean a complete return bundle
+an accepted arithmetic reference does not create a funding treatment
+an accepted current value does not create a future or exit assumption
+calculationEligible requires every exact source and policy authority
+not eligible means not calculated
+optional return ineligibility does not block valid core publication
+```
+
+All total-use, equity-basis, annual equity-cash-flow, exit-proceeds, cash-on-cash, equity-multiple, and internal-rate-of-return outputs remain null. No hold period, dated cash-flow series, exit value, selling cost, debt payoff, refinance proceeds, classification, or recommendation is inferred.
+
+Permanent proof is `tests/qa/institutional-underwriting-return-readiness-contract-smoke.js`, registered in `qa:financial-intelligence`. Gate 5E verification is `PASS`: dedicated adversarial smoke; Financial Intelligence `12 / 12`; full QA and build; support authority `37 / 37`; Vercel budget `12 / 12`; diff integrity.
+
+Gate 5E is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. NEXT: Gate 5F may expand deterministic semantic evidence and canonical adjudication for explicit optional return inputs. Filename, artifact type, parser route, AI output, prior report, appraisal, current debt, or a lone extracted number cannot independently create those facts.

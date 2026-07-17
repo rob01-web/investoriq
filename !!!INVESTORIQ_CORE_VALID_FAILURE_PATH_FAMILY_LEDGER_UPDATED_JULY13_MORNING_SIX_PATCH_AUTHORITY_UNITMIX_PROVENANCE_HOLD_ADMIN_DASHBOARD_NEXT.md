@@ -19515,3 +19515,42 @@ No closing costs, total equity requirement, fee funding source, current-debt pay
 Verification: dedicated Gate 5D smoke `PASS`; Financial Intelligence `PASS` with 11 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
 
 Status: Gate 5D `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5E canonical acquisition-cost, equity-basis, and return-readiness authority. Gate 5E defines eligibility only and cannot calculate returns or create customer output.
+
+## July 16 Gate 5E CVF closure
+
+Gate 5D is committed at `80974e0`, with exact `origin/main` parity confirmed. Vercel deployment was not verified in this turn. Gate 5E adds one immutable return-readiness authority receipt without changing downstream behavior.
+
+Closed Gate 5E failure families:
+
+```text
+marker-only Gate 5B, Gate 5C, or Gate 5D object unlocks readiness -> prohibited
+individually valid analyses from different Gate 5A inputs are combined -> prohibited
+caller-supplied cost, hold, exit, return, or recommendation changes receipt -> prohibited
+changed readiness, return value, semantic boundary, or provenance survives validation -> prohibited
+source-case NOI becomes equity cash flow -> prohibited
+purchase price becomes total acquisition uses -> prohibited
+purchase price less proposed loan becomes total equity -> prohibited
+lender-fee dollars create an inferred funding source -> prohibited
+appraised value becomes future value or exit value -> prohibited
+current debt becomes acquisition debt, exit payoff, or refinance proceeds -> prohibited
+missing closing costs, hold period, exit value, or selling costs become zero -> prohibited
+accepted zero lender fee becomes missing -> prohibited
+missing optional support becomes a report blocker -> prohibited
+incomplete acquisition uses become return-ready -> prohibited
+incomplete initial equity basis becomes return-ready -> prohibited
+incomplete annual equity cash flow becomes return-ready -> prohibited
+incomplete exit proceeds become return-ready -> prohibited
+cash-on-cash return is calculated without its complete bundle -> prohibited
+equity multiple is calculated without its complete bundle -> prohibited
+internal rate of return is calculated without dated cash flows -> prohibited
+Gate 5E changes Screening, rendering, Admin, Delivery Gate, or terminal taxonomy -> prohibited
+legacy underwriting becomes production authority -> prohibited
+```
+
+The sole Gate 5E production owner is `api/_lib/institutional-underwriting-return-readiness-contract.js`. It requires complete canonical Gate 5B, Gate 5C, and Gate 5D analyses with an exactly identical embedded Gate 5A contract. It retains six source-bound references, records seventeen unavailable authority fields as null, defines seven readiness bundles, and leaves seven return outputs null and unauthorized.
+
+Every optional readiness failure is non-blocking. Valid core publication remains sovereign. No return metric, refinance proceeds, classification, recommendation, customer rendering, Screening behavior, Delivery Gate behavior, or terminal taxonomy changed.
+
+Verification: dedicated Gate 5E smoke `PASS`; Financial Intelligence `PASS` with 12 smokes; full QA and production build `PASS`; parser, recovery, routing, Boss, CustomerSurfaceModel, Report Contract QA, PDF Boss, Quality Manifest, Admin projection, 37-scenario support-authority matrix, Vercel budget `12 / 12`, and diff integrity all `PASS`.
+
+Status: Gate 5E `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next bounded CVF slice is Gate 5F exact optional return-input source authority. Gate 5F may accept only exact source-evidenced acquisition costs, funding treatments, timing, cash flows, exit value, exit costs, and debt payoff facts. It cannot infer missing values or calculate returns.

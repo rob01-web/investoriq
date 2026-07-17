@@ -941,3 +941,42 @@ The dashboard may not label loan-to-price, purchase price less loan, lender fee,
 Gate 5D verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 11 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
 
 Gate 5D is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5E canonical acquisition-cost, equity-basis, and return-readiness authority. Gate 5E remains eligibility-only and cannot create returns, customer remedies, or publication authority.
+
+## July 16 Gate 5E checkpoint
+
+```text
+Gate 5D: COMMITTED AT 80974e0 / ORIGIN MAIN MATCH CONFIRMED
+Gate 5D Vercel deployment: NOT VERIFIED IN THIS TURN
+Gate 5E: PASS locally / eligibility-only return-readiness authority receipt
+Admin Dashboard change: NONE
+Quality incident projection change: NONE
+Customer remedy change: NONE
+Delivery or publication change: NONE
+Customer report change: NONE
+Screening change: NONE
+```
+
+Gate 5E creates no Admin row, incident, attention-risk flag, customer message, remedy recommendation, contact state, credit action, billing action, retry action, Delivery Gate change, terminal-code change, report section, return value, or Screening behavior. Every readiness bundle and return output has `customerSurfaceAuthorized: false` and `reportPublicationBlocker: false`.
+
+The future Quality Manifest and Admin projection may consume Gate 5E only after a later finalized Gate 5 aggregate receipt and atomic downstream gate establish exact mappings. They must not calculate returns, reconstruct missing costs, infer hold or exit assumptions, call purchase price less loan total equity, use appraisal as exit value, use current debt as exit payoff, or turn optional return ineligibility into a platform defect.
+
+Permitted future administrative states remain factual:
+
+```text
+accepted acquisition reference available
+acquisition uses incomplete
+initial equity basis not established
+annual equity cash-flow authority incomplete
+hold period not established
+exit value authority not established
+exit costs or debt payoff not established
+cash-on-cash return not eligible
+equity multiple not eligible
+internal rate of return not eligible
+```
+
+The dashboard may not display a return metric, return range, investment classification, recommendation, or remedy from Gate 5E. Missing optional return inputs remain analysis limitations and do not become a catastrophic core failure, customer replacement-document workflow, credit remedy, or publication block.
+
+Gate 5E verification: dedicated adversarial smoke `PASS`; Financial Intelligence `PASS` with 12 smokes; full QA and build `PASS`; authority matrix `37 / 37`; Vercel function budget `12 / 12`; diff integrity `PASS` before ledger update.
+
+Gate 5E is `PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO LIVE RETEST`. Next is Gate 5F exact optional return-input source authority. Gate 5F remains upstream and may not create customer remedies, publication authority, or calculated returns.

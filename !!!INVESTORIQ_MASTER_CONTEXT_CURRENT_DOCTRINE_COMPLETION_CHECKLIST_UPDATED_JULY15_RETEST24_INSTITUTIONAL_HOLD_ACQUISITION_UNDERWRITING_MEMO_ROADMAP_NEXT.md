@@ -2454,5 +2454,95 @@ git diff --check: PASS before ledger update
 
 Gate 5E must define the canonical authority and completeness contract required before any return metric can exist. It must separately identify accepted acquisition costs, accepted funding sources, lender-fee funding treatment, total equity basis, hold period, interim cash flows, exit value authority, exit costs, and timing. Missing inputs remain null and make the dependent return ineligible. Gate 5E must not calculate IRR, equity multiple, cash-on-cash return, refinance proceeds, or a recommendation.
 
+## July 16 Gate 5E status
+
+```text
+GATE 5D: COMMITTED AT 80974e0 / ORIGIN MAIN MATCH CONFIRMED
+GATE 5D VERCEL DEPLOYMENT: NOT VERIFIED IN THIS TURN
+GATE 5E CANONICAL RETURN-READINESS AUTHORITY CONTRACT: PASS LOCALLY
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+RETURN CALCULATIONS CREATED: NO
+CUSTOMER RENDERING CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION CHANGED: NO
+NEXT: Gate 5F exact source-authority expansion for optional return inputs
+```
+
+Gate 5E creates one new bounded production owner:
+
+```text
+api/_lib/institutional-underwriting-return-readiness-contract.js
+```
+
+It consumes only three complete canonical Gate 5 analyses built from the exact same immutable Gate 5A input contract:
+
+```text
+deterministic Gate 5B source-case analysis
+deterministic Gate 5C acquisition valuation analysis
+deterministic Gate 5D acquisition capital-structure analysis
+-> exact common input-contract identity
+-> immutable Gate 5E return-readiness authority receipt
+-> no downstream consumer and no customer surface yet
+```
+
+Each upstream analysis must independently pass its complete canonical validator. A matching source marker, copied job identifier, or partial receipt is insufficient. If the embedded Gate 5A input contracts are not exactly identical, Gate 5E creates no contract.
+
+Gate 5E retains six accepted references with exact provenance when available:
+
+```text
+source-case T12 NOI
+purchase price
+proposed acquisition loan
+purchase price less proposed loan
+proposed lender-fee dollars
+appraised value
+```
+
+Every reference carries a semantic restriction. NOI is not equity cash flow. Purchase price is not total acquisition uses. Purchase price less proposed loan is not total equity. Lender-fee dollars do not establish who funds the fee. Appraised value is not an exit value or future value. No reference independently becomes a complete return input.
+
+Gate 5E explicitly records seventeen missing authority fields as null. These include closing and other acquisition costs, lender-fee funding treatment, capital-plan acquisition treatment, other funding sources and uses, initial equity basis, return-period debt service, annual capital expenditures, annual reserves, other equity cash-flow items, hold period, dated interim cash flows, exit value and date, selling costs, debt payoff at exit, and net exit proceeds.
+
+Seven readiness bundles are explicit and independently auditable:
+
+```text
+acquisition uses
+initial equity basis
+annual equity cash flow
+exit proceeds
+cash-on-cash return
+equity multiple
+internal rate of return
+```
+
+All seven are currently ineligible because their complete canonical fact and policy bundles do not exist. All seven dependent return outputs remain null and `not_calculated`. Missing optional return authority is non-blocking and cannot change valid T12 and Rent Roll publication.
+
+Gate 5E does not calculate total acquisition uses, initial equity, cash-on-cash return, equity multiple, internal rate of return, refinance proceeds, or net exit proceeds. It does not infer a hold period, exit value, selling costs, fee funding source, capital-plan timing, or current-debt payoff. It creates no classification, recommendation, customer copy, Admin state, Screening behavior, Delivery Gate behavior, or terminal-code change.
+
+Permanent proof owner:
+
+```text
+tests/qa/institutional-underwriting-return-readiness-contract-smoke.js
+package.json -> qa:financial-intelligence
+```
+
+The adversarial proof covers immutable receipt reconstruction, exact common input identity, caller-override rejection, marker-only receipt rejection, cross-job rejection, upstream tamper rejection, readiness tamper rejection, fabricated return rejection, provenance tamper rejection, missing lender fee, accepted zero lender fee, missing purchase price, missing proposed loan, missing appraisal value, accepted zero NOI, current-debt isolation, purchase-role conflict, no false zero, no appraisal-to-exit promotion, no NOI-to-equity-cash-flow promotion, legacy isolation, downstream isolation, and the customer em-dash prohibition.
+
+Exact Gate 5E verification:
+
+```text
+node tests/qa/institutional-underwriting-return-readiness-contract-smoke.js: PASS
+npm.cmd run qa:financial-intelligence: PASS, 12 smokes
+npm.cmd run qa:full: PASS
+npm.cmd run build: PASS through qa:full
+support-document authority adversarial matrix: PASS, 37 scenarios
+Vercel function budget: PASS, 12 / 12
+git diff --check: PASS before ledger update
+```
+
+Gate 5F is bounded to exact optional return-input source authority. It may add reusable semantic evidence and canonical adjudication fields for explicit closing costs, other acquisition costs, funding sources, lender-fee treatment, hold timing, dated interim cash flows, exit value authority, exit costs, and payoff timing only when exact source evidence exists. Missing or ambiguous values must remain null. Gate 5F must not calculate a return, infer a scenario, weaken Source Truth, change customer output, or special-case a document.
+
 ---
 # End of Active Master Context
