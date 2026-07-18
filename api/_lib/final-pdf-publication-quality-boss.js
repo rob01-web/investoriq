@@ -5,10 +5,25 @@ import {
   isCanonicalInstitutionalPdfConstitution,
 } from "./institutional-pdf-constitution.js";
 import { buildInstitutionalPdfRepairPlan } from "./institutional-pdf-repair-plan.js";
+import {
+  buildCanonicalReportIdentityReceipt,
+  isCanonicalReportIdentityReceipt,
+  SCREENING_REPORT_IDENTITY,
+  UNDERWRITING_REPORT_IDENTITY,
+} from "./report-identity-authority.js";
 
-const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10v_final_pdf_publication_quality_boss_v5";
+const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10v_final_pdf_publication_quality_boss_v6";
 const PAGE_CERTIFICATION_SCOPE = "institutional_page_by_page_certification";
 const TEST_WATERMARK_PATTERN = /\b(?:docraptor|test document|test mode)\b/i;
+const REPORT_IDENTITY_NOISE_PATTERN = new RegExp(
+  `\\b(?:${[
+    SCREENING_REPORT_IDENTITY.fullTitle,
+    SCREENING_REPORT_IDENTITY.canonicalTitle,
+    UNDERWRITING_REPORT_IDENTITY.fullTitle,
+    UNDERWRITING_REPORT_IDENTITY.canonicalTitle,
+  ].map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\b`,
+  "gi"
+);
 const NONBLOCKING_QUALITY_ISSUE_CODES = new Set([
   "PDF_BLANK_PAGES",
   "PDF_NEARLY_BLANK_PAGES",
@@ -26,6 +41,7 @@ const NONBLOCKING_QUALITY_ISSUE_CODES = new Set([
   "PDF_APPROVED_CHART_NOT_CERTIFIED",
   "PDF_APPROVED_NUMBER_NOT_CERTIFIED",
   "PDF_PAGE_NUMBERS_MISSING",
+  "PDF_CALLER_IDENTITY_ANCHOR_REJECTED",
 ]);
 
 function issueBlocksCustomerDelivery(code = "") {
@@ -432,11 +448,22 @@ function extractApprovedCharts(html = "") {
 
 export function buildApprovedPdfSurfaceManifest({
   approvedHtml = "",
+  reportIdentity = null,
   requiredTextAnchors = [],
   sourceReconciliation = null,
   deterministicContractQaSeal = null,
   financialIntelligence = null,
 } = {}) {
+  const identityReceipt = isCanonicalReportIdentityReceipt(reportIdentity)
+    ? reportIdentity
+    : buildCanonicalReportIdentityReceipt(reportIdentity || deterministicContractQaSeal?.report_identity || {});
+  const callerTextAnchors = unique(requiredTextAnchors.map((value) => String(value || "").trim()));
+  const canonicalTextAnchors = identityReceipt
+    ? [...identityReceipt.requiredPdfTextAnchors]
+    : callerTextAnchors;
+  const rejectedCallerTextAnchors = identityReceipt
+    ? callerTextAnchors.filter((anchor) => !canonicalTextAnchors.includes(anchor))
+    : [];
   const reconciliationState = sourceReconciliation?.state && typeof sourceReconciliation.state === "object"
     ? sourceReconciliation.state
     : sourceReconciliation;
@@ -460,7 +487,9 @@ export function buildApprovedPdfSurfaceManifest({
     tables: extractApprovedTables(approvedHtml),
     charts: extractApprovedCharts(approvedHtml),
     displayedNumbers: extractDisplayedNumbers(approvedHtml),
-    requiredTextAnchors: unique(requiredTextAnchors.map((value) => String(value || "").trim())),
+    requiredTextAnchors: canonicalTextAnchors,
+    rejectedCallerTextAnchors,
+    reportIdentity: identityReceipt,
     reconciliation: {
       required: reconciliationRequired,
       disclosure: String(reconciliationState?.source_reconciliation_disclosure || "").trim(),
@@ -490,7 +519,7 @@ function meaningfulPageText(page = {}) {
     .replace(/\bpage\s+\d+(?:\s+(?:of|\/)\s+\d+)?\b/gi, " ")
     .replace(/\binvestoriq(?: technologies inc\.)?\b/gi, " ")
     .replace(/\bcapital intelligence memorandum\b/gi, " ")
-    .replace(/\bunderwriting report\b/gi, " ")
+    .replace(REPORT_IDENTITY_NOISE_PATTERN, " ")
     .replace(/\bconfidential\b/gi, " ")
     .replace(/\bcopyright\b|©/gi, " ")
     .replace(/\s+/g, " ")
@@ -1072,6 +1101,7 @@ export async function inspectFinalPdfPublicationQuality({
   deterministicContractQaSeal = null,
   sourceReconciliation = null,
   financialIntelligence = null,
+  reportIdentity = null,
   requiredTextAnchors = [],
   artifactMode = "production_pdf",
   publicationTarget = "internal_test",
@@ -1110,11 +1140,24 @@ export async function inspectFinalPdfPublicationQuality({
 
   const manifest = buildApprovedPdfSurfaceManifest({
     approvedHtml,
+    reportIdentity,
     requiredTextAnchors,
     sourceReconciliation,
     deterministicContractQaSeal,
     financialIntelligence,
   });
+  if (manifest.rejectedCallerTextAnchors.length > 0) {
+    issues.push(buildIssue(
+      "PDF_CALLER_IDENTITY_ANCHOR_REJECTED",
+      "Caller-provided PDF identity anchors disagreed with canonical report identity and were ignored.",
+      {
+        rejected_anchors: manifest.rejectedCallerTextAnchors,
+        canonical_anchors: manifest.requiredTextAnchors,
+        identity_key: manifest.reportIdentity?.identityKey || null,
+      },
+      "pdf.approvedSurface.reportIdentity"
+    ));
+  }
   const internalStub = normalizedArtifactMode === "stub_pdf" && !externalTarget;
   let coverage = { tableCoverage: [], chartCoverage: [], numberCoverage: [] };
   if (!internalStub) {
@@ -1221,6 +1264,8 @@ export async function inspectFinalPdfPublicationQuality({
       table_count: manifest.tables.length,
       chart_count: manifest.charts.length,
       displayed_number_count: manifest.displayedNumbers.length,
+      report_identity: manifest.reportIdentity,
+      rejected_caller_identity_anchors: manifest.rejectedCallerTextAnchors,
     },
     institutional_certification: {
       required: !internalStub,

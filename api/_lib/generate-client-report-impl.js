@@ -88,6 +88,11 @@ import {
   isFinalPdfCustomerDeliveryAllowed,
 } from "./final-pdf-publication-quality-boss.js";
 import {
+  buildCanonicalReportIdentityReceipt,
+  SCREENING_REPORT_IDENTITY,
+  UNDERWRITING_REPORT_IDENTITY,
+} from "./report-identity-authority.js";
+import {
   buildInstitutionalPdfRecoveryHtml,
   isInstitutionalPdfRecoveryEligible,
 } from "./institutional-pdf-recovery.js";
@@ -3289,7 +3294,7 @@ export default async function handler(req, res) {
       "{{ESTIMATES_DISCLOSURE}}",
       effectiveReportMode === "screening_v1"
         ? "InvestorIQ screening outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
-        : "InvestorIQ acquisition memo outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
+        : "InvestorIQ underwriting report outputs are document-backed and framework-constrained, using uploaded documents and standardized underwriting frameworks. When required inputs are missing, those outputs are omitted rather than inferred."
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -3300,7 +3305,7 @@ export default async function handler(req, res) {
       /<h3>\s*InvestorIQ Estimates\s*<\/h3>/g,
       effectiveReportMode === "screening_v1"
         ? "<h3>Document-Backed Screening Outputs</h3>"
-        : "<h3>Document-Backed Acquisition Memo Outputs</h3>"
+        : `<h3>Document-Backed ${UNDERWRITING_REPORT_IDENTITY.canonicalTitle} Outputs</h3>`
     );
     finalHtml = replaceAll(
       finalHtml,
@@ -4490,13 +4495,13 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       : coverClassificationLabel === "Outside Parameters" ? "verdict-fragile"
       : "";
     finalHtml = replaceAll(finalHtml, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
-    // Verdict label tokens: differentiate screening triage vs acquisition memo
+    // Verdict label tokens preserve report-family identity before the sealed renderer takes over.
     const coverVerdictLabel = effectiveReportMode === "v1_core"
-      ? "ACQUISITION<br/>MEMO"
+      ? UNDERWRITING_REPORT_IDENTITY.canonicalTitle.toUpperCase().replace(" ", "<br/>")
       : "SCREENING<br/>SIGNAL";
     finalHtml = replaceAll(finalHtml, "{{COVER_VERDICT_LABEL}}", coverVerdictLabel);
     const execVerdictLabel = effectiveReportMode === "v1_core"
-      ? "ACQUISITION MEMO"
+      ? UNDERWRITING_REPORT_IDENTITY.canonicalTitle.toUpperCase()
       : "SCREENING SIGNAL";
     finalHtml = replaceAll(finalHtml, "{{EXEC_VERDICT_LABEL}}", execVerdictLabel);
     // Cover metric strip: screening only; strip when values unavailable
@@ -4523,14 +4528,16 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
       const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
       if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
-      const modeLabel = effectiveReportMode === "v1_core" ? "Acquisition Memo" : "Preliminary Screening";
+      const modeLabel = effectiveReportMode === "v1_core" ? UNDERWRITING_REPORT_IDENTITY.canonicalTitle : "Preliminary Screening";
       snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="${coverSnapshotValueStyle}">${modeLabel}</div></div>`);
       const snapHtml = snapRows.length > 0
         ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>`
         : "";
       finalHtml = replaceAll(finalHtml, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
     }
-    const reportTypeLabel = effectiveReportMode === "v1_core" ? "Acquisition Memo" : "Preliminary Investment Screening Memorandum";
+    const reportTypeLabel = effectiveReportMode === "v1_core"
+      ? UNDERWRITING_REPORT_IDENTITY.canonicalTitle
+      : SCREENING_REPORT_IDENTITY.canonicalTitle;
     finalHtml = replaceAll(finalHtml, "{{REPORT_TYPE_LABEL}}", reportTypeLabel);
     finalHtml = replaceAll(finalHtml, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
     if (effectiveReportMode === "v1_core") {
@@ -4941,9 +4948,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       if (Number.isFinite(acquisitionMemoRenderContext.breakEvenOccupancy)) summaryRows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.breakEvenOccupancy)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.purchasePrice)) summaryRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(acquisitionMemoRenderContext.purchasePrice)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.goingInCapRate)) summaryRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.goingInCapRate)}</td></tr>`);
-      const summaryNote = "Source-bound acquisition memo summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. Additional modeling remains deferred from the launch acquisition memo.";
+      const summaryNote = "Source-bound underwriting summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. Additional modeling remains deferred from the launch underwriting report.";
       const contextNote = "Document treatment and data coverage later enumerate property tax corroboration, market survey context, CapEx context, appraisal context, environmental / Phase I context, and broker email auditability where present.";
-      const summaryCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Acquisition Memo Summary: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${summaryRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryNote)}</p></div>`;
+      const summaryCard = `<div class="card no-break" style="margin-top:16px;border-left:3px solid #B8860B;"><p class="subsection-title">Underwriting Summary: <span style="color:#1e293b;">${coverClassificationLabel.toUpperCase()}</span></p><table><tbody>${summaryRows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:6px;">${escapeHtml(summaryNote)}</p></div>`;
       const contextCard = `<div class="card no-break" style="margin-top:12px;"><p class="subsection-title">Source Context</p><p class="small" style="margin:0;color:#374151;line-height:1.6;">${escapeHtml(contextNote)}</p></div>`;
       acquisitionMemoSummaryBlockHtml = buildAcquisitionMemoSummaryCard({
         units: acquisitionMemoRenderContext.units,
@@ -8433,6 +8440,11 @@ try {
       }
     : null;
   if (effectiveReportMode === "screening_v1") {
+    const screeningReportIdentity = buildCanonicalReportIdentityReceipt({
+      reportMode: effectiveReportMode,
+      reportType,
+      reportTier,
+    });
     const sealedScreeningOutput = runScreeningReportPipeline({
       finalHtml,
       qaHtml,
@@ -8508,7 +8520,8 @@ try {
         state: sourceReconciliationState || null,
       },
       report_quality_manifest_candidate: reportQualityManifestCandidate,
-      pdf_required_text_anchors: ["Preliminary Investment Screening Memorandum"],
+      report_identity: screeningReportIdentity,
+      pdf_required_text_anchors: [...(screeningReportIdentity?.requiredPdfTextAnchors || [])],
     });
   }
   if (
@@ -8797,13 +8810,18 @@ try {
   const finalPdfSourceReconciliation =
     acquisitionMemoV2Finalization?.customerSurfaceModel?.sourceTruth?.sourceReconciliation ||
     { state: sourceReconciliationState || null };
+  const finalPdfReportIdentity = buildCanonicalReportIdentityReceipt({
+    reportMode: effectiveReportMode,
+    reportType,
+    reportTier,
+  });
   finalPdfPublicationQualityBossResult = await inspectFinalPdfPublicationQuality({
     pdfBytes: pdfResponse.data,
     approvedHtml: docHtml,
     deterministicContractQaSeal: finalPdfDeterministicContractQaSeal,
     sourceReconciliation: finalPdfSourceReconciliation,
     financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
-    requiredTextAnchors: ["Acquisition Memo"],
+    reportIdentity: finalPdfReportIdentity,
     artifactMode: finalPdfArtifactMode,
     publicationTarget: finalPdfPublicationTarget,
   });
@@ -8837,7 +8855,7 @@ try {
       deterministicContractQaSeal: finalPdfDeterministicContractQaSeal,
       sourceReconciliation: finalPdfSourceReconciliation,
       financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
-      requiredTextAnchors: ["Acquisition Memo"],
+      reportIdentity: finalPdfReportIdentity,
       artifactMode: finalPdfArtifactMode,
       publicationTarget: finalPdfPublicationTarget,
     });

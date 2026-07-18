@@ -1,5 +1,6 @@
 import { formatInterestRatePercent } from "./report-formatting-helpers.js";
 import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
+import { UNDERWRITING_REPORT_IDENTITY } from "./report-identity-authority.js";
 
 const MODEL_VERSION = "acq_memo_v2_customer_surface_model_v1";
 
@@ -1460,7 +1461,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       bossContract?.visibleClassification ||
       "Review - Source Reconciliation Disclosure"
   ).trim();
-  const reportTitle = String(reportMeta?.reportTitle || reportMeta?.report_title || `${propertyName || "Acquisition Memo"}`.trim()).trim();
+  const reportTitle = String(reportMeta?.reportTitle || reportMeta?.report_title || `${propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle}`.trim()).trim();
 
   const units = normalizeMoney(coreMetrics?.units ?? coreRentRoll?.extractedFacts?.total_units);
   const occupancy = normalizeCapRatio(coreMetrics?.occupancy ?? coreRentRoll?.extractedFacts?.occupancy);

@@ -1,4 +1,8 @@
 import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
+import {
+  buildCanonicalReportIdentityReceipt,
+  resolveCanonicalReportIdentity,
+} from "./report-identity-authority.js";
 
 const CONTRACT_QA_SEAL_VERSION = "p0b_deterministic_contract_qa_v1";
 const BREAK_EVEN_FORMULA = "total_operating_expenses / gross_potential_rent";
@@ -131,6 +135,16 @@ function validateIdentity(text, reportIdentity = null) {
   const mode = String(reportIdentity?.reportMode || "").trim().toLowerCase();
   const type = String(reportIdentity?.reportType || "").trim().toLowerCase();
   const tier = finite(reportIdentity?.reportTier);
+  const canonicalIdentity = resolveCanonicalReportIdentity({ reportMode: mode, reportType: type });
+  if ((mode || type) && !canonicalIdentity) {
+    issues.push(buildIssue(
+      "REPORT_IDENTITY_CONTRACT_MISMATCH",
+      "The report mode and type do not resolve to a canonical report identity.",
+      { report_mode: mode || null, report_type: type || null, report_tier: tier },
+      "contract.reportIdentity"
+    ));
+    return issues;
+  }
   if (mode === "screening_v1") {
     if (type && !type.includes("screen")) {
       issues.push(buildIssue(
@@ -140,7 +154,9 @@ function validateIdentity(text, reportIdentity = null) {
         "contract.reportIdentity"
       ));
     }
-    if (!/(?:Preliminary Investment Screening Memorandum|Screening Signal|Preliminary Screening|Screening Report)/i.test(text) || /Acquisition Memo|Underwriting Report/i.test(text)) {
+    const hasAcceptedIdentity = canonicalIdentity?.acceptedVisibleTitles.some((title) => new RegExp(escapeRegExp(title), "i").test(text));
+    const hasProhibitedIdentity = canonicalIdentity?.prohibitedVisibleTitles.some((title) => new RegExp(escapeRegExp(title), "i").test(text));
+    if (!hasAcceptedIdentity || hasProhibitedIdentity) {
       issues.push(buildIssue(
         "SCREENING_VISIBLE_IDENTITY_MISMATCH",
         "Screening customer HTML must identify only as the Screening report family.",
@@ -166,7 +182,9 @@ function validateIdentity(text, reportIdentity = null) {
         "contract.reportIdentity.reportTier"
       ));
     }
-    if (!/(?:Underwriting Report|Acquisition Memo)/i.test(text) || /Preliminary Investment Screening Memorandum|Screening Signal/i.test(text)) {
+    const hasAcceptedIdentity = canonicalIdentity?.acceptedVisibleTitles.some((title) => new RegExp(escapeRegExp(title), "i").test(text));
+    const hasProhibitedIdentity = canonicalIdentity?.prohibitedVisibleTitles.some((title) => new RegExp(escapeRegExp(title), "i").test(text));
+    if (!hasAcceptedIdentity || hasProhibitedIdentity) {
       issues.push(buildIssue(
         "ACQUISITION_VISIBLE_IDENTITY_MISMATCH",
         "Acquisition customer HTML must identify only as the Underwriting report family.",
@@ -388,8 +406,9 @@ export function buildDeterministicReportContractQaSeal({
   upstreamSeal = null,
 } = {}) {
   const text = stripCustomerHtml(html);
+  const identityReceipt = buildCanonicalReportIdentityReceipt(reportIdentity);
   const fullCustomerIdentitySurface = /<html\b|<!doctype\s+html/i.test(String(html || "")) ||
-    /Acquisition Memo|Preliminary Investment Screening Memorandum|Screening Signal/i.test(text);
+    Boolean(identityReceipt?.canonicalTitle && new RegExp(escapeRegExp(identityReceipt.canonicalTitle), "i").test(text));
   const issues = [
     ...(fullCustomerIdentitySurface ? validateIdentity(text, reportIdentity) : []),
     ...validateSupportFactBundles(supportSections),
@@ -472,6 +491,7 @@ export function buildDeterministicReportContractQaSeal({
       required: reconciliation.required,
       publishability: reconciliation.publishability,
     },
+    report_identity: identityReceipt,
     canonical_qa_agreement: !issues.some((issue) => issue.code === "CANONICAL_QA_DISAGREEMENT"),
     issues,
   };

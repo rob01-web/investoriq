@@ -4,6 +4,7 @@ import {
   assertFinalPdfPublicationQuality,
   isFinalPdfCustomerDeliveryAllowed,
 } from "./final-pdf-publication-quality-boss.js";
+import { buildCanonicalReportIdentityReceipt } from "./report-identity-authority.js";
 import {
   buildInstitutionalPdfRecoveryHtml,
   isInstitutionalPdfRecoveryEligible,
@@ -289,7 +290,7 @@ export async function ensureReportDownloadArtifact({
   holdDelivery = false,
   deterministicContractQaSeal = null,
   sourceReconciliation = null,
-  requiredPdfTextAnchors = [],
+  reportIdentity = null,
   publicationTarget = process.env.REPORT_PUBLICATION_TARGET || "",
   runFinalPdfPublicationQualityBoss = assertFinalPdfPublicationQuality,
 } = {}) {
@@ -334,12 +335,16 @@ export async function ensureReportDownloadArtifact({
   });
   const resolvedPublicationTarget = String(publicationTarget || "").trim() ||
     (artifactMode === "production_pdf" ? "external_customer" : "internal_test");
+  const canonicalReportIdentity = buildCanonicalReportIdentityReceipt({
+    reportMode: reportIdentity?.reportMode || null,
+    reportType: reportIdentity?.reportType || reportType || null,
+  });
   const certifyPdf = async (pdfBytes) => runFinalPdfPublicationQualityBoss({
     pdfBytes,
     approvedHtml: finalHtml,
     deterministicContractQaSeal,
     sourceReconciliation,
-    requiredTextAnchors: requiredPdfTextAnchors,
+    reportIdentity: canonicalReportIdentity,
     artifactMode,
     publicationTarget: resolvedPublicationTarget,
   });

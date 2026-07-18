@@ -256,7 +256,7 @@ function buildRenderedSections(html) {
   const text = typeof html === "string" ? html : "";
   const has = (pattern) => pattern.test(text);
   const sections = {
-    has_executive_summary_section: has(/Executive Summary|Operating Profile Summary|Capital Risk Profile|Acquisition Memo Summary|SECTION_1_EXEC/i),
+    has_executive_summary_section: has(/Executive Summary|Underwriting Summary|Operating Profile Summary|Capital Risk Profile|Acquisition Memo Summary|SECTION_1_EXEC/i),
     has_operating_profile_section: has(/Operating Profile|Capital Risk Profile|Operating Profile Summary|Operating Snapshot|Key Metrics Snapshot/i),
     has_expense_structure_section: has(/Expense Structure|Expense Ratio Sensitivity|SECTION_3_EXPENSE/i),
     has_noi_stability_section: has(/NOI Stability|Variance Flags \(Deterministic\)|SECTION_4_NOI/i),

@@ -2402,7 +2402,7 @@ export function buildReportContractQa({
       code: "RENT_POSITIONING_DUPLICATE_RENDER",
       severity: "high",
       category: "render_contract",
-      message: "Acquisition Memo renders more than one visible rent-positioning summary/evidence block.",
+      message: "Underwriting Report renders more than one visible rent-positioning summary/evidence block.",
       evidence: {
         visible_block_count: rentPositioningVisibleBlocks.length,
       },

@@ -20053,3 +20053,46 @@ The Final PDF Boss v4 constitutional publication-authority correction documented
 ### Active continuation pointer after Gate 10V
 
 Gate 10V-A through 10V-H is the current local closure: `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. It preserves core publish-or-collapse authority and supersedes no RETEST 32 publication doctrine. Gate 11 remains the next separately bounded gate.
+
+## July 18 RETEST 34 core-valid report-identity failure-family closure
+
+RETEST 34 is permanent evidence of a post-authority identity contradiction: accepted core evidence, zero true Source Truth blockers, deliverable Delivery Gate, and a valid PDF were all present before an obsolete generator-owned `Acquisition Memo` required anchor blocked the Gate 10V `Underwriting Report`. This was an InvestorIQ internal contract defect, not catastrophic T12 or Rent Roll evidence and not an optional-section consequence.
+
+The repaired failure family is deterministic:
+
+```text
+canonical report identity present in PDF -> continue certification
+stale or conflicting caller identity anchor -> reject caller authority, record nonblocking internal incident, continue
+canonical report identity absent from PDF -> block as internal system failure
+unsupported optional evidence -> collapse dependent section only
+catastrophic validated core evidence -> retain canonical Source Truth block
+```
+
+`canonical_report_identity_v1` is the sole production owner of literal required PDF identity anchors. Both direct generation and recovery pass its receipt; the worker no longer forwards response aliases as authority; the delivery resolver reconstructs the receipt from canonical report mode/type; Final PDF Boss v6 accepts no caller override. Internal `acquisition_memo` names remain compatibility and implementation identifiers only.
+
+Verification: RETEST 34 regression smoke `PASS`; dynamic Underwriting and Screening resolver proof `PASS`; P0-C Boss smoke `PASS`; renderer `PASS`; `qa:institutional-pdf` 12 / 12 `PASS`; `qa:quality-ops`, `qa:financial-intelligence`, and `qa:full` including build and diff integrity `PASS`.
+
+```text
+BASE COMMIT: 841bba5
+CORE ACCEPTANCE CHANGED: NO
+CATASTROPHIC CORE DOCTRINE CHANGED: NO
+SOURCE TRUTH WEAKENED: NO
+OPTIONAL FAILURE CONSEQUENCE CHANGED: NO
+DELIVERY GATE AUTHORITY CHANGED: NO
+CALLER IDENTITY VETO REMOVED: YES
+TRUE CANONICAL IDENTITY LOSS REMAINS BLOCKING: YES
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+```
+
+### Active continuation pointer after RETEST 34
+
+The canonical report-identity authority closure is the current local state: `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains the next separately bounded gate.
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

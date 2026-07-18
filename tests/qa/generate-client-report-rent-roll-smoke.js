@@ -1727,7 +1727,7 @@ assert.equal(/Pass Conditions \(All must hold\)|Hard Disqualifiers \(Any trigger
 assert.equal(/reportTierBadges|reportTierBadgeHtml|Screening Scope|Source-Constrained|Debt Not Provided|Disclosure Required/.test(reportSource), false);
 assert.match(
   reportSource,
-  /const coverVerdictLabel = effectiveReportMode === "v1_core"\s*\?\s*"ACQUISITION<br\/>MEMO"/
+  /const coverVerdictLabel = effectiveReportMode === "v1_core"\s*\?\s*UNDERWRITING_REPORT_IDENTITY\.canonicalTitle\.toUpperCase\(\)\.replace\(" ", "<br\/>"\)/
 );
 assert.match(
   reportSource,
@@ -1739,7 +1739,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /const execVerdictLabel = effectiveReportMode === "v1_core"\s*\?\s*"ACQUISITION MEMO"/
+  /const execVerdictLabel = effectiveReportMode === "v1_core"\s*\?\s*UNDERWRITING_REPORT_IDENTITY\.canonicalTitle\.toUpperCase\(\)/
 );
 assert.match(
   reportSource,
@@ -1747,7 +1747,7 @@ assert.match(
 );
 assert.match(
   reportSource,
-  /Acquisition Memo Summary:/
+  /Underwriting Summary:/
 );
 assert.match(
   reportSource,

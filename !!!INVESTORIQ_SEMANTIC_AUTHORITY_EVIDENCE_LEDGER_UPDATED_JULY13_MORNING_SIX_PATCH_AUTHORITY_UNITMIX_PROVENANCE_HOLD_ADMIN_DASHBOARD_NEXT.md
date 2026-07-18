@@ -9173,6 +9173,48 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+## July 18 RETEST 34 report-identity semantic-authority closure
+
+Report identity is presentation-contract authority, not source-fact authority. RETEST 34 failed because two presentation owners disagreed: the approved document correctly said `Underwriting Report`, while a later generator caller still demanded `Acquisition Memo`. No accepted fact, number, source, calculation, scenario, score, section eligibility, or Delivery Gate decision was defective.
+
+`canonical_report_identity_v1` now owns report-family identity once. Its immutable receipt is consumed by deterministic QA, customer-surface composition, direct and recovery PDF certification, storage resolution, and worker delivery. Required PDF identity anchors may be defined literally only in that owner. Compatibility aliases can identify legacy internal report types but cannot become customer-surface or publication authority.
+
+Permanent semantic boundary:
+
+```text
+report type alias is not customer-visible title authority
+response compatibility field is not delivery authority
+caller-required anchor is not canonical identity authority
+stale caller anchor cannot veto a canonical valid PDF
+canonical title absent from final PDF remains an objective required-content failure
+report identity cannot create, infer, replace, or calculate a source value
+Underwriting identity cannot mutate Screening identity
+```
+
+Final PDF Boss v6 records rejected caller identity anchors without certifying them and continues to enforce exact canonical title presence. The regression smoke recursively scans production files and fails if a literal required-anchor owner appears outside the canonical authority or if the RETEST 34 stale anchor returns.
+
+```text
+BASE COMMIT: 841bba5
+SOURCE OR ACCEPTED FACT MUTATION: NONE
+CALCULATION, SCENARIO, OR SCORING MUTATION: NONE
+SCREENING APPEARANCE MUTATION: NONE
+SECTION ELIGIBILITY MUTATION: NONE
+DELIVERY GATE SOURCE AUTHORITY MUTATION: NONE
+CANONICAL REPORT IDENTITY CENTRALIZED: YES
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+```
+
+Verification: RETEST 34 identity-authority smoke `PASS`; direct/recovery/worker/delivery adversarial proof `PASS`; `qa:institutional-pdf` 12 / 12 `PASS`; `qa:financial-intelligence` and `qa:full` including build and diff integrity `PASS`.
+
+Gate 11 remains preserved exactly and requires a separate bounded authority review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ## July 18 Gate 10R semantic-authority and exact-glyph certification closure
 
 The user-run RETEST 31 failure was a Final PDF certification regression, not a Source Truth, T12, Rent Roll, support-document, calculation, scenario, scoring, memo, or Delivery Gate failure. The valid rendered PDF reached `gate10_final_pdf_publication_quality_boss_v2`, where real extraction fragments created false table, number, page-navigation, spacing, and alignment blockers.
@@ -9255,6 +9297,17 @@ CODEX LIVE RETEST: NOT RUN
 ```
 
 Gate 11 remains preserved exactly and requires a separate bounded authority review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
+### Active continuation pointer after RETEST 34
+
+The `canonical_report_identity_v1` closure documented above is the current semantic-authority state: `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. It creates no source, accepted-fact, calculation, scenario, scoring, section, Screening, or Delivery Gate authority. Gate 11 remains the next separately bounded gate.
+
+Gate 11 remains preserved exactly:
 
 ```text
 Gate 11: Launch Operations and Certification

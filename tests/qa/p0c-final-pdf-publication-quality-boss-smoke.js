@@ -4,6 +4,7 @@ import {
   inspectFinalPdfPublicationQuality,
 } from "../../api/_lib/final-pdf-publication-quality-boss.js";
 import { ensureReportDownloadArtifact } from "../../api/_lib/report-delivery-output.js";
+import { isCanonicalReportIdentityReceipt } from "../../api/_lib/report-identity-authority.js";
 
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const acquisitionDocumentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
@@ -312,8 +313,11 @@ const existingResult = await ensureReportDownloadArtifact({
   reportType: "full_underwriting",
   deliveryGateStatus: "deliverable",
   holdDelivery: false,
-  runFinalPdfPublicationQualityBoss: async () => {
+  runFinalPdfPublicationQualityBoss: async ({ reportIdentity }) => {
     existingBossCalls += 1;
+    assert.equal(isCanonicalReportIdentityReceipt(reportIdentity), true);
+    assert.equal(reportIdentity.canonicalTitle, "Underwriting Report");
+    assert.deepEqual(reportIdentity.requiredPdfTextAnchors, ["Underwriting Report"]);
     return { ok: true, status: "certified" };
   },
 });
@@ -335,8 +339,11 @@ await ensureReportDownloadArtifact({
     order.push("render");
     return Buffer.from("%PDF-new");
   },
-  runFinalPdfPublicationQualityBoss: async () => {
+  runFinalPdfPublicationQualityBoss: async ({ reportIdentity }) => {
     order.push("boss");
+    assert.equal(isCanonicalReportIdentityReceipt(reportIdentity), true);
+    assert.equal(reportIdentity.canonicalTitle, "Preliminary Investment Screening Memorandum");
+    assert.deepEqual(reportIdentity.requiredPdfTextAnchors, ["Preliminary Investment Screening Memorandum"]);
     return { ok: true, status: "certified" };
   },
 });

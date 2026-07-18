@@ -19,6 +19,10 @@ import {
   stripEmptyHeadingBlocks,
   stripChartBlockByAlt,
 } from "./report-html-helpers.js";
+import {
+  SCREENING_REPORT_IDENTITY,
+  UNDERWRITING_REPORT_IDENTITY,
+} from "./report-identity-authority.js";
 
 const DATA_NOT_AVAILABLE = "Not assessed";
 
@@ -796,7 +800,7 @@ export function buildScreeningCustomerOutput({
     : "";
   html = replaceAll(html, "{{VERDICT_CSS_CLASS}}", verdictCssClass);
   html = replaceAll(html, "{{COVER_VERDICT_LABEL}}", reportMode === "screening_v1" ? "SCREENING<br/>SIGNAL" : "ACQUISITION<br/>MEMO");
-  html = replaceAll(html, "{{EXEC_VERDICT_LABEL}}", reportMode === "screening_v1" ? "SCREENING SIGNAL" : "ACQUISITION MEMO");
+  html = replaceAll(html, "{{EXEC_VERDICT_LABEL}}", reportMode === "screening_v1" ? "SCREENING SIGNAL" : UNDERWRITING_REPORT_IDENTITY.canonicalTitle.toUpperCase());
 
   const coverNoi = execNoiText !== DATA_NOT_AVAILABLE ? execNoiText : "";
   const coverER = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : "";
@@ -819,15 +823,15 @@ export function buildScreeningCustomerOutput({
     if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
     const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
     if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
-    const modeLabel = reportMode === "screening_v1" ? "Preliminary Screening" : "Acquisition Memo";
+    const modeLabel = reportMode === "screening_v1" ? "Preliminary Screening" : UNDERWRITING_REPORT_IDENTITY.canonicalTitle;
     snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Report Tier</span><div style="${coverSnapshotValueStyle}">${modeLabel}</div></div>`);
     const snapHtml = snapRows.length > 0 ? `<div style="margin-top:0;padding-top:0;">${snapRows.join("")}</div>` : "";
     html = replaceAll(html, "{{COVER_ASSET_SNAPSHOT}}", snapHtml);
   }
 
   const reportTypeLabel = reportMode === "screening_v1"
-    ? "Preliminary Investment Screening Memorandum"
-    : "Acquisition Memo";
+    ? SCREENING_REPORT_IDENTITY.canonicalTitle
+    : UNDERWRITING_REPORT_IDENTITY.canonicalTitle;
   html = replaceAll(html, "{{REPORT_TYPE_LABEL}}", reportTypeLabel);
   html = replaceAll(html, "{{COVER_REPORT_TYPE_LABEL}}", reportTypeLabel);
   html = replaceAll(html, "{{PRIMARY_PRESSURE_POINT}}", primaryPressurePoint);

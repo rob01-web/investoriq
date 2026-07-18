@@ -2,6 +2,7 @@ import { toCapRatio, toRateRatio } from "./report-number-helpers.js";
 import { buildDocumentTreatmentSummaryHtml } from "./document-treatment-authority.js";
 import { formatInterestRatePercent } from "./report-formatting-helpers.js";
 import { ACQUISITION_FINANCING_DISPLAY_LABELS } from "./acquisition-financing-display-contract.js";
+import { UNDERWRITING_REPORT_IDENTITY } from "./report-identity-authority.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -361,7 +362,7 @@ function buildMinimalAcquisitionMemoV2Html({
   reportMeta = null,
   propertyProfile = null,
 } = {}) {
-  const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Underwriting Report";
+  const propertyName = propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle;
   const propertyAddress = propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
   const propertyTitle = propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
   const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
@@ -395,7 +396,7 @@ function buildMinimalAcquisitionMemoV2Html({
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(`InvestorIQ Underwriting Report - ${propertyName}`)}</title>
+  <title>${escapeHtml(`${UNDERWRITING_REPORT_IDENTITY.fullTitle} - ${propertyName}`)}</title>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; margin: 24px; color: #102033; }
     .report { max-width: 900px; margin: 0 auto; }
@@ -418,7 +419,7 @@ function buildMinimalAcquisitionMemoV2Html({
       <div class="card">
         <div class="body-copy">Institutional Real Estate Analysis</div>
         <div class="body-copy">${escapeHtml(propertyName)}</div>
-        <div class="body-copy">UNDERWRITING REPORT</div>
+        <div class="body-copy">${escapeHtml(UNDERWRITING_REPORT_IDENTITY.canonicalTitle.toUpperCase())}</div>
         <div class="body-copy">CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.</div>
         <div class="body-copy">${escapeHtml(propertyAddress || propertyTitle || generatedLabel || "")}</div>
       </div>
@@ -670,8 +671,8 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
         <td class="cover-cell">
           <div class="cover-brand-name">INVESTORIQ</div>
           <div class="cover-brand-sub">Institutional Real Estate Analysis</div>
-          <div class="cover-prop-name">${escapeHtml(propertyName || "Underwriting Report")}</div>
-          <div class="cover-prop-sub">UNDERWRITING REPORT</div>
+          <div class="cover-prop-name">${escapeHtml(propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle)}</div>
+          <div class="cover-prop-sub">${escapeHtml(UNDERWRITING_REPORT_IDENTITY.canonicalTitle.toUpperCase())}</div>
           <div class="cover-verdict-value">CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC.</div>
           <div class="cover-disclosure">${escapeHtml(customerSurfaceModel?.identity?.visibleClassification || "Acquisition Underwriting Review")}</div>
           <hr class="cover-divider" />
@@ -1400,7 +1401,7 @@ function renderAcquisitionMemoSummarySection({ sourcePackage = null, acquisition
     : stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.coreSourceSummaryHtml || "").trim();
   const rows = [
     `<tr><td>Asset Identity</td><td style="font-weight:600;">${escapeHtml(assetIdentity)}</td></tr>`,
-    `<tr><td>UNDERWRITING REPORT</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
+    `<tr><td>${escapeHtml(UNDERWRITING_REPORT_IDENTITY.canonicalTitle.toUpperCase())}</td><td style="font-weight:600;">${escapeHtml("InvestorIQ")}</td></tr>`,
     Number.isFinite(Number(coreMetrics?.occupancy)) ? `<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>` : "",
     Number.isFinite(Number(coreMetrics?.noi)) ? `<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(coreMetrics.noi)}</td></tr>` : "",
     `<tr><td>Current debt context</td><td style="font-weight:600;">${escapeHtml(supportFactBundleStatus(customerSurfaceModel, "currentDebtContext", acquisitionMemoProjection?.financingReadinessSignals?.hasCurrentDebtContext === true))}</td></tr>`,
@@ -1746,7 +1747,7 @@ export function renderCompleteAcquisitionMemoV2Html({
       };
     }
     const surfaceIdentity = customerSurfaceModel?.identity || {};
-    const propertyName = surfaceIdentity?.propertyName || propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || "Underwriting Report";
+    const propertyName = surfaceIdentity?.propertyName || propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle;
     const propertyAddress = surfaceIdentity?.propertyAddress || propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";
     const propertyTitle = surfaceIdentity?.propertyTitle || propertyProfile?.propertyTitle || propertyProfile?.property_title || reportMeta?.propertyTitle || reportMeta?.property_title || "";
     const generatedLabel = formatDisplayDate(reportMeta?.generatedAt || reportMeta?.generated_at || "");
@@ -1798,14 +1799,14 @@ export function renderCompleteAcquisitionMemoV2Html({
     const dataCoverageSection = renderSafely("Data Coverage & Source Limitations", () => renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.dataCoverageSourceLimitations });
     const treatmentSection = renderSafely("Source Context / Support Document Treatment", () => renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.sourceContextSupportDocumentTreatment });
     const methodologySection = renderSafely("Methodology & Data Transparency", () => renderMethodologySection(), { pageBreakBefore: true });
-    const footerSection = `<div class="report-footer"><div class="report-footer-inner"><span>InvestorIQ Underwriting Report | Confidential</span><span>&copy; InvestorIQ Technologies Inc.</span></div></div>`;
+    const footerSection = `<div class="report-footer"><div class="report-footer-inner"><span>${escapeHtml(UNDERWRITING_REPORT_IDENTITY.fullTitle)} | Confidential</span><span>&copy; InvestorIQ Technologies Inc.</span></div></div>`;
 
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(`InvestorIQ Underwriting Report - ${propertyName}`)}</title>
+  <title>${escapeHtml(`${UNDERWRITING_REPORT_IDENTITY.fullTitle} - ${propertyName}`)}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     @page {

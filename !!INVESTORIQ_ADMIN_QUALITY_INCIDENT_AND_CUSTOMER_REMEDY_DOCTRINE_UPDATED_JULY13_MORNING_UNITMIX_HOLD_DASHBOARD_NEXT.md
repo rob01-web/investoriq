@@ -1500,3 +1500,40 @@ Gate 11 remains preserved exactly and is the next separately bounded launch-oper
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+## July 18 RETEST 34 Admin identity-contract remedy checkpoint
+
+RETEST 34 was an InvestorIQ-owned internal identity-contract failure. The customer supplied core-publishable evidence, the report was deliverable, and a valid PDF existed. The terminal block was created only because an obsolete internal caller demanded the removed `Acquisition Memo` title. Optional market-survey authority and presentation findings were nonterminal and must not be represented as customer document failure or replacement-document authority.
+
+Canonical Admin treatment is now:
+
+```text
+stale caller identity anchor rejected, canonical title present -> publish path continues; internal nonblocking quality event retained
+canonical title objectively absent from PDF -> blocked / InvestorIQ defect
+unsupported optional evidence -> section collapse or disclosure; no full-report remedy
+catastrophic validated core evidence -> blocked / customer source limitation
+```
+
+The nonblocking event code is `PDF_CALLER_IDENTITY_ANCHOR_REJECTED`. It does not restore a report credit, request a replacement T12 or Rent Roll, mark `customer_document_failure`, or change billing. True canonical-title loss remains a blocking InvestorIQ defect. No Admin dashboard component, lifecycle state, credit rule, retry rule, or customer messaging surface changed in this patch.
+
+```text
+BASE COMMIT: 841bba5
+ADMIN DASHBOARD CHANGE: NONE
+CUSTOMER LIFECYCLE OR REMEDY CHANGE: NONE
+BILLING OR CREDIT DOCTRINE CHANGE: NONE
+REPLACEMENT-DOCUMENT WORKFLOW CHANGE: NONE
+SOURCE TRUTH OR DELIVERY GATE CHANGE: NONE
+CANONICAL IDENTITY INCIDENT CLASSIFICATION: ADDED
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+```
+
+Verification: RETEST 34 canonical report-identity smoke `PASS`; quality-manifest and incident projection remain `PASS` through `qa:quality-ops` and `qa:full`; `qa:institutional-pdf` 12 / 12 and `qa:financial-intelligence` `PASS`.
+
+Gate 11 remains preserved exactly and is the next separately bounded launch-operations review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

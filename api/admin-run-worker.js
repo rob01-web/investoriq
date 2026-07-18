@@ -2650,9 +2650,10 @@ export default async function handler(req, res) {
                       holdDelivery: resolvedDeliveryDecision.holdDelivery,
                       deterministicContractQaSeal: reportData?.deterministic_contract_qa_seal || null,
                       sourceReconciliation: reportData?.source_reconciliation || null,
-                      requiredPdfTextAnchors: Array.isArray(reportData?.pdf_required_text_anchors)
-                        ? reportData.pdf_required_text_anchors
-                        : [],
+                      reportIdentity: {
+                        reportMode: reportData?.report_mode || null,
+                        reportType: reportData?.report_type || job.report_type || null,
+                      },
                       reportDownloadArtifactMode: reportData?.pdf_artifact_mode || process.env.REPORT_DOWNLOAD_ARTIFACT_MODE || "",
                     });
                   } catch (artifactErr) {

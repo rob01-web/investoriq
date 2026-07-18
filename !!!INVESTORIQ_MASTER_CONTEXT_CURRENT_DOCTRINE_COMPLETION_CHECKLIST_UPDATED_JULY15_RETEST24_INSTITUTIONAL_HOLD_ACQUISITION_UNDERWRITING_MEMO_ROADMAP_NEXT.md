@@ -3860,5 +3860,41 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+## July 18 RETEST 34 canonical report-identity authority closure
+
+RETEST 34 did not fail Source Truth, core evidence, section policy, or Delivery Gate. The package was core-publishable with no true blockers, Delivery was deliverable, and a valid 11-page PDF existed. Publication stopped only because the generator still supplied the obsolete caller anchor `Acquisition Memo` after Gate 10V had correctly changed the approved customer document to `Underwriting Report`. Final PDF Boss therefore raised `PDF_CONTENT_DISAGREES_WITH_APPROVED_SURFACE` for a title that was no longer approved. The optional market-survey authority limitation and the recorded presentation findings were nonblocking and did not cause the failure.
+
+The root class is now closed by `canonical_report_identity_v1`. Screening and Underwriting each have one immutable report-identity receipt containing canonical title, accepted internal aliases, visible compatibility aliases, prohibited cross-report titles, and required PDF anchors. The generator, deterministic QA seal, renderer, document composer, direct PDF path, recovery path, delivery resolver, worker path, and Final PDF Boss consume or reconstruct that receipt. A caller cannot create or override report-identity authority.
+
+Final PDF Boss v6 ignores a stale caller identity anchor, records `PDF_CALLER_IDENTITY_ANCHOR_REJECTED` as a nonblocking InvestorIQ quality incident, and certifies against the canonical anchor. Actual loss of the canonical title still blocks with `PDF_CONTENT_DISAGREES_WITH_APPROVED_SURFACE`. Production inventory proves the only literal required-anchor definitions are in `api/_lib/report-identity-authority.js`; remaining `Acquisition Memo` strings are internal module, database, log, comment, or quarantined legacy-compatibility terminology and cannot control publication.
+
+```text
+BASE COMMIT: 841bba5
+REPORT IDENTITY AUTHORITY: canonical_report_identity_v1
+FINAL PDF BOSS: gate10v_final_pdf_publication_quality_boss_v6
+RETEST 34 TERMINAL ROOT CAUSE: STALE CALLER IDENTITY ANCHOR
+CALLER IDENTITY OVERRIDE AUTHORITY: NONE
+TRUE CANONICAL IDENTITY LOSS BLOCKS: YES
+SOURCE TRUTH CHANGED: NO
+SCREENING APPEARANCE CHANGED: NO
+SECTION POLICY OR CALCULATIONS CHANGED: NO
+DELIVERY GATE CANONICAL AUTHORITY CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+ADMIN OR CUSTOMER LIFECYCLE CHANGED: NO
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+NEXT: Gate 11 Launch Operations and Certification under a separately bounded authority review
+```
+
+Permanent proof: RETEST 34 canonical report-identity regression smoke `PASS`; dynamic Underwriting and Screening delivery-resolver identity proof `PASS`; P0-C Final PDF Boss smoke `PASS`; renderer smoke `PASS`; `qa:institutional-pdf` 12 / 12 `PASS`; `qa:quality-ops` `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` including production build and diff integrity `PASS`.
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ---
 # End of Active Master Context
