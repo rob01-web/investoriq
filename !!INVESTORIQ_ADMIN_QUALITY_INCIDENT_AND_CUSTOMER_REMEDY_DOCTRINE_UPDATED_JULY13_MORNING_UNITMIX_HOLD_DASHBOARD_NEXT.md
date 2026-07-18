@@ -1381,6 +1381,44 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+## July 18 RETEST 32 publish-with-quality-incident remedy checkpoint
+
+RETEST 32 was a false terminal block owned by InvestorIQ. The report had deliverable canonical authority and a valid 12-page PDF, but strict PDF extraction certification retained three findings after one bounded recomposition: numeric-column alignment, approved-table certification, and approved-number certification. Those findings remain visible and InvestorIQ-owned, but they no longer create `PDF_ARTIFACT_FAILED` when no objective delivery blocker exists.
+
+Canonical Admin treatment is now:
+
+```text
+certified PDF -> published clean
+valid deliverable PDF plus nonblocking institutional findings -> published with limitations
+unsafe, invalid, unsealed, prohibited, or objectively incomplete PDF -> blocked / InvestorIQ defect
+catastrophic validated T12 or Rent Roll -> blocked / customer source limitation
+```
+
+Published-with-limitations manifests carry `pdfCertified: false`, `pdfQualityDisposition: publish_with_quality_incident`, `verified_publication_with_quality_incident`, the complete Final PDF Boss receipt, and a high-severity internal PDF quality event. They do not request replacement customer documents, restore a consumed credit as though generation failed, or represent a customer-caused terminal incident.
+
+The one-attempt recovery limit remains. Strict ELITE findings remain available for Admin follow-up and Gate 11 monitoring. Unsafe artifacts remain terminal and never upload. A contradictory allow flag cannot bypass an explicit blocker.
+
+```text
+Customer document replacement workflow change: NONE
+Credit doctrine change: NONE
+Billing doctrine change: NONE
+Source Truth change: NONE
+Screening change: NONE
+Delivery Gate canonical authority change: NONE
+Admin published-with-limitations support: YES
+Deployment: NONE
+Codex live retest: NONE
+```
+
+Verification: quality-manifest and incident-projection smokes `PASS`; RETEST 32 publication-authority regression smoke `PASS`; bounded recovery and upload-order proof `PASS`; `qa:institutional-pdf` 10 / 10 `PASS`; `qa:financial-intelligence`, `qa:full`, production build, and diff integrity `PASS`.
+
+Gate 11 remains preserved exactly and is the next separately bounded launch-operations review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ## July 18 RETEST 31 Admin incident and Gate 10R remedy checkpoint
 
 The RETEST 31 Admin row correctly recorded that publication stopped, the PDF was not certified, the failure was internal, and the credit was restored. Its `mixed` responsibility label was not an accurate statement of terminal causation. It combined the critical InvestorIQ-owned `PDF_ARTIFACT_FAILED` event with low-severity expected source limitations such as an omitted optional property-tax section and a disclosed reconciliation.
@@ -1418,3 +1456,7 @@ Gate 11 remains preserved exactly and is the next separately bounded launch-oper
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+### Active continuation pointer after RETEST 32
+
+The published-with-quality-incident v4 remedy checkpoint documented above supersedes the v3 universal PDF terminal block. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains the next separately bounded launch-operations review.

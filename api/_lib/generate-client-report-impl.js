@@ -83,7 +83,10 @@ import {
   assertValidReportPublicationInsert,
   sanitizeTypography,
 } from "./report-delivery-output.js";
-import { inspectFinalPdfPublicationQuality } from "./final-pdf-publication-quality-boss.js";
+import {
+  inspectFinalPdfPublicationQuality,
+  isFinalPdfCustomerDeliveryAllowed,
+} from "./final-pdf-publication-quality-boss.js";
 import {
   buildInstitutionalPdfRecoveryHtml,
   isInstitutionalPdfRecoveryEligible,
@@ -8845,6 +8848,7 @@ try {
         initialCertificationStatus,
         finalCertificationStatus: recoveredCertification.status || null,
         recovered: recoveredCertification.ok === true,
+        customerDeliveryPreserved: isFinalPdfCustomerDeliveryAllowed(recoveredCertification),
       },
     };
   }
@@ -8860,7 +8864,7 @@ try {
     }]);
     if (pdfBossArtifactError) console.error("Failed to write final_pdf_publication_quality_boss artifact:", pdfBossArtifactError);
   }
-  if (!finalPdfPublicationQualityBossResult.ok) {
+  if (!isFinalPdfCustomerDeliveryAllowed(finalPdfPublicationQualityBossResult)) {
     const pdfBossError = new Error("Final PDF failed Publication Quality Boss certification");
     pdfBossError.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
     pdfBossError.context = {

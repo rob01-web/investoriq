@@ -88,6 +88,19 @@ function explicitDeliveryState(decision = null) {
   };
 }
 
+function finalPdfCustomerDeliveryAllowed(value = {}) {
+  const blockingCodes = asArray(value?.blocking_issue_codes);
+  const blockingIssues = asArray(value?.issues).filter((issue) => issue?.blocks_customer_delivery === true);
+  if (blockingCodes.length > 0 || blockingIssues.length > 0) return false;
+  return (value?.customer_delivery_allowed === true &&
+      ["certified", "internal_test_artifact_only", "publishable_with_quality_incident"].includes(text(value?.status))) ||
+    (value?.ok === true && ["certified", "internal_test_artifact_only"].includes(text(value?.status)));
+}
+
+function finalPdfStrictlyCertified(value = {}) {
+  return value?.ok === true && value?.status === "certified";
+}
+
 function buildCoreDocument(entry, canonicalRole, corePublishable) {
   const source = asObject(entry);
   const acceptedFacts = clone(asObject(source.accepted_facts));
@@ -553,8 +566,8 @@ export function validateReportQualityManifest(manifest, { requireFinal = false }
       if (delivery.status !== "deliverable" || delivery.customerDeliveryAllowed !== true || delivery.holdDelivery === true) {
         push("MANIFEST_FINAL_DELIVERY_NOT_ALLOWED", "receipts.deliveryGate", "Published manifest requires explicit deliverable authority.");
       }
-      if (manifest?.receipts?.finalPdfPublicationQualityBoss?.ok !== true || manifest?.receipts?.finalPdfPublicationQualityBoss?.status !== "certified") {
-        push("MANIFEST_FINAL_PDF_NOT_CERTIFIED", "receipts.finalPdfPublicationQualityBoss", "Published manifest requires a certified PDF Boss receipt.");
+      if (!finalPdfCustomerDeliveryAllowed(manifest?.receipts?.finalPdfPublicationQualityBoss)) {
+        push("MANIFEST_FINAL_PDF_DELIVERY_NOT_ALLOWED", "receipts.finalPdfPublicationQualityBoss", "Published manifest requires a PDF Boss receipt that explicitly allows customer delivery.");
       }
     }
     if (publicationState === "blocked") {
@@ -713,7 +726,8 @@ export function buildReportQualityManifestCandidate({
     publication: {
       state: "candidate",
       storagePath: null,
-      pdfCertified: finalPdfPublicationQualityBoss?.ok === true && finalPdfPublicationQualityBoss?.status === "certified",
+      pdfCertified: finalPdfStrictlyCertified(finalPdfPublicationQualityBoss),
+      pdfQualityDisposition: finalPdfPublicationQualityBoss?.publication_disposition || null,
     },
     credit: { state: "not_finalized" },
     remedy: { state: "not_required_for_candidate" },
@@ -830,7 +844,9 @@ export function finalizeReportQualityManifest({
     },
     qualityState: {
       ...clone(candidate.qualityState),
-      confidence: "verified_publication",
+      confidence: finalPdfStrictlyCertified(finalPdfPublicationQualityBoss)
+        ? "verified_publication"
+        : "verified_publication_with_quality_incident",
       delivery: explicitDeliveryState(deliveryDecision),
     },
     receipts: {
@@ -842,8 +858,8 @@ export function finalizeReportQualityManifest({
       state: text(publicationState) || null,
       storagePath: text(storagePath) || null,
       pdfCertified:
-        finalPdfPublicationQualityBoss?.ok === true &&
-        finalPdfPublicationQualityBoss?.status === "certified",
+        finalPdfStrictlyCertified(finalPdfPublicationQualityBoss),
+      pdfQualityDisposition: finalPdfPublicationQualityBoss?.publication_disposition || null,
     },
     credit: clone(creditState || { state: "reconciled" }),
     remedy: clone(remedyState || { state: "not_required" }),

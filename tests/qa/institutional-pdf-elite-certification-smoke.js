@@ -32,6 +32,8 @@ assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.composition.pageCountHardcoded, fals
 assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.composition.contentDrivenPaginationRequired, true);
 assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.repair.customerDocumentFailure, false);
 assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.publication.optionalSectionIssueMayBlockValidatedCorePublication, false);
+assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.publication.nonblockingQualityIncidentMayPublish, true);
+assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.strictCertificationRecordedSeparatelyFromDelivery, true);
 
 assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.scope, "institutional_page_by_page_certification");
 assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.pageByPageCertificationRequired, true);

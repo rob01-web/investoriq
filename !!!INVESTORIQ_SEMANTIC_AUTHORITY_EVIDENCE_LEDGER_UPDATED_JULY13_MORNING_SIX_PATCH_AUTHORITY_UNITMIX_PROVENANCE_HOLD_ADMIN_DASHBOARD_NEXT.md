@@ -9134,6 +9134,45 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+## July 18 RETEST 32 Final PDF semantic-authority correction
+
+The RETEST 32 terminal outcome was not supported by source authority. Canonical Source Truth and Delivery both authorized publication. Final PDF Boss v3 independently promoted presentation and PDF-extraction findings into report-level delivery blockers. This contradicted the rule that post-authority helpers may mirror canonical authority but may not manufacture deliverability or rediscover document truth.
+
+Final PDF Boss v4 now carries two independent receipts:
+
+```text
+strict_institutional_certified -> exact ELITE page-by-page quality status
+customer_delivery_allowed -> deterministic artifact safety and integrity disposition
+```
+
+Strict certification still fails and records every defect whenever any institutional check fails. Customer delivery remains blocked for invalid PDF bytes, constitution tampering, external test-mode publication, an unsealed approved surface, objective required-content loss, required reconciliation loss, prohibited customer language or punctuation, and page overflow. Extraction-certification uncertainty, table or chart certification uncertainty, numeric token fragmentation, alignment findings, blank or nearly blank extra pages, running-navigation defects, spacing, pagination, orphan, and readability findings remain internal quality incidents and cannot independently override validated core publication.
+
+Both direct generation and storage-resolution paths use the same fail-closed delivery predicate. Worker late-error preservation and the immutable Report Quality Manifest accept only a Boss receipt with no explicit blocking code or blocking issue. `ok: false` plus `publishable_with_quality_incident` is publishable; a contradictory `customer_delivery_allowed: true` plus any blocking issue is rejected.
+
+```text
+Source Truth mutation: NONE
+Accepted fact mutation: NONE
+Calculation mutation: NONE
+Scenario or scoring mutation: NONE
+Screening mutation: NONE
+Section eligibility mutation: NONE
+Delivery Gate source authority mutation: NONE
+Final PDF post-authority veto corrected: YES
+Strict institutional defect evidence preserved: YES
+Committed: NO
+Deployed: NO
+Codex live retest: NOT RUN
+```
+
+Verification: dedicated RETEST 32 publication-authority regression smoke `PASS`; `qa:institutional-pdf` 10 / 10 `PASS`; `qa:quality-ops` `PASS`; Acquisition Memo final-PDF handoff `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` and production build `PASS`; diff integrity `PASS`.
+
+Gate 11 remains preserved exactly and requires a separate bounded authority review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ## July 18 Gate 10R semantic-authority and exact-glyph certification closure
 
 The user-run RETEST 31 failure was a Final PDF certification regression, not a Source Truth, T12, Rent Roll, support-document, calculation, scenario, scoring, memo, or Delivery Gate failure. The valid rendered PDF reached `gate10_final_pdf_publication_quality_boss_v2`, where real extraction fragments created false table, number, page-navigation, spacing, and alignment blockers.
@@ -9168,3 +9207,7 @@ Gate 11 remains preserved exactly and requires a separate bounded authority revi
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+### Active continuation pointer after RETEST 32
+
+The v4 strict-certification versus customer-delivery separation documented above supersedes the v3 universal Final PDF veto. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains separately bounded.

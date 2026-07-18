@@ -46,6 +46,9 @@ assert.deepEqual(constitution.certification.pageReceiptRequiredFields, [
 ]);
 assert.equal(constitution.publication.testWatermarkExcludedFromInstitutionalScoring, true);
 assert.equal(constitution.publication.testModeExternalPublicationAllowed, false);
+assert.equal(constitution.publication.strictInstitutionalCertificationRecordedSeparatelyFromDelivery, true);
+assert.equal(constitution.publication.nonblockingQualityIncidentMayPublish, true);
+assert.equal(constitution.publication.unsafeArtifactMayPublish, false);
 assert.equal(constitution.publication.optionalSectionIssueMayBlockValidatedCorePublication, false);
 
 for (const mutate of [

@@ -156,15 +156,23 @@ for (const receipt of valid.institutional_certification.page_receipts) {
   assert.equal(Object.keys(receipt.dimensions).length, 12);
 }
 
-async function assertIssue(code, mutate, overrides = {}) {
+async function assertIssue(code, mutate, overrides = {}, { blocksCustomerDelivery = false } = {}) {
   const analysis = validAnalysis();
   mutate?.(analysis);
   refreshText(analysis);
   const result = await inspect(analysis, overrides);
   assert.equal(result.ok, false, code);
-  assert.equal(result.failure_class, "internal_system_failure", code);
+  assert.equal(result.failure_class, blocksCustomerDelivery ? "internal_system_failure" : null, code);
+  assert.equal(result.customer_delivery_allowed, !blocksCustomerDelivery, code);
+  assert.equal(
+    result.status,
+    blocksCustomerDelivery ? "internal_pdf_publication_quality_failure" : "publishable_with_quality_incident",
+    code
+  );
   assert.equal(result.customer_document_failure, false, code);
-  assert.ok(result.issues.some((issue) => issue.code === code), code);
+  assert.ok(result.issues.some((issue) =>
+    issue.code === code && issue.blocks_customer_delivery === blocksCustomerDelivery
+  ), code);
 }
 
 await assertIssue("PDF_BLANK_PAGES", (analysis) => {
@@ -175,10 +183,10 @@ await assertIssue("PDF_NEARLY_BLANK_PAGES", (analysis) => {
 });
 await assertIssue("PDF_REQUIRED_FINANCIAL_FACTS_MISSING", (analysis) => {
   analysis.pages[1].lines = analysis.pages[1].lines.filter((line) => !line.text.includes("$945,000"));
-});
+}, {}, { blocksCustomerDelivery: true });
 await assertIssue("PDF_RECONCILIATION_DISCLOSURE_MISSING", (analysis) => {
   analysis.pages[1].lines = analysis.pages[1].lines.filter((line) => line.text !== disclosure);
-});
+}, {}, { blocksCustomerDelivery: true });
 await assertIssue("PDF_DUPLICATED_RUNNING_HEADER", (analysis) => {
   analysis.pages[1].lines.unshift(makeLine("InvestorIQ Acquisition Memo", 770), makeLine("InvestorIQ Acquisition Memo", 760));
 });
@@ -194,7 +202,7 @@ await assertIssue("PDF_BROKEN_RUNNING_HEADER", (analysis) => {
 });
 await assertIssue("PDF_PAGE_OVERFLOW", (analysis) => {
   analysis.pages[1].items.push({ text: "$945,000", x: 600, y: 400, width: 80, height: 9, fontSize: 9 });
-});
+}, {}, { blocksCustomerDelivery: true });
 await assertIssue("PDF_ORPHANED_HEADINGS", (analysis) => {
   analysis.pages[2].lines.push(makeLine("Valuation Analysis", 65, { fontSize: 15 }));
 });
@@ -231,16 +239,16 @@ await assertIssue("PDF_RUNNING_FOOTER_MISSING", (analysis) => {
 });
 await assertIssue("PDF_PROHIBITED_PUNCTUATION", (analysis) => {
   analysis.pages[2].lines.push(makeLine("Approved surface — prohibited punctuation", 200));
-});
+}, {}, { blocksCustomerDelivery: true });
 await assertIssue("PDF_CONTENT_DISAGREES_WITH_APPROVED_SURFACE", null, {
   requiredTextAnchors: ["Acquisition Memo", "Source Reconciliation", "Missing approved anchor"],
-});
+}, { blocksCustomerDelivery: true });
 await assertIssue("TEST_MODE_PDF_EXTERNAL_PUBLICATION_BLOCKED", null, {
   publicationTarget: "external_customer",
-});
+}, { blocksCustomerDelivery: true });
 await assertIssue("PDF_CONSTITUTION_TAMPERING_REJECTED", null, {
   institutionalPdfConstitution: { source: "caller_override", pageCountHardcoded: true },
-});
+}, { blocksCustomerDelivery: true });
 
 const watermarkedAnalysis = validAnalysis();
 for (const page of watermarkedAnalysis.pages) {

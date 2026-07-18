@@ -3740,5 +3740,48 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+## July 18 RETEST 32 constitutional PDF publication-authority correction
+
+The Gate 10R-A through 10R-F patch at `299908d` deployed and executed, but RETEST 32 exposed the remaining root authority defect. Source Truth was core-publishable, true blockers were empty, Delivery was deliverable, and a valid 12-page PDF was generated. Final PDF Boss v3 nevertheless gave every institutional certification finding universal report-level veto power. One unsuccessful CSS recomposition then became `PDF_ARTIFACT_FAILED` even though the Boss classified the customer documents as valid and the failure as internal.
+
+The corrected v4 architecture keeps ELITE certification strict while restoring core-gated publish-or-collapse authority:
+
+```text
+no institutional findings -> certified / publish
+nonblocking presentation or extraction-certification findings -> one bounded repair, then publish with quality incident
+objective unsafe, invalid, prohibited, unsealed, required-content, or publication-mode failure -> block as internal system failure
+catastrophic validated core evidence -> block under canonical Source Truth
+```
+
+Every table, chart, column, number, heading, page break, spacing rule, alignment finding, page receipt, and repair action remains recorded. Certification uncertainty is not erased or relabeled as clean. It is separated from customer delivery authority. The canonical Report Quality Manifest and Admin incident projection now support `published` plus `pdfCertified: false` and preserve the internal quality follow-up. Both generation paths and the worker enforce explicit blocker precedence, so an allow flag cannot override a blocking code.
+
+The displayed-number parser now recognizes parenthesized currency beginning with `(` before the currency symbol, removing the malformed approved token family observed in RETEST 32 without inventing or changing any value.
+
+```text
+BASE COMMIT: 299908d
+FINAL PDF CONSTITUTION VERSION: 3
+FINAL PDF BOSS VERSION: gate10r_final_pdf_publication_quality_boss_v4
+SOURCE TRUTH CHANGED: NO
+SCREENING CHANGED: NO
+SECTION POLICY CHANGED: NO
+SOURCE VALUES OR CALCULATIONS CHANGED: NO
+DELIVERY GATE CANONICAL AUTHORITY CHANGED: NO
+POST-RENDER PUBLICATION CONSEQUENCE CORRECTED: YES
+STRICT ELITE PAGE CERTIFICATION PRESERVED: YES
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NO
+NEXT: Gate 11 Launch Operations and Certification under a separately bounded authority review
+```
+
+Permanent proof: `tests/qa/retest32-pdf-publication-authority-regression-smoke.js`. Dedicated smoke `PASS`; `qa:institutional-pdf` 10 / 10 `PASS`; `qa:quality-ops` `PASS`; Acquisition Memo final-PDF handoff `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` including production build and diff integrity `PASS`.
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ---
 # End of Active Master Context

@@ -1,5 +1,5 @@
 const CONSTITUTION_SOURCE = 'canonical_institutional_pdf_constitution';
-const CONSTITUTION_VERSION = 2;
+const CONSTITUTION_VERSION = 3;
 
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -145,7 +145,10 @@ function assembleConstitution() {
     publication: {
       testWatermarkExcludedFromInstitutionalScoring: true,
       testModeExternalPublicationAllowed: false,
-      institutionalCertificationRequiredForExternalPublication: true,
+      institutionalCertificationReceiptRequiredForExternalPublication: true,
+      strictInstitutionalCertificationRecordedSeparatelyFromDelivery: true,
+      nonblockingQualityIncidentMayPublish: true,
+      unsafeArtifactMayPublish: false,
       presentationIssueCustomerDocumentFailure: false,
       optionalSectionIssueMayBlockValidatedCorePublication: false,
     },

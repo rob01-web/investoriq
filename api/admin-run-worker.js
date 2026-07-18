@@ -965,11 +965,21 @@ export default async function handler(req, res) {
       return { creditRestoration };
     };
 
+    const pdfBossAllowsCustomerDelivery = (boss = null) => {
+      const blockingCodes = Array.isArray(boss?.blocking_issue_codes) ? boss.blocking_issue_codes : [];
+      const hasBlockingIssue = blockingCodes.length > 0 ||
+        (Array.isArray(boss?.issues) && boss.issues.some((issue) => issue?.blocks_customer_delivery === true));
+      if (hasBlockingIssue) return false;
+      if (boss?.customer_delivery_allowed === true) {
+        return ['certified', 'internal_test_artifact_only', 'publishable_with_quality_incident'].includes(String(boss?.status || ''));
+      }
+      return boss?.ok === true && boss?.status === 'certified';
+    };
+
     const preserveVerifiedPublicationAfterLateWorkerError = async (job, checkpoint, err) => {
       if (
         checkpoint?.verifiedDownloadArtifact !== true ||
-        checkpoint?.publicationQualityBoss?.ok !== true ||
-        checkpoint?.publicationQualityBoss?.status !== 'certified' ||
+        !pdfBossAllowsCustomerDelivery(checkpoint?.publicationQualityBoss) ||
         !checkpoint?.reportId ||
         !checkpoint?.storagePath
       ) {
@@ -2672,8 +2682,7 @@ export default async function handler(req, res) {
                       resolvedDeliveryDecision.holdDelivery !== true &&
                       resolvedDeliveryDecision.customerDeliveryAllowed === true &&
                       artifactResolution?.verifiedDownloadArtifact === true &&
-                      publicationQualityBoss?.ok === true &&
-                      publicationQualityBoss?.status === 'certified' &&
+                      pdfBossAllowsCustomerDelivery(publicationQualityBoss) &&
                       reportId &&
                       storagePath
                     ) {

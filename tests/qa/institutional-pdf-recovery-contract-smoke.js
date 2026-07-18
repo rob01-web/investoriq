@@ -49,7 +49,7 @@ assert.equal(recovery.receipt.disclosuresMayChange, false);
 assert.equal(recovery.receipt.attemptCount, 1);
 assert.equal(recovery.receipt.recertifyAgainstOriginalApprovedHtml, true);
 
-assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.constitutionVersion, 2);
+assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.constitutionVersion, 3);
 assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.repair.maximumAutomaticRecompositionAttempts, 1);
 assert.equal(INSTITUTIONAL_PDF_CONSTITUTION.certification.inferredValueReconstructionAllowed, false);
 assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.orderedExactGlyphFragmentTolerance, true);

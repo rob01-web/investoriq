@@ -396,6 +396,30 @@ assert.equal(finalManifest.publication.pdfCertified, true);
 assert.equal(finalManifest.qualityState.confidence, "verified_publication");
 assert.equal(validateReportQualityManifest(finalManifest, { requireFinal: true }).ok, true);
 
+const qualityIncidentManifest = finalizeReportQualityManifest({
+  candidate,
+  reportId: "quality-incident-report-id",
+  storagePath: "manifest-user/quality-incident-report-id.pdf",
+  deliveryDecision: deliverableDecision,
+  finalPdfPublicationQualityBoss: {
+    ok: false,
+    status: "publishable_with_quality_incident",
+    customer_delivery_allowed: true,
+    publication_disposition: "publish_with_quality_incident",
+    blocking_issue_codes: [],
+    quality_incident_codes: ["PDF_APPROVED_NUMBER_NOT_CERTIFIED"],
+  },
+  publicationState: "published",
+  creditState: { state: "reconciled" },
+  remedyState: { state: "internal_quality_followup" },
+  finalizedAt: "2026-07-18T15:01:00.000Z",
+});
+assert.equal(qualityIncidentManifest.publication.state, "published");
+assert.equal(qualityIncidentManifest.publication.pdfCertified, false);
+assert.equal(qualityIncidentManifest.publication.pdfQualityDisposition, "publish_with_quality_incident");
+assert.equal(qualityIncidentManifest.qualityState.confidence, "verified_publication_with_quality_incident");
+assert.equal(validateReportQualityManifest(qualityIncidentManifest, { requireFinal: true }).ok, true);
+
 const unavailableCandidate = buildUnavailableReportQualityManifestCandidate({
   jobId: "blocked-manifest-job",
   userId: "manifest-user",

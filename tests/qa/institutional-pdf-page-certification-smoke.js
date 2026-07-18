@@ -150,8 +150,22 @@ async function assertIssue(code, mutate, overrides = {}) {
   refresh(analysis);
   const result = await inspect(analysis, overrides);
   assert.equal(result.ok, false, code);
+  assert.equal(
+    result.customer_delivery_allowed,
+    !result.issues.some((issue) => issue.blocks_customer_delivery === true),
+    code
+  );
   assert.equal(result.customer_document_failure, false, code);
   assert.ok(result.issues.some((issue) => issue.code === code), code);
+  if ([
+    "PDF_APPROVED_TABLE_NOT_CERTIFIED",
+    "PDF_APPROVED_CHART_NOT_CERTIFIED",
+    "PDF_APPROVED_NUMBER_NOT_CERTIFIED",
+    "PDF_NUMERIC_COLUMN_MISALIGNMENT",
+    "PDF_SPACING_OVERLAP",
+  ].includes(code)) {
+    assert.equal(result.issues.find((issue) => issue.code === code).blocks_customer_delivery, false, code);
+  }
   assert.notEqual(result.repair_plan.publicationDisposition, "certified", code);
   return result;
 }

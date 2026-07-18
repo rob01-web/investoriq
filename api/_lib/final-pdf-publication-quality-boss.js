@@ -6,9 +6,30 @@ import {
 } from "./institutional-pdf-constitution.js";
 import { buildInstitutionalPdfRepairPlan } from "./institutional-pdf-repair-plan.js";
 
-const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10r_final_pdf_publication_quality_boss_v3";
+const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10r_final_pdf_publication_quality_boss_v4";
 const PAGE_CERTIFICATION_SCOPE = "institutional_page_by_page_certification";
 const TEST_WATERMARK_PATTERN = /\b(?:docraptor|test document|test mode)\b/i;
+const NONBLOCKING_QUALITY_ISSUE_CODES = new Set([
+  "PDF_BLANK_PAGES",
+  "PDF_NEARLY_BLANK_PAGES",
+  "PDF_ORPHANED_HEADINGS",
+  "PDF_TABLE_SEPARATED_FROM_HEADING",
+  "PDF_UNREADABLE_TABLE",
+  "PDF_DUPLICATED_RUNNING_HEADER",
+  "PDF_BROKEN_RUNNING_HEADER",
+  "PDF_RUNNING_HEADER_MISSING",
+  "PDF_RUNNING_FOOTER_MISSING",
+  "PDF_SPACING_OVERLAP",
+  "PDF_NUMERIC_COLUMN_MISALIGNMENT",
+  "PDF_APPROVED_TABLE_NOT_CERTIFIED",
+  "PDF_APPROVED_CHART_NOT_CERTIFIED",
+  "PDF_APPROVED_NUMBER_NOT_CERTIFIED",
+  "PDF_PAGE_NUMBERS_MISSING",
+]);
+
+function issueBlocksCustomerDelivery(code = "") {
+  return !NONBLOCKING_QUALITY_ISSUE_CODES.has(String(code || "").trim());
+}
 
 function toBuffer(value) {
   if (Buffer.isBuffer(value)) return value;
@@ -92,7 +113,7 @@ function extractElementBlock(html = "", openIndex = -1, tagName = "div") {
 
 function extractDisplayedNumbers(value = "") {
   const visibleText = stripHtml(value);
-  const matches = visibleText.match(/(?:[$€£]\s*)?\(?-?\d[\d,]*(?:\.\d+)?\)?(?:\s*%|\s*x|\s*years?)?/gi) || [];
+  const matches = visibleText.match(/(?:\(\s*)?(?:[$€£]\s*)?-?\d[\d,]*(?:\.\d+)?\)?(?:\s*%|\s*x|\s*years?)?/gi) || [];
   return unique(matches.map((number) => number.replace(/\s+/g, " ").trim()));
 }
 
@@ -166,16 +187,18 @@ function numberCertificationMatch(analysis = {}, value = "") {
 }
 
 function buildIssue(code, message, evidence = {}, path = "pdf") {
+  const blocksCustomerDelivery = issueBlocksCustomerDelivery(code);
   return {
     code,
-    severity: "critical",
-    category: "internal_pdf_publication_quality_failure",
-    classification: "internal_system_failure",
-    failure_class: "internal_system_failure",
+    severity: blocksCustomerDelivery ? "critical" : "high",
+    category: blocksCustomerDelivery ? "internal_pdf_publication_quality_failure" : "internal_pdf_quality_incident",
+    classification: blocksCustomerDelivery ? "internal_system_failure" : "internal_quality_incident",
+    failure_class: blocksCustomerDelivery ? "internal_system_failure" : null,
     message,
     evidence,
     path,
-    blocks_customer_delivery: true,
+    blocks_customer_delivery: blocksCustomerDelivery,
+    publication_disposition: blocksCustomerDelivery ? "block" : "publish_with_quality_incident",
     customer_document_failure: false,
   };
 }
@@ -980,7 +1003,8 @@ function buildPageCertificationReceipts({ analysis = {}, manifest = {}, issues =
 function repairDefectsFromIssues(issues = []) {
   return issues.map((issue) => {
     const pages = issuePageNumbers(issue);
-    const required = /(?:NUMBER|FINANCIAL_FACT|APPROVED|RECONCILIATION|REQUIRED|CONSTITUTION|SOURCE)/.test(issue.code);
+    const required = issue.blocks_customer_delivery === true &&
+      /(?:NUMBER|FINANCIAL_FACT|APPROVED|RECONCILIATION|REQUIRED|CONSTITUTION|SOURCE)/.test(issue.code);
     const category = /NUMBER|FINANCIAL_FACT/.test(issue.code)
       ? "number"
       : /RECONCILIATION|SOURCE|CONSTITUTION/.test(issue.code)
@@ -1095,16 +1119,40 @@ export async function inspectFinalPdfPublicationQuality({
   }));
   const repairPlan = buildInstitutionalPdfRepairPlan({ defects: repairDefectsFromIssues(issues) });
   const ok = issues.length === 0;
+  const blockingIssues = issues.filter((issue) => issue.blocks_customer_delivery === true);
+  const qualityIncidents = issues.filter((issue) => issue.blocks_customer_delivery !== true);
+  const customerDeliveryAllowed = blockingIssues.length === 0;
+  const status = ok
+    ? (internalStub ? "internal_test_artifact_only" : "certified")
+    : customerDeliveryAllowed
+      ? "publishable_with_quality_incident"
+      : "internal_pdf_publication_quality_failure";
+  const resolvedRepairPlan = Object.freeze({
+    ...repairPlan,
+    publicationDisposition: ok
+      ? repairPlan.publicationDisposition
+      : customerDeliveryAllowed
+        ? "publish_with_quality_incident"
+        : "hold_for_internal_repair",
+    customerDeliveryBlocked: !customerDeliveryAllowed,
+  });
 
   return {
     version: FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION,
     authority: "final_pdf_publication_quality_boss",
     scope: PAGE_CERTIFICATION_SCOPE,
     ok,
-    status: ok ? (internalStub ? "internal_test_artifact_only" : "certified") : "internal_pdf_publication_quality_failure",
-    failure_class: ok ? null : "internal_system_failure",
+    status,
+    strict_institutional_certified: ok,
+    customer_delivery_allowed: customerDeliveryAllowed,
+    publication_disposition: customerDeliveryAllowed
+      ? (ok ? "publish" : "publish_with_quality_incident")
+      : "block",
+    blocking_issue_codes: blockingIssues.map((issue) => issue.code),
+    quality_incident_codes: qualityIncidents.map((issue) => issue.code),
+    failure_class: blockingIssues.length > 0 ? "internal_system_failure" : null,
     customer_document_failure: false,
-    external_publication_allowed: ok && normalizedArtifactMode === "production_pdf",
+    external_publication_allowed: customerDeliveryAllowed && normalizedArtifactMode === "production_pdf",
     artifact_mode: normalizedArtifactMode || null,
     publication_target: normalizedTarget || null,
     constitution: {
@@ -1150,14 +1198,14 @@ export async function inspectFinalPdfPublicationQuality({
       number_coverage: coverage.numberCoverage,
       report_defects: reportDefects,
     },
-    repair_plan: repairPlan,
+    repair_plan: resolvedRepairPlan,
     issues,
   };
 }
 
 export async function assertFinalPdfPublicationQuality(args = {}) {
   const result = await inspectFinalPdfPublicationQuality(args);
-  if (!result.ok) {
+  if (!isFinalPdfCustomerDeliveryAllowed(result)) {
     const error = new Error("Final PDF failed Publication Quality Boss certification");
     error.code = "PDF_ARTIFACT_FAILED";
     error.context = {
@@ -1168,6 +1216,17 @@ export async function assertFinalPdfPublicationQuality(args = {}) {
     throw error;
   }
   return result;
+}
+
+export function isFinalPdfCustomerDeliveryAllowed(result = {}) {
+  const blockingCodes = Array.isArray(result?.blocking_issue_codes) ? result.blocking_issue_codes : [];
+  const hasBlockingIssue = blockingCodes.length > 0 ||
+    (Array.isArray(result?.issues) && result.issues.some((issue) => issue?.blocks_customer_delivery === true));
+  if (hasBlockingIssue) return false;
+  if (result?.customer_delivery_allowed === true) {
+    return ["certified", "internal_test_artifact_only", "publishable_with_quality_incident"].includes(String(result?.status || ""));
+  }
+  return result?.ok === true && ["certified", "internal_test_artifact_only"].includes(String(result?.status || ""));
 }
 
 export const FINAL_PDF_PUBLICATION_QUALITY_CONTRACT = Object.freeze({
@@ -1181,4 +1240,6 @@ export const FINAL_PDF_PUBLICATION_QUALITY_CONTRACT = Object.freeze({
   inferredValueReconstructionAllowed: false,
   alignmentRequiresApprovedTableRowScope: true,
   maximumAutomaticRecompositionAttempts: 1,
+  strictCertificationRecordedSeparatelyFromDelivery: true,
+  nonblockingQualityIncidentMayPublish: true,
 });

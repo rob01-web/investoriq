@@ -19919,6 +19919,45 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+### Active continuation pointer after RETEST 32
+
+The Final PDF Boss v4 constitutional publication-authority correction documented above supersedes the prior v3 Gate 10R terminal behavior. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains the next separately bounded gate.
+
+## July 18 RETEST 32 constitutional PDF publication-authority correction
+
+RETEST 32 proved that canonical core and section authority had already succeeded before the report failed. The T12 and Rent Roll were accepted, Source Truth was core-publishable, no true core blocker existed, optional section policy had already rendered, omitted, or disclosed correctly, and the Delivery Gate was deliverable. The terminal failure was manufactured afterward because Final PDF Boss v3 assigned `blocks_customer_delivery: true` to every certification issue and converted any non-empty issue list into `PDF_ARTIFACT_FAILED`.
+
+Final PDF Boss v4 removes that unauthorized universal veto while preserving strict institutional certification. `ok` and `strict_institutional_certified` remain false whenever any page-by-page defect exists. Every table, chart, column, number, heading, page break, spacing rule, alignment finding, and report defect remains recorded. A separate deterministic `customer_delivery_allowed` decision now blocks only objective safety, authority, required-content, prohibited-language, publication-mode, or artifact-validity failures.
+
+Nonblocking presentation and extraction-certification findings now produce `publishable_with_quality_incident`. They receive one bounded content-preserving recomposition and recertification attempt. If strict certification remains uncertain but no blocking issue exists, the valid report uploads and publishes with its quality incident preserved. An allow flag cannot override an explicit blocking code or issue.
+
+```text
+BASE COMMIT: 299908d
+FINAL PDF BOSS: gate10r_final_pdf_publication_quality_boss_v4
+CORE ACCEPTANCE CHANGED: NO
+CATASTROPHIC CORE DOCTRINE CHANGED: NO
+SOURCE TRUTH CHANGED: NO
+SCREENING CHANGED: NO
+SECTION COLLAPSE POLICY CHANGED: NO
+CALCULATIONS OR SOURCE VALUES CHANGED: NO
+DELIVERY GATE AUTHORITY CHANGED: NO
+PDF QUALITY CONSEQUENCE CORRECTED: YES
+STRICT PAGE-BY-PAGE CERTIFICATION PRESERVED: YES
+MAXIMUM AUTOMATIC PDF RECOMPOSITION ATTEMPTS: 1
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+```
+
+Adversarial proof: RETEST 32 failure-family quality findings publish after one unsuccessful strict recertification; invalid PDF bytes remain blocked before upload; an explicit blocking issue defeats any contradictory allow flag. Dedicated RETEST 32 smoke `PASS`; `qa:institutional-pdf` 10 / 10 `PASS`; `qa:quality-ops` `PASS`; Acquisition Memo final-PDF handoff `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` including production build and diff integrity `PASS`.
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ## July 18 RETEST 31 core-valid failure-path closure and Gate 10R
 
 RETEST 31 is permanent proof that an accepted core-valid report can reach a valid PDF and still be overblocked by a verifier that confuses extraction shape with visual failure. The core package was publishable, Delivery Gate was deliverable, the 12-page PDF was valid, and the terminal `PDF_ARTIFACT_FAILED` remained `internal_system_failure` with no replacement-document authority.
@@ -19958,3 +19997,7 @@ Gate 11 remains preserved exactly:
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+### Active continuation pointer after RETEST 32
+
+The Final PDF Boss v4 constitutional publication-authority correction documented above supersedes the prior v3 Gate 10R terminal behavior. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains the next separately bounded gate.

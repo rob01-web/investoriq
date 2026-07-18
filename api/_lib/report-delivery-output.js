@@ -1,6 +1,9 @@
 import axios from "axios";
 import { sanitizeFinalCustomerHtml } from "./report-surface-contracts.js";
-import { assertFinalPdfPublicationQuality } from "./final-pdf-publication-quality-boss.js";
+import {
+  assertFinalPdfPublicationQuality,
+  isFinalPdfCustomerDeliveryAllowed,
+} from "./final-pdf-publication-quality-boss.js";
 import {
   buildInstitutionalPdfRecoveryHtml,
   isInstitutionalPdfRecoveryEligible,
@@ -393,14 +396,9 @@ export async function ensureReportDownloadArtifact({
 
   let publicationQualityBoss;
   let institutionalPdfRecovery = null;
-  try {
-    publicationQualityBoss = await certifyPdf(pdfBuffer);
-  } catch (error) {
-    const initialCertification = error?.context?.final_pdf_publication_quality_boss || null;
-    if (!isInstitutionalPdfRecoveryEligible(initialCertification)) {
-      await cleanupCreatedReportRecord("PDF publication quality failure");
-      throw error;
-    }
+  let recoveryAttempted = false;
+  const recoverPdfOnce = async (initialCertification) => {
+    recoveryAttempted = true;
     const recovery = buildInstitutionalPdfRecoveryHtml({
       approvedHtml: finalHtml,
       certification: initialCertification,
@@ -417,26 +415,79 @@ export async function ensureReportDownloadArtifact({
       storagePath: normalizedStoragePath,
     });
     try {
-      publicationQualityBoss = await certifyPdf(recoveredBuffer);
-      pdfBuffer = recoveredBuffer;
-      institutionalPdfRecovery = {
-        ...recovery.receipt,
-        initialCertificationStatus: initialCertification?.status || null,
-        finalCertificationStatus: publicationQualityBoss?.status || null,
-        recovered: true,
+      const recoveredCertification = await certifyPdf(recoveredBuffer);
+      return {
+        pdfBuffer: recoveredBuffer,
+        publicationQualityBoss: recoveredCertification,
+        institutionalPdfRecovery: {
+          ...recovery.receipt,
+          initialCertificationStatus: initialCertification?.status || null,
+          finalCertificationStatus: recoveredCertification?.status || null,
+          recovered: recoveredCertification?.ok === true,
+          customerDeliveryPreserved: isFinalPdfCustomerDeliveryAllowed(recoveredCertification),
+        },
       };
     } catch (recoveryError) {
+      const recoveredCertification = recoveryError?.context?.final_pdf_publication_quality_boss || null;
+      if (isFinalPdfCustomerDeliveryAllowed(recoveredCertification)) {
+        return {
+          pdfBuffer: recoveredBuffer,
+          publicationQualityBoss: recoveredCertification,
+          institutionalPdfRecovery: {
+            ...recovery.receipt,
+            initialCertificationStatus: initialCertification?.status || null,
+            finalCertificationStatus: recoveredCertification?.status || null,
+            recovered: false,
+            customerDeliveryPreserved: true,
+          },
+        };
+      }
       recoveryError.context = {
         ...(recoveryError.context || {}),
         institutional_pdf_recovery: {
           ...recovery.receipt,
           initialCertificationStatus: initialCertification?.status || null,
           recovered: false,
+          customerDeliveryPreserved: false,
         },
       };
       await cleanupCreatedReportRecord("PDF publication quality recovery failure");
       throw recoveryError;
     }
+  };
+  try {
+    publicationQualityBoss = await certifyPdf(pdfBuffer);
+  } catch (error) {
+    const initialCertification = error?.context?.final_pdf_publication_quality_boss || null;
+    if (!isInstitutionalPdfRecoveryEligible(initialCertification)) {
+      await cleanupCreatedReportRecord("PDF publication quality failure");
+      throw error;
+    }
+    const recovered = await recoverPdfOnce(initialCertification);
+    pdfBuffer = recovered.pdfBuffer;
+    publicationQualityBoss = recovered.publicationQualityBoss;
+    institutionalPdfRecovery = recovered.institutionalPdfRecovery;
+  }
+  if (
+    !recoveryAttempted &&
+    publicationQualityBoss?.ok === false &&
+    isInstitutionalPdfRecoveryEligible(publicationQualityBoss)
+  ) {
+    const recovered = await recoverPdfOnce(publicationQualityBoss);
+    pdfBuffer = recovered.pdfBuffer;
+    publicationQualityBoss = recovered.publicationQualityBoss;
+    institutionalPdfRecovery = recovered.institutionalPdfRecovery;
+  }
+  if (!isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss)) {
+    await cleanupCreatedReportRecord("PDF publication safety failure");
+    const error = new Error("Final PDF failed customer delivery safety certification");
+    error.code = "PDF_ARTIFACT_FAILED";
+    error.context = {
+      failure_class: "internal_system_failure",
+      customer_document_failure: false,
+      final_pdf_publication_quality_boss: publicationQualityBoss || null,
+    };
+    throw error;
   }
 
   const { error: uploadError } = await storageBucket.upload(normalizedStoragePath, pdfBuffer, {

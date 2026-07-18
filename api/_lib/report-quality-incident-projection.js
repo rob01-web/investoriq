@@ -373,7 +373,7 @@ export function buildReportQualityIncidentProjection({
     events.push(event({
       code: "PUBLISHED_PDF_NOT_CERTIFIED",
       family: "pdf_quality",
-      severity: "critical",
+      severity: "high",
       ownerArea: "pdf_publication_boss",
       responsibility: "investoriq_defect",
       message: "A published report does not carry a certified PDF receipt.",
