@@ -428,13 +428,18 @@ export function buildReportQualityIncidentProjection({
       ? "MEDIUM"
       : "LOW";
   const responsibilities = unique(events.map((entry) => entry.responsibility));
-  const responsibility = responsibilities.includes("investoriq_defect") && responsibilities.includes("customer_source_limitation")
-    ? "mixed"
-    : responsibilities.includes("investoriq_defect")
-      ? "investoriq_defect"
-      : responsibilities.includes("customer_source_limitation")
-        ? "customer_source_limitation"
-        : "none";
+  const terminalResponsibility = publicationState === "blocked"
+    ? (terminal.failureClass === "customer_document_failure" ? "customer_source_limitation" : "investoriq_defect")
+    : null;
+  const responsibility = terminalResponsibility || (
+    responsibilities.includes("investoriq_defect") && responsibilities.includes("customer_source_limitation")
+      ? "mixed"
+      : responsibilities.includes("investoriq_defect")
+        ? "investoriq_defect"
+        : responsibilities.includes("customer_source_limitation")
+          ? "customer_source_limitation"
+          : "none"
+  );
   const collapseStates = unique(
     events
       .filter((entry) => entry.family === "section_collapse")

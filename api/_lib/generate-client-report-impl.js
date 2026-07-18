@@ -85,6 +85,10 @@ import {
 } from "./report-delivery-output.js";
 import { inspectFinalPdfPublicationQuality } from "./final-pdf-publication-quality-boss.js";
 import {
+  buildInstitutionalPdfRecoveryHtml,
+  isInstitutionalPdfRecoveryEligible,
+} from "./institutional-pdf-recovery.js";
+import {
   resolveReportTypeAndTier,
   constantTimeEqual,
 } from "./report-request-context.js";
@@ -8800,6 +8804,50 @@ try {
     artifactMode: finalPdfArtifactMode,
     publicationTarget: finalPdfPublicationTarget,
   });
+  if (!finalPdfPublicationQualityBossResult.ok && isInstitutionalPdfRecoveryEligible(finalPdfPublicationQualityBossResult)) {
+    const recovery = buildInstitutionalPdfRecoveryHtml({
+      approvedHtml: docHtml,
+      certification: finalPdfPublicationQualityBossResult,
+    });
+    const initialCertificationStatus = finalPdfPublicationQualityBossResult.status || null;
+    pdfResponse = await axios.post(
+      "https://docraptor.com/docs",
+      {
+        test: docraptorMode !== "production",
+        document_content: recovery.html,
+        name: "InvestorIQ-ClientReport.pdf",
+        document_type: "pdf",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${Buffer.from(
+            process.env.DOCRAPTOR_API_KEY + ":"
+          ).toString("base64")}`,
+        },
+        responseType: "arraybuffer",
+      }
+    );
+    const recoveredCertification = await inspectFinalPdfPublicationQuality({
+      pdfBytes: pdfResponse.data,
+      approvedHtml: docHtml,
+      deterministicContractQaSeal: finalPdfDeterministicContractQaSeal,
+      sourceReconciliation: finalPdfSourceReconciliation,
+      financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
+      requiredTextAnchors: ["Acquisition Memo"],
+      artifactMode: finalPdfArtifactMode,
+      publicationTarget: finalPdfPublicationTarget,
+    });
+    finalPdfPublicationQualityBossResult = {
+      ...recoveredCertification,
+      institutional_pdf_recovery: {
+        ...recovery.receipt,
+        initialCertificationStatus,
+        finalCertificationStatus: recoveredCertification.status || null,
+        recovered: recoveredCertification.ok === true,
+      },
+    };
+  }
   if (jobId) {
     const pdfBossTimestamp = new Date().toISOString().replace(/:/g, "-");
     const { error: pdfBossArtifactError } = await supabase.from("analysis_artifacts").insert([{

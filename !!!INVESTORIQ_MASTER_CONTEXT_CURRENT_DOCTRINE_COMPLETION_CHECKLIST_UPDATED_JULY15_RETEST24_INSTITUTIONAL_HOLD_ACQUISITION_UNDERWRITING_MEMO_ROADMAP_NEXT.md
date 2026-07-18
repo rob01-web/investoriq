@@ -3663,5 +3663,82 @@ Gate 11: Launch Operations and Certification
 
 Gate 10 completion does not authorize Gate 11 implementation, deployment, a live retest, or production-mode DocRaptor activation.
 
+## July 18 RETEST 31 post-Gate 10 live-PDF regression and Gate 10R closure
+
+The user-run `Final Attack Test 8 RETEST 31`, job `8efe67ca-0430-460b-9ed0-3e6f85d546ae`, reached a valid 12-page PDF but did not publish. The supplied artifact export proves the uploaded package was not the cause:
+
+```text
+T12 and Rent Roll: accepted
+core_publishable: true
+true core blockers: 0
+Delivery Gate: deliverable
+customer delivery allowed before final PDF certification: true
+generated PDF: valid, 12 pages
+terminal code: PDF_ARTIFACT_FAILED
+failure class: internal_system_failure
+customer document replacement required: false
+credit: restored
+```
+
+The Gate 10 v2 Boss interpreted real DocRaptor extraction fragmentation as six critical PDF defect families. Merged footer text containing `Page N of M` was rejected because the page number was not an isolated line. The same small running-navigation lines were misclassified as unreadable table rows. Exact currency and percentage values were split across PDF text items. One-column cover layout was classified as a data table. Numeric alignment was measured across unrelated nearby lines. Baseline proximity without horizontal overlap was classified as text overlap.
+
+Gate 10R completed in six controlled stages:
+
+```text
+10R-A: generic real-PDF extraction replay
+10R-B: extraction-aware navigation, table, number, spacing, and alignment certification
+10R-C: exact ordered-glyph fragment resolution without inferred-value authority
+10R-D: one bounded conservative recomposition plus recertification against the original approved HTML
+10R-E: adversarial false-positive and true-defect proof, including exact one-digit loss
+10R-F: dedicated PDF QA, Financial Intelligence, full QA, build, diff, hardcoding, and authority-integrity proof
+```
+
+The canonical PDF constitution is version 2, the repair plan is version 2, and the Final PDF Boss is `gate10r_final_pdf_publication_quality_boss_v3`. Exact PDF fragments may be joined only in rendered glyph order when the resulting characters match an already approved value. This is certification of presentation survival only. It cannot create, infer, replace, round, calculate, or authorize a value.
+
+Running headers and footers are excluded from table-readability scoring. Page numbers may be recognized inside the verified footer region. Numeric alignment is evaluated only for rows belonging to an approved table. Nonsemantic one-column layout containers are not certified as institutional data tables. Spacing requires both vertical proximity and horizontal overlap.
+
+If a recoverable presentation defect remains, the primary generator and worker artifact path may perform exactly one conservative CSS-only recomposition. The second PDF is certified against the original approved HTML. The recovery cannot change values, sources, disclosures, calculations, classifications, scenarios, or Source Truth. Constitution tampering, invalid PDF bytes, prohibited customer language, prohibited punctuation, and test-mode external publication are never retry-eligible. An unresolved defect still fails closed before storage.
+
+The Admin incident projection now gives terminal failure responsibility precedence over unrelated low-severity collapses or disclosures. A blocked internal PDF defect is `investoriq_defect`, not `mixed`, even when an expected optional collapse is also recorded.
+
+Permanent proof:
+
+```text
+qa:institutional-pdf: PASS, 9 smokes
+Gate 10R real PDF extraction regression replay: PASS
+Gate 10R bounded recovery contract: PASS
+true missing-digit rejection: PASS
+legacy Final PDF Boss strictness: PASS
+page-by-page institutional certification: PASS
+qa:financial-intelligence: PASS
+qa:full: PASS
+standalone production build: PASS
+diff integrity: PASS
+production hardcoding scan: CLEAN
+authority weakening scan: CLEAN
+```
+
+```text
+GATE 10R REAL-PDF CERTIFICATION AND RECOVERY: COMPLETE / PASS LOCALLY
+BASE COMMIT: b6eea9d
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+SOURCE TRUTH CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+VALUE OR SOURCE AUTHORITY CREATED: NO
+MAXIMUM AUTOMATIC PDF RECOMPOSITION ATTEMPTS: 1
+NEXT: Gate 11 Launch Operations and Certification under a separately bounded authority review
+```
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ---
 # End of Active Master Context

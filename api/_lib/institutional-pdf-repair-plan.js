@@ -1,5 +1,5 @@
 const SOURCE = 'canonical_institutional_pdf_repair_plan';
-const VERSION = 1;
+const VERSION = 2;
 
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -94,6 +94,9 @@ export function buildInstitutionalPdfRepairPlan({ artifactId = null, defects = [
       requiredContentDefectIsInternalSystemRepair: true,
       customerDocumentFailureStateCreated: false,
       pageCountIsContentDriven: true,
+      maximumAutomaticRecompositionAttempts: 1,
+      recertifyAgainstOriginalApprovedSurface: true,
+      extractionUncertaintyMayNotBecomeConfirmedDefect: true,
     },
   });
 }

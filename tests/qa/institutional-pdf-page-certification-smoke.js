@@ -177,8 +177,8 @@ assert.equal(misaligned.institutional_certification.page_receipts[1].dimensions.
 
 const spacing = await assertIssue("PDF_SPACING_OVERLAP", (analysis) => {
   const row = analysis.pages[1].lines.find((candidate) => candidate.text === "Expenses $650,000");
-  row.y = 537;
-  for (const entry of row.items) entry.y = 537;
+  row.y = 539;
+  for (const entry of row.items) entry.y = 539;
 });
 assert.equal(spacing.institutional_certification.page_receipts[1].dimensions.spacing.status, "fail");
 

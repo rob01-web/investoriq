@@ -137,7 +137,7 @@ async function inspect(pdfAnalysis, overrides = {}) {
 }
 
 const valid = await inspect(validAnalysis());
-assert.equal(valid.ok, true);
+assert.equal(valid.ok, true, valid.issues.map((issue) => issue.code).join(", "));
 assert.equal(valid.status, "certified");
 assert.equal(valid.customer_document_failure, false);
 assert.equal(valid.external_publication_allowed, false);
@@ -328,6 +328,49 @@ await ensureReportDownloadArtifact({
 });
 order.push(...newStorage.events.filter((event) => event === "upload"));
 assert.deepEqual(order, ["render", "boss", "upload"]);
+
+const recoveredStorage = makeSupabaseStorage();
+const recoveryRenders = [];
+let recoveryBossCalls = 0;
+const recoveredResult = await ensureReportDownloadArtifact({
+  supabaseAdmin: recoveredStorage.client,
+  reportId: "report-recovered",
+  storagePath: "user/report-recovered.pdf",
+  finalHtml: approvedHtml,
+  reportType: "screening",
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
+  renderPdfBuffer: async ({ finalHtml }) => {
+    recoveryRenders.push(finalHtml);
+    return Buffer.from(recoveryRenders.length === 1 ? "%PDF-initial" : "%PDF-recovered");
+  },
+  runFinalPdfPublicationQualityBoss: async () => {
+    recoveryBossCalls += 1;
+    if (recoveryBossCalls === 1) {
+      const error = new Error("Final PDF failed Publication Quality Boss certification");
+      error.code = "PDF_ARTIFACT_FAILED";
+      error.context = {
+        customer_document_failure: false,
+        final_pdf_publication_quality_boss: {
+          ok: false,
+          status: "internal_pdf_publication_quality_failure",
+          customer_document_failure: false,
+          issues: [{ code: "PDF_SPACING_OVERLAP" }],
+        },
+      };
+      throw error;
+    }
+    return { ok: true, status: "certified" };
+  },
+});
+assert.equal(recoveryBossCalls, 2);
+assert.equal(recoveryRenders.length, 2);
+assert.equal(recoveryRenders[0], approvedHtml);
+assert.match(recoveryRenders[1], /data-iq-pdf-recovery="conservative-v1"/);
+assert.equal(recoveredResult.institutionalPdfRecovery.recovered, true);
+assert.equal(recoveredResult.institutionalPdfRecovery.valuesMayChange, false);
+assert.equal(recoveredResult.publicationQualityBoss.status, "certified");
+assert.equal(recoveredStorage.events.includes("upload"), true);
 
 const rejectedStorage = makeSupabaseStorage();
 await assert.rejects(

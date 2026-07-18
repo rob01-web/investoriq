@@ -1,5 +1,5 @@
 const CONSTITUTION_SOURCE = 'canonical_institutional_pdf_constitution';
-const CONSTITUTION_VERSION = 1;
+const CONSTITUTION_VERSION = 2;
 
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -79,11 +79,14 @@ function assembleConstitution() {
     },
     repair: {
       deterministicOnly: true,
+      maximumAutomaticRecompositionAttempts: 1,
+      recertifyAgainstOriginalApprovedSurface: true,
       repairSequence: [
         'recompose_adjacent_sections',
         'apply_approved_spacing_bounds',
         'move_or_split_table_at_row_boundary',
         'collapse_optional_surface',
+        'single_bounded_conservative_recomposition',
         'rerender_and_recertify',
       ],
       numericValueMutationAllowed: false,
@@ -96,6 +99,10 @@ function assembleConstitution() {
     },
     certification: {
       pageByPageRequired: true,
+      pdfExtractionFragmentTolerance: 'ordered_exact_glyphs_only',
+      inferredValueReconstructionAllowed: false,
+      runningNavigationExcludedFromTableReadability: true,
+      alignmentRequiresApprovedTableRowScope: true,
       certificationDimensions: [
         'geometry',
         'content_density',

@@ -6,7 +6,7 @@ import {
 } from "./institutional-pdf-constitution.js";
 import { buildInstitutionalPdfRepairPlan } from "./institutional-pdf-repair-plan.js";
 
-const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10_final_pdf_publication_quality_boss_v2";
+const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10r_final_pdf_publication_quality_boss_v3";
 const PAGE_CERTIFICATION_SCOPE = "institutional_page_by_page_certification";
 const TEST_WATERMARK_PATTERN = /\b(?:docraptor|test document|test mode)\b/i;
 
@@ -98,6 +98,71 @@ function extractDisplayedNumbers(value = "") {
 
 function numberKey(value = "") {
   return normalizeComparisonText(value).replace(/[()]/g, "").replace(/^-/, "negative");
+}
+
+function orderedLineTextCandidates(line = {}) {
+  const items = [...(Array.isArray(line?.items) ? line.items : [])]
+    .filter((item) => !isTestWatermarkText(item?.text))
+    .sort((left, right) => Number(left.x) - Number(right.x));
+  return unique([
+    String(line?.text || ""),
+    items.map((item) => item.text).join(" "),
+    items.map((item) => item.text).join(""),
+  ]);
+}
+
+function pageTextCandidates(page = {}) {
+  return unique([
+    pageTextWithoutExcludedArtifacts(page),
+    ...(Array.isArray(page?.lines) ? page.lines : []).flatMap(orderedLineTextCandidates),
+  ]);
+}
+
+function directComparisonMatch(value = "", candidate = "") {
+  const expected = normalizeComparisonText(value);
+  return Boolean(expected) && normalizeComparisonText(candidate).includes(expected);
+}
+
+function orderedGlyphMatch(value = "", candidate = "") {
+  const expected = normalizeComparisonText(value).replace(/[^a-z0-9$€£%.-]/g, "");
+  const actual = normalizeComparisonText(candidate).replace(/[^a-z0-9$€£%.-]/g, "");
+  return Boolean(expected) && actual.includes(expected);
+}
+
+function certificationMatch(analysis = {}, value = "") {
+  for (const page of Array.isArray(analysis?.pages) ? analysis.pages : []) {
+    for (const candidate of pageTextCandidates(page)) {
+      if (directComparisonMatch(value, candidate)) return { certified: true, method: "direct_text", page: page.pageNumber };
+      if (orderedGlyphMatch(value, candidate)) return { certified: true, method: "ordered_glyph_reconstruction", page: page.pageNumber };
+    }
+  }
+  return { certified: false, method: "not_found", page: null };
+}
+
+function numberCertificationMatch(analysis = {}, value = "") {
+  const expected = numberKey(value);
+  if (!expected) return { certified: false, method: "not_found", page: null };
+  for (const page of Array.isArray(analysis?.pages) ? analysis.pages : []) {
+    for (const candidate of pageTextCandidates(page)) {
+      const actual = numberKey(candidate);
+      let index = actual.indexOf(expected);
+      while (index >= 0) {
+        const preceding = actual[index - 1] || "";
+        const following = actual[index + expected.length] || "";
+        const positiveExpected = !expected.startsWith("negative");
+        const numericBoundaryViolation = /[0-9.]/.test(preceding) || /[0-9.]/.test(following);
+        if (!(positiveExpected && preceding === "-") && !numericBoundaryViolation) {
+          return {
+            certified: true,
+            method: "ordered_glyph_reconstruction",
+            page: page.pageNumber,
+          };
+        }
+        index = actual.indexOf(expected, index + 1);
+      }
+    }
+  }
+  return { certified: false, method: "not_found", page: null };
 }
 
 function buildIssue(code, message, evidence = {}, path = "pdf") {
@@ -263,6 +328,7 @@ function extractApprovedTables(html = "") {
     const cells = [];
     const headers = [];
     const rowColumnCounts = [];
+    const rows = [];
     const rowPattern = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
     let rowMatch;
     while ((rowMatch = rowPattern.exec(match[1])) !== null) {
@@ -276,18 +342,25 @@ function extractApprovedTables(html = "") {
         cells.push(text);
         if (String(cellMatch[1]).toLowerCase() === "th") headers.push(text);
       }
-      if (rowCells.length) rowColumnCounts.push(rowCells.length);
+      if (rowCells.length) {
+        rowColumnCounts.push(rowCells.length);
+        rows.push(rowCells);
+      }
     }
     const openTag = match[0].match(/^<table\b[^>]*>/i)?.[0] || "";
     const preceding = source.slice(Math.max(0, match.index - 600), match.index);
     const precedingHeadings = extractApprovedHeadings(preceding);
-    const id = attributeValue(openTag, "data-iq-table") || `approved-table-${tables.length + 1}`;
+    const explicitId = attributeValue(openTag, "data-iq-table");
+    const columnCount = rowColumnCounts.length ? Math.max(...rowColumnCounts) : 0;
+    if (!explicitId && columnCount < 2) continue;
+    const id = explicitId || `approved-table-${tables.length + 1}`;
     tables.push({
       id,
       title: precedingHeadings.at(-1) || null,
       headers: unique(headers),
       cells,
-      columnCount: rowColumnCounts.length ? Math.max(...rowColumnCounts) : 0,
+      rows,
+      columnCount,
       displayedNumbers: extractDisplayedNumbers(match[0]),
     });
   }
@@ -401,8 +474,9 @@ function isPageNumberLine(line = {}, page = {}, pageCount = 0) {
   const height = Number(page?.height) || 792;
   if (Number(line?.y) > height * 0.16) return false;
   const text = String(line?.text || "").trim();
-  return /^(?:page\s*)?\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(text) ||
-    new RegExp(`^page\\s+${Number(page?.pageNumber)}\\s+of\\s+${pageCount}$`, "i").test(text);
+  const expectedPage = Number(page?.pageNumber);
+  const exactOrEmbedded = new RegExp(`(?:^|\\b)page\\s*${expectedPage}\\s*(?:of|\\/)\\s*${pageCount}(?:\\b|$)`, "i");
+  return /^(?:page\s*)?\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(text) || exactOrEmbedded.test(text);
 }
 
 function hasPageNumber(page = {}, pageCount = 0) {
@@ -410,6 +484,14 @@ function hasPageNumber(page = {}, pageCount = 0) {
   return (Array.isArray(page?.lines) ? page.lines : []).some((line) =>
     isPageNumberLine(line, page, pageCount)
   );
+}
+
+function hasRunningFooterContent(line = {}, page = {}, pageCount = 0) {
+  const height = Number(page?.height) || 792;
+  if (Number(line?.y) > height * 0.08) return false;
+  const pagePattern = new RegExp(`(?:^|\\b)page\\s*${Number(page?.pageNumber)}\\s*(?:of|\\/)\\s*${pageCount}(?:\\b|$)`, "ig");
+  const remainder = String(line?.text || "").replace(pagePattern, " ").replace(/[|:/-]+/g, " ").replace(/\s+/g, " ").trim();
+  return normalizeText(remainder).length >= 4;
 }
 
 function isHeadingLine(line = {}) {
@@ -422,7 +504,7 @@ function tableHeadingLine(line = {}) {
   return isHeadingLine(line) && /(?:table|summary|analysis|reconciliation|unit mix|schedule|source|coverage|diligence|financial|valuation|debt|capitalization)/i.test(String(line?.text || ""));
 }
 
-function inspectLayout(analysis = {}) {
+function inspectLayout(analysis = {}, manifest = {}) {
   const issues = [];
   const pages = Array.isArray(analysis?.pages) ? analysis.pages : [];
   const blankPages = [];
@@ -475,7 +557,8 @@ function inspectLayout(analysis = {}) {
       }
       const numericTokens = String(line?.text || "").match(/(?:[$€£]?\(?\d[\d,.]*\)?%?)/g) || [];
       const pageNumberLine = isPageNumberLine(line, page, Number(analysis?.pageCount) || pages.length);
-      if (!pageNumberLine && numericTokens.length >= 2 && Number(line?.fontSize) > 0 && Number(line.fontSize) < 6) {
+      const bodyRegion = Number(line?.y) > height * 0.08 && Number(line?.y) < height * 0.92;
+      if (bodyRegion && !pageNumberLine && numericTokens.length >= 2 && Number(line?.fontSize) > 0 && Number(line.fontSize) < 6) {
         unreadableTableRows.push({ page: page.pageNumber, text: line.text, font_size: line.fontSize });
       }
     }
@@ -485,7 +568,7 @@ function inspectLayout(analysis = {}) {
       const runningFooters = lines.filter((line) =>
         Number(line?.y) <= height * 0.08 &&
         normalizeText(line?.text).length >= 4 &&
-        !isPageNumberLine(line, page, Number(analysis?.pageCount) || pages.length)
+        hasRunningFooterContent(line, page, Number(analysis?.pageCount) || pages.length)
       );
       if (page?.hasRunningHeader !== true && runningHeaders.length === 0) missingRunningHeaders.push(page.pageNumber);
       if (page?.hasRunningFooter !== true && runningFooters.length === 0) missingRunningFooters.push(page.pageNumber);
@@ -498,8 +581,9 @@ function inspectLayout(analysis = {}) {
       const current = bodyLines[index];
       const next = bodyLines[index + 1];
       const verticalDistance = Number(current.y) - Number(next.y);
-      const requiredDistance = Math.max(Number(current.fontSize) || 0, Number(next.fontSize) || 0) * 0.55;
-      if (requiredDistance > 0 && verticalDistance < requiredDistance) {
+      const requiredDistance = Math.max(Number(current.fontSize) || 0, Number(next.fontSize) || 0) * 0.25;
+      const horizontalOverlap = Math.min(Number(current.maxX) || 0, Number(next.maxX) || 0) - Math.max(Number(current.x) || 0, Number(next.x) || 0);
+      if (requiredDistance > 0 && horizontalOverlap > 2 && verticalDistance < requiredDistance) {
         spacingOverlaps.push({
           page: page.pageNumber,
           upper_line: current.text,
@@ -510,16 +594,33 @@ function inspectLayout(analysis = {}) {
       }
     }
 
-    const numericRows = bodyLines.map((line) => ({
-      line,
-      cells: (Array.isArray(line?.items) ? line.items : [])
+    const approvedRows = (manifest.tables || []).flatMap((table) => (table.rows || []).slice(1).map((row) => ({
+      tableId: table.id,
+      label: row[0],
+    }))).filter((row) => row.label);
+    const numericRows = bodyLines.map((line) => {
+      const lineCandidates = orderedLineTextCandidates(line);
+      const approvedRow = approvedRows.find((row) => lineCandidates.some((candidate) => directComparisonMatch(row.label, candidate)));
+      if (!approvedRow || !Array.isArray(line?.items) || line.items.length < 2) return null;
+      const numericItems = [...(Array.isArray(line?.items) ? line.items : [])]
         .filter((item) => /(?:[$€£]?\(?-?\d[\d,.]*\)?%?|\d+(?:\.\d+)?x)/i.test(String(item?.text || "")))
-        .map((item) => Number(item.x) + Number(item.width)),
-    })).filter((row) => row.cells.length > 0 && (Array.isArray(row.line?.items) ? row.line.items.length : 0) >= 2);
+        .sort((left, right) => Number(left.x) - Number(right.x));
+      const clusters = [];
+      for (const item of numericItems) {
+        const previous = clusters.at(-1);
+        const gap = previous ? Number(item.x) - Number(previous.maxX) : Number.POSITIVE_INFINITY;
+        if (previous && gap <= 4) {
+          previous.maxX = Math.max(previous.maxX, Number(item.x) + Number(item.width));
+        } else {
+          clusters.push({ maxX: Number(item.x) + Number(item.width) });
+        }
+      }
+      return { line, tableId: approvedRow.tableId, cells: clusters.map((cluster) => cluster.maxX) };
+    }).filter((row) => row?.cells?.length > 0);
     const numericGroups = [];
     for (const row of numericRows) {
       const group = numericGroups.at(-1);
-      if (!group || Number(group.at(-1).line.y) - Number(row.line.y) > 32) numericGroups.push([row]);
+      if (!group || group.at(-1).tableId !== row.tableId || Number(group.at(-1).line.y) - Number(row.line.y) > 32) numericGroups.push([row]);
       else group.push(row);
     }
     for (const group of numericGroups.filter((candidate) => candidate.length >= 3)) {
@@ -620,10 +721,10 @@ function inspectApprovedSurface(analysis = {}, manifest = {}) {
 
 function inspectInstitutionalCoverage(analysis = {}, manifest = {}) {
   const issues = [];
-  const pdfText = normalizeComparisonText(analysis?.text || "");
   const pdfNumberKeys = new Set(extractDisplayedNumbers(analysis?.text || "").map(numberKey));
   const tableCoverage = (Array.isArray(manifest?.tables) ? manifest.tables : []).map((table) => {
-    const missingCells = table.cells.filter((cell) => !pdfText.includes(normalizeComparisonText(cell)));
+    const cellCoverage = table.cells.map((cell) => ({ cell, ...certificationMatch(analysis, cell) }));
+    const missingCells = cellCoverage.filter((cell) => !cell.certified).map((cell) => cell.cell);
     return {
       id: table.id,
       title: table.title,
@@ -632,11 +733,13 @@ function inspectInstitutionalCoverage(analysis = {}, manifest = {}) {
       certifiedCellCount: table.cells.length - missingCells.length,
       totalCellCount: table.cells.length,
       missingCells,
+      resolvedExtractionFragments: cellCoverage.filter((cell) => cell.certified && cell.method === "ordered_glyph_reconstruction").length,
     };
   });
   const chartCoverage = (Array.isArray(manifest?.charts) ? manifest.charts : []).map((chart) => {
     const requiredVisibleValues = unique([chart.title, ...chart.labels, ...chart.displayedNumbers]).filter(Boolean);
-    const missingVisibleValues = requiredVisibleValues.filter((value) => !pdfText.includes(normalizeComparisonText(value)));
+    const visibleCoverage = requiredVisibleValues.map((value) => ({ value, ...certificationMatch(analysis, value) }));
+    const missingVisibleValues = visibleCoverage.filter((value) => !value.certified).map((value) => value.value);
     return {
       id: chart.id,
       receipt: chart.receipt,
@@ -646,13 +749,20 @@ function inspectInstitutionalCoverage(analysis = {}, manifest = {}) {
       certified: missingVisibleValues.length === 0 && chart.receipt === chart.id && chart.sourcePaths.length > 0,
       missingVisibleValues,
       receiptValid: chart.receipt === chart.id && chart.sourcePaths.length > 0,
+      resolvedExtractionFragments: visibleCoverage.filter((value) => value.certified && value.method === "ordered_glyph_reconstruction").length,
     };
   });
-  const numberCoverage = (Array.isArray(manifest?.displayedNumbers) ? manifest.displayedNumbers : []).map((value) => ({
-    value,
-    key: numberKey(value),
-    certified: pdfNumberKeys.has(numberKey(value)),
-  }));
+  const numberCoverage = (Array.isArray(manifest?.displayedNumbers) ? manifest.displayedNumbers : []).map((value) => {
+    const directCertified = pdfNumberKeys.has(numberKey(value));
+    const fallback = directCertified ? null : numberCertificationMatch(analysis, value);
+    return {
+      value,
+      key: numberKey(value),
+      certified: directCertified || fallback?.certified === true,
+      certificationMethod: directCertified ? "direct_number_token" : fallback?.method || "not_found",
+      page: fallback?.page || null,
+    };
+  });
 
   const failedTables = tableCoverage.filter((table) => !table.certified);
   if (failedTables.length) {
@@ -949,7 +1059,7 @@ export async function inspectFinalPdfPublicationQuality({
         "pdf.approvedSurface.contractQa"
       ));
     }
-    issues.push(...inspectLayout(analysis));
+    issues.push(...inspectLayout(analysis, manifest));
     issues.push(...inspectApprovedSurface(analysis, manifest));
     coverage = inspectInstitutionalCoverage(analysis, manifest);
     issues.push(...coverage.issues);
@@ -1031,6 +1141,10 @@ export async function inspectFinalPdfPublicationQuality({
       every_table_certified: coverage.tableCoverage.every((table) => table.certified),
       every_chart_certified: coverage.chartCoverage.every((chart) => chart.certified),
       every_number_certified: coverage.numberCoverage.every((number) => number.certified),
+      resolved_extraction_fragment_count:
+        coverage.tableCoverage.reduce((sum, table) => sum + Number(table.resolvedExtractionFragments || 0), 0) +
+        coverage.chartCoverage.reduce((sum, chart) => sum + Number(chart.resolvedExtractionFragments || 0), 0) +
+        coverage.numberCoverage.filter((number) => number.certificationMethod === "ordered_glyph_reconstruction").length,
       table_coverage: coverage.tableCoverage,
       chart_coverage: coverage.chartCoverage,
       number_coverage: coverage.numberCoverage,
@@ -1063,4 +1177,8 @@ export const FINAL_PDF_PUBLICATION_QUALITY_CONTRACT = Object.freeze({
   constitutionVersion: INSTITUTIONAL_PDF_CONSTITUTION.constitutionVersion,
   pageByPageCertificationRequired: true,
   pageCountHardcoded: false,
+  orderedExactGlyphFragmentTolerance: true,
+  inferredValueReconstructionAllowed: false,
+  alignmentRequiresApprovedTableRowScope: true,
+  maximumAutomaticRecompositionAttempts: 1,
 });

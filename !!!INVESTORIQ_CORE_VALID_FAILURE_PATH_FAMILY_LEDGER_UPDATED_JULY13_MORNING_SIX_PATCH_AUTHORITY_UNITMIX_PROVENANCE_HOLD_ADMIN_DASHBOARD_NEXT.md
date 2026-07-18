@@ -19918,3 +19918,43 @@ The deferred catastrophic-core usability threshold remains unchanged and unimple
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+## July 18 RETEST 31 core-valid failure-path closure and Gate 10R
+
+RETEST 31 is permanent proof that an accepted core-valid report can reach a valid PDF and still be overblocked by a verifier that confuses extraction shape with visual failure. The core package was publishable, Delivery Gate was deliverable, the 12-page PDF was valid, and the terminal `PDF_ARTIFACT_FAILED` remained `internal_system_failure` with no replacement-document authority.
+
+Gate 10R repairs the class without weakening the Final PDF Boss:
+
+```text
+merged footer navigation -> certify page number and footer label independently
+small running navigation -> excluded from table readability
+split exact values -> ordered exact-glyph certification only
+changed or missing digit -> remains a critical parity failure
+one-column layout container -> excluded from institutional data-table inventory
+numeric alignment -> approved table rows only
+spacing overlap -> vertical proximity plus horizontal overlap required
+recoverable presentation defect -> one conservative recomposition and recertification
+unresolved or nonrecoverable defect -> fail closed before storage
+customer document failure created -> false
+```
+
+The bounded recovery cannot modify accepted content or canonical authority. Optional unsupported sections continue to collapse upstream. A PDF presentation defect cannot blame the T12 or Rent Roll. Terminal internal-failure ownership now outranks unrelated expected collapses in the Admin incident projection, preventing the RETEST 31 `mixed` misclassification.
+
+Verification: dedicated Gate 10R replay and recovery smokes `PASS`; the one-digit-loss adversarial case `PASS`; full nine-smoke institutional PDF suite `PASS`; Financial Intelligence `PASS`; full QA and build `PASS`; hardcoding and authority scans clean.
+
+```text
+GATE 10R: COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST
+BASE COMMIT: b6eea9d
+CORE ACCEPTANCE CHANGED: NO
+CATASTROPHIC CORE DOCTRINE CHANGED: NO
+SOURCE TRUTH CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+```
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

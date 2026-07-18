@@ -1380,3 +1380,41 @@ Gate 11 remains preserved exactly and is not authorized by this checkpoint:
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+## July 18 RETEST 31 Admin incident and Gate 10R remedy checkpoint
+
+The RETEST 31 Admin row correctly recorded that publication stopped, the PDF was not certified, the failure was internal, and the credit was restored. Its `mixed` responsibility label was not an accurate statement of terminal causation. It combined the critical InvestorIQ-owned `PDF_ARTIFACT_FAILED` event with low-severity expected source limitations such as an omitted optional property-tax section and a disclosed reconciliation.
+
+Gate 10R gives a blocked terminal outcome responsibility precedence over unrelated nonterminal limitations:
+
+```text
+blocked internal system failure -> investoriq_defect
+blocked catastrophic core document failure -> customer_source_limitation
+published report with both platform and source limitations -> mixed remains available
+expected collapse and disclosure events -> preserved independently
+```
+
+The Final PDF paths now attempt one bounded content-preserving recomposition for recoverable presentation defects before creating a terminal failure. The recovered PDF must pass the strict Boss against the original approved HTML before upload. No recovery is permitted for constitution tampering, invalid bytes, prohibited customer language, prohibited punctuation, or test-mode external publication. Failed recovery remains an internal incident and never authorizes replacement-document blame.
+
+```text
+Gate 10R Admin projection change: terminal owner precedence only
+Customer document replacement workflow change: NONE
+Credit doctrine change: NONE
+Billing doctrine change: NONE
+Source Truth change: NONE
+Screening change: NONE
+Delivery Gate change: NONE
+Deployment: NONE
+Codex live retest: NONE
+```
+
+Verification: report-quality incident projection smoke `PASS`; bounded recovery upload-order smoke `PASS`; Gate 10R real extraction replay `PASS`; `qa:institutional-pdf` 9 / 9 `PASS`; `qa:financial-intelligence`, `qa:full`, standalone build, and diff integrity `PASS`.
+
+Gate 10R is `COMPLETE / PASS LOCALLY / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST` from base commit `b6eea9d`.
+
+Gate 11 remains preserved exactly and is the next separately bounded launch-operations review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

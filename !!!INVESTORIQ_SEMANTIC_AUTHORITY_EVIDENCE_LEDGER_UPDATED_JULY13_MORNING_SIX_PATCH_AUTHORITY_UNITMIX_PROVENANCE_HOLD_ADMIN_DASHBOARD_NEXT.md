@@ -9133,3 +9133,38 @@ Gate 11 remains preserved exactly:
 Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
+
+## July 18 Gate 10R semantic-authority and exact-glyph certification closure
+
+The user-run RETEST 31 failure was a Final PDF certification regression, not a Source Truth, T12, Rent Roll, support-document, calculation, scenario, scoring, memo, or Delivery Gate failure. The valid rendered PDF reached `gate10_final_pdf_publication_quality_boss_v2`, where real extraction fragments created false table, number, page-navigation, spacing, and alignment blockers.
+
+Gate 10R creates no semantic authority. Its ordered-glyph fallback may certify only exact characters already present in the approved customer surface and encountered in rendered spatial order. Missing or changed characters remain uncertified. A dedicated one-digit-loss adversarial case fails as required. No number is inferred, reconstructed by arithmetic, rounded, substituted, selected from another source, or promoted into Source Truth.
+
+The only automatic repair is one conservative CSS-only recomposition. Recertification always compares the recovered PDF to the original approved HTML. Values, sources, disclosures, calculations, classifications, scenarios, and canonical receipts cannot change. Nonrecoverable constitutional and customer-language failures remain fail-closed.
+
+```text
+Gate 10R-A through 10R-F: COMPLETE / PASS LOCALLY
+Base commit: b6eea9d
+Final PDF Boss: gate10r_final_pdf_publication_quality_boss_v3
+PDF constitution: version 2
+PDF repair plan: version 2
+Source authority created: NO
+Accepted facts changed: NO
+Calculation authority changed: NO
+Scenario or scoring authority changed: NO
+Screening changed: NO
+Delivery Gate changed: NO
+Core publication threshold changed: NO
+Committed: NO
+Deployed: NO
+Codex live retest: NOT RUN
+```
+
+Verification: `qa:institutional-pdf` 9 / 9 `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` `PASS`; standalone build `PASS`; diff integrity `PASS`; production hardcoding and authority-weakening scans clean.
+
+Gate 11 remains preserved exactly and requires a separate bounded authority review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

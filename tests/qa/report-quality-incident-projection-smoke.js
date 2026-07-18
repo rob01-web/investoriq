@@ -206,6 +206,21 @@ assert.equal(blockedIncident.customerAttentionRisk, 'HIGH');
 assert.equal(blockedIncident.responsibility, 'investoriq_defect');
 assert.equal(blockedIncident.remedy.level, 3);
 
+const blockedWithExpectedLimitationManifest = structuredClone(blockedManifest);
+blockedWithExpectedLimitationManifest.sections.push({
+  sectionKey: 'property_tax_context',
+  outcome: 'omitted',
+  expected: true,
+  reviewRequired: false,
+  reasonCodes: ['support_authority_unavailable'],
+});
+const blockedWithExpectedLimitation = buildReportQualityIncidentProjection({
+  manifest: blockedWithExpectedLimitationManifest,
+  canonicalDeliveryDecision: blocked,
+});
+assert.equal(blockedWithExpectedLimitation.events.some((entry) => entry.code === 'COLLAPSE_EXPECTED'), true);
+assert.equal(blockedWithExpectedLimitation.responsibility, 'investoriq_defect');
+
 const missingDeliveryManifest = finalizeBlockedReportQualityManifest({
   candidate: buildUnavailableReportQualityManifestCandidate({
     jobId: 'incident-missing-delivery',
