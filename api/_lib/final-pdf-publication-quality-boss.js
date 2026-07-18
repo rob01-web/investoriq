@@ -6,7 +6,7 @@ import {
 } from "./institutional-pdf-constitution.js";
 import { buildInstitutionalPdfRepairPlan } from "./institutional-pdf-repair-plan.js";
 
-const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10r_final_pdf_publication_quality_boss_v4";
+const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10v_final_pdf_publication_quality_boss_v5";
 const PAGE_CERTIFICATION_SCOPE = "institutional_page_by_page_certification";
 const TEST_WATERMARK_PATTERN = /\b(?:docraptor|test document|test mode)\b/i;
 const NONBLOCKING_QUALITY_ISSUE_CODES = new Set([
@@ -14,6 +14,7 @@ const NONBLOCKING_QUALITY_ISSUE_CODES = new Set([
   "PDF_NEARLY_BLANK_PAGES",
   "PDF_ORPHANED_HEADINGS",
   "PDF_TABLE_SEPARATED_FROM_HEADING",
+  "PDF_TABLE_CONTINUATION_HEADER_MISSING",
   "PDF_UNREADABLE_TABLE",
   "PDF_DUPLICATED_RUNNING_HEADER",
   "PDF_BROKEN_RUNNING_HEADER",
@@ -381,8 +382,10 @@ function extractApprovedTables(html = "") {
       id,
       title: precedingHeadings.at(-1) || null,
       headers: unique(headers),
+      hasExplicitHeader: headers.length > 0,
       cells,
       rows,
+      bodyRows: headers.length > 0 ? rows.slice(1) : rows,
       columnCount,
       displayedNumbers: extractDisplayedNumbers(match[0]),
     });
@@ -487,6 +490,7 @@ function meaningfulPageText(page = {}) {
     .replace(/\bpage\s+\d+(?:\s+(?:of|\/)\s+\d+)?\b/gi, " ")
     .replace(/\binvestoriq(?: technologies inc\.)?\b/gi, " ")
     .replace(/\bcapital intelligence memorandum\b/gi, " ")
+    .replace(/\bunderwriting report\b/gi, " ")
     .replace(/\bconfidential\b/gi, " ")
     .replace(/\bcopyright\b|©/gi, " ")
     .replace(/\s+/g, " ")
@@ -541,13 +545,25 @@ function inspectLayout(analysis = {}, manifest = {}) {
   const missingRunningFooters = [];
   const spacingOverlaps = [];
   const numericColumnMisalignments = [];
+  const missingContinuationHeaders = [];
   const topLinePresence = new Map();
 
   for (const page of pages) {
     const meaningful = meaningfulPageText(page);
     const wordCount = meaningful ? meaningful.split(/\s+/).filter(Boolean).length : 0;
+    const pageHeight = Number(page?.height) || 792;
+    const semanticBodyLines = (Array.isArray(page?.lines) ? page.lines : []).filter((line) => {
+      if (isTestWatermarkText(line?.text)) return false;
+      const y = Number(line?.y);
+      if (!(y > pageHeight * 0.1 && y < pageHeight * 0.92)) return false;
+      return meaningfulPageText({ lines: [line] }).length >= 3;
+    });
     if (!meaningful) blankPages.push(page.pageNumber);
-    else if (meaningful.length < 80 || wordCount < 10) nearlyBlankPages.push(page.pageNumber);
+    else if (
+      meaningful.length < 80 ||
+      wordCount < 10 ||
+      (Number(page?.pageNumber) > 1 && semanticBodyLines.length < 5)
+    ) nearlyBlankPages.push(page.pageNumber);
 
     const width = Number(page?.width) || 612;
     const height = Number(page?.height) || 792;
@@ -662,6 +678,30 @@ function inspectLayout(analysis = {}, manifest = {}) {
   }
 
   const contentPages = pages.filter((page) => Number(page?.pageNumber) > 1 && !blankPages.includes(page.pageNumber));
+  for (const table of (manifest.tables || []).filter((candidate) => candidate?.hasExplicitHeader && candidate?.headers?.length > 0)) {
+    const bodyPages = pages.filter((page) => {
+      const pageText = normalizeComparisonText(pageTextWithoutExcludedArtifacts(page));
+      return (table.bodyRows || []).some((row) => {
+        const matchedCells = row.filter((cell) => normalizeComparisonText(cell).length >= 2)
+          .filter((cell) => pageText.includes(normalizeComparisonText(cell)));
+        return matchedCells.length >= Math.min(2, row.length);
+      });
+    }).map((page) => Number(page.pageNumber)).sort((left, right) => left - right);
+    if (bodyPages.length < 2) continue;
+    for (const pageNumber of bodyPages.slice(1)) {
+      if (!bodyPages.includes(pageNumber - 1)) continue;
+      const page = pages.find((candidate) => Number(candidate.pageNumber) === pageNumber);
+      const pageText = normalizeComparisonText(pageTextWithoutExcludedArtifacts(page));
+      const matchedHeaders = table.headers.filter((header) => pageText.includes(normalizeComparisonText(header)));
+      if (matchedHeaders.length >= Math.min(2, table.headers.length)) continue;
+      missingContinuationHeaders.push({
+        page: pageNumber,
+        table_id: table.id,
+        expected_headers: table.headers,
+        matched_headers: matchedHeaders,
+      });
+    }
+  }
   const brokenHeaders = [];
   for (const [text, pageNumbers] of topLinePresence.entries()) {
     if (contentPages.length < 3 || pageNumbers.size < Math.ceil(contentPages.length * 0.6)) continue;
@@ -674,6 +714,7 @@ function inspectLayout(analysis = {}, manifest = {}) {
   if (overflow.length) issues.push(buildIssue("PDF_PAGE_OVERFLOW", "Rendered PDF content exceeds a page boundary.", { occurrences: overflow.slice(0, 25) }, "pdf.layout"));
   if (orphanedHeadings.length) issues.push(buildIssue("PDF_ORPHANED_HEADINGS", "One or more headings are orphaned at the bottom of a page.", { occurrences: orphanedHeadings }, "pdf.layout"));
   if (separatedTableHeadings.length) issues.push(buildIssue("PDF_TABLE_SEPARATED_FROM_HEADING", "One or more table headings are separated from their table content.", { occurrences: separatedTableHeadings }, "pdf.layout"));
+  if (missingContinuationHeaders.length) issues.push(buildIssue("PDF_TABLE_CONTINUATION_HEADER_MISSING", "One or more multi-page tables do not repeat their approved column headers on continuation pages.", { occurrences: missingContinuationHeaders }, "pdf.tables"));
   if (unreadableTableRows.length) issues.push(buildIssue("PDF_UNREADABLE_TABLE", "One or more rendered table rows use unreadably small text.", { occurrences: unreadableTableRows.slice(0, 25) }, "pdf.tables"));
   if (duplicatedHeaders.length) issues.push(buildIssue("PDF_DUPLICATED_RUNNING_HEADER", "A running header is duplicated on the same page.", { occurrences: duplicatedHeaders }, "pdf.headers"));
   if (brokenHeaders.length) issues.push(buildIssue("PDF_BROKEN_RUNNING_HEADER", "A recurring running header disappears on one or more content pages.", { occurrences: brokenHeaders }, "pdf.headers"));
@@ -864,6 +905,7 @@ function dimensionsForIssue(issue = {}) {
   if (/OVERFLOW|BYTES_INVALID/.test(code)) dimensions.push("geometry");
   if (/HEADING/.test(code)) dimensions.push("heading_hierarchy", "page_breaks");
   if (/TABLE/.test(code)) dimensions.push("tables");
+  if (/TABLE_CONTINUATION/.test(code)) dimensions.push("page_breaks");
   if (/CHART/.test(code)) dimensions.push("charts");
   if (/NUMBER|FINANCIAL_FACT/.test(code)) dimensions.push("numbers");
   if (/PAGE_NUMBERS|RUNNING_HEADER|RUNNING_FOOTER/.test(code)) dimensions.push("running_navigation");
@@ -986,6 +1028,7 @@ function buildPageCertificationReceipts({ analysis = {}, manifest = {}, issues =
         precedingPageNumber: Number(page.pageNumber) > 1 ? Number(page.pageNumber) - 1 : null,
         headingOrphanDetected: mappedIssues.some((issue) => issue.code === "PDF_ORPHANED_HEADINGS"),
         tableHeadingSeparated: mappedIssues.some((issue) => issue.code === "PDF_TABLE_SEPARATED_FROM_HEADING"),
+        continuationHeaderMissing: mappedIssues.some((issue) => issue.code === "PDF_TABLE_CONTINUATION_HEADER_MISSING"),
       },
       spacing: pageSpacingEvidence(page),
       alignment: pageAlignmentEvidence(page),

@@ -1264,6 +1264,10 @@ function buildAcquisitionMemoBossContract({
       extractedFacts: supplementedCurrentDebtFacts,
     });
   }
+  const appraisalContextDoc = findSupportDocByRole(supportDocsWithSupplementedFacts, "appraisal_context");
+  const renovationContextDoc = findSupportDocByRole(supportDocsWithSupplementedFacts, "renovation_capex_context");
+  const marketSurveyContextDoc = findSupportDocByRole(supportDocsWithSupplementedFacts, "market_survey_context");
+  const environmentalContextDoc = findSupportDocByRole(supportDocsWithSupplementedFacts, "environmental_context");
 
   const sourceTruthPublishable = !hasCanonicalSourceTruth || sourceTruthPackage.core_publishable === true;
   const t12Valid = isValidCoreDoc(coreT12);
@@ -1282,6 +1286,10 @@ function buildAcquisitionMemoBossContract({
   const t12Facts = normalizeBossContractFact(coreT12SourceTruth?.extractedFacts || supplementedCoreT12FactsFromPayload || {});
   const purchaseFacts = supplementedPurchaseFacts;
   const currentDebtFacts = supplementedCurrentDebtFacts;
+  const appraisalFacts = normalizeBossContractFact(appraisalContextDoc?.extractedFacts || {});
+  const renovationFacts = normalizeBossContractFact(renovationContextDoc?.extractedFacts || {});
+  const marketSurveyFacts = normalizeBossContractFact(marketSurveyContextDoc?.extractedFacts || {});
+  const environmentalFacts = normalizeBossContractFact(environmentalContextDoc?.extractedFacts || {});
   const supportAuthorityDecisions = Array.isArray(sourceTruthPackage?.support?.adjudication_decisions)
     ? sourceTruthPackage.support.adjudication_decisions
     : [];
@@ -1372,6 +1380,24 @@ function buildAcquisitionMemoBossContract({
     ...(hasFiniteFact(purchaseFacts?.going_in_cap_rate) ? ["going_in_cap_rate"] : []),
     ...availableProposedFinancingFacts,
   ];
+  const availableAppraisalFacts = [
+    ...(hasFiniteFact(appraisalFacts?.appraisal_value) ? ["appraisal_value"] : []),
+    ...(hasFiniteFact(appraisalFacts?.stabilized_cap_rate) ? ["stabilized_cap_rate"] : []),
+    ...(hasFiniteFact(appraisalFacts?.stabilized_noi) ? ["stabilized_noi"] : []),
+  ];
+  const availableRenovationFacts = [
+    ...(hasFiniteFact(renovationFacts?.total_renovation_budget) ? ["total_renovation_budget"] : []),
+    ...(hasFiniteFact(renovationFacts?.capital_plan_start_month) ? ["capital_plan_start_month"] : []),
+    ...(hasFiniteFact(renovationFacts?.capital_plan_end_month) ? ["capital_plan_end_month"] : []),
+    ...(hasFiniteFact(renovationFacts?.capital_plan_duration_months) ? ["capital_plan_duration_months"] : []),
+    ...(hasStructuredValues(renovationFacts?.renovation_plan_rows) ? ["renovation_plan_rows"] : []),
+  ];
+  const availableMarketSurveyFacts = hasStructuredValues(marketSurveyFacts?.market_rent_ranges)
+    ? ["market_rent_ranges"]
+    : [];
+  const availableEnvironmentalFacts = String(environmentalFacts?.phase_i_status || "").trim()
+    ? ["phase_i_status"]
+    : [];
   const currentDebtDisplayReady = hasCanonicalSourceTruth
     ? promotedCurrentDebtDoc?.sectionEligibility?.currentDebt === true
     : currentDebtSourceBacked && currentDebtRequiredFacts.every((fact) => availableCurrentDebtFacts.includes(fact));
@@ -1381,6 +1407,26 @@ function buildAcquisitionMemoBossContract({
   const acquisitionRequestDisplayReady = hasCanonicalSourceTruth
     ? purchaseAssumptionsDoc?.sectionEligibility?.acquisitionRequest === true
     : purchaseAssumptionsSourceBacked && acquisitionRequestRequiredFacts.every((fact) => availableAcquisitionRequestFacts.includes(fact));
+  const appraisalDisplayReady = availableAppraisalFacts.length > 0 && (
+    hasCanonicalSourceTruth
+      ? appraisalContextDoc?.sectionEligibility?.appraisal === true
+      : Boolean(appraisalContextDoc)
+  );
+  const renovationDisplayReady = availableRenovationFacts.length > 0 && (
+    hasCanonicalSourceTruth
+      ? renovationContextDoc?.sectionEligibility?.renovation === true
+      : Boolean(renovationContextDoc)
+  );
+  const marketSurveyDisplayReady = availableMarketSurveyFacts.length > 0 && (
+    hasCanonicalSourceTruth
+      ? marketSurveyContextDoc?.sectionEligibility?.marketSurvey === true
+      : Boolean(marketSurveyContextDoc)
+  );
+  const environmentalDisplayReady = availableEnvironmentalFacts.length > 0 && (
+    hasCanonicalSourceTruth
+      ? environmentalContextDoc?.sectionEligibility?.environmental === true
+      : Boolean(environmentalContextDoc)
+  );
 
   const sections = {
     executiveSummary: buildSectionContract({
@@ -1543,6 +1589,74 @@ function buildAcquisitionMemoBossContract({
       },
       postRenderAssertions: [
         buildBossContractAssertion("PROPOSED_FINANCING_FACTS_REQUIRED_WHEN_SOURCE_BACKED", "Proposed financing facts are required when purchase assumptions are source-backed.", "critical", "proposedFinancingContext"),
+      ],
+    }),
+    appraisalContext: buildSectionContract({
+      status: appraisalDisplayReady ? "required" : "collapsed",
+      requiredFacts: appraisalDisplayReady ? availableAppraisalFacts : [],
+      sourceBindings: buildSectionBindings("appraisal_context", availableAppraisalFacts),
+      collapseInstructions: ["Collapse only the appraisal context when no exact canonical appraisal fact is accepted."],
+      renderRequirements: [
+        "Render accepted appraisal facts as document context only.",
+        "Do not override T12 NOI, purchase assumptions, or canonical valuation calculations.",
+      ],
+      factAvailability: {
+        ...factAvailability(appraisalDisplayReady ? availableAppraisalFacts : [], availableAppraisalFacts, appraisalDisplayReady),
+        sourcePresent: Boolean(appraisalContextDoc),
+      },
+      postRenderAssertions: [
+        buildBossContractAssertion("APPRAISAL_CONTEXT_REQUIRED_WHEN_SOURCE_BACKED", "Exact accepted appraisal facts must render when source-backed.", "critical", "appraisalContext"),
+      ],
+    }),
+    renovationContext: buildSectionContract({
+      status: renovationDisplayReady ? "required" : "collapsed",
+      requiredFacts: renovationDisplayReady ? availableRenovationFacts : [],
+      sourceBindings: buildSectionBindings("renovation_capex_context", availableRenovationFacts),
+      collapseInstructions: ["Collapse only the renovation context when no exact canonical renovation fact is accepted."],
+      renderRequirements: [
+        "Render only accepted stated renovation facts and exact row-level source bindings.",
+        "Do not calculate row totals, ROI, payback, NOI impact, value impact, or refinance impact.",
+      ],
+      factAvailability: {
+        ...factAvailability(renovationDisplayReady ? availableRenovationFacts : [], availableRenovationFacts, renovationDisplayReady),
+        sourcePresent: Boolean(renovationContextDoc),
+      },
+      postRenderAssertions: [
+        buildBossContractAssertion("RENOVATION_CONTEXT_REQUIRED_WHEN_SOURCE_BACKED", "Exact accepted renovation facts must render when source-backed.", "critical", "renovationContext"),
+      ],
+    }),
+    marketSurveyContext: buildSectionContract({
+      status: marketSurveyDisplayReady ? "required" : "collapsed",
+      requiredFacts: marketSurveyDisplayReady ? availableMarketSurveyFacts : [],
+      sourceBindings: buildSectionBindings("market_survey_context", availableMarketSurveyFacts),
+      collapseInstructions: ["Collapse only the market survey context when no exact canonical market range is accepted."],
+      renderRequirements: [
+        "Render exact accepted market rent ranges as context only.",
+        "Do not override canonical Rent Roll rents or calculate market-driven return impacts.",
+      ],
+      factAvailability: {
+        ...factAvailability(marketSurveyDisplayReady ? availableMarketSurveyFacts : [], availableMarketSurveyFacts, marketSurveyDisplayReady),
+        sourcePresent: Boolean(marketSurveyContextDoc),
+      },
+      postRenderAssertions: [
+        buildBossContractAssertion("MARKET_SURVEY_CONTEXT_REQUIRED_WHEN_SOURCE_BACKED", "Exact accepted market survey ranges must render when source-backed.", "critical", "marketSurveyContext"),
+      ],
+    }),
+    environmentalContext: buildSectionContract({
+      status: environmentalDisplayReady ? "required" : "collapsed",
+      requiredFacts: environmentalDisplayReady ? availableEnvironmentalFacts : [],
+      sourceBindings: buildSectionBindings("environmental_context", availableEnvironmentalFacts),
+      collapseInstructions: ["Collapse only the environmental context when no exact canonical Phase I status is accepted."],
+      renderRequirements: [
+        "Render the accepted Phase I status as document context only.",
+        "Do not infer environmental condition, legal compliance, remediation cost, or investment impact.",
+      ],
+      factAvailability: {
+        ...factAvailability(environmentalDisplayReady ? availableEnvironmentalFacts : [], availableEnvironmentalFacts, environmentalDisplayReady),
+        sourcePresent: Boolean(environmentalContextDoc),
+      },
+      postRenderAssertions: [
+        buildBossContractAssertion("ENVIRONMENTAL_CONTEXT_REQUIRED_WHEN_SOURCE_BACKED", "Exact accepted Phase I status must render when source-backed.", "critical", "environmentalContext"),
       ],
     }),
     debtFinancingContext: buildSectionContract({

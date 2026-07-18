@@ -196,6 +196,46 @@ const spacing = await assertIssue("PDF_SPACING_OVERLAP", (analysis) => {
 });
 assert.equal(spacing.institutional_certification.page_receipts[1].dimensions.spacing.status, "fail");
 
+function addThirdPage(analysis, bodyLines) {
+  const pageTwoNumber = analysis.pages[1].lines.find((candidate) => /^Page 2 of 2$/i.test(candidate.text));
+  if (pageTwoNumber) pageTwoNumber.text = "Page 2 of 3";
+  analysis.pages.push(page(3, bodyLines, { pageCount: 3 }));
+  analysis.pageCount = 3;
+  return refresh(analysis);
+}
+
+const nearlyBlankAnalysis = addThirdPage(validAnalysis(), [
+  line("Appendix Continuation", 700, { fontSize: 12 }),
+  line("Additional source context retained for review", 670),
+  line("No report values are changed by this continuation", 646),
+]);
+const nearlyBlankResult = await inspect(nearlyBlankAnalysis);
+const nearlyBlankIssue = nearlyBlankResult.issues.find((issue) => issue.code === "PDF_NEARLY_BLANK_PAGES");
+assert.ok(nearlyBlankIssue);
+assert.equal(nearlyBlankIssue.blocks_customer_delivery, false);
+assert.equal(nearlyBlankResult.customer_delivery_allowed, true);
+assert.equal(nearlyBlankResult.institutional_certification.page_receipts[2].dimensions.content_density.status, "fail");
+
+const continuationAnalysis = validAnalysis();
+const continuedRow = continuationAnalysis.pages[1].lines.find((candidate) => candidate.text === "Net Operating Income $850,000");
+continuationAnalysis.pages[1].lines = continuationAnalysis.pages[1].lines.filter((candidate) => candidate !== continuedRow);
+addThirdPage(continuationAnalysis, [
+  line("Operating Summary Continued", 710, { fontSize: 12 }),
+  continuedRow,
+  line("Document-stated operating facts", 470),
+  line("Source treatment remains unchanged", 448),
+  line("No assumptions introduced", 426),
+  line("Continuation page", 404),
+]);
+const continuationResult = await inspect(continuationAnalysis);
+const continuationIssue = continuationResult.issues.find((issue) => issue.code === "PDF_TABLE_CONTINUATION_HEADER_MISSING");
+assert.ok(continuationIssue);
+assert.equal(continuationIssue.blocks_customer_delivery, false);
+assert.equal(continuationResult.customer_delivery_allowed, true);
+assert.equal(continuationResult.institutional_certification.page_receipts[2].pageBreak.continuationHeaderMissing, true);
+assert.equal(continuationResult.institutional_certification.page_receipts[2].dimensions.tables.status, "fail");
+assert.equal(continuationResult.institutional_certification.page_receipts[2].dimensions.page_breaks.status, "fail");
+
 const watermarked = validAnalysis();
 for (const entry of watermarked.pages) {
   entry.lines.push(line("DocRaptor Test Document", 400, { x: -100, width: 850, fontSize: 48 }));

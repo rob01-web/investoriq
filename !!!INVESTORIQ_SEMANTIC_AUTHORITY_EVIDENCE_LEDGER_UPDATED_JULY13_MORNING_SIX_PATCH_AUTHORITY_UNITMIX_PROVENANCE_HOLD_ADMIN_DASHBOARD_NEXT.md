@@ -9211,3 +9211,52 @@ Gate 11: Launch Operations and Certification
 ### Active continuation pointer after RETEST 32
 
 The v4 strict-certification versus customer-delivery separation documented above supersedes the v3 universal Final PDF veto. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains separately bounded.
+
+## July 18 Gate 10V exact optional authority and Underwriting presentation closure
+
+Gate 10V-A and 10V-B expand optional support authority without creating facts. Appraisal context remains bound to accepted appraisal facts. Renovation rows require exact parser evidence whose excerpt is literally present in the uploaded source. Market ranges require an exact unit label and exact stated range. Phase I context accepts only an exact supported status and rejects conflicting status evidence.
+
+Permanent semantic boundary:
+
+```text
+support-document role is not accepted fact
+parser candidate is not authority without exact source evidence binding
+unit count multiplied by cost per unit is not a stated renovation total
+monthly rent lift multiplied by twelve is not a stated annual benefit
+market-survey rent is not Rent Roll rent
+appraisal value is not purchase price or calculated valuation authority
+Phase I status is not risk classification or recommendation authority
+optional section eligibility is not core publication authority
+Underwriting presentation is not Screening authority
+page composition is not semantic authority
+strict PDF certification is not permission to alter approved content
+```
+
+Gate 10V-C through 10V-F project only canonical accepted facts into the Underwriting Report. The Boss explicitly lists required optional facts; CustomerSurfaceModel validates source binding and accepted-fact survival; the document renderer consumes those facts without calculation or override. Unsupported or conflicting optional facts remain null and the dependent section omits. The Source Register may disclose source treatment without promoting the source into fact authority.
+
+The customer document identity is `InvestorIQ Underwriting Report`. Institutional chapters separate committee overview, operating performance, transaction context, debt and capital structure, valuation and reconciliation, and source appendix. This naming and architecture do not mutate Screening.
+
+Gate 10V-G and 10V-H add certification evidence only. Final PDF Boss v5 can identify low-semantic-density pages and approved-table continuation pages missing repeated headers. It does not create a number, source, heading, table cell, chart value, disclosure, or delivery decision. Exact approved-surface parity remains the ceiling of PDF certification authority.
+
+Permanent proof: support-document authority adversarial matrix `38 / 38 PASS`; Gate 10V exact-render and independent-collapse smoke `PASS`; derived `370,000` and `432,000` values prohibited; ROI, payback, refinancing proceeds, and value-impact narrative prohibited; page-by-page density and continuation-header proof `PASS`; `qa:institutional-pdf` `11 / 11 PASS`; `qa:financial-intelligence` and `qa:full` including build and diff integrity `PASS`.
+
+```text
+GATE 10V-A THROUGH 10V-H: COMPLETE / PASS LOCALLY
+BASE COMMIT: cf53bc8
+ACCEPTED FACTS CREATED WITHOUT EXACT SOURCE: NONE
+INFERRED OR DERIVED VALUES AUTHORIZED: NONE
+CALCULATION AUTHORITY CHANGED: NO
+SCENARIO OR SCORING AUTHORITY CHANGED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+```
+
+Gate 11 remains preserved exactly and requires a separate bounded authority review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```

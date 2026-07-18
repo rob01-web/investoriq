@@ -24,9 +24,9 @@ assert.equal(customerValidation.ok, true, JSON.stringify(customerValidation.issu
 const chapterKeys = [
   'committee-overview',
   'operating-performance',
-  'acquisition-context',
+  'transaction-context',
   'debt-capital-structure',
-  'financial-analysis',
+  'valuation-reconciliation',
   'source-appendix',
 ];
 let previousChapterIndex = -1;
@@ -46,6 +46,8 @@ for (const redundantHeading of [
   assert.doesNotMatch(text, new RegExp(redundantHeading, 'i'));
 }
 assert.match(text, /Underwriting Observations/i);
+assert.match(text, /Underwriting Report/i);
+assert.doesNotMatch(text, /Capital Intelligence Memorandum/i);
 assert.doesNotMatch(html, /<td>ACQUISITION MEMO<\/td><td[^>]*>InvestorIQ<\/td>/i);
 assert.match(html, /<span>Property Scale<\/span><strong>64 Units<\/strong>/i);
 assert.doesNotMatch(html, /<span>Asset Class<\/span><strong>64-Unit<\/strong>/i);

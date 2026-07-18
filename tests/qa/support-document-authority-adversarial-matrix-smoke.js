@@ -47,6 +47,25 @@ function decision(name, sourceText, { filename = `${name}.pdf`, parserType = "do
   return adjudicateSupportDocumentAuthority({ file: { file_id: fileId, original_filename: filename }, artifacts });
 }
 
+function decisionWithParsedPayload(name, sourceText, parserType, parserPayload) {
+  const fileId = `file-${name}`;
+  return adjudicateSupportDocumentAuthority({
+    file: { file_id: fileId, original_filename: `${name}.pdf` },
+    artifacts: [
+      {
+        id: `text-${name}`,
+        type: "document_text_extracted",
+        payload: { file_id: fileId, original_filename: `${name}.pdf`, text: sourceText },
+      },
+      {
+        id: `parsed-${name}`,
+        type: parserType,
+        payload: { file_id: fileId, original_filename: `${name}.pdf`, ...parserPayload },
+      },
+    ],
+  });
+}
+
 const scenarios = [
   {
     name: "affirmative_acquisition_financing_complete",
@@ -126,12 +145,12 @@ const scenarios = [
   {
     name: "environmental_reference_does_not_cross_promote",
     result: decision("environmental-reference", "Phase I ESA / Environmental Due Diligence\nNo recognized environmental condition. Purchase price is referenced only for file identification."),
-    role: "environmental_context", roleAccepted: true, sourcePresent: true, sourceBacked: true, ambiguity: false,
+    role: "environmental_context", roleAccepted: true, sourcePresent: true, sourceBacked: false, ambiguity: false,
   },
   {
     name: "market_survey_references_appraisal_and_financing",
     result: decision("market-reference", "Market Rent Survey\nRent comparables support market context. Appraised value and purchase price appear only in the transaction notes."),
-    role: "market_survey_context", roleAccepted: true, sourcePresent: true, sourceBacked: true, ambiguity: false,
+    role: "market_survey_context", roleAccepted: true, sourcePresent: true, sourceBacked: false, ambiguity: false,
   },
   {
     name: "renovation_references_debt_and_market_rent",
@@ -260,6 +279,100 @@ const negatedFixedDecision = decision(
   completeAcquisition.replace("Rate Structure Fixed", "Rate Structure: not fixed\nVariable Rate")
 );
 assert.equal(negatedFixedDecision.acceptedFacts.rate_structure, "floating");
+
+const exactMarketDecision = decision(
+  "exact-market-ranges",
+  "Market Rent Survey\n1BR $2,100-$2,250\n2BR $2,500 to $2,700"
+);
+assert.deepEqual(exactMarketDecision.acceptedFacts.market_rent_ranges, [
+  { unit_type: "1BR", low_monthly_rent: 2100, high_monthly_rent: 2250 },
+  { unit_type: "2BR", low_monthly_rent: 2500, high_monthly_rent: 2700 },
+]);
+assert.equal(exactMarketDecision.sectionEligibility.marketSurvey, true);
+
+const conflictingMarketDecision = decision(
+  "conflicting-market-ranges",
+  "Market Rent Survey\n1BR $2,100-$2,250\n1BR $2,300-$2,450"
+);
+assert.equal(conflictingMarketDecision.acceptedFacts.market_rent_ranges, undefined);
+assert.equal(conflictingMarketDecision.sectionEligibility.marketSurvey, false);
+assert.equal(conflictingMarketDecision.factAmbiguities.market_rent_ranges.reason, "conflicting_exact_market_rent_ranges");
+
+const exactEnvironmentalDecision = decision(
+  "exact-environmental-status",
+  "Phase I ESA / Environmental Due Diligence\nRecognized Environmental Conditions: None identified in this summary."
+);
+assert.equal(exactEnvironmentalDecision.acceptedFacts.phase_i_status, "none_identified_in_summary");
+assert.equal(exactEnvironmentalDecision.sectionEligibility.environmental, true);
+
+const unsupportedEnvironmentalDecision = decision(
+  "unsupported-environmental-status",
+  "Phase I ESA / Environmental Due Diligence\nNo environmental review conclusion was supplied."
+);
+assert.equal(unsupportedEnvironmentalDecision.acceptedFacts.phase_i_status, undefined);
+assert.equal(unsupportedEnvironmentalDecision.sectionEligibility.environmental, false);
+
+const exactRenovationSource = [
+  "Renovation / CapEx Plan",
+  "Total Renovation Budget $1,280,000",
+  "1BR Interiors 20 units X $18,500/unit; expected rent lift $225/month; Months 1-18",
+  "Common Area Refresh $210,000",
+].join("\n");
+const exactRenovationDecision = decisionWithParsedPayload(
+  "exact-renovation-rows",
+  exactRenovationSource,
+  "renovation_parsed",
+  {
+    semantic_doc_role: "renovation_capex_context",
+    total_budget: 1280000,
+    budget_rows: [
+      {
+        category: "1BR Interiors",
+        evidence: ["1BR Interiors 20 units X $18,500/unit; expected rent lift $225/month; Months 1-18"],
+        unit_type: "1BR",
+        unit_count: 20,
+        cost_per_unit: 18500,
+        estimated_cost: 370000,
+        expected_monthly_rent_lift: 225,
+        phase_timing: "Months 1-18",
+      },
+      {
+        category: "Common Area Refresh",
+        evidence: ["Common Area Refresh $210,000"],
+        estimated_cost: 210000,
+      },
+    ],
+  }
+);
+assert.deepEqual(exactRenovationDecision.acceptedFacts.renovation_plan_rows, [
+  {
+    category: "1BR Interiors",
+    unit_type: "1BR",
+    unit_count: 20,
+    cost_per_unit: 18500,
+    expected_monthly_rent_lift: 225,
+    start_month: 1,
+    end_month: 18,
+  },
+  { category: "Common Area Refresh", stated_amount: 210000 },
+]);
+assert.equal(
+  exactRenovationDecision.acceptedFacts.renovation_plan_rows.some((row) => row.stated_amount === 370000),
+  false,
+  "derived unit-count multiplied by per-unit cost must not become an accepted stated amount"
+);
+
+const unsupportedRenovationDecision = decisionWithParsedPayload(
+  "unsupported-renovation-row",
+  "Renovation / CapEx Plan\nTotal Renovation Budget $1,280,000\n1BR scope provided without row amounts.",
+  "renovation_parsed",
+  {
+    semantic_doc_role: "renovation_capex_context",
+    total_budget: 1280000,
+    budget_rows: [{ category: "1BR Interiors", evidence: ["invented excerpt $18,500/unit"], cost_per_unit: 18500 }],
+  }
+);
+assert.equal(unsupportedRenovationDecision.acceptedFacts.renovation_plan_rows, undefined);
 
 function packageForTexts(entries) {
   const uploadedFiles = entries.map((entry) => ({ id: entry.id, original_filename: entry.filename, parse_status: "parsed" }));

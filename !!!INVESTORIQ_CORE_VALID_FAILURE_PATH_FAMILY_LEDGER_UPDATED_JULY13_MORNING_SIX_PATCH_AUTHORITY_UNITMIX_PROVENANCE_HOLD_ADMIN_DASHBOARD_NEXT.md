@@ -19923,6 +19923,54 @@ Gate 11: Launch Operations and Certification
 
 The Final PDF Boss v4 constitutional publication-authority correction documented above supersedes the prior v3 Gate 10R terminal behavior. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains the next separately bounded gate.
 
+## July 18 Gate 10V core-valid Underwriting Report closure
+
+Gate 10V preserves the core-valid publish-or-collapse constitution. It changes neither T12 and Rent Roll acceptance nor the deferred catastrophic-core threshold. Exact optional appraisal, renovation, market-survey, and Phase I context may render only through accepted support-document authority; missing, unsupported, or conflicting optional facts collapse only their dependent context.
+
+Closed failure families:
+
+```text
+support-document role presence alone renders optional facts -> prohibited
+parser candidate without exact source excerpt becomes accepted fact -> prohibited
+derived renovation row total renders because unit count and cost per unit exist -> prohibited
+conflicting duplicate optional evidence is silently selected -> prohibited
+market survey replaces or overrides Rent Roll authority -> prohibited
+optional context creates valuation, return, risk, recommendation, or environmental conclusion -> prohibited
+collapsed optional context blocks a core-publishable report -> prohibited
+presentation page count becomes report-validity authority -> prohibited
+low-density page or missing continuation header is certified clean -> prohibited
+nonblocking presentation finding becomes customer-document failure -> prohibited
+Screening inherits Underwriting title, chapter, or support authority -> prohibited
+```
+
+The Underwriting Report architecture and composition are deterministic and content-driven. Unsupported optional sections omit; accepted core sections remain. Long tables may continue with repeated headers, individual rows remain intact, numeric columns remain aligned, and duplicate running identity is removed. No universal page count exists.
+
+Final PDF Boss v5 preserves the RETEST 32 publication consequence: strict institutional certification records every page defect, while nonblocking presentation findings publish with a quality incident after the bounded repair path. Invalid bytes, unsealed or constitution-tampered surfaces, prohibited content, objective required-content loss, unsafe artifacts, and external test-mode publication remain blockers. Presentation uncertainty does not blame accepted customer documents.
+
+Verification: exact Gate 10V smoke `PASS`; support-document authority adversarial matrix `38 / 38 PASS`; `qa:support-authority` `PASS`; `qa:institutional-pdf` `11 / 11 PASS`; page-by-page density and continuation-header adversarial proof `PASS`; `qa:financial-intelligence` `PASS`; `qa:full` including production build and diff integrity `PASS`.
+
+```text
+GATE 10V-A THROUGH 10V-H: COMPLETE / PASS LOCALLY
+BASE COMMIT: cf53bc8
+CORE ACCEPTANCE CHANGED: NO
+CATASTROPHIC CORE DOCTRINE CHANGED: NO
+SOURCE TRUTH WEAKENED: NO
+OPTIONAL FAILURE CONSEQUENCE: DEPENDENT SECTION COLLAPSE ONLY
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+COMMITTED: NO
+DEPLOYED: NO
+CODEX LIVE RETEST: NOT RUN
+```
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ## July 18 RETEST 32 constitutional PDF publication-authority correction
 
 RETEST 32 proved that canonical core and section authority had already succeeded before the report failed. The T12 and Rent Roll were accepted, Source Truth was core-publishable, no true core blocker existed, optional section policy had already rendered, omitted, or disclosed correctly, and the Delivery Gate was deliverable. The terminal failure was manufactured afterward because Final PDF Boss v3 assigned `blocks_customer_delivery: true` to every certification issue and converted any non-empty issue list into `PDF_ARTIFACT_FAILED`.
@@ -20001,3 +20049,7 @@ Gate 11: Launch Operations and Certification
 ### Active continuation pointer after RETEST 32
 
 The Final PDF Boss v4 constitutional publication-authority correction documented above supersedes the prior v3 Gate 10R terminal behavior. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains the next separately bounded gate.
+
+### Active continuation pointer after Gate 10V
+
+Gate 10V-A through 10V-H is the current local closure: `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. It preserves core publish-or-collapse authority and supersedes no RETEST 32 publication doctrine. Gate 11 remains the next separately bounded gate.

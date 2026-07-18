@@ -529,8 +529,8 @@ assert.equal(fullRenderHarnessResponse.body?.success, true);
 const fullRenderHtml = String(fullRenderHarnessResponse.body?.final_html || "");
 let financingSectionMatch = null;
 if (!process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY) {
-  assert.match(fullRenderHtml, /ACQUISITION MEMO/i);
-  for (const chapter of ["committee-overview", "operating-performance", "acquisition-context", "debt-capital-structure", "financial-analysis", "source-appendix"]) {
+  assert.match(fullRenderHtml, /UNDERWRITING REPORT/i);
+  for (const chapter of ["committee-overview", "operating-performance", "transaction-context", "debt-capital-structure", "valuation-reconciliation", "source-appendix"]) {
     assert.match(fullRenderHtml, new RegExp(`data-iq-chapter="${chapter}"`, "i"));
   }
   assert.doesNotMatch(fullRenderHtml, /Acquisition Memo Summary|Operating Snapshot|Operating Support|Rent Position Support/i);
@@ -4483,7 +4483,7 @@ const acquisitionMemoSummaryCardHtml = generatorTest.buildAcquisitionMemoSummary
   formatCurrency,
   formatPercent1,
 });
-assert.match(acquisitionMemoSummaryCardHtml, /Acquisition Memo Summary/);
+assert.match(acquisitionMemoSummaryCardHtml, /Underwriting Summary/);
 assert.match(acquisitionMemoSummaryCardHtml, /Purchase Price/);
 assert.match(acquisitionMemoSummaryCardHtml, /NOI Basis/);
 assert.equal(/<table>\s*<\/table>/.test(acquisitionMemoSummaryCardHtml), false);

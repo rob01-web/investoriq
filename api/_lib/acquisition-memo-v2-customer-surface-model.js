@@ -103,6 +103,9 @@ function expectedSurfaceValuesFromModel(model) {
   const unitMixFacts = model?.sections?.unitMix?.facts || {};
   const t12Facts = model?.sections?.operatingStatementTTMSummary?.facts || {};
   const appFacts = model?.sections?.appraisalContext?.facts || {};
+  const renovationFacts = model?.sections?.renovationContext?.facts || {};
+  const marketSurveyFacts = model?.sections?.marketSurveyContext?.facts || {};
+  const environmentalFacts = model?.sections?.environmentalContext?.facts || {};
   return {
     title: String(model?.identity?.reportTitle || model?.identity?.propertyName || "").trim(),
     coreT12Label: String(model?.coreSources?.coreT12?.visibleLabel || "").trim(),
@@ -147,6 +150,35 @@ function expectedSurfaceValuesFromModel(model) {
       appraisalValue: formatMoneyForSurface(appFacts.appraisal_value),
       stabilizedCapRate: formatPercentForSurface(appFacts.stabilized_cap_rate),
       stabilizedNOI: formatMoneyForSurface(appFacts.stabilized_noi),
+    },
+    renovation: {
+      totalBudget: formatMoneyForSurface(renovationFacts.total_renovation_budget),
+      planRows: Array.isArray(renovationFacts.renovation_plan_rows)
+        ? renovationFacts.renovation_plan_rows.map((row) => ({
+            category: String(row?.category || "").trim(),
+            unitCount: row?.unit_count !== null && row?.unit_count !== undefined && Number.isFinite(Number(row.unit_count)) ? String(Math.round(Number(row.unit_count))) : "",
+            costPerUnit: formatMoneyForSurface(row?.cost_per_unit),
+            statedAmount: formatMoneyForSurface(row?.stated_amount),
+            rentLift: formatMoneyForSurface(row?.expected_monthly_rent_lift),
+            timing: row?.start_month !== null && row?.start_month !== undefined && row?.end_month !== null && row?.end_month !== undefined && Number.isFinite(Number(row.start_month)) && Number.isFinite(Number(row.end_month))
+              ? `Months ${Math.round(Number(row.start_month))}-${Math.round(Number(row.end_month))}`
+              : "",
+          }))
+        : [],
+    },
+    marketSurvey: {
+      ranges: Array.isArray(marketSurveyFacts.market_rent_ranges)
+        ? marketSurveyFacts.market_rent_ranges.map((row) => ({
+            unitType: String(row?.unit_type || "").trim(),
+            low: formatMoneyForSurface(row?.low_monthly_rent),
+            high: formatMoneyForSurface(row?.high_monthly_rent),
+          }))
+        : [],
+    },
+    environmental: {
+      status: String(environmentalFacts.phase_i_status || "").trim() === "none_identified_in_summary"
+        ? "None identified in this summary"
+        : String(environmentalFacts.phase_i_status || "").trim().replace(/_/g, " "),
     },
   };
 }
@@ -991,10 +1023,17 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "appraisalContext") {
     const appraisal = supportDocsByRole.appraisal_context || null;
     const facts = appraisal?.extractedFacts || {};
+    const normalizedFacts = {
+      appraisal_value: normalizeMoney(facts.appraisal_value),
+      stabilized_cap_rate: normalizeCapRatio(facts.stabilized_cap_rate),
+      stabilized_noi: normalizeMoney(facts.stabilized_noi),
+    };
+    const availableFacts = Object.entries(normalizedFacts)
+      .filter(([, value]) => value !== null)
+      .map(([keyName]) => keyName);
+    const requiredFacts = Array.isArray(section?.requiredFacts) ? section.requiredFacts : [];
     const hasSourceBackedFacts =
-      Number.isFinite(normalizeMoney(facts.appraisal_value)) ||
-      Number.isFinite(normalizeCapRatio(facts.stabilized_cap_rate)) ||
-      Number.isFinite(normalizeMoney(facts.stabilized_noi));
+      availableFacts.length > 0 && section?.factAvailability?.sourceBacked === true;
     if (!appraisal || !hasSourceBackedFacts) {
       return {
         ...section,
@@ -1007,9 +1046,9 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           stabilized_noi: null,
         },
         factAvailability: {
-          required: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
+          required: requiredFacts,
           available: [],
-          missing: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
+          missing: requiredFacts,
           sourceBacked: false,
           sourcePresent: Boolean(section?.factAvailability?.sourcePresent || appraisal),
         },
@@ -1025,33 +1064,17 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       ...section,
       sourceRole: "appraisal_context",
       visibleLabel: appraisal?.visibleLabel || appraisal?.roleLabel || "Appraisal / Valuation Context",
-      facts: {
-        appraisal_value: normalizeMoney(facts.appraisal_value),
-        stabilized_cap_rate: normalizeCapRatio(facts.stabilized_cap_rate),
-        stabilized_noi: normalizeMoney(facts.stabilized_noi),
-      },
+      facts: normalizedFacts,
       boundaries: {
         appraisalIsContextOnly: true,
         stabilizedCapRateIsNotInterestRate: true,
         stabilizedNOIIsNotT12NOI: true,
       },
       factAvailability: {
-        required: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
-        available: Object.entries({
-          appraisal_value: facts.appraisal_value,
-          stabilized_cap_rate: facts.stabilized_cap_rate,
-          stabilized_noi: facts.stabilized_noi,
-        })
-          .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value)))
-          .map(([keyName]) => keyName),
-        missing: Object.entries({
-          appraisal_value: facts.appraisal_value,
-          stabilized_cap_rate: facts.stabilized_cap_rate,
-          stabilized_noi: facts.stabilized_noi,
-        })
-          .filter(([, value]) => !(Number.isFinite(normalizeMoney(value)) || Number.isFinite(normalizeCapRatio(value))))
-          .map(([keyName]) => keyName),
-        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        required: requiredFacts,
+        available: availableFacts,
+        missing: requiredFacts.filter((factName) => !availableFacts.includes(factName)),
+        sourceBacked: hasSourceBackedFacts,
         sourcePresent: Boolean(section?.factAvailability?.sourcePresent || appraisal),
       },
       sourceDoc: appraisal,
@@ -1059,11 +1082,30 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   }
 
   if (key === "renovationContext") {
-    const renovation = supportDocsByRole.structured_renovation_capex_plan || supportDocsByRole.renovation_capex_budget_context || null;
+    const renovation = supportDocsByRole.renovation_capex_context || supportDocsByRole.structured_renovation_capex_plan || supportDocsByRole.renovation_capex_budget_context || null;
     const facts = renovation?.extractedFacts || {};
-    const hasSourceBackedFacts =
-      Number.isFinite(normalizeMoney(facts.total_renovation_budget)) ||
-      Number.isFinite(normalizeMoney(facts.rent_lift));
+    const renovationPlanRows = toArrayLike(facts.renovation_plan_rows).map((row) => ({
+      category: String(row?.category || "").trim(),
+      unit_type: String(row?.unit_type || "").trim() || null,
+      unit_count: normalizeMoney(row?.unit_count),
+      cost_per_unit: normalizeMoney(row?.cost_per_unit),
+      stated_amount: normalizeMoney(row?.stated_amount),
+      expected_monthly_rent_lift: normalizeMoney(row?.expected_monthly_rent_lift),
+      start_month: normalizeMoney(row?.start_month),
+      end_month: normalizeMoney(row?.end_month),
+    })).filter((row) => row.category && Object.entries(row).some(([field, value]) => field !== "category" && value !== null && value !== ""));
+    const normalizedFacts = {
+      total_renovation_budget: normalizeMoney(facts.total_renovation_budget),
+      capital_plan_start_month: normalizeMoney(facts.capital_plan_start_month),
+      capital_plan_end_month: normalizeMoney(facts.capital_plan_end_month),
+      capital_plan_duration_months: normalizeMoney(facts.capital_plan_duration_months),
+      renovation_plan_rows: renovationPlanRows,
+    };
+    const availableFacts = Object.entries(normalizedFacts)
+      .filter(([, value]) => Array.isArray(value) ? value.length > 0 : value !== null)
+      .map(([keyName]) => keyName);
+    const requiredFacts = Array.isArray(section?.requiredFacts) ? section.requiredFacts : [];
+    const hasSourceBackedFacts = availableFacts.length > 0 && section?.factAvailability?.sourceBacked === true;
     if (!renovation || !hasSourceBackedFacts) {
       return {
         ...section,
@@ -1072,12 +1114,15 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         visibleLabel: "Structured Renovation / CapEx Plan",
         facts: {
           total_renovation_budget: null,
-          rent_lift: null,
+          capital_plan_start_month: null,
+          capital_plan_end_month: null,
+          capital_plan_duration_months: null,
+          renovation_plan_rows: [],
         },
         factAvailability: {
-          required: ["total_renovation_budget"],
+          required: requiredFacts,
           available: [],
-          missing: ["total_renovation_budget"],
+          missing: requiredFacts,
           sourceBacked: false,
           sourcePresent: Boolean(section?.factAvailability?.sourcePresent || renovation),
         },
@@ -1092,29 +1137,16 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       ...section,
       sourceRole: renovation?.canonicalRole || "structured_renovation_capex_plan",
       visibleLabel: renovation?.visibleLabel || renovation?.roleLabel || "Structured Renovation / CapEx Plan",
-      facts: {
-        total_renovation_budget: normalizeMoney(facts.total_renovation_budget),
-        rent_lift: normalizeMoney(facts.rent_lift),
-      },
+      facts: normalizedFacts,
       boundaries: {
         renovationIsContextOnly: true,
         noRoiOrPaybackModeling: true,
       },
       factAvailability: {
-        required: ["total_renovation_budget"],
-        available: Object.entries({
-          total_renovation_budget: facts.total_renovation_budget,
-          rent_lift: facts.rent_lift,
-        })
-          .filter(([, value]) => Number.isFinite(normalizeMoney(value)))
-          .map(([keyName]) => keyName),
-        missing: Object.entries({
-          total_renovation_budget: facts.total_renovation_budget,
-          rent_lift: facts.rent_lift,
-        })
-          .filter(([, value]) => !Number.isFinite(normalizeMoney(value)))
-          .map(([keyName]) => keyName),
-        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        required: requiredFacts,
+        available: availableFacts,
+        missing: requiredFacts.filter((factName) => !availableFacts.includes(factName)),
+        sourceBacked: hasSourceBackedFacts,
         sourcePresent: Boolean(section?.factAvailability?.sourcePresent || renovation),
       },
       sourceDoc: renovation,
@@ -1124,9 +1156,14 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "marketSurveyContext") {
     const marketSurvey = supportDocsByRole.market_survey_context || null;
     const facts = marketSurvey?.extractedFacts || {};
-    const hasSourceBackedFacts =
-      Number.isFinite(normalizeMoney(facts.market_rent)) ||
-      Array.isArray(facts.rent_comp);
+    const marketRentRanges = toArrayLike(facts.market_rent_ranges).map((row) => ({
+      unit_type: String(row?.unit_type || "").trim(),
+      low_monthly_rent: normalizeMoney(row?.low_monthly_rent),
+      high_monthly_rent: normalizeMoney(row?.high_monthly_rent),
+    })).filter((row) => row.unit_type && row.low_monthly_rent !== null && row.high_monthly_rent !== null);
+    const requiredFacts = Array.isArray(section?.requiredFacts) ? section.requiredFacts : [];
+    const availableFacts = marketRentRanges.length > 0 ? ["market_rent_ranges"] : [];
+    const hasSourceBackedFacts = availableFacts.length > 0 && section?.factAvailability?.sourceBacked === true;
     if (!marketSurvey || !hasSourceBackedFacts) {
       return {
         ...section,
@@ -1134,13 +1171,12 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
         sourceRole: "market_survey_context",
         visibleLabel: "Market Survey Context",
         facts: {
-          market_rent: null,
-          rent_comp: [],
+          market_rent_ranges: [],
         },
         factAvailability: {
-          required: [],
+          required: requiredFacts,
           available: [],
-          missing: [],
+          missing: requiredFacts,
           sourceBacked: false,
           sourcePresent: Boolean(section?.factAvailability?.sourcePresent || marketSurvey),
         },
@@ -1156,23 +1192,17 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       sourceRole: "market_survey_context",
       visibleLabel: marketSurvey?.visibleLabel || marketSurvey?.roleLabel || "Market Survey Context",
       facts: {
-        market_rent: normalizeMoney(facts.market_rent),
-        rent_comp: clone(facts.rent_comp || []),
+        market_rent_ranges: marketRentRanges,
       },
       boundaries: {
         marketSurveyIsContextOnly: true,
         noMarketSurveyOverride: true,
       },
       factAvailability: {
-        required: [],
-        available: Object.entries({
-          market_rent: facts.market_rent,
-          rent_comp: facts.rent_comp,
-        })
-          .filter(([, value]) => Number.isFinite(normalizeMoney(value)) || Array.isArray(value))
-          .map(([keyName]) => keyName),
-        missing: [],
-        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        required: requiredFacts,
+        available: availableFacts,
+        missing: requiredFacts.filter((factName) => !availableFacts.includes(factName)),
+        sourceBacked: hasSourceBackedFacts,
         sourcePresent: Boolean(section?.factAvailability?.sourcePresent || marketSurvey),
       },
       sourceDoc: marketSurvey,
@@ -1182,7 +1212,10 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
   if (key === "environmentalContext") {
     const environmental = supportDocsByRole.environmental_context || null;
     const facts = environmental?.extractedFacts || {};
-    const hasSourceBackedFacts = String(facts.phase_i_status || facts.esa_status || "").trim().length > 0;
+    const phaseIStatus = String(facts.phase_i_status || "").trim();
+    const requiredFacts = Array.isArray(section?.requiredFacts) ? section.requiredFacts : [];
+    const availableFacts = phaseIStatus ? ["phase_i_status"] : [];
+    const hasSourceBackedFacts = availableFacts.length > 0 && section?.factAvailability?.sourceBacked === true;
     if (!environmental || !hasSourceBackedFacts) {
       return {
         ...section,
@@ -1193,9 +1226,9 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
           phase_i_status: null,
         },
         factAvailability: {
-          required: [],
+          required: requiredFacts,
           available: [],
-          missing: [],
+          missing: requiredFacts,
           sourceBacked: false,
           sourcePresent: Boolean(section?.factAvailability?.sourcePresent || environmental),
         },
@@ -1210,20 +1243,16 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
       sourceRole: "environmental_context",
       visibleLabel: environmental?.visibleLabel || environmental?.roleLabel || "Environmental / Phase I ESA Context",
       facts: {
-        phase_i_status: String(facts.phase_i_status || facts.esa_status || "").trim() || null,
+        phase_i_status: phaseIStatus || null,
       },
       boundaries: {
         environmentalIsContextOnly: true,
       },
       factAvailability: {
-        required: [],
-        available: Object.entries({
-          phase_i_status: facts.phase_i_status || facts.esa_status,
-        })
-          .filter(([, value]) => String(value || "").trim().length > 0)
-          .map(([keyName]) => keyName),
-        missing: [],
-        sourceBacked: section?.factAvailability?.sourceBacked === true,
+        required: requiredFacts,
+        available: availableFacts,
+        missing: requiredFacts.filter((factName) => !availableFacts.includes(factName)),
+        sourceBacked: hasSourceBackedFacts,
         sourcePresent: Boolean(section?.factAvailability?.sourcePresent || environmental),
       },
       sourceDoc: environmental,
@@ -1696,8 +1725,8 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
       proposedFinancingContext: { mustHaveFacts: ["proposed_loan_amount", "ltv", "interest_rate"] },
       appraisalContext: { mustHaveFacts: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"] },
       renovationContext: { mustHaveFacts: ["total_renovation_budget"] },
-      marketSurveyContext: { mustHaveFacts: [] },
-      environmentalContext: { mustHaveFacts: [] },
+      marketSurveyContext: { mustHaveFacts: ["market_rent_ranges"] },
+      environmentalContext: { mustHaveFacts: ["phase_i_status"] },
       unitMix: { mustHaveFacts: ["unit_mix", "units"] },
       capRateValueIndication: { mustHaveFacts: ["total_units", "going_in_cap_rate"] },
       operatingStatementTTMSummary: { mustHaveFacts: ["expense_lines", "net_operating_income"] },
@@ -1721,7 +1750,8 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
       }
       const shouldRender = Boolean(section.factAvailability?.sourceBacked) || section.status === "required" || section.status === "required_if_source_present";
       const isCoreSection = sectionKey === "unitMix" || sectionKey === "capRateValueIndication" || sectionKey === "operatingStatementTTMSummary";
-      if (shouldRender && isCoreSection && (!Array.isArray(section.sourceBindings) || section.sourceBindings.length === 0)) {
+      const isAuthorityContextSection = ["appraisalContext", "renovationContext", "marketSurveyContext", "environmentalContext"].includes(sectionKey);
+      if (shouldRender && (isCoreSection || isAuthorityContextSection) && (!Array.isArray(section.sourceBindings) || section.sourceBindings.length === 0)) {
         pushIssue("SECTION_SOURCE_BINDINGS_EMPTY", `${sectionKey} requires source bindings.`, "critical", `model.sections.${sectionKey}.sourceBindings`);
       }
       if (shouldRender && isCoreSection && !Array.isArray(section.postRenderAssertions)) {
@@ -1732,8 +1762,16 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
           pushIssue("SECTION_REQUIRED_FACT_MISSING", `${sectionKey} must expose ${factName}.`, "fatal_core", `model.sections.${sectionKey}.facts.${factName}`);
         }
       }
+      for (const factName of Array.isArray(section.requiredFacts) ? section.requiredFacts : []) {
+        if (shouldRender && isAuthorityContextSection && !(factName in (section.facts || {}))) {
+          pushIssue("SECTION_ACCEPTED_FACT_MISSING", `${sectionKey} lost accepted fact ${factName}.`, "critical", `model.sections.${sectionKey}.facts.${factName}`);
+        }
+      }
       if (shouldRender && isCoreSection && !section.factAvailability?.sourceBacked) {
         pushIssue("SECTION_NOT_SOURCE_BACKED", `${sectionKey} must be source-backed.`, "critical", `model.sections.${sectionKey}.factAvailability.sourceBacked`);
+      }
+      if (section.status === "required" && isAuthorityContextSection && !section.factAvailability?.sourceBacked) {
+        pushIssue("SECTION_ACCEPTED_AUTHORITY_LOST", `${sectionKey} cannot be required without canonical source authority.`, "critical", `model.sections.${sectionKey}.factAvailability.sourceBacked`);
       }
     }
 
@@ -1770,7 +1808,7 @@ function validateAcquisitionMemoV2CustomerSurfaceModel(model) {
   const purchaseAssumptions = supportSourcesByRole.purchase_assumptions || null;
   const currentDebt = supportSourcesByRole.current_debt_context || null;
   const appraisal = supportSourcesByRole.appraisal_context || null;
-  const renovation = supportSourcesByRole.structured_renovation_capex_plan || supportSourcesByRole.renovation_capex_budget_context || null;
+  const renovation = supportSourcesByRole.renovation_capex_context || supportSourcesByRole.structured_renovation_capex_plan || supportSourcesByRole.renovation_capex_budget_context || null;
   const marketSurvey = supportSourcesByRole.market_survey_context || null;
   const environmental = supportSourcesByRole.environmental_context || null;
   const acceptedSourceTruth = model.sourceTruth?.accepted || {};
@@ -2046,6 +2084,43 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
         pushIssue("HTML_T12_EXPENSE_AMOUNT_MISSING", `${amount} is missing from customer HTML.`, "critical", "html.operatingStatementTTMSummary");
       }
     }
+  }
+
+  const appraisalShouldValidate = model.sections?.appraisalContext?.factAvailability?.sourceBacked === true;
+  for (const [field, value] of Object.entries(expected.appraisal || {})) {
+    if (appraisalShouldValidate && value && !containsText(htmlText, value)) {
+      pushIssue("HTML_APPRAISAL_FACT_MISSING", `${field} is missing from customer HTML.`, "critical", `html.appraisalContext.${field}`);
+    }
+  }
+
+  const renovationShouldValidate = model.sections?.renovationContext?.factAvailability?.sourceBacked === true;
+  if (renovationShouldValidate && expected.renovation?.totalBudget && !containsText(htmlText, expected.renovation.totalBudget)) {
+    pushIssue("HTML_RENOVATION_TOTAL_MISSING", "Accepted renovation total is missing from customer HTML.", "critical", "html.renovationContext.totalBudget");
+  }
+  if (renovationShouldValidate) {
+    for (const row of expected.renovation?.planRows || []) {
+      for (const [field, value] of Object.entries(row)) {
+        if (value && !containsText(htmlText, value)) {
+          pushIssue("HTML_RENOVATION_ROW_FACT_MISSING", `${field} is missing from customer HTML.`, "critical", `html.renovationContext.${field}`);
+        }
+      }
+    }
+  }
+
+  const marketSurveyShouldValidate = model.sections?.marketSurveyContext?.factAvailability?.sourceBacked === true;
+  if (marketSurveyShouldValidate) {
+    for (const range of expected.marketSurvey?.ranges || []) {
+      for (const [field, value] of Object.entries(range)) {
+        if (value && !containsText(htmlText, value)) {
+          pushIssue("HTML_MARKET_RANGE_FACT_MISSING", `${field} is missing from customer HTML.`, "critical", `html.marketSurveyContext.${field}`);
+        }
+      }
+    }
+  }
+
+  const environmentalShouldValidate = model.sections?.environmentalContext?.factAvailability?.sourceBacked === true;
+  if (environmentalShouldValidate && expected.environmental?.status && !containsText(htmlText, expected.environmental.status)) {
+    pushIssue("HTML_ENVIRONMENTAL_STATUS_MISSING", "Accepted Phase I status is missing from customer HTML.", "critical", "html.environmentalContext.phase_i_status");
   }
 
   if (containsText(htmlText, "No parsed unit mix rows were available from the canonical rent roll evidence.")) {

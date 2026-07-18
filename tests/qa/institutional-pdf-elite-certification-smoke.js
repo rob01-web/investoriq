@@ -49,9 +49,9 @@ assert.ok(manifest.charts.every((chart) =>
 assert.deepEqual(manifest.chapters.map((chapter) => chapter.id), [
   "committee-overview",
   "operating-performance",
-  "acquisition-context",
+  "transaction-context",
   "debt-capital-structure",
-  "financial-analysis",
+  "valuation-reconciliation",
   "source-appendix",
 ]);
 

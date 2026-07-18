@@ -3783,5 +3783,82 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+## July 18 Gate 10V institutional Underwriting Report closure
+
+Gate 10V-A through 10V-H completed sequentially from base commit `cf53bc8` in four separate authority boundaries. The work is generic and source-driven. No Stonebridge property name, filename, financial value, page count, or fixture-specific exception was added to production.
+
+### Source authority and accuracy
+
+```text
+10V-A: exact optional support-document authority for appraisal, renovation, market-survey, and Phase I context
+10V-B: canonical Boss and CustomerSurfaceModel projection with conflict rejection, exact evidence binding, and no derived or inferred values
+```
+
+Renovation rows are accepted only when their exact evidence excerpt occurs in the uploaded source. A stated renovation total may render; a mathematically derivable row total may not render unless the document states that exact amount. Conflicting duplicate rows, market ranges, or environmental statuses reject only the affected optional fact. Market-survey values cannot override Rent Roll authority. Appraisal and Phase I context cannot create valuation, environmental, risk, recommendation, or publication conclusions. The fixture expectation now reflects the existing canonical `34.4%` OpEx-to-T12-GPR break-even receipt rather than the stale `37%` text.
+
+### Report architecture
+
+```text
+10V-C: customer identity corrected to InvestorIQ Underwriting Report with institutional chapter order
+10V-D: exact optional context sections connected to their canonical eligibility and source register; unsupported sections omit independently
+```
+
+The customer PDF is now an Underwriting Report. Its chapter sequence is Investment Committee Overview, Operating Performance, Transaction Context, Debt and Capital Structure, Valuation and Reconciliation, and Source Appendix. Screening identity and files are unchanged. Optional support-document presence is not enough to render a section; canonical accepted facts and exact section eligibility are required. A collapsed optional context section does not block or invalidate a core-publishable report, and source-presence treatment remains visible in the Source Register.
+
+### Composition and visual design
+
+```text
+10V-E: content-driven pagination, true no-break blocks, controlled long-table splitting, repeated table headers, and reduced accidental whitespace
+10V-F: explicit numeric-column alignment, tabular numerals, wrapped source cells, source-row integrity, and duplicate running-identity removal
+```
+
+No universal page count was introduced. Major chapter and semantic break rules remain content-driven. Long source registers may continue across pages, their headers repeat, and individual source rows do not split. Numeric cells are explicitly right-aligned. Repeated property identity was removed from running navigation without dropping the canonical report identity.
+
+### Certification and adversarial proof
+
+```text
+10V-G: Final PDF Boss v5 continuation-header and low-semantic-density certification
+10V-H: exact-authority, collapse-independence, prohibited-calculation, page-composition, and full-regression proof
+```
+
+The Final PDF Boss remains strict and page-by-page. It records every table, chart, column, number, heading, page break, spacing rule, alignment defect, continuation-header defect, and low-semantic-density page that a sophisticated institutional investor would notice. A content page with fewer than five semantic body lines is flagged; the cover is exempt. Missing repeated headers on approved tables are flagged. These presentation findings remain nonblocking quality incidents under the v4 publication consequence unless an objective safety, artifact, authority, prohibited-content, required-content, or publication-mode blocker exists.
+
+Permanent proof:
+
+```text
+support-document authority adversarial matrix: PASS, 38 scenarios
+Gate 10V elite Underwriting Report smoke: PASS
+qa:support-authority: PASS
+qa:institutional-pdf: PASS, 11 smokes
+page-by-page continuation-header and low-density adversarial proof: PASS
+qa:financial-intelligence: PASS
+qa:full including production build: PASS
+diff integrity: PASS
+Screening production-file change: NONE
+```
+
+```text
+GATE 10V-A THROUGH 10V-H: COMPLETE / PASS LOCALLY
+BASE COMMIT: cf53bc8
+COMMITTED: NO
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+LIVE CUSTOMER PDF CERTIFIED IN THIS RUN: NO
+SOURCE TRUTH WEAKENED: NO
+INFERRED OR DERIVED OPTIONAL VALUE AUTHORIZED: NO
+SCREENING CHANGED: NO
+DELIVERY GATE CHANGED: NO
+CORE PUBLICATION THRESHOLD CHANGED: NO
+ADMIN OR CUSTOMER LIFECYCLE CHANGED: NO
+NEXT: Gate 11 Launch Operations and Certification under a separately bounded authority review
+```
+
+Gate 11 remains preserved exactly:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
+
 ---
 # End of Active Master Context

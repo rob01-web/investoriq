@@ -1,7 +1,7 @@
 FINAL ATTACK TEST 8 - MIXED SUPPORT / DUPLICATE PRECEDENCE / RENOVATION + DEBT SEPARATION
 
 Purpose:
-Validate that InvestorIQ can publish an Acquisition Memo when T12 and Rent Roll are usable, while the support package contains tempting but bounded sources: purchase assumptions, appraisal context, current debt, renovation plan, market survey, and Phase I ESA.
+Validate that InvestorIQ can publish an Underwriting Report when T12 and Rent Roll are usable, while the support package contains tempting but bounded sources: purchase assumptions, appraisal context, current debt, renovation plan, market survey, and Phase I ESA.
 
 Core expected values:
 - Units: 64
@@ -13,7 +13,7 @@ Core expected values:
 - T12 Net Operating Income: $945,000
 - Expense Ratio: 37.0%
 - NOI Margin: 63.0%
-- Break-Even Occupancy: 37.0%
+- Break-Even Occupancy: 34.4% (T12 Operating Expenses / T12 Gross Potential Rent)
 - Rent roll annual in-place rent: $1,432,800
 - Rent roll annual market rent: $1,718,400
 - Annual rent upside: $285,600
@@ -45,7 +45,7 @@ Renovation expected values:
 - Contingency: $153,000
 
 Expected InvestorIQ behavior:
-- Should publish Acquisition Memo.
+- Should publish Underwriting Report.
 - Should not fail closed.
 - Should not go to admin review.
 - Should not infer the cause of source differences.

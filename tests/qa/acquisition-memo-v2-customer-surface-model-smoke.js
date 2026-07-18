@@ -430,6 +430,7 @@ const syntheticHtml = `
     <div>${model.sections.renovationContext.visibleLabel}</div>
     <div>${model.sections.marketSurveyContext.visibleLabel}</div>
     <div>${model.sections.environmentalContext.visibleLabel}</div>
+    <div>Total Renovation Budget $1,280,000</div>
     <div>Current Outstanding Balance $6,800,000</div>
     <div>Interest Rate 4.85%</div>
     <div>Amortization Remaining 24 years</div>
@@ -603,11 +604,13 @@ const genericHtml = `
     <div>Lender / Origination Fee 1.00%</div>
     <div>Studio 12 $1,425 $1,575 $150</div>
     <div>3BR 8 $2,195 $2,495 $300</div>
+    <div>Total Renovation Budget $1,280,000</div>
     <div>Insurance $42,000</div>
     <div>Repairs $54,000</div>
   </body></html>
 `;
-assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericHtml, genericModel).ok, true);
+const genericHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericHtml, genericModel);
+assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));
 
 const hardcodeMismatchHtml = syntheticHtml.replace(/Stonebridge Lofts/g, "Legacy Property");
 const hardcodeMismatchValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(hardcodeMismatchHtml, genericModel);

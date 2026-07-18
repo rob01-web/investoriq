@@ -100,6 +100,75 @@ export function buildInstitutionalGate10ReportFixture(jobId = 'gate-10-report-jo
     },
     sectionEligibility: { capitalPlan: true },
   });
+  const appraisal = acceptedSupport({
+    fileId: 'appraisal-file',
+    filename: 'Institutional_Appraisal_Context_With_Long_Source_Name.pdf',
+    role: 'appraisal_context',
+    facts: {
+      appraisal_value: 14200000,
+      stabilized_noi: 1050000,
+      stabilized_cap_rate: 0.074,
+    },
+    factEvidence: {
+      appraisal_value: evidence(14200000, 'Appraised Value $14,200,000'),
+      stabilized_noi: evidence(1050000, 'Stabilized NOI $1,050,000'),
+      stabilized_cap_rate: evidence(7.4, 'Stabilized Cap Rate 7.40%', 0.074),
+    },
+    sectionEligibility: { appraisal: true },
+  });
+  const renovation = acceptedSupport({
+    fileId: 'renovation-file',
+    filename: 'Institutional_Renovation_Context_With_Long_Source_Name.pdf',
+    role: 'renovation_capex_context',
+    facts: {
+      total_renovation_budget: 1280000,
+      capital_plan_start_month: 1,
+      capital_plan_end_month: 24,
+      capital_plan_duration_months: 24,
+      renovation_plan_rows: [
+        { category: '1BR Interiors', unit_type: '1BR', unit_count: 20, cost_per_unit: 18500, expected_monthly_rent_lift: 225, start_month: 1, end_month: 18 },
+        { category: '2BR Interiors', unit_type: '2BR', unit_count: 18, cost_per_unit: 24000, expected_monthly_rent_lift: 325, start_month: 1, end_month: 24 },
+        { category: 'Common Area Refresh', stated_amount: 210000 },
+      ],
+    },
+    factEvidence: {
+      total_renovation_budget: evidence(1280000, 'Total Renovation Budget $1,280,000'),
+      renovation_plan_rows: [
+        evidence(null, '1BR Interiors 20 units X $18,500/unit; expected rent lift $225/month; Months 1-18'),
+        evidence(null, '2BR Interiors 18 units X $24,000/unit; expected rent lift $325/month; Months 1-24'),
+        evidence(null, 'Common Area Refresh $210,000'),
+      ],
+    },
+    sectionEligibility: { renovation: true },
+  });
+  const marketSurvey = acceptedSupport({
+    fileId: 'market-survey-file',
+    filename: 'Institutional_Market_Survey_Context_With_Long_Source_Name.pdf',
+    role: 'market_survey_context',
+    facts: {
+      market_rent_ranges: [
+        { unit_type: '1BR', low_monthly_rent: 2100, high_monthly_rent: 2250 },
+        { unit_type: '2BR', low_monthly_rent: 2500, high_monthly_rent: 2700 },
+      ],
+    },
+    factEvidence: {
+      market_rent_ranges: [
+        evidence(null, '1BR $2,100-$2,250'),
+        evidence(null, '2BR $2,500-$2,700'),
+      ],
+    },
+    sectionEligibility: { marketSurvey: true },
+  });
+  const environmental = acceptedSupport({
+    fileId: 'environmental-file',
+    filename: 'Institutional_Phase_I_ESA_Context_With_Long_Source_Name.pdf',
+    role: 'environmental_context',
+    facts: { phase_i_status: 'none_identified_in_summary' },
+    factEvidence: {
+      phase_i_status: evidence('None identified in this summary', 'Recognized Environmental Conditions: None identified in this summary.', 'none_identified_in_summary'),
+    },
+    sectionEligibility: { environmental: true },
+  });
   const sourceTruthPackage = {
     source: 'canonical_source_truth_package',
     schema_version: 1,
@@ -151,13 +220,17 @@ export function buildInstitutionalGate10ReportFixture(jobId = 'gate-10-report-jo
       },
     },
     support: {
-      accepted: [purchaseAssumptions, currentDebt, capitalPlan],
+      accepted: [purchaseAssumptions, currentDebt, capitalPlan, appraisal, renovation, marketSurvey, environmental],
       advisory: [],
       rejected: [],
       adjudication_decisions: [
         purchaseAssumptions.authority_decision,
         currentDebt.authority_decision,
         capitalPlan.authority_decision,
+        appraisal.authority_decision,
+        renovation.authority_decision,
+        marketSurvey.authority_decision,
+        environmental.authority_decision,
       ],
       conflicts: [],
       fact_conflicts: [],

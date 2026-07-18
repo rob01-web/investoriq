@@ -384,7 +384,7 @@ const pdfBoss = await inspectFinalPdfPublicationQuality({
   deterministicContractQaSeal: deterministicSeal,
   sourceReconciliation: customerSurfaceModel.sourceTruth.sourceReconciliation,
   financialIntelligence,
-  requiredTextAnchors: ['Acquisition Memo'],
+  requiredTextAnchors: ['Underwriting Report'],
   artifactMode: 'production_pdf',
   publicationTarget: 'internal_test',
   pdfAnalysis: {
@@ -403,7 +403,7 @@ const markerOnlyPdfBoss = await inspectFinalPdfPublicationQuality({
   deterministicContractQaSeal: deterministicSeal,
   sourceReconciliation: customerSurfaceModel.sourceTruth.sourceReconciliation,
   financialIntelligence: markerOnlyFinancialIntelligence,
-  requiredTextAnchors: ['Acquisition Memo'],
+  requiredTextAnchors: ['Underwriting Report'],
   artifactMode: 'production_pdf',
   publicationTarget: 'internal_test',
   pdfAnalysis: {

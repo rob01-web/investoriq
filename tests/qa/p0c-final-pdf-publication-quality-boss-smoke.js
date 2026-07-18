@@ -95,6 +95,12 @@ const conclusionLines = [
   "Risk and Diligence Summary",
   "The approved customer surface remains intact through final PDF rendering.",
   "All displayed figures are preserved from the sealed report contract.",
+  "Document treatment and source reconciliation remain visible for review.",
+  "No unsupported assumption or recommendation is introduced.",
+  "Page-level geometry and navigation are retained.",
+  "Financial values remain aligned to approved source facts.",
+  "This certification fixture represents a complete content page.",
+  "Institutional review context remains present on the page.",
 ];
 
 function validAnalysis() {

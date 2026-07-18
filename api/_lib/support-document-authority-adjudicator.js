@@ -1,6 +1,6 @@
 import { evaluateSupportDocumentSemanticFamilies } from "./support-doc-semantic-evidence.js";
 
-export const SUPPORT_DOCUMENT_AUTHORITY_VERSION = "support_doc_authority_v1";
+export const SUPPORT_DOCUMENT_AUTHORITY_VERSION = "support_doc_authority_v2";
 
 const FAMILY_ROLE_MAP = Object.freeze({
   acquisition_financing: "purchase_assumptions",
@@ -489,6 +489,175 @@ function sourceExcerpt(source, index, length, before = 40, after = 100) {
   return text(source.slice(Math.max(0, index - before), Math.min(source.length, index + length + after)));
 }
 
+function normalizedEvidenceText(value) {
+  return text(value).replace(/[\u2013\u2014]/g, "-").replace(/\s+/g, " ").toLowerCase();
+}
+
+function exactEvidenceExcerpt(rawSourceText, excerpts) {
+  const source = normalizedEvidenceText(rawSourceText);
+  return toArray(excerpts)
+    .map((excerpt) => text(excerpt))
+    .find((excerpt) => excerpt && source.includes(normalizedEvidenceText(excerpt))) || null;
+}
+
+function renovationPlanRowsFromArtifacts(artifacts, rawSourceText) {
+  const acceptedRows = [];
+  const rowsByCategory = new Map();
+  const ambiguities = [];
+  for (const artifact of toArray(artifacts)) {
+    const payload = payloadOf(artifact);
+    const rows = Array.isArray(payload?.candidate_facts?.budget_rows)
+      ? payload.candidate_facts.budget_rows
+      : Array.isArray(payload?.budget_rows)
+        ? payload.budget_rows
+        : [];
+    for (const row of rows) {
+      if (!row || typeof row !== "object") continue;
+      const category = text(row.category);
+      const evidenceExcerpt = exactEvidenceExcerpt(rawSourceText, row.evidence);
+      if (!category || !evidenceExcerpt) continue;
+      const normalizedExcerpt = normalizedEvidenceText(evidenceExcerpt);
+      if (!normalizedExcerpt.includes(normalizedEvidenceText(category))) continue;
+
+      const accepted = { category };
+      const unitType = text(row.unit_type);
+      if (unitType && normalizedExcerpt.includes(normalizedEvidenceText(unitType))) accepted.unit_type = unitType;
+
+      const unitCountMatch = evidenceExcerpt.match(/\b(\d{1,5})\s+units?\b/i);
+      const unitCount = Number(unitCountMatch?.[1]);
+      if (Number.isInteger(unitCount) && unitCount > 0 && Number(row.unit_count) === unitCount) {
+        accepted.unit_count = unitCount;
+      }
+
+      const perUnitMatch = evidenceExcerpt.match(/[$]\s*([\d,]+(?:\.\d{1,2})?)\s*(?:\/\s*(?:unit|each)|per\s+(?:unit|each))/i);
+      const costPerUnit = Number(String(perUnitMatch?.[1] || "").replace(/,/g, ""));
+      if (Number.isFinite(costPerUnit) && costPerUnit > 0 && Number(row.cost_per_unit) === costPerUnit) {
+        accepted.cost_per_unit = costPerUnit;
+      }
+
+      const rentLiftMatch = evidenceExcerpt.match(/(?:expected\s+)?rent\s+lift\s*[$]\s*([\d,]+(?:\.\d{1,2})?)\s*(?:\/\s*month|per\s+month)/i);
+      const monthlyRentLift = Number(String(rentLiftMatch?.[1] || "").replace(/,/g, ""));
+      if (Number.isFinite(monthlyRentLift) && monthlyRentLift >= 0 && Number(row.expected_monthly_rent_lift) === monthlyRentLift) {
+        accepted.expected_monthly_rent_lift = monthlyRentLift;
+      }
+
+      const timingMatch = evidenceExcerpt.replace(/[\u2013\u2014]/g, "-").match(/\bmonths?\s*(\d{1,3})\s*(?:-|to|through)\s*(\d{1,3})\b/i);
+      const startMonth = Number(timingMatch?.[1]);
+      const endMonth = Number(timingMatch?.[2]);
+      if (Number.isInteger(startMonth) && Number.isInteger(endMonth) && startMonth >= 0 && endMonth >= startMonth) {
+        const candidateTiming = normalizedEvidenceText(row.phase_timing);
+        if (!candidateTiming || candidateTiming.includes(String(startMonth)) && candidateTiming.includes(String(endMonth))) {
+          accepted.start_month = startMonth;
+          accepted.end_month = endMonth;
+        }
+      }
+
+      const statedAmounts = monetaryValues(evidenceExcerpt);
+      const candidateAmount = finitePositive(row.estimated_cost ?? row.total_cost ?? row.stated_amount);
+      if (Number.isFinite(candidateAmount) && statedAmounts.some((value) => numericMatches(candidateAmount, value))) {
+        accepted.stated_amount = candidateAmount;
+      }
+
+      if (Object.keys(accepted).length === 1) continue;
+      const categoryKey = normalizedEvidenceText(category);
+      const comparable = JSON.stringify(accepted);
+      const prior = rowsByCategory.get(categoryKey);
+      if (prior && prior !== comparable) {
+        ambiguities.push({ category, evidenceExcerpt });
+        continue;
+      }
+      if (prior) continue;
+      rowsByCategory.set(categoryKey, comparable);
+      acceptedRows.push({
+        ...accepted,
+        evidence: {
+          excerpt: evidenceExcerpt,
+          method: "deterministic_exact_renovation_row_binding",
+        },
+      });
+    }
+  }
+  if (ambiguities.length > 0) {
+    return {
+      rows: [],
+      ambiguity: {
+        reason: "conflicting_exact_renovation_rows",
+        excerpts: ambiguities.map((entry) => entry.evidenceExcerpt),
+      },
+    };
+  }
+  return { rows: acceptedRows, ambiguity: null };
+}
+
+function marketRentRangesFromSource(rawSourceText) {
+  const source = String(rawSourceText || "").replace(/[\u2013\u2014]/g, "-");
+  const ranges = [];
+  const byUnitType = new Map();
+  const conflicts = [];
+  const pattern = /\b(studio|efficiency|\d+\s*(?:br|bed(?:room)?s?))\b[^\r\n$]{0,80}[$]\s*([\d,]+(?:\.\d{1,2})?)\s*(?:-|to|through)\s*[$]\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  for (const match of source.matchAll(pattern)) {
+    const unitType = text(match[1]).replace(/\s+/g, "");
+    const low = Number(String(match[2] || "").replace(/,/g, ""));
+    const high = Number(String(match[3] || "").replace(/,/g, ""));
+    if (!unitType || !Number.isFinite(low) || !Number.isFinite(high) || low <= 0 || high < low) continue;
+    const value = { unit_type: unitType, low_monthly_rent: low, high_monthly_rent: high };
+    const key = unitType.toLowerCase();
+    const comparable = JSON.stringify(value);
+    const prior = byUnitType.get(key);
+    if (prior && prior !== comparable) {
+      conflicts.push(sourceExcerpt(source, match.index || 0, match[0].length));
+      continue;
+    }
+    if (prior) continue;
+    byUnitType.set(key, comparable);
+    ranges.push({
+      ...value,
+      evidence: {
+        excerpt: sourceExcerpt(source, match.index || 0, match[0].length, 0, 0),
+        method: "deterministic_exact_market_range_binding",
+      },
+    });
+  }
+  if (conflicts.length > 0) {
+    return {
+      ranges: [],
+      ambiguity: { reason: "conflicting_exact_market_rent_ranges", excerpts: conflicts },
+    };
+  }
+  return { ranges, ambiguity: null };
+}
+
+function environmentalStatusFromSource(rawSourceText) {
+  const source = String(rawSourceText || "");
+  const noneMatches = collectPatternExcerpts(source, [
+    /recognized environmental conditions?\s*[:\-]?\s*none identified(?:\s+in this summary)?/i,
+  ]);
+  const adverseMatches = collectPatternExcerpts(source, [
+    /recognized environmental conditions?\s*[:\-]?\s*(?:one or more|identified|present)/i,
+  ]);
+  if (noneMatches.length > 0 && adverseMatches.length > 0) {
+    return {
+      value: null,
+      evidence: null,
+      ambiguity: {
+        reason: "conflicting_rec_status",
+        excerpts: [noneMatches[0], adverseMatches[0]],
+      },
+    };
+  }
+  if (noneMatches.length === 0) return { value: null, evidence: null, ambiguity: null };
+  return {
+    value: "none_identified_in_summary",
+    evidence: {
+      excerpt: noneMatches[0],
+      method: "deterministic_exact_environmental_status_binding",
+      sourceValue: "None identified in this summary",
+      normalizedValue: "none_identified_in_summary",
+    },
+    ambiguity: null,
+  };
+}
+
 function capitalPlanTimingFromSource(rawSourceText) {
   const source = String(rawSourceText || "").replace(/[\u2013\u2014]/g, "-");
   const ranges = [];
@@ -725,6 +894,33 @@ function acceptedFactsForRole(role, artifacts, rawSourceText) {
     Object.assign(factEvidence, timing.factEvidence);
     if (timing.ambiguity) factAmbiguities.capital_plan_timing = timing.ambiguity;
   }
+  if (role === "renovation_capex_context") {
+    const renovationRows = renovationPlanRowsFromArtifacts(artifacts, rawSourceText);
+    if (renovationRows.rows.length > 0) {
+      acceptedFacts.renovation_plan_rows = renovationRows.rows.map(({ evidence, ...row }) => row);
+      factEvidence.renovation_plan_rows = renovationRows.rows.map((row) => row.evidence);
+    } else if (renovationRows.ambiguity) {
+      factAmbiguities.renovation_plan_rows = renovationRows.ambiguity;
+    }
+  }
+  if (role === "market_survey_context") {
+    const marketRanges = marketRentRangesFromSource(rawSourceText);
+    if (marketRanges.ranges.length > 0) {
+      acceptedFacts.market_rent_ranges = marketRanges.ranges.map(({ evidence, ...range }) => range);
+      factEvidence.market_rent_ranges = marketRanges.ranges.map((range) => range.evidence);
+    } else if (marketRanges.ambiguity) {
+      factAmbiguities.market_rent_ranges = marketRanges.ambiguity;
+    }
+  }
+  if (role === "environmental_context") {
+    const environmentalStatus = environmentalStatusFromSource(rawSourceText);
+    if (environmentalStatus.value) {
+      acceptedFacts.phase_i_status = environmentalStatus.value;
+      factEvidence.phase_i_status = environmentalStatus.evidence;
+    } else if (environmentalStatus.ambiguity) {
+      factAmbiguities.phase_i_status = environmentalStatus.ambiguity;
+    }
+  }
   if (["appraisal_context", "property_condition_context", "renovation_capex_context"].includes(role)) {
     const deferredStatus = deferredMaintenanceStatusFromSource(
       rawSourceText,
@@ -804,8 +1000,8 @@ function sectionEligibilityFor(role, acceptedFacts, roleAccepted) {
     propertyCondition: role === "property_condition_context" && roleAccepted && Object.keys(acceptedFacts).length > 0,
     historicalCapital: role === "historical_capital_context" && roleAccepted,
     renovation: role === "renovation_capex_context" && roleAccepted && Object.keys(acceptedFacts).length > 0,
-    marketSurvey: role === "market_survey_context" && roleAccepted,
-    environmental: role === "environmental_context" && roleAccepted,
+    marketSurvey: role === "market_survey_context" && roleAccepted && Object.keys(acceptedFacts).length > 0,
+    environmental: role === "environmental_context" && roleAccepted && Object.keys(acceptedFacts).length > 0,
     propertyTax: role === "property_tax_support" && roleAccepted && Object.keys(acceptedFacts).length > 0,
   };
 }

@@ -140,7 +140,7 @@ function validateIdentity(text, reportIdentity = null) {
         "contract.reportIdentity"
       ));
     }
-    if (!/(?:Preliminary Investment Screening Memorandum|Screening Signal|Preliminary Screening|Screening Report)/i.test(text) || /Acquisition Memo/i.test(text)) {
+    if (!/(?:Preliminary Investment Screening Memorandum|Screening Signal|Preliminary Screening|Screening Report)/i.test(text) || /Acquisition Memo|Underwriting Report/i.test(text)) {
       issues.push(buildIssue(
         "SCREENING_VISIBLE_IDENTITY_MISMATCH",
         "Screening customer HTML must identify only as the Screening report family.",
@@ -166,10 +166,10 @@ function validateIdentity(text, reportIdentity = null) {
         "contract.reportIdentity.reportTier"
       ));
     }
-    if (!/Acquisition Memo/i.test(text) || /Preliminary Investment Screening Memorandum|Screening Signal/i.test(text)) {
+    if (!/(?:Underwriting Report|Acquisition Memo)/i.test(text) || /Preliminary Investment Screening Memorandum|Screening Signal/i.test(text)) {
       issues.push(buildIssue(
         "ACQUISITION_VISIBLE_IDENTITY_MISMATCH",
-        "Acquisition customer HTML must identify only as the Acquisition underwriting report family.",
+        "Acquisition customer HTML must identify only as the Underwriting report family.",
         { report_mode: mode, report_type: type, report_tier: tier },
         "html.identity"
       ));

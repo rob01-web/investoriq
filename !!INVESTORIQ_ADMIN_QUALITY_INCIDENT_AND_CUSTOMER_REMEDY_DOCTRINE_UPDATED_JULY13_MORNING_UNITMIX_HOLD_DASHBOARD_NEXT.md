@@ -1460,3 +1460,43 @@ Gate 11: Launch Operations and Certification
 ### Active continuation pointer after RETEST 32
 
 The published-with-quality-incident v4 remedy checkpoint documented above supersedes the v3 universal PDF terminal block. Local closure is `PASS / UNCOMMITTED / UNDEPLOYED / NO CODEX LIVE RETEST`. Gate 11 remains the next separately bounded launch-operations review.
+
+## July 18 Gate 10V Admin and customer-remedy doctrine checkpoint
+
+```text
+Gate 10V-A through 10V-H: COMPLETE / PASS LOCALLY
+Base commit: cf53bc8
+Admin Dashboard change: NONE
+Customer lifecycle change: NONE
+Customer remedy change: NONE
+Billing or credit doctrine change: NONE
+Replacement-document workflow change: NONE
+Screening change: NONE
+Delivery Gate change: NONE
+Core publication threshold change: NONE
+Deployment: NONE
+Codex live retest: NONE
+```
+
+Gate 10V adds exact optional support context and institutional Underwriting Report composition. It creates no Admin row, customer failure, replacement-document request, billing action, credit action, refund action, retry authority, or customer lifecycle state. Missing or conflicting optional appraisal, renovation, market-survey, or Phase I evidence collapses only that dependent section and remains a customer source limitation where disclosure is applicable. It does not fail an otherwise core-publishable report.
+
+Final PDF Boss v5 adds two platform-owned quality findings: a low-semantic-density content page and a missing repeated header on an approved table continuation page. Both preserve exact page receipts and institutional follow-up evidence. Under the existing RETEST 32 constitution, they are nonblocking presentation-quality incidents unless accompanied by an independent objective blocker. They do not become `customer_document_failure`, request replacement of accepted T12 or Rent Roll evidence, or restore a report credit as though generation failed.
+
+The canonical outcome distinction remains:
+
+```text
+strictly certified PDF -> published clean
+valid deliverable PDF with nonblocking presentation findings -> published with limitations
+unsafe, invalid, prohibited, unsealed, or objectively incomplete PDF -> blocked / InvestorIQ defect
+catastrophic validated core evidence -> blocked / customer source limitation
+unsupported optional evidence -> dependent section collapsed, report continues
+```
+
+Verification: Gate 10V elite Underwriting Report smoke `PASS`; support authority `38 / 38 PASS`; quality-manifest and incident-projection smokes `PASS` through `qa:full`; `qa:institutional-pdf` `11 / 11 PASS`; `qa:financial-intelligence` `PASS`; `qa:full` including production build and diff integrity `PASS`.
+
+Gate 11 remains preserved exactly and is the next separately bounded launch-operations review:
+
+```text
+Gate 11: Launch Operations and Certification
+  dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
+```
