@@ -3896,5 +3896,111 @@ Gate 11: Launch Operations and Certification
   dashboard, monitoring, analytics, retry/remedy execution, billing audit, and Elite certification
 ```
 
+## July 25 RETEST 36 Premium Acquisition Underwriting V1 doctrine lock
+
+RETEST 36 established a product-depth limitation rather than a Source Truth or publication-authority failure. The published Underwriting Report was broadly readable and carried accepted facts, but it did not yet use the available evidence with the analytical depth, semantic density, and financing-grade structure required for the $999 underwriting product. The problem is not constitutionally defined as an 11-page failure, and the remedy is not a mandatory page count. The remedy is comprehensive use of canonical accepted evidence through a governed premium expansion layer.
+
+The legacy underwriting implementation will not be reactivated. It contains useful historical concepts but does not have current authority and may contain unsafe assumptions, obsolete rendering, or incompatible source logic.
+
+The locked architecture is:
+
+```text
+canonical Source Truth receipts
+canonical Financial Intelligence receipts
+canonical reconciliation and identity receipts
+                |
+                v
+consume-only Premium Acquisition Underwriting Expansion Model
+                |
+                v
+independent validation and premium certification
+                |
+                v
+one guarded renderer insertion
+                |
+                v
+existing HTML, PDF, quality, delivery, and publication path
+```
+
+The deployment capability defaults off:
+
+```text
+PREMIUM_ACQUISITION_UNDERWRITING_V1=false
+```
+
+External activation will additionally require an immutable job-level `report_surface_version`. Premium rendering requires both deployment capability and a premium-pinned job. Tests may supply the version during disconnected development without changing worker authority.
+
+The protected spine remains:
+
+```text
+Source Truth: UNCHANGED
+Core Publish-or-Collapse: UNCHANGED
+Delivery Gate source eligibility: UNCHANGED
+Worker orchestration: UNCHANGED
+Storage and publication authority: UNCHANGED
+Credits, billing, remedies, and lifecycle: UNCHANGED
+Screening: UNCHANGED
+Existing PDF Boss doctrine and thresholds: UNCHANGED
+Current-debt and proposed-debt separation: PRESERVED
+```
+
+Premium V1 is a governed launch bridge, not yet the full refinance-stress product. It may include canonical source presentation and authorized deterministic unit, rent, expense, debt, leverage, valuation, acquisition-equity, and diligence analysis. Complete sources and uses, IRR, DCF, exit assumptions, market growth, renovation value creation, refinance max proceeds, sensitivity matrices, binding constraints, and refinance classifications remain collapsed until separately governed.
+
+Locked labels include:
+
+```text
+Minimum Purchase-Price Equity Before Transaction Costs
+Debt-Inclusive Break-Even Occupancy
+```
+
+The first is purchase price minus proposed loan amount and must not imply a complete equity requirement. The second uses accepted T12 operating expenses, accepted annual debt service, and accepted T12 gross potential rent; it must be separately labeled for current and proposed debt and qualified as a simplified operating break-even ratio.
+
+Premium completeness enforcement proceeds in stages:
+
+```text
+observe_only
+internal_test_required
+premium_flag_required
+external_underwriting_enforcement
+```
+
+Core delivery eligibility and premium certification are distinct. Before external enforcement, premium observations cannot weaken canonical core publication. Once an external job is sold and pinned to Premium Acquisition Underwriting V1, premium certification failure may not silently downgrade the customer to the thinner base report. It is an internal premium-generation or certification failure unless canonical core authority independently establishes a valid customer-source failure.
+
+The execution sequence is doctrine, characterization shield, disconnected model, isolated supporting-source repairs if still required, formula contracts and calculators, model validation, guarded rendering, observe-only completeness, internal PDF proof, internal premium certification, protected replays, job-level surface authority, and external enforcement. Full governed refinance stress is later.
+
+Controlling documents:
+
+```text
+docs/INVESTORIQ_PRODUCT_DOCTRINE.md
+docs/PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md
+UNDERWRITING_GAMEPLAN_v2.md
+ELITE_ROADMAP.md
+docs/LEVEL_UP_EXECUTION_SUMMARY.md
+AGENTS.md
+CLAUDE.md
+```
+
+```text
+RETEST 36 PRODUCT-DEPTH VERDICT: UNDERWRITING EXPANSION REQUIRED
+MANDATORY PAGE COUNT: NONE
+LEGACY UNDERWRITING RESURRECTION: PROHIBITED
+PREMIUM ARCHITECTURE: ADDITIVE / CONSUME-ONLY / FEATURE-FLAGGED
+EXTERNAL ACTIVATION: DUAL-GATED BY CAPABILITY AND JOB SURFACE VERSION
+PREMIUM CERTIFICATION: SEPARATE FROM CORE DELIVERY ELIGIBILITY
+SILENT PREMIUM-TO-BASE DOWNGRADE: PROHIBITED AFTER EXTERNAL PROMISE
+IMPLEMENTATION AUTHORITY: PHASED / CHARACTERIZED / INDEPENDENTLY REVERTIBLE
+PHASE 0 DEFAULT-OFF CHARACTERIZATION SHIELD: PASS
+PHASE 1 DISCONNECTED MODEL SKELETON: PASS
+PHASE 2 RENOVATION ROW AUTHORITY REPAIR: PASS
+PHASE 2 MARKET RANGE AUTHORITY REPAIR: PASS
+TRUE RENOVATION ROW CONFLICT COLLAPSE: PRESERVED
+UNLABELED ADJACENT MARKET AMOUNTS: REJECTED
+PREMIUM RENDERER CONNECTION: NONE
+PREMIUM DELIVERY OR PUBLICATION AUTHORITY: NONE
+DEPLOYED: NO
+LIVE RETEST: NOT RUN
+NEXT: Phase 3 governed Financial Intelligence receipt mapping and missing-formula contracts
+```
+
 ---
 # End of Active Master Context

@@ -66,6 +66,25 @@ function decisionWithParsedPayload(name, sourceText, parserType, parserPayload) 
   });
 }
 
+function decisionWithParsedPayloads(name, sourceText, parserType, parserPayloads) {
+  const fileId = `file-${name}`;
+  return adjudicateSupportDocumentAuthority({
+    file: { file_id: fileId, original_filename: `${name}.pdf` },
+    artifacts: [
+      {
+        id: `text-${name}`,
+        type: "document_text_extracted",
+        payload: { file_id: fileId, original_filename: `${name}.pdf`, text: sourceText },
+      },
+      ...parserPayloads.map((parserPayload, index) => ({
+        id: `parsed-${name}-${index + 1}`,
+        type: parserType,
+        payload: { file_id: fileId, original_filename: `${name}.pdf`, ...parserPayload },
+      })),
+    ],
+  });
+}
+
 const scenarios = [
   {
     name: "affirmative_acquisition_financing_complete",
@@ -290,6 +309,35 @@ assert.deepEqual(exactMarketDecision.acceptedFacts.market_rent_ranges, [
 ]);
 assert.equal(exactMarketDecision.sectionEligibility.marketSurvey, true);
 
+const flattenedTableMarketDecision = decision(
+  "flattened-table-market-ranges",
+  [
+    "Market Rent Survey",
+    "Field Source Value",
+    "1BR Market Rent Range $2,100 $2,250",
+    "2BR Market Rent Range $2,500 $2,700",
+    "Context only; not a modeled rent-roll override.",
+  ].join("\n"),
+);
+assert.deepEqual(flattenedTableMarketDecision.acceptedFacts.market_rent_ranges, [
+  { unit_type: "1BR", low_monthly_rent: 2100, high_monthly_rent: 2250 },
+  { unit_type: "2BR", low_monthly_rent: 2500, high_monthly_rent: 2700 },
+]);
+assert.equal(flattenedTableMarketDecision.sectionEligibility.marketSurvey, true);
+assert.equal(
+  flattenedTableMarketDecision.acceptedFactEvidence.market_rent_ranges.every(
+    (evidence) => evidence.method === "deterministic_labeled_market_range_table_binding",
+  ),
+  true,
+);
+
+const unlabeledAdjacentMarketAmounts = decision(
+  "unlabeled-adjacent-market-amounts",
+  "Market Rent Survey\n1BR Asking Rents $2,100 $2,250",
+);
+assert.equal(unlabeledAdjacentMarketAmounts.acceptedFacts.market_rent_ranges, undefined);
+assert.equal(unlabeledAdjacentMarketAmounts.sectionEligibility.marketSurvey, false);
+
 const conflictingMarketDecision = decision(
   "conflicting-market-ranges",
   "Market Rent Survey\n1BR $2,100-$2,250\n1BR $2,300-$2,450"
@@ -361,6 +409,247 @@ assert.equal(
   false,
   "derived unit-count multiplied by per-unit cost must not become an accepted stated amount"
 );
+
+const compatibleDuplicateRenovationSource = [
+  "Renovation / CapEx Plan",
+  "Total Renovation Budget $1,280,000",
+  "1BR Interiors20 units x $18,500/unit; expected rent lift $225/month; Months 1-18",
+  "2BR Interiors18 units x $24,000/unit; expected rent lift $325/month; Months 1-24",
+  "Common Area Refresh$210,000",
+  "Exterior / Security$115,000",
+  "Contingency$153,000",
+].join("\n");
+const compatibleDuplicateRenovationDecision = decisionWithParsedPayloads(
+  "compatible-duplicate-renovation-rows",
+  compatibleDuplicateRenovationSource,
+  "renovation_parsed",
+  [
+    {
+      budget_rows: [
+        {
+          category: "1BR Interiors",
+          evidence: ["1BR Interiors20 units x $18,500/unit; expected rent lift $225/month; Months 1-18"],
+          unit_type: "1BR",
+          unit_count: 20,
+          cost_per_unit: 18500,
+          expected_monthly_rent_lift: 225,
+          phase_timing: "Months 1-18",
+        },
+        {
+          category: "2BR Interiors",
+          evidence: ["2BR Interiors18 units x $24,000/unit; expected rent lift $325/month; Months 1-24"],
+          unit_type: "2BR",
+          unit_count: 18,
+          cost_per_unit: 24000,
+          expected_monthly_rent_lift: 325,
+          phase_timing: "Months 1-24",
+        },
+        { category: "Common Area Refresh", evidence: ["Common Area Refresh$210,000"], estimated_cost: 210000 },
+        { category: "Exterior / Security", evidence: ["Exterior / Security$115,000"], estimated_cost: 115000 },
+        { category: "Contingency", evidence: ["Contingency$153,000"], estimated_cost: 153000 },
+      ],
+    },
+    {
+      candidate_facts: {
+        budget_rows: [
+          {
+            category: "1BR Interiors",
+            evidence: ["1BR Interiors20 units x $18,500/unit; expected rent lift $225/month; Months 1-18"],
+            unit_type: "1BR unit",
+            unit_count: 20,
+            cost_per_unit: 18500,
+            expected_monthly_rent_lift: 225,
+            phase_timing: "Months 1-18",
+          },
+          {
+            category: "2BR Interiors",
+            evidence: ["2BR Interiors18 units x $24,000/unit; expected rent lift $325/month; Months 1-24"],
+            unit_type: "2BR unit",
+            unit_count: 18,
+            cost_per_unit: 24000,
+            expected_monthly_rent_lift: 325,
+            phase_timing: "Months 1-24",
+          },
+          { category: "Common Area Refresh", evidence: ["Common Area Refresh$210,000"], estimated_cost: 210000 },
+          { category: "Exterior / Security", evidence: ["Exterior / Security$115,000"], estimated_cost: 115000 },
+          { category: "Contingency", evidence: ["Contingency$153,000"], estimated_cost: 153000 },
+        ],
+      },
+    },
+  ],
+);
+assert.equal(compatibleDuplicateRenovationDecision.factAmbiguities.renovation_plan_rows, undefined);
+assert.deepEqual(compatibleDuplicateRenovationDecision.acceptedFacts.renovation_plan_rows, [
+  {
+    category: "1BR Interiors",
+    unit_type: "1BR",
+    unit_count: 20,
+    cost_per_unit: 18500,
+    expected_monthly_rent_lift: 225,
+    start_month: 1,
+    end_month: 18,
+  },
+  {
+    category: "2BR Interiors",
+    unit_type: "2BR",
+    unit_count: 18,
+    cost_per_unit: 24000,
+    expected_monthly_rent_lift: 325,
+    start_month: 1,
+    end_month: 24,
+  },
+  { category: "Common Area Refresh", stated_amount: 210000 },
+  { category: "Exterior / Security", stated_amount: 115000 },
+  { category: "Contingency", stated_amount: 153000 },
+]);
+
+const conflictingDuplicateRenovationDecision = decisionWithParsedPayloads(
+  "conflicting-duplicate-renovation-rows",
+  [
+    "Renovation / CapEx Plan",
+    "1BR Interiors 20 units x $18,500/unit",
+    "1BR Interiors 22 units x $18,500/unit",
+  ].join("\n"),
+  "renovation_parsed",
+  [
+    {
+      budget_rows: [{
+        category: "1BR Interiors",
+        evidence: ["1BR Interiors 20 units x $18,500/unit"],
+        unit_count: 20,
+        cost_per_unit: 18500,
+      }],
+    },
+    {
+      budget_rows: [{
+        category: "1BR Interiors",
+        evidence: ["1BR Interiors 22 units x $18,500/unit"],
+        unit_count: 22,
+        cost_per_unit: 18500,
+      }],
+    },
+  ],
+);
+assert.equal(conflictingDuplicateRenovationDecision.acceptedFacts.renovation_plan_rows, undefined);
+assert.equal(
+  conflictingDuplicateRenovationDecision.factAmbiguities.renovation_plan_rows.reason,
+  "conflicting_exact_renovation_rows",
+);
+
+const retest36SupportPackage = buildCanonicalSourceTruthPackage({
+  jobId: "retest36-support-source-regression",
+  propertyName: "Stonebridge Lofts",
+  uploadedFiles: [
+    { id: "retest36-renovation", original_filename: "Stonebridge_Reno_Plan.pdf", parse_status: "parsed" },
+    { id: "retest36-market", original_filename: "Stonebridge_Market_Survey.pdf", parse_status: "parsed" },
+  ],
+  artifacts: [
+    {
+      id: "retest36-renovation-text",
+      type: "document_text_extracted",
+      payload: {
+        file_id: "retest36-renovation",
+        original_filename: "Stonebridge_Reno_Plan.pdf",
+        text: compatibleDuplicateRenovationSource,
+      },
+    },
+    {
+      id: "retest36-renovation-parser-one",
+      type: "renovation_parsed",
+      payload: {
+        file_id: "retest36-renovation",
+        original_filename: "Stonebridge_Reno_Plan.pdf",
+        budget_rows: [
+          {
+            category: "1BR Interiors",
+            evidence: ["1BR Interiors20 units x $18,500/unit; expected rent lift $225/month; Months 1-18"],
+            unit_type: "1BR",
+            unit_count: 20,
+            cost_per_unit: 18500,
+            expected_monthly_rent_lift: 225,
+            phase_timing: "Months 1-18",
+          },
+          {
+            category: "2BR Interiors",
+            evidence: ["2BR Interiors18 units x $24,000/unit; expected rent lift $325/month; Months 1-24"],
+            unit_type: "2BR",
+            unit_count: 18,
+            cost_per_unit: 24000,
+            expected_monthly_rent_lift: 325,
+            phase_timing: "Months 1-24",
+          },
+          { category: "Common Area Refresh", evidence: ["Common Area Refresh$210,000"], estimated_cost: 210000 },
+          { category: "Exterior / Security", evidence: ["Exterior / Security$115,000"], estimated_cost: 115000 },
+          { category: "Contingency", evidence: ["Contingency$153,000"], estimated_cost: 153000 },
+        ],
+      },
+    },
+    {
+      id: "retest36-renovation-parser-two",
+      type: "renovation_parsed",
+      payload: {
+        file_id: "retest36-renovation",
+        original_filename: "Stonebridge_Reno_Plan.pdf",
+        candidate_facts: {
+          budget_rows: [
+            {
+              category: "1BR Interiors",
+              evidence: ["1BR Interiors20 units x $18,500/unit; expected rent lift $225/month; Months 1-18"],
+              unit_type: "1BR unit",
+              unit_count: 20,
+              cost_per_unit: 18500,
+              expected_monthly_rent_lift: 225,
+              phase_timing: "Months 1-18",
+            },
+            {
+              category: "2BR Interiors",
+              evidence: ["2BR Interiors18 units x $24,000/unit; expected rent lift $325/month; Months 1-24"],
+              unit_type: "2BR unit",
+              unit_count: 18,
+              cost_per_unit: 24000,
+              expected_monthly_rent_lift: 325,
+              phase_timing: "Months 1-24",
+            },
+            { category: "Common Area Refresh", evidence: ["Common Area Refresh$210,000"], estimated_cost: 210000 },
+            { category: "Exterior / Security", evidence: ["Exterior / Security$115,000"], estimated_cost: 115000 },
+            { category: "Contingency", evidence: ["Contingency$153,000"], estimated_cost: 153000 },
+          ],
+        },
+      },
+    },
+    {
+      id: "retest36-market-text",
+      type: "document_text_extracted",
+      payload: {
+        file_id: "retest36-market",
+        original_filename: "Stonebridge_Market_Survey.pdf",
+        text: [
+          "Market Rent Survey",
+          "Field Source Value",
+          "1BR Market Rent Range $2,100 $2,250",
+          "2BR Market Rent Range $2,500 $2,700",
+          "Context only; not a modeled rent-roll override.",
+        ].join("\n"),
+      },
+    },
+  ],
+});
+const retest36RenovationAuthority = retest36SupportPackage.support.accepted.find(
+  (entry) => entry.canonical_role === "renovation_capex_context",
+);
+const retest36MarketAuthority = retest36SupportPackage.support.accepted.find(
+  (entry) => entry.canonical_role === "market_survey_context",
+);
+assert.equal(retest36RenovationAuthority.accepted_facts.renovation_plan_rows.length, 5);
+assert.equal(
+  retest36RenovationAuthority.authority_decision.factAmbiguities.renovation_plan_rows,
+  undefined,
+);
+assert.deepEqual(retest36MarketAuthority.accepted_facts.market_rent_ranges, [
+  { unit_type: "1BR", low_monthly_rent: 2100, high_monthly_rent: 2250 },
+  { unit_type: "2BR", low_monthly_rent: 2500, high_monthly_rent: 2700 },
+]);
+assert.equal(retest36MarketAuthority.section_eligibility.marketSurvey, true);
 
 const unsupportedRenovationDecision = decisionWithParsedPayload(
   "unsupported-renovation-row",

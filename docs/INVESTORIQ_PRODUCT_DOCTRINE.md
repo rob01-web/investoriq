@@ -2,6 +2,12 @@
 
 InvestorIQ is a document-driven real estate decision engine that produces institutional-grade investment memoranda based strictly on uploaded source documents.
 
+## Controlling Underwriting Doctrine
+
+Premium Underwriting expansion work must also comply with [PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md).
+
+That document governs the launch bridge from the current Underwriting Report to Premium Acquisition Underwriting V1. This product doctrine remains controlling wherever the documents overlap.
+
 ## Core Principles
 - No assumptions unless explicitly allowed.
 - Fail-closed when data is missing.
@@ -150,28 +156,30 @@ Think: family office associate evaluating 40 deals per week.
 It should be short, sharp, ranked, and deterministic.
 
 ### Underwriting Report ($999)
-Purpose: capital allocation and refinance risk modeling.
+Purpose: institutional acquisition and capital-risk underwriting.
 
 Primary question:
-- If I deploy capital, how does this deal behave under structured stress and debt constraints?
+- What do the accepted documents prove about operations, valuation, debt burden, acquisition capitalization, and material diligence limitations?
 
 Underwriting assumes:
 - Rent Roll.
 - T12.
-- Debt terms or mortgage statement.
-- Supporting documents.
-- Tax and appraisal when available.
+- Supporting documents when provided and canonically accepted.
+- Debt, appraisal, tax, environmental, renovation, market, and assumption evidence may expand the report but do not replace core authority.
 
 Underwriting is not triage. It is:
-- Refinance constraint modeling.
-- Deterministic stress testing.
-- Capital structure math.
-- LTV vs DSCR binding analysis.
-- Worst-case refinance coverage modeling.
-- Sensitivity matrices.
-- Refinance Stability Classification tiers.
+- Source-aware operating analysis.
+- Deterministic debt and capital structure math.
+- Unit economics and expense analysis.
+- Valuation and reconciliation analysis.
+- Evidence and diligence treatment.
+- Explicit formula, source, and limitation disclosure.
 
-Underwriting must include:
+Premium Acquisition Underwriting V1 is the governed launch bridge. It is additive, feature-flagged, consume-only, and independently certified. It may use canonical accepted facts and authorized deterministic calculations, but it may not create source authority, infer missing assumptions, change publication eligibility, alter Screening, mix debt roles, or silently fall back to the base report after an external premium job has been promised.
+
+Premium V1 has no universal page-count target. It must use accepted evidence comprehensively, present decision-useful analytical depth, and avoid filler, repeated narrative, excessive whitespace, and predominantly empty analytical pages.
+
+Full capital-risk and refinance underwriting is a later governed phase. Once separately authorized, it may include:
 - Base and stressed implied value.
 - Max proceeds (LTV constrained).
 - Max proceeds (DSCR constrained).
@@ -179,12 +187,15 @@ Underwriting must include:
 - Coverage ratios.
 - Tier classification (Stable / Sensitized / Fragile / Refinance Failure Under Stress).
 
-Underwriting is a capital risk model.
+Those later calculations require versioned formula and scenario authority. They may not be activated through hardcoded assumptions or legacy logic.
+
+Underwriting is an institutional evidence and capital-risk model.
 Think: lender credit memo, investment committee packet, refinance committee analysis.
 
 ## Critical Clarification
 - Screening = Decision Triage.
-- Underwriting = Capital Structure Stress Model.
+- Premium Acquisition Underwriting V1 = Source-aware acquisition, operating, debt, valuation, and diligence analysis.
+- Full Underwriting = Later governed capital-structure stress model.
 
 They are not layered versions of the same product.
 
@@ -198,6 +209,7 @@ Underwriting should:
 - Be constraint-focused.
 - Be structured.
 - Be capital-risk oriented.
+- Be source-aware and lineage-complete.
 
 ## Architecture Implication
 Shared base layer:
@@ -217,26 +229,33 @@ Then fork into separate report branches.
 - Deterministic deal score.
 
 ### Underwriting Branch
-- Debt model.
-- Refi stability.
-- Sensitivity matrix.
-- Capital structure.
-- Constraint binding.
-- Tier classification.
+- Premium V1 acquisition analysis.
+- Current and proposed debt analysis.
+- Unit economics and expense structure.
+- Valuation and appraisal bridge.
+- Evidence and diligence register.
+- Later governed refinance stress analysis.
 
 They share the base financial layer.
 They do not share narrative structure.
 
 InvestorIQ produces two distinct report types:
 - Screening: a capital triage memo.
-- Underwriting: a deterministic refinance and capital structure stress model.
+- Underwriting: a deterministic, source-aware acquisition and capital-risk report.
 
 Underwriting is not Screening plus additional pages.
 
-Underwriting includes:
+Premium Acquisition Underwriting V1 includes:
+- Deterministic unit, operating, debt, valuation, and acquisition-capitalization analysis.
+- Current and proposed debt-role separation.
+- Source reconciliation and evidence treatment.
+- Source-aware chapter collapse.
+- Independent premium certification.
+
+Later Full Underwriting may include:
 - Deterministic refinance modeling.
 - LTV vs DSCR constraint analysis.
-- Sensitivity matrix.
+- Sensitivity matrices.
 - Refinance Stability Classification.
 - Capital structure stress testing.
 
@@ -252,12 +271,16 @@ Fail-closed logic applies to both.
 Do not duplicate sections across report types unless explicitly required.
 
 ## Why Underwriting Can Feel Thin
-If the refinance engine is fail-closed because debt terms are not parsed, capital structure math never activates and underwriting collapses into a base financial shell.
-Once debt terms parse, underwriting pages should expand automatically.
+Underwriting feels thin when accepted source evidence and authorized deterministic analysis are omitted, fragmented, or presented with excessive whitespace.
+
+The remedy is not a fixed page count, speculative filler, or automatic activation of legacy refinance logic. The remedy is comprehensive use of canonical accepted evidence through the governed Premium Expansion Model, source-aware chapter eligibility, and institutional PDF composition.
 
 ## Final Positioning
 Screening ($299):
 - Should I allocate attention?
 
 Underwriting ($999):
-- If I allocate capital, where does it break?
+- What do the accepted documents prove about this acquisition, its operations, debt burden, valuation, and diligence limitations?
+
+Later Full Underwriting:
+- Under governed stress and debt constraints, where does the capital structure break?

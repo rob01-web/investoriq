@@ -523,7 +523,13 @@ function renovationPlanRowsFromArtifacts(artifacts, rawSourceText) {
       const unitType = text(row.unit_type);
       if (unitType && normalizedExcerpt.includes(normalizedEvidenceText(unitType))) accepted.unit_type = unitType;
 
-      const unitCountMatch = evidenceExcerpt.match(/\b(\d{1,5})\s+units?\b/i);
+      const categoryIndex = evidenceExcerpt.toLowerCase().indexOf(category.toLowerCase());
+      const evidenceAfterCategory = categoryIndex >= 0
+        ? evidenceExcerpt.slice(categoryIndex + category.length)
+        : "";
+      const unitCountMatch =
+        evidenceAfterCategory.match(/^\s*(\d{1,5})\s+units?\b/i) ||
+        evidenceExcerpt.match(/\b(\d{1,5})\s+units?\b/i);
       const unitCount = Number(unitCountMatch?.[1]);
       if (Number.isInteger(unitCount) && unitCount > 0 && Number(row.unit_count) === unitCount) {
         accepted.unit_count = unitCount;
@@ -560,21 +566,31 @@ function renovationPlanRowsFromArtifacts(artifacts, rawSourceText) {
 
       if (Object.keys(accepted).length === 1) continue;
       const categoryKey = normalizedEvidenceText(category);
-      const comparable = JSON.stringify(accepted);
       const prior = rowsByCategory.get(categoryKey);
-      if (prior && prior !== comparable) {
-        ambiguities.push({ category, evidenceExcerpt });
+      if (prior) {
+        const conflictingFields = Object.keys(accepted).filter((field) => (
+          field !== "category" &&
+          Object.prototype.hasOwnProperty.call(prior, field) &&
+          JSON.stringify(prior[field]) !== JSON.stringify(accepted[field])
+        ));
+        if (conflictingFields.length > 0) {
+          ambiguities.push({ category, evidenceExcerpt, conflictingFields });
+          continue;
+        }
+        for (const [field, value] of Object.entries(accepted)) {
+          if (!Object.prototype.hasOwnProperty.call(prior, field)) prior[field] = value;
+        }
         continue;
       }
-      if (prior) continue;
-      rowsByCategory.set(categoryKey, comparable);
-      acceptedRows.push({
+      const acceptedRow = {
         ...accepted,
         evidence: {
           excerpt: evidenceExcerpt,
           method: "deterministic_exact_renovation_row_binding",
         },
-      });
+      };
+      rowsByCategory.set(categoryKey, acceptedRow);
+      acceptedRows.push(acceptedRow);
     }
   }
   if (ambiguities.length > 0) {
@@ -594,29 +610,40 @@ function marketRentRangesFromSource(rawSourceText) {
   const ranges = [];
   const byUnitType = new Map();
   const conflicts = [];
-  const pattern = /\b(studio|efficiency|\d+\s*(?:br|bed(?:room)?s?))\b[^\r\n$]{0,80}[$]\s*([\d,]+(?:\.\d{1,2})?)\s*(?:-|to|through)\s*[$]\s*([\d,]+(?:\.\d{1,2})?)/gi;
-  for (const match of source.matchAll(pattern)) {
-    const unitType = text(match[1]).replace(/\s+/g, "");
-    const low = Number(String(match[2] || "").replace(/,/g, ""));
-    const high = Number(String(match[3] || "").replace(/,/g, ""));
-    if (!unitType || !Number.isFinite(low) || !Number.isFinite(high) || low <= 0 || high < low) continue;
-    const value = { unit_type: unitType, low_monthly_rent: low, high_monthly_rent: high };
-    const key = unitType.toLowerCase();
-    const comparable = JSON.stringify(value);
-    const prior = byUnitType.get(key);
-    if (prior && prior !== comparable) {
-      conflicts.push(sourceExcerpt(source, match.index || 0, match[0].length));
-      continue;
+  const patterns = [
+    {
+      matcher: /\b(studio|efficiency|\d+\s*(?:br|bed(?:room)?s?))\b[^\r\n$]{0,80}[$]\s*([\d,]+(?:\.\d{1,2})?)\s*(?:-|to|through)\s*[$]\s*([\d,]+(?:\.\d{1,2})?)/gi,
+      method: "deterministic_exact_market_range_binding",
+    },
+    {
+      matcher: /\b(studio|efficiency|\d+\s*(?:br|bed(?:room)?s?))\b[^\r\n$]{0,40}\bmarket\s+rent\s+range\b[^\r\n$]{0,20}[$]\s*([\d,]+(?:\.\d{1,2})?)\s+[$]\s*([\d,]+(?:\.\d{1,2})?)/gi,
+      method: "deterministic_labeled_market_range_table_binding",
+    },
+  ];
+  for (const { matcher, method } of patterns) {
+    for (const match of source.matchAll(matcher)) {
+      const unitType = text(match[1]).replace(/\s+/g, "");
+      const low = Number(String(match[2] || "").replace(/,/g, ""));
+      const high = Number(String(match[3] || "").replace(/,/g, ""));
+      if (!unitType || !Number.isFinite(low) || !Number.isFinite(high) || low <= 0 || high < low) continue;
+      const value = { unit_type: unitType, low_monthly_rent: low, high_monthly_rent: high };
+      const key = unitType.toLowerCase();
+      const comparable = JSON.stringify(value);
+      const prior = byUnitType.get(key);
+      if (prior && prior !== comparable) {
+        conflicts.push(sourceExcerpt(source, match.index || 0, match[0].length));
+        continue;
+      }
+      if (prior) continue;
+      byUnitType.set(key, comparable);
+      ranges.push({
+        ...value,
+        evidence: {
+          excerpt: sourceExcerpt(source, match.index || 0, match[0].length, 0, 0),
+          method,
+        },
+      });
     }
-    if (prior) continue;
-    byUnitType.set(key, comparable);
-    ranges.push({
-      ...value,
-      evidence: {
-        excerpt: sourceExcerpt(source, match.index || 0, match[0].length, 0, 0),
-        method: "deterministic_exact_market_range_binding",
-      },
-    });
   }
   if (conflicts.length > 0) {
     return {
