@@ -59,6 +59,22 @@ function makeLine(text, y, { x = 40, fontSize = 9, width = null } = {}) {
   };
 }
 
+function makeExtractedLine(y, items) {
+  const normalizedItems = items.map((item) => ({
+    ...item,
+    y,
+    height: item.height ?? item.fontSize,
+  }));
+  return {
+    text: normalizedItems.map((item) => item.text).join(" "),
+    x: Math.min(...normalizedItems.map((item) => item.x)),
+    y,
+    maxX: Math.max(...normalizedItems.map((item) => item.x + item.width)),
+    fontSize: Math.max(...normalizedItems.map((item) => item.fontSize)),
+    items: normalizedItems,
+  };
+}
+
 function makePage(pageNumber, bodyLines, { includePageNumber = pageNumber > 1, extraLines = [], extraItems = [] } = {}) {
   const lines = [
     ...(pageNumber > 1 ? [makeLine("InvestorIQ", 770, { fontSize: 7 })] : []),
@@ -216,6 +232,56 @@ await assertIssue("PDF_ORPHANED_HEADINGS", (analysis) => {
 await assertIssue("PDF_TABLE_SEPARATED_FROM_HEADING", (analysis) => {
   analysis.pages[2].lines.push(makeLine("Debt Analysis", 130, { fontSize: 15 }));
 });
+const retest35Page4LabelValueAnalysis = validAnalysis();
+retest35Page4LabelValueAnalysis.pages.push(makePage(4, conclusionLines, {
+  extraLines: [
+    makeExtractedLine(84.0415, [
+      { text: "Rent R", x: 47.25, width: 23.29425, fontSize: 7.875 },
+      { text: "oll Evidence", x: 70.308, width: 43.67475, fontSize: 7.875 },
+      { text: "Accepted for analy", x: 481.0545, width: 73.34765, fontSize: 7.875 },
+      { text: "sis", x: 554.2131, width: 10.53675, fontSize: 7.875 },
+    ]),
+  ],
+}));
+retest35Page4LabelValueAnalysis.pageCount = retest35Page4LabelValueAnalysis.pages.length;
+refreshText(retest35Page4LabelValueAnalysis);
+const retest35Page4LabelValueResult = await inspect(retest35Page4LabelValueAnalysis);
+assert.equal(
+  retest35Page4LabelValueResult.issues.some((issue) => issue.code === "PDF_ORPHANED_HEADINGS"),
+  false,
+  "RETEST 35 page-4 Rent Roll Evidence label/value row must not be classified as an orphaned heading."
+);
+
+const retest35Page6StatusValueAnalysis = validAnalysis();
+retest35Page6StatusValueAnalysis.pages.push(
+  makePage(4, conclusionLines),
+  makePage(5, conclusionLines),
+  makePage(6, conclusionLines, {
+    extraLines: [
+      makeLine("Environmental Due Diligence Context", 206.9845, { x: 30, fontSize: 18, width: 255.078 }),
+      makeExtractedLine(156.1065, [
+        { text: "Reco", x: 47.25, width: 18.088875, fontSize: 7.875 },
+        { text: "gnized En", x: 65.1735, width: 34.88625, fontSize: 7.875 },
+        { text: "vir", x: 99.981, width: 8.953875, fontSize: 7.875 },
+        { text: "onmental Conditions", x: 108.7852, width: 76.206375, fontSize: 7.875 },
+        { text: "None identified in this summary", x: 441.9236, width: 122.826375, fontSize: 7.875 },
+      ]),
+      makeLine(
+        "This is the document-stated summary status only. No legal conclusion, remediation cost, or investment impact is inferred.",
+        128.0437,
+        { x: 41.25, fontSize: 7.648529270389178, width: 422.7675 }
+      ),
+    ],
+  })
+);
+retest35Page6StatusValueAnalysis.pageCount = retest35Page6StatusValueAnalysis.pages.length;
+refreshText(retest35Page6StatusValueAnalysis);
+const retest35Page6StatusValueResult = await inspect(retest35Page6StatusValueAnalysis);
+assert.equal(
+  retest35Page6StatusValueResult.issues.some((issue) => issue.code === "PDF_TABLE_SEPARATED_FROM_HEADING"),
+  false,
+  "RETEST 35 page-6 environmental status/value row must not be classified as a separated table heading."
+);
 await assertIssue("PDF_UNREADABLE_TABLE", (analysis) => {
   analysis.pages[1].lines.push(makeLine("$1,612,800 $806,400 -50.00%", 210, { fontSize: 5 }));
 });

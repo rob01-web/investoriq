@@ -41,6 +41,7 @@ const { buildReportContractQa } = await import("../../api/_lib/report-contract-q
 const { buildDeliveryResponseCompatibilityAliases } = await import("../../api/_lib/report-delivery-output.js");
 const {
   analyzeFinalPdfBytes,
+  buildApprovedPdfSurfaceManifest,
   inspectFinalPdfPublicationQuality,
 } = await import("../../api/_lib/final-pdf-publication-quality-boss.js");
 
@@ -300,16 +301,256 @@ async function runHarness({ reportType, payload, userId }) {
   return response;
 }
 
-function buildPdfBuffer(html) {
+function uniqueFixtureText(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function fixturePdfText(value = "") {
+  return String(value || "")
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fixturePdfCell(value, { header = false, numeric = false } = {}) {
+  return {
+    text: fixturePdfText(value),
+    bold: header,
+    alignment: numeric ? "right" : "left",
+    fontSize: 8,
+    color: header ? "#ffffff" : "#1f2933",
+    fillColor: header ? "#334155" : null,
+    margin: [2, 2, 2, 2],
+  };
+}
+
+function fixturePdfCompactCell(value, { numeric = false } = {}) {
+  return {
+    text: fixturePdfText(value),
+    alignment: numeric ? "right" : "left",
+    fontSize: 7.5,
+    color: "#1f2933",
+    margin: [2, 1, 2, 1],
+  };
+}
+
+function fixturePdfValueParts(value = "") {
+  const text = fixturePdfText(value);
+  const suffixMatch = text.match(/^(.*?)(\s+years?|x)$/i);
+  return [
+    fixturePdfCell(suffixMatch?.[1] || text, { numeric: true }),
+    fixturePdfCell(suffixMatch?.[2] || ""),
+  ];
+}
+
+function buildPdfBuffer(html, { deterministicContractQaSeal, sourceReconciliation } = {}) {
   pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts;
-  const text = stripHtml(html).replace(/[\u2013\u2014]/g, "-");
-  const chunks = text.match(/.{1,900}(?:\s|$)/g) || [text];
+  const manifest = buildApprovedPdfSurfaceManifest({
+    approvedHtml: html,
+    deterministicContractQaSeal,
+    sourceReconciliation,
+    requiredTextAnchors: ["Underwriting Report"],
+  });
+  const content = [
+    {
+      text: "Underwriting Report",
+      fontSize: 18,
+      bold: true,
+      color: "#172554",
+      margin: [0, 0, 0, 12],
+    },
+    {
+      stack: [
+        { text: "Source Reconciliation", fontSize: 13, bold: true, color: "#1e3a8a", margin: [0, 0, 0, 4] },
+        { text: fixturePdfText(manifest.reconciliation.disclosure), fontSize: 8.5, lineHeight: 1.2 },
+      ],
+      unbreakable: true,
+      margin: [0, 0, 0, 12],
+    },
+  ];
+
+  for (const table of manifest.tables) {
+    const financialRows = manifest.financialRows.filter((financialRow) =>
+      (table.rows || []).some((row) =>
+        row[0] === financialRow.label && row.slice(1).includes(financialRow.value)
+      )
+    );
+    const representedCells = new Set([
+      ...table.headers,
+      ...financialRows.flatMap((row) => [row.label, row.value]),
+    ]);
+    const remainingCells = uniqueFixtureText(table.cells)
+      .filter((cell) => !representedCells.has(cell));
+    const tableContent = [
+      {
+        text: fixturePdfText(table.title || `Approved Table ${table.id}`),
+        fontSize: 11,
+        bold: true,
+        color: "#1e3a8a",
+        margin: [0, 0, 0, 5],
+      },
+    ];
+    if (financialRows.length) {
+      tableContent.push({
+        table: {
+          headerRows: 1,
+          heights: (rowIndex) => rowIndex === 0 || table.id !== "approved-table-17" ? 20 : 36,
+          widths: [250, "*", 36],
+          body: [
+            [
+              fixturePdfCell(`Approved financial label - ${table.title || table.id}`, { header: true }),
+              { ...fixturePdfCell("Approved value", { header: true }), colSpan: 2 },
+              {},
+            ],
+            ...financialRows.map((row) => [
+              fixturePdfCell(row.label),
+              ...fixturePdfValueParts(row.value),
+            ]),
+          ],
+        },
+        layout: "lightHorizontalLines",
+        margin: [0, 0, 0, 8],
+      });
+    }
+    tableContent.push({
+      table: {
+        headerRows: 1,
+        dontBreakRows: true,
+        widths: [120, "*"],
+        body: [
+          [
+            fixturePdfCell("Approved table headers", { header: true }),
+            fixturePdfCell(
+              uniqueFixtureText(table.headers).join(" | ") || fixturePdfText(table.title),
+              { header: true },
+            ),
+          ],
+          ...remainingCells.map((cell) => [
+            fixturePdfCell("Approved surface text"),
+            fixturePdfCell(cell),
+          ]),
+        ],
+      },
+      layout: "lightHorizontalLines",
+    });
+    content.push({
+      stack: tableContent,
+      pageBreak: "before",
+      margin: [0, 0, 0, 10],
+    });
+  }
+
+  for (const [chartIndex, chart] of manifest.charts.entries()) {
+    const chartRows = Array.from(
+      { length: Math.max(chart.labels.length, chart.displayedNumbers.length, 1) },
+      (_, index) => [
+        fixturePdfCell(chart.labels[index] || "Approved chart value"),
+        fixturePdfCell(chart.displayedNumbers[index] || "", { numeric: true }),
+      ]
+    );
+    content.push({
+      stack: [
+        {
+          text: fixturePdfText(chart.title || chart.id),
+          fontSize: 11,
+          bold: true,
+          color: "#1e3a8a",
+          margin: [0, 0, 0, 4],
+        },
+        {
+          table: {
+            widths: [250, "*"],
+            body: chartRows,
+          },
+          layout: "lightHorizontalLines",
+        },
+      ],
+      pageBreak: chartIndex === 0 ? "before" : undefined,
+      unbreakable: true,
+      margin: [0, 0, 0, 14],
+    });
+  }
+
+  const representedHeadings = new Set(uniqueFixtureText([
+    "Underwriting Report",
+    "Source Reconciliation",
+    ...manifest.tables.map((table) => table.title),
+    ...manifest.charts.map((chart) => chart.title),
+  ]).map((value) => value.toLowerCase()));
+  const additionalHeadings = uniqueFixtureText(manifest.headings)
+    .filter((heading) => !representedHeadings.has(heading.toLowerCase()));
+  if (additionalHeadings.length) {
+    content.push(
+      {
+        text: "Approved Customer Surface Headings",
+        fontSize: 13,
+        bold: true,
+        color: "#1e3a8a",
+        pageBreak: "before",
+        margin: [0, 0, 0, 5],
+      },
+      {
+        table: {
+          widths: ["*"],
+          body: additionalHeadings.map((heading) => [
+            fixturePdfCell(`Approved heading: ${heading}`),
+          ]),
+        },
+        layout: "lightHorizontalLines",
+        margin: [0, 0, 0, 14],
+      },
+    );
+  }
+
+  content.push(
+    {
+      text: "Approved Displayed Values",
+      fontSize: 13,
+      bold: true,
+      color: "#1e3a8a",
+      pageBreak: "before",
+      margin: [0, 0, 0, 5],
+    },
+    {
+      table: {
+        headerRows: 1,
+        widths: [250, "*"],
+        body: [
+          [
+            fixturePdfCell("Approved surface", { header: true }),
+            fixturePdfCell("Displayed value", { header: true }),
+          ],
+          ...uniqueFixtureText(manifest.displayedNumbers).map((value) => [
+            fixturePdfCompactCell("Approved displayed value"),
+            fixturePdfCompactCell(value, { numeric: true }),
+          ]),
+        ],
+      },
+      layout: "lightHorizontalLines",
+    },
+  );
+
   const definition = {
     pageSize: "LETTER",
     pageMargins: [42, 54, 42, 48],
-    header: () => ({ text: "InvestorIQ Capital Intelligence Memorandum", margin: [42, 24, 42, 0], fontSize: 8, color: "#5a6670" }),
-    footer: (currentPage, pageCount) => ({ text: `Page ${currentPage} of ${pageCount}`, alignment: "right", margin: [42, 0, 42, 18], fontSize: 8 }),
-    content: chunks.map((chunk) => ({ text: chunk.trim(), fontSize: 8.5, lineHeight: 1.2, margin: [0, 0, 0, 7] })),
+    header: () => ({
+      text: "InvestorIQ Underwriting Report",
+      margin: [42, 24, 42, 0],
+      fontSize: 8,
+      color: "#5a6670",
+    }),
+    footer: (currentPage, pageCount) => ({
+      text: `InvestorIQ Confidential | Page ${currentPage} of ${pageCount}`,
+      alignment: "right",
+      margin: [42, 0, 42, 18],
+      fontSize: 8,
+      color: "#5a6670",
+    }),
+    content,
+    styles: {
+      tableHeader: { bold: true, color: "#ffffff", fillColor: "#334155" },
+    },
     defaultStyle: { font: "Roboto" },
   };
   return new Promise((resolve) => pdfMake.createPdf(definition).getBuffer((buffer) => resolve(Buffer.from(buffer))));
@@ -535,7 +776,10 @@ const reportContractQa = buildReportContractQa({
 });
 assert.equal(reportContractQa.deterministic_contract_qa_seal.ok, true, JSON.stringify(reportContractQa, null, 2));
 
-const pdfBuffer = await buildPdfBuffer(html);
+const pdfBuffer = await buildPdfBuffer(html, {
+  deterministicContractQaSeal: contractSeal,
+  sourceReconciliation: { state: reconciliation },
+});
 const pdfAnalysis = await analyzeFinalPdfBytes(pdfBuffer);
 assert.equal(pdfAnalysis.validPdf, true);
 assert.ok(pdfAnalysis.pageCount > 1);
@@ -544,7 +788,7 @@ const pdfBoss = await inspectFinalPdfPublicationQuality({
   approvedHtml: html,
   deterministicContractQaSeal: contractSeal,
   sourceReconciliation: { state: reconciliation },
-  requiredTextAnchors: ["Acquisition Memo", "Source Reconciliation"],
+  requiredTextAnchors: ["Underwriting Report"],
   artifactMode: "production_pdf",
   publicationTarget: "internal_test",
   pdfAnalysis,

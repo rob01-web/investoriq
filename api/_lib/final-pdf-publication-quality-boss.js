@@ -550,9 +550,29 @@ function hasRunningFooterContent(line = {}, page = {}, pageCount = 0) {
   return normalizeText(remainder).length >= 4;
 }
 
+function isLikelyTwoColumnLabelValueRow(line = {}) {
+  const fontSize = Number(line?.fontSize);
+  if (!(fontSize > 0 && fontSize < 12)) return false;
+  const items = (Array.isArray(line?.items) ? line.items : [])
+    .filter((item) =>
+      String(item?.text || "").trim().length > 0 &&
+      Number.isFinite(Number(item?.x)) &&
+      Number.isFinite(Number(item?.width))
+    )
+    .sort((left, right) => Number(left.x) - Number(right.x));
+  if (items.length < 2) return false;
+  const substantialGap = Math.max(72, fontSize * 8);
+  return items.some((item, index) => {
+    const next = items[index + 1];
+    if (!next) return false;
+    return Number(next.x) - (Number(item.x) + Math.max(0, Number(item.width))) >= substantialGap;
+  });
+}
+
 function isHeadingLine(line = {}) {
   const text = String(line?.text || "").trim();
   if (text.length < 4 || text.length > 150) return false;
+  if (isLikelyTwoColumnLabelValueRow(line)) return false;
   return Number(line?.fontSize) >= 12 || /^\d+(?:\.\d+)*\s+[A-Z]/.test(text) || /^[A-Z][A-Za-z /&-]{3,80}$/.test(text);
 }
 

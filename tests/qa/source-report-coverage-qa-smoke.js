@@ -1667,8 +1667,41 @@ if (underwritingDebtAssessedPassResult.deterministic_flags.some((flag) => flag.c
   process.exit(1);
 }
 
-const canonicalDebtComputedRenderedWeakPhraseResult = buildSourceReportCoverageQa({
-  jobId: "canonical-debt-computed-rendered-weak-phrase",
+const canonicalDebtComputedRenderedPositiveDscrResult = buildSourceReportCoverageQa({
+  jobId: "canonical-debt-computed-rendered-positive-dscr",
+  userId: "user-smoke",
+  propertyName: "Canonical Debt Computed Positive DSCR",
+  reportType: "underwriting",
+  reportTier: 2,
+  uploadedFiles: [],
+  artifacts: [],
+  html: "<p>Current Debt DSCR 2.01x</p>",
+  currentDebtState: {
+    current_debt_dscr_status: "computed",
+    current_debt_assessed: true,
+    has_true_current_debt_balance: true,
+    current_debt_dscr: 2.01,
+  },
+  acquisitionAssumptionState: {
+    has_proposed_acquisition_financing: false,
+  },
+  sectionEligibility: {
+    sections: {
+      debt_structure: { eligible: true, rendered: true, omitted: false, source_constrained: false },
+    },
+  },
+});
+if (canonicalDebtComputedRenderedPositiveDscrResult.rendered_text_signals.includes("dscr_current_debt_not_assessed")) {
+  console.error("Computed Current Debt DSCR output must not emit the not-assessed rendered-text signal.");
+  process.exit(1);
+}
+if (canonicalDebtComputedRenderedPositiveDscrResult.deterministic_flags.some((flag) => flag.code === "CURRENT_DEBT_CANONICAL_RENDER_STATE_DRIFT")) {
+  console.error("Computed Current Debt DSCR output must not emit canonical/render state drift.");
+  process.exit(1);
+}
+
+const canonicalDebtComputedRenderedNegativePhraseResult = buildSourceReportCoverageQa({
+  jobId: "canonical-debt-computed-rendered-negative-phrase",
   userId: "user-smoke",
   propertyName: "Canonical Debt Computed",
   reportType: "underwriting",
@@ -1691,11 +1724,15 @@ const canonicalDebtComputedRenderedWeakPhraseResult = buildSourceReportCoverageQ
     },
   },
 });
-if (canonicalDebtComputedRenderedWeakPhraseResult.current_debt_state?.current_debt_dscr_status !== "computed") {
-  console.error("Canonical computed debt state should remain authoritative despite rendered weak phrase.");
+if (canonicalDebtComputedRenderedNegativePhraseResult.current_debt_state?.current_debt_dscr_status !== "computed") {
+  console.error("Canonical computed debt state should remain authoritative despite rendered negative phrase.");
   process.exit(1);
 }
-if (!canonicalDebtComputedRenderedWeakPhraseResult.deterministic_flags.some((flag) => flag.code === "CURRENT_DEBT_CANONICAL_RENDER_STATE_DRIFT")) {
+if (!canonicalDebtComputedRenderedNegativePhraseResult.rendered_text_signals.includes("dscr_current_debt_not_assessed")) {
+  console.error("Expected explicit negative current-debt wording to emit the not-assessed rendered-text signal.");
+  process.exit(1);
+}
+if (!canonicalDebtComputedRenderedNegativePhraseResult.deterministic_flags.some((flag) => flag.code === "CURRENT_DEBT_CANONICAL_RENDER_STATE_DRIFT")) {
   console.error("Expected canonical-vs-render debt state drift flag for computed canonical debt with not-assessed rendered phrase.");
   process.exit(1);
 }
