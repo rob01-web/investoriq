@@ -337,3 +337,10 @@ assert.equal(hiddenDowngradeObservation.premiumCertified, false);
 assert.equal(hiddenDowngradeObservation.coreDeliveryEligibilityChanged, false);
 
 console.log('premium-acquisition-underwriting-v1 renderer-integration smoke passed');
+
+export {
+  baseFixture,
+  model as premiumUnderwritingModel,
+  premiumHtml,
+  premiumOrchestrator,
+};
