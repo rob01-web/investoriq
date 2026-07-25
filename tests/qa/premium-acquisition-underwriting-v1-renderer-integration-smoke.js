@@ -340,6 +340,7 @@ console.log('premium-acquisition-underwriting-v1 renderer-integration smoke pass
 
 export {
   baseFixture,
+  completeObservation,
   model as premiumUnderwritingModel,
   premiumHtml,
   premiumOrchestrator,

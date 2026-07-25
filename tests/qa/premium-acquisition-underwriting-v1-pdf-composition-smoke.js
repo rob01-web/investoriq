@@ -426,3 +426,8 @@ console.log(JSON.stringify({
   blankPages: 0,
   pdfBoss: pdfBoss.status,
 }));
+
+export {
+  pdfAnalysis as premiumPdfAnalysis,
+  pdfBoss as premiumPdfBoss,
+};
