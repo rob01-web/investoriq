@@ -38,6 +38,9 @@ const GROUPS = Object.freeze([
     ]),
   }),
 ]);
+const PREMIUM_RENDERED_SECTION_KEYS = Object.freeze(
+  GROUPS.flatMap((group) => group.sections.map(([sectionKey]) => sectionKey)),
+);
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -266,6 +269,7 @@ const PREMIUM_ACQUISITION_UNDERWRITING_V1_RENDERER_CONTRACT = Object.freeze({
 
 export {
   PREMIUM_ACQUISITION_UNDERWRITING_V1_RENDERER_CONTRACT,
+  PREMIUM_RENDERED_SECTION_KEYS,
   PREMIUM_RENDERER_SOURCE,
   PREMIUM_RENDERER_VERSION,
   renderPremiumAcquisitionUnderwritingV1Expansion,

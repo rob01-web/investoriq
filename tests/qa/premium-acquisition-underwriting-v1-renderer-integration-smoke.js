@@ -29,6 +29,9 @@ import {
   renderPremiumAcquisitionUnderwritingV1Expansion,
 } from '../../api/_lib/premium-acquisition-underwriting-v1-renderer.js';
 import {
+  observePremiumAcquisitionUnderwritingV1Quality,
+} from '../../api/_lib/premium-acquisition-underwriting-v1-quality-observer.js';
+import {
   renderCompleteAcquisitionMemoV2Html,
 } from '../../api/_lib/acquisition-memo-v2-document.js';
 import {
@@ -259,5 +262,78 @@ assert.equal(
   premiumOrchestrator.finalDeliveryDecision.report_publishable,
   baseOrchestrator.finalDeliveryDecision.report_publishable,
 );
+
+const disabledObservation = observePremiumAcquisitionUnderwritingV1Quality({
+  premiumUnderwritingModel: model,
+  renderedHtml: baseHtml,
+  premiumUnderwritingCapabilityEnabled: false,
+  reportSurfaceVersion: PREMIUM_SURFACE,
+});
+assert.equal(disabledObservation.status, 'not_applicable');
+assert.equal(disabledObservation.issues.length, 0);
+assert.equal(disabledObservation.premiumCertified, false);
+assert.equal(disabledObservation.coreDeliveryEligibilityChanged, false);
+
+const completeObservation = observePremiumAcquisitionUnderwritingV1Quality({
+  premiumUnderwritingModel: model,
+  renderedHtml: premiumHtml,
+  premiumUnderwritingCapabilityEnabled: true,
+  reportSurfaceVersion: PREMIUM_SURFACE,
+});
+assert.equal(completeObservation.status, 'observed_complete');
+assert.equal(completeObservation.observedComplete, true);
+assert.equal(completeObservation.issues.length, 0);
+assert.equal(completeObservation.premiumCertified, false);
+assert.equal(completeObservation.certificationStage, 'observe_only');
+assert.equal(completeObservation.deliveryAuthority, false);
+assert.equal(completeObservation.publicationAuthority, false);
+assert.equal(completeObservation.reportPublicationBlocker, false);
+
+const missingCalculationHtml = premiumHtml.replace(
+  'data-iq-premium-calculation="proposedAcquisitionDebtYield"',
+  'data-iq-removed-calculation="proposedAcquisitionDebtYield"',
+);
+const gapObservation = observePremiumAcquisitionUnderwritingV1Quality({
+  premiumUnderwritingModel: model,
+  renderedHtml: missingCalculationHtml,
+  premiumUnderwritingCapabilityEnabled: true,
+  reportSurfaceVersion: PREMIUM_SURFACE,
+});
+assert.equal(gapObservation.status, 'observed_gaps');
+assert.equal(gapObservation.observedComplete, false);
+assert.equal(
+  gapObservation.issues.some(
+    (issue) =>
+      issue.code === 'PREMIUM_CALCULATION_MISSING' &&
+      issue.evidence.calculationKey === 'proposedAcquisitionDebtYield',
+  ),
+  true,
+);
+assert.equal(
+  gapObservation.issues.every(
+    (issue) =>
+      issue.severity === 'advisory' &&
+      issue.coreDeliveryBlocker === false &&
+      issue.premiumPublicationBlocker === false,
+  ),
+  true,
+);
+assert.equal(gapObservation.coreDeliveryEligibilityChanged, false);
+assert.equal(gapObservation.reportPublicationBlocker, false);
+
+const hiddenDowngradeObservation = observePremiumAcquisitionUnderwritingV1Quality({
+  premiumUnderwritingModel: model,
+  renderedHtml: baseHtml,
+  premiumUnderwritingCapabilityEnabled: true,
+  reportSurfaceVersion: PREMIUM_SURFACE,
+});
+assert.equal(
+  hiddenDowngradeObservation.issues.some(
+    (issue) => issue.code === 'PREMIUM_RENDER_MARKER_MISSING',
+  ),
+  true,
+);
+assert.equal(hiddenDowngradeObservation.premiumCertified, false);
+assert.equal(hiddenDowngradeObservation.coreDeliveryEligibilityChanged, false);
 
 console.log('premium-acquisition-underwriting-v1 renderer-integration smoke passed');
