@@ -53,7 +53,7 @@ billing, credits, and remedies were not modified.
 Current state:
 
 ```text
-repository_readiness: CANARY_STAGED_PENDING_RETEST_38
+repository_readiness: REPAIRS_DEPLOYED_PREMIUM_REVALIDATION_PENDING
 repository_capability_default: false
 repository_activation_timestamp_default: unset
 external_activation: explicit deployment decision required
@@ -71,13 +71,24 @@ claim_path_repair_commit: 50458b4
 claim_path_repair_deployment: dpl_Bs72xBCAjkf9NTnibmEchea1sm8S
 claim_path_repair_health: ready_200
 post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
-premium_capability: exact_false_readback
+post_retest37_premium_capability: exact_false_readback
 premium_jobs_successfully_certified: none
-next_step: submit_and_inspect_retest_38_after_activation_boundary
+next_step: premium_revalidation_requires_separate_authorization
 retest_38_activation_deployment: dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd
 retest_38_activation_boundary: 2026-07-26T14:35:00.652Z
 retest_38_configuration_readback: exact
-retest_38_status: staged_pending_boundary
+retest_38_job_id: 18b949ca-5d1d-4fe4-b028-f846fcad9fc1
+retest_38_status: failed_closed_before_publication
+retest_38_error: PDF_ARTIFACT_FAILED
+retest_38_credit: restored
+retest_38_delivery_gate: deliverable
+retest_38_pdf: production_pdf_19_pages
+retest_38_root_cause: recoverable_incident_set_did_not_enter_bounded_recomposition
+pdf_recovery_commit: 8545d69
+dashboard_history_commit: 2544969
+repair_deployment: dpl_A7DCmhqyNVu8VJmUG6uxhcDdbPt1
+repair_deployment_health: ready_200
+premium_capability: exact_false
 ```
 
 RETEST 37 established a production orchestration defect, not a Source Truth,
@@ -96,12 +107,20 @@ production variable and read back as exact `false`. A new canary is prohibited
 until the remaining Premium and production-PDF configuration values have been
 set with byte-exact input and read back exactly.
 
-That preflight is now complete. Premium capability, the activation timestamp,
-production-PDF permission, DocRaptor production mode, and the download
-artifact mode were independently read back at their exact required values.
-Deployment `dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd` is Ready and production-aliased.
-RETEST 38 must be created after `2026-07-26T14:35:00.652Z` and is the only
-authorized canary pending artifact-level inspection.
+RETEST 38 proved that immutable Premium assignment, canonical inputs,
+deterministic analysis, and the Delivery Gate operated correctly. Publication
+failed later because one presentation-recoverable PDF incident code was absent
+from the all-codes recovery eligibility set, so the existing bounded
+recomposition was never attempted. The PDF Boss was not bypassed: the
+approved-surface parity failure remained blocking and the credit was restored.
+
+The recovery eligibility correction and the customer Report History correction
+are independently committed and deployed. Failed reports now appear in Report
+History after its own Refresh action, with current credit-restoration
+messaging. The former full-page Reload button was removed. Refresh performs one
+bounded status snapshot and adds no background polling, subscription, or
+render loop. Premium assignment is off pending a separately governed
+revalidation.
 
 Activation and rollback are governed by
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md).

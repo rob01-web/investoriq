@@ -1,6 +1,6 @@
 # Premium Acquisition Underwriting V1 Activation Runbook
 
-Status: CANARY_STAGED_PENDING_BOUNDARY
+Status: RETEST_38_FAILED_REPAIRS_DEPLOYED_FLAG_OFF
 Effective: July 26, 2026
 Controlling doctrine:
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md)
@@ -118,7 +118,7 @@ already promised premium jobs.
 
 ```text
 repository_implementation: complete
-repository_readiness: CANARY_STAGED_PENDING_RETEST_38
+repository_readiness: REPAIRS_DEPLOYED_PREMIUM_REVALIDATION_PENDING
 live_environment_inspected: true
 live_environment_changed: true
 flag_off_release_deployment: dpl_Hocip6Ut67oh7CV5SkiyitjGzkx7
@@ -136,9 +136,9 @@ post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
 claim_path_repair_commit: 50458b4
 claim_path_repair_deployment: dpl_Bs72xBCAjkf9NTnibmEchea1sm8S
 claim_path_repair_deployment_health: ready_200
-premium_capability_enabled: true
-premium_capability_readback: exact_true
-feature_activated: pending_future_boundary
+retest_38_staged_capability_enabled: true
+retest_38_staged_capability_readback: exact_true
+retest_38_feature_state_at_stage: pending_future_boundary
 live_retest_run: true
 live_retest_status: RETEST_37_FAILED_CLOSED_REPAIR_DEPLOYED
 retest_38_activation_deployment: dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd
@@ -148,7 +148,20 @@ retest_38_premium_capability_readback: exact_true
 retest_38_allow_production_pdf_readback: exact_true
 retest_38_docraptor_mode_readback: exact_production
 retest_38_download_artifact_mode_readback: exact_production_pdf
-retest_38_status: staged_pending_boundary
+retest_38_job_id: 18b949ca-5d1d-4fe4-b028-f846fcad9fc1
+retest_38_status: failed_closed_before_publication
+retest_38_error: PDF_ARTIFACT_FAILED
+retest_38_credit_restored: true
+retest_38_pdf_page_count: 19
+retest_38_pdf_artifact_mode: production_pdf
+retest_38_pdf_publication_target: external_customer
+retest_38_delivery_gate: deliverable
+retest_38_root_cause: recovery_eligibility_code_set_omitted_table_continuation_incident
+retest_38_pdf_recovery_commit: 8545d69
+retest_38_dashboard_history_commit: 2544969
+retest_38_repair_deployment: dpl_A7DCmhqyNVu8VJmUG6uxhcDdbPt1
+retest_38_repair_deployment_health: ready_200
+premium_capability_after_retest_38: exact_false
 ```
 
 The first activation configuration was superseded by the safe rollback
@@ -182,10 +195,26 @@ DOCRAPTOR_MODE
 REPORT_DOWNLOAD_ARTIFACT_MODE
 ```
 
-The repaired claim path is deployed and healthy. All five non-secret
-configuration values were set with byte-exact standard input and independently
-read back. Deployment `dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd` is Ready and aliased
-to production. RETEST 38 may be submitted only after
-`2026-07-26T14:35:00.652Z`; its immutable receipt and every downstream
-certification/publication artifact must then be inspected before Premium may
-remain enabled.
+RETEST 38 received the correct immutable Premium surface receipt. Source Truth,
+deterministic analysis, and Delivery Gate were valid, and the Delivery Gate was
+deliverable. The 19-page production PDF then failed strict certification with
+one blocking approved-surface parity incident plus nonblocking composition
+incidents. The complete incident set was presentation-recoverable, but
+`PDF_TABLE_CONTINUATION_HEADER_MISSING` was absent from the institutional PDF
+recovery eligibility set. Because eligibility requires every incident code to
+be recoverable, the omission skipped the single bounded recomposition attempt
+and terminated publication.
+
+Commit `8545d69` adds only that composition incident to the existing recovery
+set and locks RETEST 38's complete incident combination as recoverable. It does
+not weaken PDF Boss, change the original approved surface, or permit a failed
+recomposition to publish. Commit `2544969` removes the customer dashboard's
+full-page Reload control, makes Report History Refresh update completed,
+active, failed, entitlement, and remedy state in one bounded snapshot, and
+shows failed jobs with credit-restoration messaging inside Report History. It
+adds no timer, subscription, or polling loop.
+
+Deployment `dpl_A7DCmhqyNVu8VJmUG6uxhcDdbPt1` is Ready, production-aliased,
+and returns HTTP 200 with Premium assignment independently read back as exact
+`false`. RETEST 38's credit was restored. No further live canary is authorized
+until a separate revalidation boundary is approved.
