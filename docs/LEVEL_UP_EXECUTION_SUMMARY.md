@@ -53,7 +53,7 @@ billing, credits, and remedies were not modified.
 Current state:
 
 ```text
-repository_readiness: CANARY_REPAIR_DEPLOYED_CONFIGURATION_PREFLIGHT_PENDING
+repository_readiness: CANARY_STAGED_PENDING_RETEST_38
 repository_capability_default: false
 repository_activation_timestamp_default: unset
 external_activation: explicit deployment decision required
@@ -73,7 +73,11 @@ claim_path_repair_health: ready_200
 post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
 premium_capability: exact_false_readback
 premium_jobs_successfully_certified: none
-next_step: verify_exact_production_pdf_configuration_then_stage_new_canary
+next_step: submit_and_inspect_retest_38_after_activation_boundary
+retest_38_activation_deployment: dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd
+retest_38_activation_boundary: 2026-07-26T14:35:00.652Z
+retest_38_configuration_readback: exact
+retest_38_status: staged_pending_boundary
 ```
 
 RETEST 37 established a production orchestration defect, not a Source Truth,
@@ -91,6 +95,13 @@ empty. The non-secret Premium capability has now been recreated as a normal
 production variable and read back as exact `false`. A new canary is prohibited
 until the remaining Premium and production-PDF configuration values have been
 set with byte-exact input and read back exactly.
+
+That preflight is now complete. Premium capability, the activation timestamp,
+production-PDF permission, DocRaptor production mode, and the download
+artifact mode were independently read back at their exact required values.
+Deployment `dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd` is Ready and production-aliased.
+RETEST 38 must be created after `2026-07-26T14:35:00.652Z` and is the only
+authorized canary pending artifact-level inspection.
 
 Activation and rollback are governed by
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md).

@@ -1,6 +1,6 @@
 # Premium Acquisition Underwriting V1 Activation Runbook
 
-Status: CANARY_REPAIR_DEPLOYED_FLAG_OFF
+Status: CANARY_STAGED_PENDING_BOUNDARY
 Effective: July 26, 2026
 Controlling doctrine:
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md)
@@ -118,7 +118,7 @@ already promised premium jobs.
 
 ```text
 repository_implementation: complete
-repository_readiness: CANARY_REPAIR_DEPLOYED_CONFIGURATION_PREFLIGHT_PENDING
+repository_readiness: CANARY_STAGED_PENDING_RETEST_38
 live_environment_inspected: true
 live_environment_changed: true
 flag_off_release_deployment: dpl_Hocip6Ut67oh7CV5SkiyitjGzkx7
@@ -136,11 +136,19 @@ post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
 claim_path_repair_commit: 50458b4
 claim_path_repair_deployment: dpl_Bs72xBCAjkf9NTnibmEchea1sm8S
 claim_path_repair_deployment_health: ready_200
-premium_capability_enabled: false
-premium_capability_readback: exact_false
-feature_activated: false
+premium_capability_enabled: true
+premium_capability_readback: exact_true
+feature_activated: pending_future_boundary
 live_retest_run: true
 live_retest_status: RETEST_37_FAILED_CLOSED_REPAIR_DEPLOYED
+retest_38_activation_deployment: dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd
+retest_38_activation_deployment_health: ready_200
+retest_38_activation_boundary: 2026-07-26T14:35:00.652Z
+retest_38_premium_capability_readback: exact_true
+retest_38_allow_production_pdf_readback: exact_true
+retest_38_docraptor_mode_readback: exact_production
+retest_38_download_artifact_mode_readback: exact_production_pdf
+retest_38_status: staged_pending_boundary
 ```
 
 The first activation configuration was superseded by the safe rollback
@@ -174,6 +182,10 @@ DOCRAPTOR_MODE
 REPORT_DOWNLOAD_ARTIFACT_MODE
 ```
 
-The repaired claim path is now deployed and healthy with Premium assignment
-off. No further canary may begin until the remaining production PDF
-configuration and the future activation boundary are independently read back.
+The repaired claim path is deployed and healthy. All five non-secret
+configuration values were set with byte-exact standard input and independently
+read back. Deployment `dpl_jTNMkPQxSpzw8rzJdc8U1vmu9YGd` is Ready and aliased
+to production. RETEST 38 may be submitted only after
+`2026-07-26T14:35:00.652Z`; its immutable receipt and every downstream
+certification/publication artifact must then be inspected before Premium may
+remain enabled.
