@@ -410,6 +410,59 @@ assert.equal(
   "derived unit-count multiplied by per-unit cost must not become an accepted stated amount"
 );
 
+const complementaryUnitEvidence = "1BR Interiors 20 units x $18,500/unit";
+const complementaryRentEvidence = "1BR Interiors expected rent lift $225/month; Months 1-18";
+const complementaryRenovationDecision = decisionWithParsedPayloads(
+  "complementary-renovation-row-provenance",
+  [
+    "Renovation / CapEx Plan",
+    complementaryUnitEvidence,
+    complementaryRentEvidence,
+  ].join("\n"),
+  "renovation_parsed",
+  [
+    {
+      budget_rows: [{
+        category: "1BR Interiors",
+        evidence: [complementaryUnitEvidence],
+        unit_count: 20,
+        cost_per_unit: 18500,
+      }],
+    },
+    {
+      budget_rows: [{
+        category: "1BR Interiors",
+        evidence: [complementaryRentEvidence],
+        expected_monthly_rent_lift: 225,
+        phase_timing: "Months 1-18",
+      }],
+    },
+  ],
+);
+assert.equal(complementaryRenovationDecision.factAmbiguities.renovation_plan_rows, undefined);
+assert.deepEqual(complementaryRenovationDecision.acceptedFacts.renovation_plan_rows, [{
+  category: "1BR Interiors",
+  unit_count: 20,
+  cost_per_unit: 18500,
+  expected_monthly_rent_lift: 225,
+  start_month: 1,
+  end_month: 18,
+}]);
+const complementaryFieldEvidence =
+  complementaryRenovationDecision.acceptedFactEvidence.renovation_plan_rows[0].fieldEvidence;
+for (const field of ["category", "unit_count", "cost_per_unit"]) {
+  assert.deepEqual(complementaryFieldEvidence[field], {
+    excerpt: complementaryUnitEvidence,
+    method: "deterministic_exact_renovation_row_binding",
+  });
+}
+for (const field of ["expected_monthly_rent_lift", "start_month", "end_month"]) {
+  assert.deepEqual(complementaryFieldEvidence[field], {
+    excerpt: complementaryRentEvidence,
+    method: "deterministic_exact_renovation_row_binding",
+  });
+}
+
 const compatibleDuplicateRenovationSource = [
   "Renovation / CapEx Plan",
   "Total Renovation Budget $1,280,000",

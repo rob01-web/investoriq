@@ -565,6 +565,15 @@ function renovationPlanRowsFromArtifacts(artifacts, rawSourceText) {
       }
 
       if (Object.keys(accepted).length === 1) continue;
+      const fieldEvidence = Object.fromEntries(
+        Object.keys(accepted).map((field) => [
+          field,
+          {
+            excerpt: evidenceExcerpt,
+            method: "deterministic_exact_renovation_row_binding",
+          },
+        ]),
+      );
       const categoryKey = normalizedEvidenceText(category);
       const prior = rowsByCategory.get(categoryKey);
       if (prior) {
@@ -578,7 +587,10 @@ function renovationPlanRowsFromArtifacts(artifacts, rawSourceText) {
           continue;
         }
         for (const [field, value] of Object.entries(accepted)) {
-          if (!Object.prototype.hasOwnProperty.call(prior, field)) prior[field] = value;
+          if (!Object.prototype.hasOwnProperty.call(prior, field)) {
+            prior[field] = value;
+            prior.evidence.fieldEvidence[field] = fieldEvidence[field];
+          }
         }
         continue;
       }
@@ -587,6 +599,7 @@ function renovationPlanRowsFromArtifacts(artifacts, rawSourceText) {
         evidence: {
           excerpt: evidenceExcerpt,
           method: "deterministic_exact_renovation_row_binding",
+          fieldEvidence,
         },
       };
       rowsByCategory.set(categoryKey, acceptedRow);
