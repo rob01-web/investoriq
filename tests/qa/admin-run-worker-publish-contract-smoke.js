@@ -49,7 +49,7 @@ assert.match(workerSource, /sourceReconciliation:\s*reportData\?\.source_reconci
 assert.match(workerSource, /let artifactResolution = null;\s*let verifiedPublicationCheckpoint = null;/);
 assert.match(
   workerSource,
-  /resolvedDeliveryDecision\.deliveryGateStatus === 'deliverable'[\s\S]*?resolvedDeliveryDecision\.customerDeliveryAllowed === true[\s\S]*?artifactResolution\?\.verifiedDownloadArtifact === true[\s\S]*?publicationQualityBoss\?\.ok === true[\s\S]*?publicationQualityBoss\?\.status === 'certified'/
+  /resolvedDeliveryDecision\.deliveryGateStatus === 'deliverable'[\s\S]*?resolvedDeliveryDecision\.customerDeliveryAllowed === true[\s\S]*?artifactResolution\?\.verifiedDownloadArtifact === true[\s\S]*?pdfBossAllowsCustomerDelivery\(publicationQualityBoss\)/
 );
 assert.match(
   workerSource,
@@ -61,7 +61,10 @@ assert.notEqual(preservationStart, -1);
 assert.notEqual(preservationEnd, -1);
 const preservationSource = workerSource.slice(preservationStart, preservationEnd);
 assert.match(preservationSource, /checkpoint\?\.verifiedDownloadArtifact !== true/);
-assert.match(preservationSource, /checkpoint\?\.publicationQualityBoss\?\.status !== 'certified'/);
+assert.match(
+  preservationSource,
+  /!pdfBossAllowsCustomerDelivery\(checkpoint\?\.publicationQualityBoss\)/,
+);
 assert.match(preservationSource, /const completeUpdate = \{ status: 'published' \};/);
 assert.match(preservationSource, /POST_VERIFIED_PUBLICATION_WORKER_ERROR/);
 assert.equal(/applyTerminalFailureOutcome|restoreEntitlementForFailedJob/.test(preservationSource), false);

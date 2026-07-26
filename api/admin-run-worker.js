@@ -13,6 +13,9 @@ import {
   finalizeBlockedReportQualityManifest,
   finalizeReportQualityManifest,
 } from './_lib/report-quality-manifest.js';
+import {
+  resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt,
+} from './_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 const normalizeAuditText = (value) => String(value || '').toLowerCase();
@@ -1351,7 +1354,7 @@ export default async function handler(req, res) {
       // Pull a small batch of queued jobs
       const { data: queuedJobs, error: queuedErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .select('id, user_id, status, started_at')
+        .select('id, user_id, status, started_at, created_at, report_type')
         .eq('status', 'queued')
         .order('created_at', { ascending: true })
         .limit(jobLimit);
@@ -1425,6 +1428,17 @@ export default async function handler(req, res) {
 
               continue;
             }
+
+            await resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
+              supabaseAdmin,
+              job,
+              capabilityEnabled:
+                process.env.PREMIUM_ACQUISITION_UNDERWRITING_V1 || false,
+              activationStartedAt:
+                process.env.PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT ||
+                null,
+              resolvedAt: nowIso,
+            });
 
             transitions.push({
               job_id: job.id,

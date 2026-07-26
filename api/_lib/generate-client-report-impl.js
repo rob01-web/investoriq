@@ -44,6 +44,15 @@ import {
 import { buildReportQualityManifestCandidate } from "./report-quality-manifest.js";
 import { buildAcquisitionMemoProjection } from "./acquisition-memo-projection.js";
 import { buildCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
+import {
+  buildPremiumAcquisitionUnderwritingV1ExternalGeneration,
+} from "./premium-acquisition-underwriting-v1-external-generation.js";
+import {
+  JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE,
+} from "./premium-acquisition-underwriting-v1-job-start-surface-receipt.js";
+import {
+  isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt,
+} from "./premium-acquisition-underwriting-v1-job-surface-authority.js";
 import { renderAcquisitionMemo } from "./acquisition-memo-renderer.js";
 import {
   buildAcquisitionMemoBossContract,
@@ -2791,6 +2800,7 @@ export default async function handler(req, res) {
     let jobReportType = null;
     let jobUserId = null;
     let jobPropertyName = null;
+    let premiumJobStartSurfaceReceipt = null;
     if (jobId) {
       const { data: jobRow } = await supabase
         .from("analysis_jobs")
@@ -2808,6 +2818,30 @@ export default async function handler(req, res) {
       }
       if (jobUserId && effectiveUserId && jobUserId !== effectiveUserId) {
         return res.status(403).json({ error: "Job ownership mismatch" });
+      }
+      const { data: surfaceReceiptRows, error: surfaceReceiptError } =
+        await supabase
+          .from("analysis_artifacts")
+          .select("payload")
+          .eq("job_id", jobId)
+          .eq("type", JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE)
+          .order("created_at", { ascending: true })
+          .limit(2);
+      if (surfaceReceiptError) throw surfaceReceiptError;
+      if (Array.isArray(surfaceReceiptRows) && surfaceReceiptRows.length > 1) {
+        throw new Error("MULTIPLE_JOB_START_SURFACE_RECEIPTS_DETECTED");
+      }
+      premiumJobStartSurfaceReceipt = surfaceReceiptRows?.[0]?.payload || null;
+      if (
+        premiumJobStartSurfaceReceipt &&
+        (
+          !isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt(
+            premiumJobStartSurfaceReceipt,
+          ) ||
+          premiumJobStartSurfaceReceipt.jobId !== jobId
+        )
+      ) {
+        throw new Error("INVALID_PREMIUM_JOB_START_SURFACE_RECEIPT");
       }
     }
     if (isAdminRegen) {
@@ -4687,6 +4721,20 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           asOfDate: acquisitionMemoGeneratedAt.slice(0, 10),
         })
       : null;
+    const premiumExternalGeneration =
+      effectiveReportMode === "v1_core"
+        ? buildPremiumAcquisitionUnderwritingV1ExternalGeneration({
+            jobSurfaceReceipt: premiumJobStartSurfaceReceipt,
+            sourceTruthPackage: sourceTruthPackageResult,
+            financialIntelligence: acquisitionMemoFinancialIntelligence,
+          })
+        : {
+            enabled: false,
+            reportSurfaceVersion: null,
+            premiumUnderwritingCapabilityEnabled: false,
+            premiumUnderwritingModel: null,
+            generationReceipt: null,
+          };
     let acquisitionMemoV2Bridge = null;
     let acquisitionMemoV2Finalization = null;
     const sourceTruthCanonicalSourcePackage = constrainCanonicalSourcePackageToSourceTruth(
@@ -5137,6 +5185,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyAddress: displayPropertyAddress,
         propertyTitle: displayPropertyTitle,
       },
+      premiumUnderwritingModel:
+        premiumExternalGeneration.premiumUnderwritingModel,
+      premiumUnderwritingCapabilityEnabled:
+        premiumExternalGeneration.premiumUnderwritingCapabilityEnabled,
+      reportSurfaceVersion:
+        premiumExternalGeneration.reportSurfaceVersion,
     };
     if (acquisitionMemoV2OwnsFinalHtml) {
       const finalBossCompliance = acquisitionMemoV2Finalization ||
@@ -9036,6 +9090,10 @@ try {
       pdf_artifact_mode: docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf",
       final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
       report_quality_manifest_candidate: reportQualityManifestCandidate,
+      premium_underwriting_job_start_surface_receipt:
+        premiumJobStartSurfaceReceipt,
+      premium_underwriting_generation_receipt:
+        premiumExternalGeneration.generationReceipt,
       deliveryDecisionState: canonicalDeliveryDecisionState,
     delivery_gate_status: deliveryAliases.delivery_gate_status,
     customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,

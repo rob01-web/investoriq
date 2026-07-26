@@ -64,10 +64,15 @@ assert.match(roleReconcilerSource, /acceptedSourceTruth/);
 assert.match(bossRepairSource, /forbiddenSurface/);
 
 const fullHarnessV2Anchor = implSource.indexOf("if (acquisitionMemoV2OwnsFinalHtml) {");
+const fullHarnessV2EndAnchor = implSource.indexOf(
+  'if (!String(upsideHtml || "").trim()) {',
+  fullHarnessV2Anchor,
+);
 const fullHarnessReturnAnchor = implSource.indexOf("return res.status(200).json", fullHarnessV2Anchor);
 assert.ok(fullHarnessV2Anchor >= 0, "Missing full-render V2 sealed output anchor");
+assert.ok(fullHarnessV2EndAnchor > fullHarnessV2Anchor, "Missing full-render V2 sealed output boundary");
 assert.ok(fullHarnessReturnAnchor > fullHarnessV2Anchor, "Missing full-render final_html return after V2 anchor");
-const fullHarnessV2Slice = implSource.slice(fullHarnessV2Anchor, fullHarnessReturnAnchor);
+const fullHarnessV2Slice = implSource.slice(fullHarnessV2Anchor, fullHarnessV2EndAnchor);
 assert.match(fullHarnessV2Slice, /runAcquisitionMemoV2Pipeline/);
 assert.equal(/buildDocumentTreatmentSummaryHtml\(/.test(fullHarnessV2Slice), false);
 assert.equal(/replaceMarkedSection\(/.test(fullHarnessV2Slice), false);
