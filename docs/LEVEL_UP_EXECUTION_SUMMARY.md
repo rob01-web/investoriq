@@ -53,7 +53,7 @@ billing, credits, and remedies were not modified.
 Current state:
 
 ```text
-repository_readiness: CANARY_REPAIR_VERIFIED_PENDING_DEPLOYMENT
+repository_readiness: CANARY_REPAIR_DEPLOYED_CONFIGURATION_PREFLIGHT_PENDING
 repository_capability_default: false
 repository_activation_timestamp_default: unset
 external_activation: explicit deployment decision required
@@ -68,10 +68,12 @@ retest_37: failed_closed_before_publication
 retest_37_root_cause: canonical_claim_path_omitted_job_start_surface_receipt
 retest_37_customer_credit: restored
 claim_path_repair_commit: 50458b4
+claim_path_repair_deployment: dpl_Bs72xBCAjkf9NTnibmEchea1sm8S
+claim_path_repair_health: ready_200
 post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
-premium_capability: false
+premium_capability: exact_false_readback
 premium_jobs_successfully_certified: none
-next_step: deploy_repair_flag_off_then_verify_exact_production_configuration
+next_step: verify_exact_production_pdf_configuration_then_stage_new_canary
 ```
 
 RETEST 37 established a production orchestration defect, not a Source Truth,
@@ -83,11 +85,12 @@ therefore correctly failed closed with
 receipt at that first canonical claim boundary and retains the existing
 worker-side no-silent-downgrade enforcement.
 
-The attempted live environment writes were also verified to contain empty
-values. Empty Premium capability is fail-off and did not establish a Premium
-assignment. A new canary is prohibited until the repaired flag-off deployment
-is healthy and all Premium and production-PDF configuration values have been
-set by a reliable mechanism and read back exactly.
+Environment pull returned blanks for variables stored as Vercel `Sensitive`;
+that behavior withholds values and was not proof that the runtime values were
+empty. The non-secret Premium capability has now been recreated as a normal
+production variable and read back as exact `false`. A new canary is prohibited
+until the remaining Premium and production-PDF configuration values have been
+set with byte-exact input and read back exactly.
 
 Activation and rollback are governed by
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md).

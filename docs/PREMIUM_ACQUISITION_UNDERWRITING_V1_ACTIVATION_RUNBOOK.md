@@ -1,6 +1,6 @@
 # Premium Acquisition Underwriting V1 Activation Runbook
 
-Status: CANARY_FAILED_ROLLED_BACK
+Status: CANARY_REPAIR_DEPLOYED_FLAG_OFF
 Effective: July 26, 2026
 Controlling doctrine:
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md)
@@ -118,7 +118,7 @@ already promised premium jobs.
 
 ```text
 repository_implementation: complete
-repository_readiness: CANARY_REPAIR_VERIFIED_PENDING_DEPLOYMENT
+repository_readiness: CANARY_REPAIR_DEPLOYED_CONFIGURATION_PREFLIGHT_PENDING
 live_environment_inspected: true
 live_environment_changed: true
 flag_off_release_deployment: dpl_Hocip6Ut67oh7CV5SkiyitjGzkx7
@@ -134,10 +134,13 @@ retest_37_error: PREMIUM_JOB_START_SURFACE_RECEIPT_REQUIRED
 retest_37_credit_restored: true
 post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
 claim_path_repair_commit: 50458b4
+claim_path_repair_deployment: dpl_Bs72xBCAjkf9NTnibmEchea1sm8S
+claim_path_repair_deployment_health: ready_200
 premium_capability_enabled: false
+premium_capability_readback: exact_false
 feature_activated: false
 live_retest_run: true
-live_retest_status: RETEST_37_FAILED_CLOSED_REPAIR_PENDING_DEPLOYMENT
+live_retest_status: RETEST_37_FAILED_CLOSED_REPAIR_DEPLOYED
 ```
 
 The first activation configuration was superseded by the safe rollback
@@ -150,11 +153,18 @@ credit. Commit `50458b4` now establishes that receipt immediately after the
 canonical claim and before the claimed job is exposed to downstream worker
 processing.
 
-Post-failure environment inspection also proved that the attempted CLI
-configuration writes had stored empty values. Empty Premium capability is
-fail-off, so the RETEST 37 receipt omission affected the base surface path and
-did not prove a successful Premium assignment. Before another canary, the
-operator must set and then read back exact non-empty production values for:
+Post-failure environment inspection returned blank values for variables
+previously stored as Vercel `Sensitive`. Vercel intentionally withholds
+sensitive values from environment pull output, so that blank readback was
+inconclusive and must not be treated as proof of an empty runtime value.
+The non-secret Premium capability was recreated as a normal production
+variable and independently read back as exact `false`. The RETEST 37 artifact
+inventory contained no job-start surface receipt, so RETEST 37 still did not
+prove a successful Premium assignment.
+
+Before another canary, the operator must recreate non-secret configuration as
+readable production variables, set them with byte-exact standard input, and
+read back exact values for:
 
 ```text
 PREMIUM_ACQUISITION_UNDERWRITING_V1
@@ -164,6 +174,6 @@ DOCRAPTOR_MODE
 REPORT_DOWNLOAD_ARTIFACT_MODE
 ```
 
-No further canary may begin until the repaired claim path is deployed with
-Premium assignment off, the deployment is healthy, and the exact production
-configuration is independently read back.
+The repaired claim path is now deployed and healthy with Premium assignment
+off. No further canary may begin until the remaining production PDF
+configuration and the future activation boundary are independently read back.
