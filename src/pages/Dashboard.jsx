@@ -381,6 +381,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [stagedBatchId, setStagedBatchId] = useState(null);
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [dashboardSnapshotRefreshing, setDashboardSnapshotRefreshing] = useState(false);
   const [jobEvents, setJobEvents] = useState({});
   const [deliveryGateDecisionEventsByJobId, setDeliveryGateDecisionEventsByJobId] = useState({});
   const [latestFailedJob, setLatestFailedJob] = useState(null);
@@ -411,6 +412,10 @@ const DASHBOARD_DIAG_MINIMAL = false;
       return job.status === 'failed' && !dismissed;
     })
   ), [recentJobs, dismissedJobIds]);
+
+  const failedJobsForHistory = useMemo(() => (
+    recentJobs.filter((job) => job.status === 'failed')
+  ), [recentJobs]);
 
   const hasActiveProcessingJob = useMemo(() => (
     inProgressJobs.some((job) =>
@@ -640,6 +645,22 @@ const DASHBOARD_DIAG_MINIMAL = false;
       });
     } finally {
       latestFailedFetchRef.current = false;
+    }
+  };
+
+  const refreshDashboardSnapshot = async () => {
+    if (!profile?.id || dashboardSnapshotRefreshing) return;
+    setDashboardSnapshotRefreshing(true);
+    try {
+      await Promise.all([
+        fetchReports(),
+        fetchInProgressJobs(),
+        fetchRecentJobs(),
+        fetchLatestFailedJob(),
+        fetchEntitlements(),
+      ]);
+    } finally {
+      setDashboardSnapshotRefreshing(false);
     }
   };
 
@@ -1425,12 +1446,6 @@ useEffect(() => {
                 Upload your documents to generate an institutional underwriting report.
               </p>
             </div>
-            <GhostBtn
-              onClick={() => window.location.reload()}
-              style={{ borderColor:'rgba(255,255,255,0.18)', color:'rgba(255,255,255,0.45)', alignSelf:'flex-end' }}
-            >
-              Reload
-            </GhostBtn>
           </motion.div>
         </div>
 
@@ -1922,13 +1937,18 @@ useEffect(() => {
               </div>
               <div style={{ flex:'1 1 280px', minWidth:220, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, padding:'0 12px' }}>
                 <span style={{ ...bodySmall, fontSize:11, color:T.ink3, lineHeight:1.35 }}>
-                  Completed reports may take a moment to appear in Report History.
+                  Refresh updates completed, active, and failed report status.
                 </span>
                 <span style={{ ...bodySmall, fontSize:11, color:T.ink3, lineHeight:1.35 }}>
-                  Click Refresh if needed.
+                  Failed reports include the current credit-restoration message.
                 </span>
               </div>
-              <GhostBtn onClick={fetchReports}>Refresh</GhostBtn>
+              <GhostBtn
+                onClick={refreshDashboardSnapshot}
+                disabled={dashboardSnapshotRefreshing}
+              >
+                {dashboardSnapshotRefreshing ? 'Refreshing...' : 'Refresh'}
+              </GhostBtn>
             </div>
 
             {reportsLoading ? (
@@ -1936,12 +1956,60 @@ useEffect(() => {
                 <Loader2 style={{ width:16, height:16, color:T.gold, animation:'spin 1s linear infinite' }} />
                 <span style={{ ...bodySmall, fontSize:12 }}>Loading reports...</span>
               </div>
-            ) : reports.length === 0 ? (
+            ) : reports.length === 0 && failedJobsForHistory.length === 0 ? (
               <div style={{ padding:'24px 0', textAlign:'center' }}>
                 <span style={{ ...bodySmall, fontSize:13, color:T.ink4 }}>No reports generated yet. Complete steps 1-3 above to generate your first report.</span>
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {failedJobsForHistory.map((job) => {
+                  const canonicalDecision = resolveDashboardCustomerStatus(
+                    job,
+                    deliveryGateDecisionEventsByJobId[String(job.id)]?.payload
+                  );
+                  const hasCanonicalCustomerMessage =
+                    Boolean(String(canonicalDecision?.customer_message || '').trim());
+                  const fallbackCopy = buildCustomerFailureMessage(job, {
+                    creditRestored: failedJobCreditRestoredById[String(job.id)] === true,
+                    coreValidRequiredCoverage: Boolean(canonicalDecision?.core_valid_required_coverage),
+                  });
+                  return (
+                    <div
+                      key={`failed-${job.id}`}
+                      data-report-history-status="failed"
+                      style={{ border:`1px solid ${T.errorBorder}`, background:T.errorBg, padding:'14px 16px' }}
+                    >
+                      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                        <div style={{ minWidth:0, flex:'1 1 300px' }}>
+                          <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink2, marginBottom:4 }}>
+                            {job.property_name || 'Unknown property'}
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:8 }}>
+                            <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink3 }}>
+                              {job.report_type || '-'}
+                            </span>
+                            <span style={{ ...bodySmall, fontSize:12, color:T.ink4 }}>
+                              {job.created_at ? new Date(job.created_at).toLocaleDateString() : '-'}
+                            </span>
+                          </div>
+                          <div style={failedMessageLeadStyle}>
+                            {hasCanonicalCustomerMessage ? canonicalDecision.customer_message : fallbackCopy.body}
+                          </div>
+                          {!hasCanonicalCustomerMessage && fallbackCopy.creditLine && (
+                            <div style={{ ...failedMessageSupportStyle, marginTop:6 }}>
+                              {fallbackCopy.creditLine}
+                            </div>
+                          )}
+                        </div>
+                        <StatusBadge
+                          status="failed"
+                          errorCode={job.error_code}
+                          deliveryDecision={canonicalDecision}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
                 {reportHistoryCards}
               </div>
             )}

@@ -83,5 +83,28 @@ assert.match(queueMetricsSource, /Internal documents required/);
 
 assert.equal(/getFailedFileGuidance/.test(dashboardSource), false);
 assert.equal(/select\('original_filename, doc_type, parse_status, parse_error'\)/.test(dashboardSource), false);
+assert.doesNotMatch(dashboardSource, /window\.location\.reload\(\)/);
+assert.match(dashboardSource, /const refreshDashboardSnapshot = async \(\) =>/);
+for (const refreshTarget of [
+  "fetchReports()",
+  "fetchInProgressJobs()",
+  "fetchRecentJobs()",
+  "fetchLatestFailedJob()",
+  "fetchEntitlements()",
+]) {
+  assert.match(
+    dashboardSource,
+    new RegExp(refreshTarget.replace(/[()]/g, "\\$&")),
+    refreshTarget,
+  );
+}
+assert.match(dashboardSource, /onClick=\{refreshDashboardSnapshot\}/);
+assert.match(dashboardSource, /disabled=\{dashboardSnapshotRefreshing\}/);
+assert.match(dashboardSource, /data-report-history-status="failed"/);
+assert.match(dashboardSource, /failedJobsForHistory\.map/);
+assert.match(
+  dashboardSource,
+  /Failed reports include the current credit-restoration message\./,
+);
 
 console.log("dashboard customer-copy smoke PASS");
