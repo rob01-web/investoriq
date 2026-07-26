@@ -48,6 +48,13 @@ import {
   buildPremiumAcquisitionUnderwritingV1ExternalGeneration,
 } from "./premium-acquisition-underwriting-v1-external-generation.js";
 import {
+  observePremiumAcquisitionUnderwritingV1Quality,
+} from "./premium-acquisition-underwriting-v1-quality-observer.js";
+import {
+  EXTERNAL_CERTIFICATION_ARTIFACT_TYPE,
+  certifyPremiumAcquisitionUnderwritingV1External,
+} from "./premium-acquisition-underwriting-v1-external-certification.js";
+import {
   JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE,
 } from "./premium-acquisition-underwriting-v1-job-start-surface-receipt.js";
 import {
@@ -8953,6 +8960,82 @@ try {
   err.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
   throw err;
 }
+    const premiumUnderwritingQualityObservation =
+      observePremiumAcquisitionUnderwritingV1Quality({
+        premiumUnderwritingModel:
+          premiumExternalGeneration.premiumUnderwritingModel,
+        renderedHtml: docHtml,
+        premiumUnderwritingCapabilityEnabled:
+          premiumExternalGeneration.premiumUnderwritingCapabilityEnabled,
+        reportSurfaceVersion:
+          premiumExternalGeneration.reportSurfaceVersion,
+      });
+    const premiumUnderwritingExternalCertification =
+      certifyPremiumAcquisitionUnderwritingV1External({
+        jobSurfaceReceipt: premiumJobStartSurfaceReceipt,
+        generationReceipt: premiumExternalGeneration.generationReceipt,
+        premiumUnderwritingModel:
+          premiumExternalGeneration.premiumUnderwritingModel,
+        qualityObservation: premiumUnderwritingQualityObservation,
+        pdfPublicationQualityBoss: finalPdfPublicationQualityBossResult,
+      });
+    if (
+      jobId &&
+      premiumUnderwritingExternalCertification.certificationRequired === true
+    ) {
+      const premiumCertificationTimestamp =
+        new Date().toISOString().replace(/:/g, "-");
+      const { error: premiumCertificationArtifactError } = await supabase
+        .from("analysis_artifacts")
+        .insert([{
+          job_id: jobId,
+          user_id: effectiveUserId || null,
+          type: EXTERNAL_CERTIFICATION_ARTIFACT_TYPE,
+          bucket: "internal",
+          object_path:
+            `analysis_jobs/${jobId}/${EXTERNAL_CERTIFICATION_ARTIFACT_TYPE}/${premiumCertificationTimestamp}.json`,
+          payload: premiumUnderwritingExternalCertification,
+        }]);
+      if (premiumCertificationArtifactError) {
+        const persistenceError = new Error(
+          "PREMIUM_UNDERWRITING_EXTERNAL_CERTIFICATION_PERSISTENCE_FAILED",
+        );
+        persistenceError.code = TERMINAL_FAILURE_CODES.REPORT_RENDER_FAILED;
+        persistenceError.context = {
+          failure_class: "internal_system_failure",
+          customer_document_failure: false,
+          job_id: jobId,
+          report_surface_version:
+            premiumUnderwritingExternalCertification.reportSurfaceVersion,
+        };
+        throw persistenceError;
+      }
+    }
+    if (
+      premiumUnderwritingExternalCertification.reportPublicationBlocker ===
+        true ||
+      (
+        premiumUnderwritingExternalCertification.certificationRequired ===
+          true &&
+        premiumUnderwritingExternalCertification.externalPremiumCertified !==
+          true
+      )
+    ) {
+      const certificationError = new Error(
+        "PREMIUM_UNDERWRITING_EXTERNAL_CERTIFICATION_FAILED",
+      );
+      certificationError.code = TERMINAL_FAILURE_CODES.REPORT_RENDER_FAILED;
+      certificationError.context = {
+        failure_class: "internal_system_failure",
+        customer_document_failure: false,
+        job_id: jobId || null,
+        report_surface_version:
+          premiumUnderwritingExternalCertification.reportSurfaceVersion,
+        premium_underwriting_external_certification:
+          premiumUnderwritingExternalCertification,
+      };
+      throw certificationError;
+    }
         const canonicalDeliveryDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
         const holdDelivery = Boolean(canonicalDeliveryDecisionState.hold_delivery);
     const publicationSeed = jobId || crypto.randomUUID();
@@ -9094,6 +9177,10 @@ try {
         premiumJobStartSurfaceReceipt,
       premium_underwriting_generation_receipt:
         premiumExternalGeneration.generationReceipt,
+      premium_underwriting_quality_observation:
+        premiumUnderwritingQualityObservation,
+      premium_underwriting_external_certification:
+        premiumUnderwritingExternalCertification,
       deliveryDecisionState: canonicalDeliveryDecisionState,
     delivery_gate_status: deliveryAliases.delivery_gate_status,
     customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,
