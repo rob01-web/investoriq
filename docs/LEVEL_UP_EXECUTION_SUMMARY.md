@@ -24,7 +24,8 @@ Execution plan: [UNDERWRITING_GAMEPLAN_v2.md](../UNDERWRITING_GAMEPLAN_v2.md)
 
 ## Current Closeout
 
-Premium Acquisition Underwriting V1 is complete through the internal-test surface-receipt isolation boundary:
+Premium Acquisition Underwriting V1 is repository-complete through the
+external enforcement boundary:
 
 - Canonical consume-only receipt mapping and deterministic analysis: complete.
 - Independent premium model validation: complete.
@@ -34,10 +35,32 @@ Premium Acquisition Underwriting V1 is complete through the internal-test surfac
 - Disconnected internal-test premium certification: complete.
 - Internal-only job-surface authority and base/premium isolation proof: complete.
 - Renovation-row field-level evidence provenance: preserved.
+- Immutable production job-start surface assignment: complete.
+- Worker consumption of the pinned surface receipt: complete.
+- External premium generation from canonical receipts: complete.
+- Strict external premium certification: complete.
+- Worker-side no-silent-downgrade enforcement before publication: complete.
 
-The feature remains inactive. No worker, Delivery Gate, publication, Manifest, billing, credit, remedy, or Screening authority changed.
+The feature remains inactive. The repository configuration contract defaults
+off, no live environment was changed, no deployment occurred, and no live
+RETEST was run.
 
-The next boundary is Phase 8 external integration: first persist and consume the immutable job-start surface receipt through a separately bounded worker integration, then add separately reviewed external premium certification and enforcement. External activation remains a later explicit decision.
+The protected base path remains unchanged. Premium enforcement applies only
+when the immutable job-start receipt establishes an external Premium V1
+promise. Delivery Gate, Manifest, PDF Boss rules, Source Truth, Screening,
+billing, credits, and remedies were not modified.
+
+Current state:
+
+```text
+repository_readiness: READY_NOT_ACTIVATED
+capability_default: false
+activation_timestamp_default: unset
+external_activation: explicit deployment decision required
+```
+
+Activation and rollback are governed by
+[PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md).
 
 ## Why
 
@@ -66,7 +89,7 @@ Initial implementation may not alter:
 - Screening.
 - Existing PDF Boss doctrine.
 
-## Immediate Sequence
+## Completed Sequence
 
 1. Lock doctrine.
 2. Add characterization shield.
@@ -77,8 +100,13 @@ Initial implementation may not alter:
 7. Add one guarded renderer insertion.
 8. Observe premium completeness.
 9. Certify internal PDF composition.
-10. Add job-level surface-version authority.
-11. Activate external premium enforcement only after all gates pass.
+10. Add immutable job-level surface-version authority.
+11. Integrate worker consumption and premium generation.
+12. Add strict external premium certification.
+13. Enforce no silent downgrade before publication.
+
+Live feature activation is not an implementation step and remains an explicit
+deployment configuration decision.
 
 ## Launch Rule
 

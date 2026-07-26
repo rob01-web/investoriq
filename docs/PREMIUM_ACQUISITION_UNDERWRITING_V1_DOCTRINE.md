@@ -98,9 +98,22 @@ The deployment capability flag is:
 
 ```text
 PREMIUM_ACQUISITION_UNDERWRITING_V1=false
+PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT=
 ```
 
-The default is `false`.
+The repository-safe default is capability `false` with no activation timestamp.
+
+External assignment requires both:
+
+```text
+PREMIUM_ACQUISITION_UNDERWRITING_V1=true
+AND
+PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT=<valid ISO-8601 UTC timestamp>
+```
+
+Capability `true` without a valid activation timestamp must fail closed. The
+two values must be applied together in one governed deployment configuration
+change. No repository commit may silently activate the feature.
 
 A deployment flag alone is not sufficient for external activation. Every job must ultimately carry an immutable report-surface version resolved at job start.
 
@@ -119,7 +132,13 @@ AND
 job report_surface_version = premium_acquisition_underwriting_v1
 ```
 
-During disconnected development, tests may supply the premium surface version without changing worker authority. External activation may occur only after the job-level version receipt is implemented and certified.
+Jobs created before the activation timestamp remain on the base surface. New
+underwriting jobs created at or after that timestamp may be assigned the
+premium surface. Screening always remains on its existing surface.
+
+The immutable job-start surface receipt controls the assigned surface after
+resolution. Later environment changes may stop new premium assignment but may
+not mutate a receipt or downgrade an already promised premium job.
 
 With premium disabled:
 
@@ -484,15 +503,32 @@ Completed:
 - Disconnected internal-test certification.
 - Internal-only job-surface receipt authority and integration isolation.
 - Exact field-level provenance for merged renovation-row evidence.
+- Immutable production job-start surface receipt persistence and consumption.
+- Premium generation from the pinned canonical job surface.
+- Strict external premium certification after the unchanged PDF Boss.
+- Independent worker-side no-silent-downgrade enforcement before publication
+  record resolution.
+- Fail-closed capability and activation-timestamp assignment contract.
 
-Not started:
+Repository activation status:
 
-- Production worker persistence or consumption of the premium job-surface receipt.
-- External premium certification enforcement.
-- External feature activation.
-- Any change to Delivery Gate, publication, Manifest, billing, credits, remedies, or Screening.
+```text
+readiness: READY_NOT_ACTIVATED
+external_feature_activation: false
+live_environment_changed: false
+deployment_performed: false
+```
 
-The next implementation boundary remains item 13 of the required sequence, preceded by the unfinished production portion of item 12: separately bounded worker/job-start surface integration, then separately reviewed external premium enforcement. Neither is authorized implicitly by the internal-test closeout.
+The external integration implementation is complete. It does not alter Source
+Truth, the CustomerSurfaceModel's factual authority, Delivery Gate, Manifest,
+PDF Boss rules, Screening, billing, credits, or remedies. The only new
+publication constraint applies to jobs whose immutable job-start receipt
+already establishes an external Premium V1 promise.
+
+The remaining launch boundary is an explicit deployment configuration
+decision under
+[PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md).
+That decision is not made by this repository closeout.
 
 ## 16. Definition of Done
 
@@ -507,8 +543,14 @@ Premium Acquisition Underwriting V1 is launch-ready only when:
 - The customer PDF is visually dense, readable, and correctly paginated.
 - Premium completeness has passed observe-only and internal-required stages.
 - The premium artifact is independently certified.
-- Existing Source Truth, Delivery Gate, worker, publication, billing, credit, remedy, and Screening behavior remains unchanged.
+- Existing Source Truth, Delivery Gate, base-report publication, billing,
+  credit, remedy, and Screening behavior remains unchanged; worker enforcement
+  is added only for an immutable external Premium V1 promise.
 - External premium jobs cannot silently fall back to the base report.
 - Rollback has been proven.
+
+The repository implementation satisfies these conditions through protected
+automated proofs and reversible commits. `READY_NOT_ACTIVATED` does not mean a
+live deployment, live feature activation, or live RETEST has occurred.
 
 This doctrine may be changed only through an explicit doctrine amendment before corresponding implementation work begins.
