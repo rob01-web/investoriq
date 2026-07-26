@@ -1,6 +1,6 @@
 # Premium Acquisition Underwriting V1 Activation Runbook
 
-Status: READY_NOT_ACTIVATED
+Status: CANARY_FAILED_ROLLED_BACK
 Effective: July 26, 2026
 Controlling doctrine:
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md)
@@ -107,6 +107,7 @@ The external boundary is separated into reversible commits:
 0c8738b Persist immutable premium job-start surfaces
 8b905ef Wire premium job surfaces into report generation
 5c36751 Enforce external premium underwriting certification
+50458b4 Persist premium surface receipt on canonical claim
 ```
 
 The activation-readiness documentation commit follows these implementation
@@ -117,7 +118,7 @@ already promised premium jobs.
 
 ```text
 repository_implementation: complete
-repository_readiness: READY_NOT_ACTIVATED
+repository_readiness: CANARY_REPAIR_VERIFIED_PENDING_DEPLOYMENT
 live_environment_inspected: true
 live_environment_changed: true
 flag_off_release_deployment: dpl_Hocip6Ut67oh7CV5SkiyitjGzkx7
@@ -125,13 +126,44 @@ activation_configuration_deployment: dpl_8eWdTPmJXGDKMXvcXc497ueEFbGx
 activation_boundary: 2026-07-26T13:16:22.657Z
 safe_rollback_deployment: dpl_FPgzKBWA94MbzMEkQ1dP59C2cbGJ
 rollback_ready_at: 2026-07-26T13:10:50.810Z
+retest_37_activation_deployment: dpl_5ZbgspsPHsaiNBsrWpE2KerdW4aZ
+retest_37_intended_boundary: 2026-07-26T13:52:54.945Z
+retest_37_job_id: c8b23b8d-de84-4d82-a31f-8bd7710c45a4
+retest_37_result: failed_closed
+retest_37_error: PREMIUM_JOB_START_SURFACE_RECEIPT_REQUIRED
+retest_37_credit_restored: true
+post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
+claim_path_repair_commit: 50458b4
 premium_capability_enabled: false
 feature_activated: false
-live_retest_run: false
-live_retest_status: blocked_pending_authenticated_browser_session
+live_retest_run: true
+live_retest_status: RETEST_37_FAILED_CLOSED_REPAIR_PENDING_DEPLOYMENT
 ```
 
-The activation configuration was superseded by the safe rollback deployment
-before its future activation boundary. Therefore no job became eligible for
-Premium V1 during this activation attempt. The activation timestamp may remain
-configured while capability is `false`; it has no assignment authority.
+The first activation configuration was superseded by the safe rollback
+deployment before its future activation boundary. RETEST 37 was then submitted
+after a second intended boundary. It failed closed before publication because
+the production scheduler's canonical `claim_next_job` path moved the job to
+`extracting` without first persisting the immutable job-start surface receipt.
+The worker correctly rejected the missing receipt and restored the consumed
+credit. Commit `50458b4` now establishes that receipt immediately after the
+canonical claim and before the claimed job is exposed to downstream worker
+processing.
+
+Post-failure environment inspection also proved that the attempted CLI
+configuration writes had stored empty values. Empty Premium capability is
+fail-off, so the RETEST 37 receipt omission affected the base surface path and
+did not prove a successful Premium assignment. Before another canary, the
+operator must set and then read back exact non-empty production values for:
+
+```text
+PREMIUM_ACQUISITION_UNDERWRITING_V1
+PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT
+ALLOW_PRODUCTION_PDF
+DOCRAPTOR_MODE
+REPORT_DOWNLOAD_ARTIFACT_MODE
+```
+
+No further canary may begin until the repaired claim path is deployed with
+Premium assignment off, the deployment is healthy, and the exact production
+configuration is independently read back.

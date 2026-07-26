@@ -41,9 +41,9 @@ external enforcement boundary:
 - Strict external premium certification: complete.
 - Worker-side no-silent-downgrade enforcement before publication: complete.
 
-The feature remains inactive. The repository configuration contract defaults
-off, no live environment was changed, no deployment occurred, and no live
-RETEST was run.
+The feature remains inactive after a failed-closed RETEST 37 canary and safe
+rollback. The repository configuration contract still defaults off. RETEST 37
+did not publish, and its consumed credit was restored.
 
 The protected base path remains unchanged. Premium enforcement applies only
 when the immutable job-start receipt establishes an external Premium V1
@@ -53,7 +53,7 @@ billing, credits, and remedies were not modified.
 Current state:
 
 ```text
-repository_readiness: READY_NOT_ACTIVATED
+repository_readiness: CANARY_REPAIR_VERIFIED_PENDING_DEPLOYMENT
 repository_capability_default: false
 repository_activation_timestamp_default: unset
 external_activation: explicit deployment decision required
@@ -64,10 +64,30 @@ Operational receipt, July 26, 2026:
 ```text
 flag_off_release: deployed_and_healthy
 controlled_activation_attempt: rolled_back_before_activation_boundary
+retest_37: failed_closed_before_publication
+retest_37_root_cause: canonical_claim_path_omitted_job_start_surface_receipt
+retest_37_customer_credit: restored
+claim_path_repair_commit: 50458b4
+post_failure_safe_deployment: dpl_2GihkWWCf6m3Bvxsq14ULcSpqNjC
 premium_capability: false
-premium_jobs_assigned_during_attempt: none
-live_retest_37: pending_authenticated_browser_session
+premium_jobs_successfully_certified: none
+next_step: deploy_repair_flag_off_then_verify_exact_production_configuration
 ```
+
+RETEST 37 established a production orchestration defect, not a Source Truth,
+calculation, renderer, PDF Boss, or customer-document defect. The scheduled
+`claim_next_job` route transitioned the queued job to `extracting` without
+persisting the immutable report-surface receipt. Downstream enforcement
+therefore correctly failed closed with
+`PREMIUM_JOB_START_SURFACE_RECEIPT_REQUIRED`. Commit `50458b4` persists the
+receipt at that first canonical claim boundary and retains the existing
+worker-side no-silent-downgrade enforcement.
+
+The attempted live environment writes were also verified to contain empty
+values. Empty Premium capability is fail-off and did not establish a Premium
+assignment. A new canary is prohibited until the repaired flag-off deployment
+is healthy and all Premium and production-PDF configuration values have been
+set by a reliable mechanism and read back exactly.
 
 Activation and rollback are governed by
 [PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md).
