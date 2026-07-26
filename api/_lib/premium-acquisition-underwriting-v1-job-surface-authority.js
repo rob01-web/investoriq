@@ -8,6 +8,11 @@ const JOB_SURFACE_AUTHORITY_SOURCE =
   'premium_acquisition_underwriting_v1_job_surface_authority';
 const JOB_SURFACE_AUTHORITY_VERSION = 1;
 const INTERNAL_ASSIGNMENT_SCOPE = 'internal_test_only';
+const EXTERNAL_JOB_START_ASSIGNMENT_SCOPE = 'external_job_start';
+const ASSIGNMENT_SCOPES = new Set([
+  INTERNAL_ASSIGNMENT_SCOPE,
+  EXTERNAL_JOB_START_ASSIGNMENT_SCOPE,
+]);
 
 const KNOWN_SURFACE_VERSIONS = new Set([
   BASE_ACQUISITION_UNDERWRITING_SURFACE_VERSION,
@@ -49,7 +54,7 @@ function isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt(
     !text(receipt.jobId) ||
     !isIsoTimestamp(receipt.resolvedAt) ||
     !KNOWN_SURFACE_VERSIONS.has(receipt.reportSurfaceVersion) ||
-    receipt.assignmentScope !== INTERNAL_ASSIGNMENT_SCOPE ||
+    !ASSIGNMENT_SCOPES.has(receipt.assignmentScope) ||
     receipt.authority?.reportSurfaceVersionAuthority !== true
   ) {
     return false;
@@ -69,13 +74,21 @@ function isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt(
   const premiumAssigned =
     receipt.reportSurfaceVersion ===
     PREMIUM_ACQUISITION_UNDERWRITING_V1_SURFACE_VERSION;
+  const externalAssignment =
+    receipt.assignmentScope === EXTERNAL_JOB_START_ASSIGNMENT_SCOPE;
   if (receipt.premiumSurfaceAssigned !== premiumAssigned) return false;
   if (
     premiumAssigned &&
     (
       receipt.capabilityEnabledAtResolution !== true ||
       receipt.reportType !== 'underwriting' ||
-      receipt.status !== 'premium_surface_assigned_internal_test'
+      receipt.status !== (
+        externalAssignment
+          ? 'premium_surface_assigned_external_job_start'
+          : 'premium_surface_assigned_internal_test'
+      ) ||
+      receipt.externalPremiumPromiseEstablished !== externalAssignment ||
+      receipt.premiumCertificationRequired !== externalAssignment
     )
   ) {
     return false;
@@ -96,6 +109,7 @@ function resolvePremiumAcquisitionUnderwritingV1JobSurface({
   requestedSurfaceVersion = null,
   capabilityEnabled = false,
   resolvedAt = null,
+  assignmentScope = INTERNAL_ASSIGNMENT_SCOPE,
   existingReceipt = null,
 } = {}) {
   const normalizedJobId = text(jobId);
@@ -114,6 +128,8 @@ function resolvePremiumAcquisitionUnderwritingV1JobSurface({
   }
 
   const normalizedReportType = text(reportType).toLowerCase();
+  const normalizedAssignmentScope = text(assignmentScope) ||
+    INTERNAL_ASSIGNMENT_SCOPE;
   const requested = text(requestedSurfaceVersion) ||
     BASE_ACQUISITION_UNDERWRITING_SURFACE_VERSION;
   const capability = explicitCapabilityEnabled(capabilityEnabled);
@@ -122,6 +138,9 @@ function resolvePremiumAcquisitionUnderwritingV1JobSurface({
   if (!isIsoTimestamp(resolvedAt)) issues.push('JOB_START_TIMESTAMP_REQUIRED');
   if (!['underwriting', 'screening'].includes(normalizedReportType)) {
     issues.push('SUPPORTED_REPORT_TYPE_REQUIRED');
+  }
+  if (!ASSIGNMENT_SCOPES.has(normalizedAssignmentScope)) {
+    issues.push('SUPPORTED_ASSIGNMENT_SCOPE_REQUIRED');
   }
   if (!KNOWN_SURFACE_VERSIONS.has(requested)) {
     issues.push('UNKNOWN_REPORT_SURFACE_VERSION');
@@ -146,8 +165,15 @@ function resolvePremiumAcquisitionUnderwritingV1JobSurface({
     : BASE_ACQUISITION_UNDERWRITING_SURFACE_VERSION;
 
   let status = 'base_surface_assigned';
-  if (premiumSurfaceAssigned) status = 'premium_surface_assigned_internal_test';
+  if (premiumSurfaceAssigned) {
+    status = normalizedAssignmentScope === EXTERNAL_JOB_START_ASSIGNMENT_SCOPE
+      ? 'premium_surface_assigned_external_job_start'
+      : 'premium_surface_assigned_internal_test';
+  }
   else if (issues.length > 0) status = 'surface_assignment_rejected_fail_closed';
+  const externalPremiumPromiseEstablished =
+    premiumSurfaceAssigned &&
+    normalizedAssignmentScope === EXTERNAL_JOB_START_ASSIGNMENT_SCOPE;
 
   return deepFreeze({
     source: JOB_SURFACE_AUTHORITY_SOURCE,
@@ -160,13 +186,14 @@ function resolvePremiumAcquisitionUnderwritingV1JobSurface({
     capabilityEnabledAtResolution: capability,
     premiumSurfaceRequested: premiumRequested,
     premiumSurfaceAssigned,
-    assignmentScope: INTERNAL_ASSIGNMENT_SCOPE,
+    assignmentScope: normalizedAssignmentScope,
     status,
     valid: issues.length === 0,
     immutable: true,
     resolvedAt: isIsoTimestamp(resolvedAt) ? text(resolvedAt) : null,
-    externalPremiumPromiseEstablished: false,
+    externalPremiumPromiseEstablished,
     externalPublicationAllowed: false,
+    premiumCertificationRequired: externalPremiumPromiseEstablished,
     coreDeliveryEligibilityChanged: false,
     reportPublicationBlocker: false,
     customerDocumentFailure: false,
@@ -200,6 +227,10 @@ const PREMIUM_ACQUISITION_UNDERWRITING_V1_JOB_SURFACE_AUTHORITY_CONTRACT =
       PREMIUM_ACQUISITION_UNDERWRITING_V1_SURFACE_VERSION,
     capabilityFlag: PREMIUM_ACQUISITION_UNDERWRITING_V1_CAPABILITY_FLAG,
     assignmentScope: INTERNAL_ASSIGNMENT_SCOPE,
+    supportedAssignmentScopes: [
+      INTERNAL_ASSIGNMENT_SCOPE,
+      EXTERNAL_JOB_START_ASSIGNMENT_SCOPE,
+    ],
     immutable: true,
     externalPremiumPromiseEstablished: false,
     externalPublicationAllowed: false,
@@ -213,6 +244,7 @@ const PREMIUM_ACQUISITION_UNDERWRITING_V1_JOB_SURFACE_AUTHORITY_CONTRACT =
   });
 
 export {
+  EXTERNAL_JOB_START_ASSIGNMENT_SCOPE,
   INTERNAL_ASSIGNMENT_SCOPE,
   JOB_SURFACE_AUTHORITY_SOURCE,
   JOB_SURFACE_AUTHORITY_VERSION,
