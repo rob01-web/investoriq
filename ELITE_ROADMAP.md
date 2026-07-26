@@ -1,7 +1,7 @@
 # InvestorIQ Product Roadmap
 
 Status: Active
-Updated: July 25, 2026
+Updated: July 26, 2026
 
 ## Controlling Documents
 
@@ -21,6 +21,19 @@ InvestorIQ has two distinct report products:
 The immediate product objective is Premium Acquisition Underwriting V1. It must materially deepen the current Underwriting Report without reopening the stabilized pipeline.
 
 ## Current Priority: Premium Acquisition Underwriting V1
+
+### Implementation checkpoint
+
+The internal-test implementation is complete through model validation, guarded rendering, observe-only quality, representative PDF certification, disconnected internal certification, and internal-only job-surface isolation.
+
+The premium capability is not externally active. No production worker consumes the internal surface receipt, and no external premium enforcement exists.
+
+Next boundary:
+
+1. Separately characterize and integrate immutable job-start surface selection with the worker.
+2. Prove existing jobs and Screening remain unchanged.
+3. Separately integrate external premium certification and no-silent-downgrade enforcement.
+4. Activate only through an explicit launch decision after protected replays pass.
 
 ### Product outcome
 

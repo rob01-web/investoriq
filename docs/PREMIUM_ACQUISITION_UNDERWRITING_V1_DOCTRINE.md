@@ -469,6 +469,31 @@ Full capital-structure and refinance underwriting remains a later governed produ
 
 Premium V1 must not pre-empt that authority with hardcoded assumptions.
 
+## 15A. Implementation Status Receipt — July 26, 2026
+
+This status receipt records implementation progress and does not amend the authority boundaries in this doctrine.
+
+Completed:
+
+- Default-off characterization shield.
+- Consume-only receipt map and deterministic analysis.
+- Validated premium expansion model.
+- Guarded renderer insertion with base-path equivalence.
+- Observe-only completeness receipt.
+- Representative internal PDF composition certified by the unchanged PDF Boss.
+- Disconnected internal-test certification.
+- Internal-only job-surface receipt authority and integration isolation.
+- Exact field-level provenance for merged renovation-row evidence.
+
+Not started:
+
+- Production worker persistence or consumption of the premium job-surface receipt.
+- External premium certification enforcement.
+- External feature activation.
+- Any change to Delivery Gate, publication, Manifest, billing, credits, remedies, or Screening.
+
+The next implementation boundary remains item 13 of the required sequence, preceded by the unfinished production portion of item 12: separately bounded worker/job-start surface integration, then separately reviewed external premium enforcement. Neither is authorized implicitly by the internal-test closeout.
+
 ## 16. Definition of Done
 
 Premium Acquisition Underwriting V1 is launch-ready only when:

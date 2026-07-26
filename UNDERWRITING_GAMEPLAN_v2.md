@@ -39,6 +39,34 @@ Protected systems:
 - Screening.
 - Existing PDF Boss doctrine.
 
+## Current Implementation Closeout — July 26, 2026
+
+The internal-test Premium Acquisition Underwriting V1 build is complete through the protected surface-receipt isolation boundary.
+
+Completed and protected:
+
+- Phase 0 doctrine and default-off characterization.
+- Phase 1 consume-only model skeleton.
+- Phase 2 renovation and market source-authority repairs, including field-level renovation-row provenance preservation.
+- Phase 3 governed deterministic receipt mapping and calculations.
+- Phase 4 independent model validation and lineage proof.
+- Phase 5 one guarded renderer insertion with flag-off equivalence.
+- Phase 6 observe-only completeness and disconnected internal-test certification.
+- Phase 7 representative multi-page PDF composition under the unchanged PDF Boss.
+- Internal-only report-surface receipt authority and integration isolation proof.
+
+Current authority remains:
+
+```text
+assignment_scope: internal_test_only
+external_premium_activation: false
+worker_integration: not_started
+external_underwriting_enforcement: not_started
+delivery_or_publication_authority_changed: false
+```
+
+The next boundary is the unfinished external portion of Phase 8. It requires a separately bounded worker/job-start integration patch followed by separately reviewed external premium certification and enforcement. Those changes are not authorized by completion of the internal-test phases and may not be combined with feature activation.
+
 ## Phase 0: Doctrine and Characterization Shield
 
 ### Deliverables
@@ -240,6 +268,8 @@ Page-by-page visual and extraction-based certification passes on sparse, complet
 ## Phase 8: Surface-Version Authority and External Enforcement
 
 Add an immutable job-start surface-version receipt.
+
+Status: internal-only receipt resolution and isolation proof are complete. Persistence or consumption by the production worker has not started.
 
 External premium activation requires:
 

@@ -1,7 +1,7 @@
 # Premium Underwriting Level-Up Summary
 
 Status: Active summary
-Updated: July 25, 2026
+Updated: July 26, 2026
 
 ## Decision
 
@@ -21,6 +21,23 @@ The current Underwriting Report will be expanded through a consume-only Premium 
 Full doctrine: [PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md](PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md)
 
 Execution plan: [UNDERWRITING_GAMEPLAN_v2.md](../UNDERWRITING_GAMEPLAN_v2.md)
+
+## Current Closeout
+
+Premium Acquisition Underwriting V1 is complete through the internal-test surface-receipt isolation boundary:
+
+- Canonical consume-only receipt mapping and deterministic analysis: complete.
+- Independent premium model validation: complete.
+- Guarded renderer insertion and flag-off equivalence: complete.
+- Observe-only completeness: complete.
+- Representative 16-page internal PDF composition under the unchanged PDF Boss: certified.
+- Disconnected internal-test premium certification: complete.
+- Internal-only job-surface authority and base/premium isolation proof: complete.
+- Renovation-row field-level evidence provenance: preserved.
+
+The feature remains inactive. No worker, Delivery Gate, publication, Manifest, billing, credit, remedy, or Screening authority changed.
+
+The next boundary is Phase 8 external integration: first persist and consume the immutable job-start surface receipt through a separately bounded worker integration, then add separately reviewed external premium certification and enforcement. External activation remains a later explicit decision.
 
 ## Why
 
