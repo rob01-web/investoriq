@@ -1,4 +1,7 @@
 import crypto from 'crypto';
+import {
+  resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt,
+} from '../_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -277,6 +280,39 @@ export default async function handler(req, res) {
     }
 
     const jobRow = Array.isArray(claimedJob) ? claimedJob[0] : claimedJob;
+    const { data: claimedSurfaceJob, error: claimedSurfaceJobError } =
+      await supabase
+        .from('analysis_jobs')
+        .select('id, user_id, created_at, report_type')
+        .eq('id', jobRow.id)
+        .maybeSingle();
+    if (claimedSurfaceJobError || !claimedSurfaceJob?.id) {
+      return res.status(500).json({
+        ok: false,
+        error: 'CLAIMED_JOB_SURFACE_CONTEXT_UNAVAILABLE',
+      });
+    }
+    try {
+      await resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
+        supabaseAdmin: supabase,
+        job: claimedSurfaceJob,
+        capabilityEnabled:
+          process.env.PREMIUM_ACQUISITION_UNDERWRITING_V1 || false,
+        activationStartedAt:
+          process.env.PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT ||
+          null,
+        resolvedAt: new Date().toISOString(),
+      });
+    } catch (surfaceReceiptError) {
+      console.error(
+        'Claimed job surface receipt failed:',
+        surfaceReceiptError?.message || surfaceReceiptError,
+      );
+      return res.status(500).json({
+        ok: false,
+        error: 'CLAIMED_JOB_SURFACE_RECEIPT_FAILED',
+      });
+    }
     console.log('Claimed job:', {
       id: jobRow?.id,
       attempts: jobRow?.attempts,

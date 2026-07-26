@@ -114,6 +114,10 @@ const workerSource = readFileSync(
   new URL('../../api/admin-run-worker.js', import.meta.url),
   'utf8',
 );
+const claimRouteSource = readFileSync(
+  new URL('../../api/admin/run-eligible-jobs-once.js', import.meta.url),
+  'utf8',
+);
 const generatorSource = readFileSync(
   new URL('../../api/_lib/generate-client-report-impl.js', import.meta.url),
   'utf8',
@@ -125,6 +129,28 @@ assert.match(
 assert.match(
   workerSource,
   /PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT/,
+);
+const canonicalClaimIndex = claimRouteSource.indexOf(
+  "supabase.rpc('claim_next_job')",
+);
+const claimedReceiptIndex = claimRouteSource.indexOf(
+  'resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({',
+  canonicalClaimIndex,
+);
+const claimedResponseIndex = claimRouteSource.indexOf(
+  'claimed_job_id: jobRow.id',
+  canonicalClaimIndex,
+);
+assert.ok(canonicalClaimIndex > 0);
+assert.ok(claimedReceiptIndex > canonicalClaimIndex);
+assert.ok(claimedResponseIndex > claimedReceiptIndex);
+assert.match(
+  claimRouteSource,
+  /\.select\('id, user_id, created_at, report_type'\)/,
+);
+assert.match(
+  claimRouteSource,
+  /CLAIMED_JOB_SURFACE_RECEIPT_FAILED/,
 );
 assert.match(
   generatorSource,
