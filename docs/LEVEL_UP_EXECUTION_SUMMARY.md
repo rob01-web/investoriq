@@ -54,9 +54,19 @@ Current state:
 
 ```text
 repository_readiness: READY_NOT_ACTIVATED
-capability_default: false
-activation_timestamp_default: unset
+repository_capability_default: false
+repository_activation_timestamp_default: unset
 external_activation: explicit deployment decision required
+```
+
+Operational receipt, July 26, 2026:
+
+```text
+flag_off_release: deployed_and_healthy
+controlled_activation_attempt: rolled_back_before_activation_boundary
+premium_capability: false
+premium_jobs_assigned_during_attempt: none
+live_retest_37: pending_authenticated_browser_session
 ```
 
 Activation and rollback are governed by

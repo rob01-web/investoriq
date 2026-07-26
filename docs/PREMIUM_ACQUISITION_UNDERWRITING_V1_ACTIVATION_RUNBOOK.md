@@ -118,9 +118,20 @@ already promised premium jobs.
 ```text
 repository_implementation: complete
 repository_readiness: READY_NOT_ACTIVATED
-live_environment_inspected: false
-live_environment_changed: false
-deployment_performed: false
+live_environment_inspected: true
+live_environment_changed: true
+flag_off_release_deployment: dpl_Hocip6Ut67oh7CV5SkiyitjGzkx7
+activation_configuration_deployment: dpl_8eWdTPmJXGDKMXvcXc497ueEFbGx
+activation_boundary: 2026-07-26T13:16:22.657Z
+safe_rollback_deployment: dpl_FPgzKBWA94MbzMEkQ1dP59C2cbGJ
+rollback_ready_at: 2026-07-26T13:10:50.810Z
+premium_capability_enabled: false
 feature_activated: false
 live_retest_run: false
+live_retest_status: blocked_pending_authenticated_browser_session
 ```
+
+The activation configuration was superseded by the safe rollback deployment
+before its future activation boundary. Therefore no job became eligible for
+Premium V1 during this activation attempt. The activation timestamp may remain
+configured while capability is `false`; it has no assignment authority.
