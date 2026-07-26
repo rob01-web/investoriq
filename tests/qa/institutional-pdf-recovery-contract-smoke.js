@@ -20,6 +20,26 @@ const recoverableCertification = {
 
 assert.equal(isInstitutionalPdfRecoveryEligible(recoverableCertification), true);
 assert.ok(INSTITUTIONAL_PDF_RECOVERABLE_CODES.includes("PDF_APPROVED_NUMBER_NOT_CERTIFIED"));
+assert.ok(INSTITUTIONAL_PDF_RECOVERABLE_CODES.includes("PDF_TABLE_CONTINUATION_HEADER_MISSING"));
+
+const retest38RecoverableCertification = {
+  ok: false,
+  customer_document_failure: false,
+  issues: [
+    { code: "PDF_NEARLY_BLANK_PAGES" },
+    { code: "PDF_ORPHANED_HEADINGS" },
+    { code: "PDF_TABLE_CONTINUATION_HEADER_MISSING" },
+    { code: "PDF_NUMERIC_COLUMN_MISALIGNMENT" },
+    { code: "PDF_REQUIRED_FINANCIAL_FACTS_MISSING" },
+    { code: "PDF_APPROVED_TABLE_NOT_CERTIFIED" },
+    { code: "PDF_APPROVED_NUMBER_NOT_CERTIFIED" },
+  ],
+};
+assert.equal(
+  isInstitutionalPdfRecoveryEligible(retest38RecoverableCertification),
+  true,
+  "RETEST 38's presentation-only incident set must receive the one bounded recomposition attempt",
+);
 
 for (const code of [
   "PDF_BYTES_INVALID",
@@ -40,6 +60,7 @@ const recovery = buildInstitutionalPdfRecoveryHtml({
   certification: recoverableCertification,
 });
 assert.match(recovery.html, /data-iq-pdf-recovery="conservative-v1"/);
+assert.match(recovery.html, /thead \{ display: table-header-group !important; \}/);
 assert.ok(recovery.html.includes(approvedHtml.replace("</head>", "")) === false);
 assert.match(recovery.html, /<h1>Acquisition Memorandum<\/h1><p>\$864,000<\/p>/);
 assert.equal(recovery.receipt.approvedSurfaceChanged, false);
