@@ -31,7 +31,7 @@ Vercel build is triggered. `main` is untouched.
 
 ## 1. STAGE 1 - REPOSITORY CENSUS
 
-**Stage status:** COMPLETE (with one declared enumeration gap, see 1.7)
+**Stage status:** COMPLETE (with one declared enumeration gap, see 1.6)
 
 ### 1.1 Repository state
 
@@ -79,7 +79,7 @@ path below is recorded with its blob SHA lineage available at that commit.
 | Class | Count (tracked) |
 | --- | --- |
 | Human-authored source (JS/JSX) | ~164 |
-| Tests / QA harnesses | ~95 (see gap in 1.7) |
+| Tests / QA harnesses | ~95 (see gap in 1.6) |
 | Configuration / build | 12 |
 | Database migrations | 6 |
 | Doctrine / docs (Markdown) | 13 active + large archive |
@@ -130,15 +130,16 @@ Stage 3.** No conclusions about test coverage may be drawn until this is closed.
 
 Legend: `[ ]` UNINSPECTED · `[x]` INSPECTED · `[~]` PARTIAL
 
-### 2.1 S1 - Entrypoints & routing (7)
+### 2.1 S1 - Entrypoints & routing (7) - COMPLETE
 
-- [ ] `api/generate-client-report.js` (89 B)
-- [ ] `api/checkout-session.js` (933 B)
-- [ ] `api/create-checkout-session.js` (3,984 B)
-- [ ] `api/legal-acceptance.js` (3,402 B)
-- [ ] `api/webhook.js` (6,136 B)
-- [ ] `vercel.json` (464 B)
-- [ ] `.github/workflows/worker-kick.yml` (833 B)
+- [x] `api/generate-client-report.js` (89 B) - Stage 2
+- [x] `api/checkout-session.js` (933 B) - Stage 2
+- [x] `api/create-checkout-session.js` (3,984 B) - Stage 2
+- [x] `api/legal-acceptance.js` (3,402 B) - Stage 2
+- [x] `api/webhook.js` (6,136 B) - Stage 2
+- [x] `vercel.json` (464 B) - Stage 2
+- [x] `.github/workflows/worker-kick.yml` (833 B) - Stage 2
+- [x] `api/_lib/generate-client-report-handler.js` (145 B) - Stage 2 (dispatch shim, pulled forward from S2)
 
 ### 2.2 S2 - Underwriting core library `api/_lib/` (90)
 
@@ -173,7 +174,7 @@ Legend: `[ ]` UNINSPECTED · `[x]` INSPECTED · `[~]` PARTIAL
 - [ ] `document-treatment-authority.js` (33,245 B)
 - [ ] `final-pdf-publication-quality-boss.js` (63,454 B)
 - [ ] `full-underwriting-state.js` (4,666 B)
-- [ ] `generate-client-report-handler.js` (145 B)
+- [x] `generate-client-report-handler.js` (145 B) - Stage 2
 - [ ] `generate-client-report-impl.js` (428,167 B)
 - [ ] `institutional-due-diligence-completion-handoff-contract.js` (6,490 B)
 - [ ] `institutional-due-diligence-coverage-classification-contract.js` (6,452 B)
@@ -421,9 +422,134 @@ Legend: `[ ]` UNINSPECTED · `[x]` INSPECTED · `[~]` PARTIAL
 
 ## 3. PROVEN FINDINGS LEDGER
 
-No proven findings recorded yet. Stage 1 is structural census only; nothing below the
-file-listing level has been read. Structural observations in 1.5 are explicitly **not**
-findings until the underlying files are read and cited.
+Every finding below is derived from source read at HEAD `33dac6f9`. Nothing is inferred
+from chat memory. Severity: **BLOCKER** = must fix before launch, **HIGH** = fix before
+charging customers at volume, **MEDIUM** = fix soon, **LOW** = hygiene.
+
+### Stage 2 findings (S1 Entrypoints & routing)
+
+#### F-001 - BLOCKER - `api/checkout-session.js` is unauthenticated and leaks user IDs
+
+`api/checkout-session.js` exposes a public GET endpoint that accepts any `session_id` and
+returns `session.metadata` verbatim, plus `productType`. There is no auth check, no
+ownership check, and no allow-listing of returned metadata fields. `create-checkout-session.js`
+writes `metadata.userId` into every Stripe session. Therefore any party holding or guessing
+a Stripe checkout session id can retrieve the internal Supabase `userId` and purchase type
+of another customer.
+
+**Evidence:** `api/checkout-session.js` returns `metadata: session.metadata || {}`;
+`api/create-checkout-session.js` sets `metadata: { userId, productType, quantity }`.
+
+#### F-002 - BLOCKER - `api/legal-acceptance.js` accepts unauthenticated identity claims
+
+Both the GET and POST paths take `userId` straight from the request (`req.query` / `req.body`)
+with no bearer-token verification. On POST the server then calls
+`supabase.auth.admin.getUserById(userId)` and stamps the **real** user email, IP and user agent
+onto a `legal_acceptances` row. An unauthenticated caller can therefore forge a legally
+meaningful disclosure acceptance on behalf of any user, correctly attributed to that user's
+email. GET similarly discloses whether an arbitrary user has accepted.
+
+**Evidence:** `const params = req.method === 'GET' ? (req.query || {}) : (req.body || {}); const { userId, policyTextHash } = params;`
+followed by an unconditional insert. No session/JWT validation anywhere in the file.
+
+#### F-003 - HIGH - Legal acceptance trusts the client-supplied policy hash
+
+The file's own comment states the server "should compute POLICY_TEXT_HASH from the canonical
+disclosures text" and that accepting `policyTextHash` from the client is a "compatibility
+bridge". It is still the live behaviour. `policy_text_hash` is written from client input, so
+the stored hash does not prove what text the user actually saw. That defeats the evidentiary
+purpose of the record.
+
+**Evidence:** `api/legal-acceptance.js`, POLICY_KEY/POLICY_VERSION are server constants but
+`policy_text_hash: policyTextHash` comes from the request.
+
+#### F-004 - HIGH - Legal acceptance returns a fabricated timestamp on duplicate
+
+On unique-violation (`error.code === '23505'`) the handler returns
+`accepted_at: new Date().toISOString()` - the current time - rather than reading the stored
+acceptance timestamp. The API reports a false acceptance date for every repeat acceptance.
+
+**Evidence:** `api/legal-acceptance.js`, duplicate branch.
+
+#### F-005 - HIGH - `worker-kick.yml` masks worker failures and truncates long runs
+
+The scheduled workflow runs every 5 minutes with `timeout-minutes: 2` and calls two endpoints
+with `curl -sS` (no `-f`, no `--max-time`).
+
+1. `curl -sS` exits 0 on HTTP 500. Any worker failure returns a green workflow run, so the
+   scheduler provides zero failure signal.
+2. `api/admin-run-worker.js` is configured with `maxDuration: 300` in `vercel.json`, but the
+   GitHub job is killed at 120 seconds. Whenever the worker legitimately runs past two
+   minutes, GitHub terminates the step and the connection, while the Vercel function keeps
+   executing. This is precisely the failure shape that produces "job ran but the result was
+   never recorded".
+
+**Evidence:** `.github/workflows/worker-kick.yml` vs `vercel.json` `functions` block.
+
+#### F-006 - HIGH - Function duration budget contradicts the worker design
+
+`vercel.json` grants `api/admin-run-worker.js` 300 s but caps every other function, including
+`api/admin/run-eligible-jobs-once.js` and the entire report generation path
+(`api/generate-client-report.js` -> `_lib/generate-client-report-handler.js` ->
+`_lib/generate-client-report-impl.js`, 428 KB), at 60 s. The full underwriting report path is
+the most expensive operation in the product and has the tighter budget.
+
+**Evidence:** `vercel.json` `"api/**/*.js": { "maxDuration": 60 }`; three-hop dispatch chain
+confirmed by reading all three files (the first two are pure re-export shims with no logic).
+
+#### F-007 - MEDIUM - Two competing sources of truth for purchase quantity
+
+`create-checkout-session.js` writes `metadata.quantity` AND enables
+`adjustable_quantity { minimum: 1, maximum: 5 }`, so the customer can change quantity after
+the metadata is written. `webhook.js` ignores `metadata.quantity` entirely and instead calls
+`stripe.checkout.sessions.listLineItems(sessionId, { limit: 10 })`, then reads only
+`data[0].quantity`. The webhook's choice is the safer one, but the stale `metadata.quantity`
+remains written and any future consumer of it will be wrong. Additionally, only the first
+line item is counted; a multi-line-item session would silently under-grant entitlements.
+
+**Evidence:** `api/create-checkout-session.js` metadata block; `api/webhook.js` line-item lookup.
+
+#### F-008 - MEDIUM - Synthetic Stripe session ids are written into `report_purchases`
+
+For quantity N > 1 the webhook fabricates ids of the form `${sessionId}#2`, `${sessionId}#3`,
+etc. and stores them in `report_purchases.stripe_session_id`. Those values do not exist in
+Stripe. Any reconciliation, refund matching, or support lookup that joins that column back to
+Stripe will fail for every entitlement after the first.
+
+**Evidence:** `api/webhook.js`,
+`expectedSessionIds = Array.from({ length: quantity }, (_v, i) => i === 0 ? sessionId : `+"`${sessionId}#${i + 1}`"+`)`.
+
+#### F-009 - MEDIUM - Webhook idempotency is read-then-write, not atomic
+
+Idempotency relies on inserting `event.id` into `stripe_events`. On duplicate the handler
+deliberately continues if `existingRows.length < quantity`, then re-reads and inserts the
+missing `report_purchases` rows. There is no transaction and no advisory lock between the
+read and the write, so two concurrent Stripe retries of the same event can both observe an
+incomplete row set and both insert. Whether this actually double-grants depends on a unique
+constraint on `report_purchases.stripe_session_id`, which is **not** established by any of the
+six migrations enumerated in 2.7 by filename alone.
+
+**Status:** partially proven. The race is proven from application code; the mitigating DB
+constraint is unverified. **Resolution deferred to Stage 8 (migrations & RLS).**
+
+**Evidence:** `api/webhook.js`, `loadExistingPurchases()` then `.insert(purchaseRows)`.
+
+#### F-010 - LOW - Inconsistent environment-variable initialisation discipline
+
+`api/create-checkout-session.js` validates its Stripe and Supabase env vars and returns a
+structured `{ error, missing: [...] }`. `api/webhook.js`, `api/checkout-session.js` and
+`api/legal-acceptance.js` instantiate their Stripe/Supabase clients at module scope with no
+validation, so a missing variable surfaces as an opaque cold-start crash. Note the tracked
+root file literally named `nce Vercel function env init fail-closed`, which appears to be the
+truncated remains of an abandoned attempt to standardise exactly this.
+
+#### F-011 - LOW - `vercel.json` route table contains a redundant rule
+
+After `{ "handle": "filesystem" }`, the rule `{ "src": "^/api/(.*)$", "dest": "/api/$1" }` is a
+no-op for real function files. The only meaningful custom rule is the
+`/api/admin/quality-incidents` rewrite onto `queue-metrics?admin_route=quality_incidents`,
+which means the 51 KB `queue-metrics.js` is multiplexing two distinct admin surfaces behind
+one function. Flagged for Stage 3.
 
 ---
 
@@ -432,13 +558,13 @@ findings until the underlying files are read and cited.
 | Stage | Scope | Status | Files inspected | Cumulative |
 | --- | --- | --- | --- | --- |
 | 1 | Repository census, classification, checklist | COMPLETE | 0 (listing only) | 0 |
-| 2 | S1 Entrypoints & routing + pipeline dispatch seams | NEXT | - | - |
-| 3 | Close `tests/qa` enumeration gap, then S4 worker/queue | PLANNED | - | - |
+| 2 | S1 Entrypoints & routing + dispatch shims | COMPLETE | 8 | 8 |
+| 3 | Close `tests/qa` enumeration gap, then S4 worker/queue (`admin-run-worker.js`, `queue-metrics.js`, `run-eligible-jobs-once.js`, `jobs/request-revision.js`) | NEXT | - | - |
 | 4 | S2 underwriting core - contract layer | PLANNED | - | - |
 | 5 | S2 underwriting core - deterministic analysis layer | PLANNED | - | - |
 | 6 | S2 - memo v1 vs v2 lane resolution | PLANNED | - | - |
 | 7 | S3 ingest & parsing | PLANNED | - | - |
-| 8 | S7 migrations & RLS | PLANNED | - | - |
+| 8 | S7 migrations & RLS (also resolves F-009) | PLANNED | - | - |
 | 9 | S5 frontend surfaces | PLANNED | - | - |
 | 10 | S10 doctrine reconciliation vs code reality | PLANNED | - | - |
 | 11 | Synthesis - 12-deliverable launch report | PLANNED | - | - |
