@@ -331,7 +331,7 @@ function NoticeBox({ type = 'info', children }) {
 // MAIN COMPONENT
 export default function Dashboard() {
   const { toast } = useToast();
-  const { user, profile, fetchProfile, signOut } = useAuth();
+  const { user, profile, session, fetchProfile, signOut } = useAuth();
 const DASHBOARD_DIAG_MINIMAL = false;
   const DISMISSED_JOBS_KEY = "investoriq_dismissed_jobs";
   const loadDismissedJobs = () => {
@@ -667,15 +667,21 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const handleCheckout = async () => {
     try {
       setCheckoutLoading(true);
+      const accessToken = session?.access_token || '';
+      if (!accessToken) {
+        toast({ title: 'Session expired', description: 'Please sign in again.', variant: 'destructive' });
+        return;
+      }
 
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           productType: selectedReportType,
           quantity: 1,
-          userId: profile?.id,
-          userEmail: user?.email,
         }),
       });
 
@@ -907,19 +913,18 @@ useEffect(() => {
   const hasAvailableReport = availableReportsCount >= 1;
   const step2Locked = !propertyName.trim();
   const step3Locked = !propertyName.trim() || !hasAvailableReport || !hasRequiredUploads || !acknowledged;
-  const policyText = 'InvestorIQ produces document-backed and framework-constrained underwriting, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. No invented data or gap-filling is performed.';
-  const computePolicyTextHash = async () => {
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(policyText);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  };
   const recordLegalAcceptance = async () => {
-    if (!profile?.id) return false;
-    const policyTextHash = await computePolicyTextHash();
+    const accessToken = session?.access_token || '';
+    if (!accessToken) return false;
     try {
-      const res = await fetch('/api/legal-acceptance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id, policyTextHash }) });
+      const res = await fetch('/api/legal-acceptance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({}),
+      });
       if (!res.ok) { console.error('Legal acceptance API failed:', await res.text()); return { ok: false }; }
       const data = await res.json().catch(() => ({}));
       const acceptedAt = data?.accepted_at || data?.acceptedAt || null;
@@ -927,11 +932,12 @@ useEffect(() => {
     } catch (err) { console.error('Legal acceptance error:', err); return false; }
   };
   const fetchLegalAcceptance = async () => {
-    if (!profile?.id) return null;
-    const policyTextHash = await computePolicyTextHash();
+    const accessToken = session?.access_token || '';
+    if (!accessToken) return null;
     try {
-      const params = new URLSearchParams({ userId: profile.id, policyTextHash });
-      const res = await fetch(`/api/legal-acceptance?${params.toString()}`);
+      const res = await fetch('/api/legal-acceptance', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (!res.ok) { console.error('Legal acceptance read failed:', await res.text()); return null; }
       const data = await res.json().catch(() => ({}));
       return data?.accepted_at || data?.acceptedAt || null;
@@ -2094,7 +2100,6 @@ useEffect(() => {
     </>
   );
 }
-
 
 
 

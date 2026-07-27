@@ -1,5 +1,27 @@
 # Premium Acquisition Underwriting V1 Doctrine
 
+## H0 Current Authority Status - July 27, 2026
+
+This doctrine is subordinate to
+[INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md](INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md)
+and applies only to historical or future separately authorized Premium
+expansion work.
+
+Premium Acquisition Underwriting V1:
+
+- remains exactly false;
+- is not the simultaneous-launch Full Underwriting product;
+- is not a fallback for Full Underwriting;
+- cannot override V2/base Full Underwriting, Product Doctrine, Source Truth,
+  Publish-or-Collapse, customer remedies, or the H0 owner decisions;
+- cannot receive external assignment, activation, deployment, or customer
+  authority without a later explicit owner authorization.
+
+Any older statement describing Premium as the launch bridge, commercial launch
+objective, externally assignable surface, or `READY_NOT_ACTIVATED` next launch
+boundary is historical implementation evidence only. It does not authorize
+Premium activation or make Premium the launch lane.
+
 Status: Locked product and implementation doctrine
 Effective: July 25, 2026
 Applies to: InvestorIQ Underwriting Report expansion work

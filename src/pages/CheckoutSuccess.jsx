@@ -63,7 +63,7 @@ function PrimaryBtn({ children, onClick, style = {} }) {
 
 export default function CheckoutSuccess() {
   const { toast }              = useToast();
-  const { profile, fetchProfile } = useAuth();
+  const { profile, session, fetchProfile } = useAuth();
 
   const [status, setStatus]           = useState('loading');
   const [productType, setProductType] = useState('');
@@ -83,7 +83,16 @@ export default function CheckoutSuccess() {
           return;
         }
 
-        const res  = await fetch(`/api/checkout-session?session_id=${encodeURIComponent(sessionId)}`);
+        const accessToken = session?.access_token || '';
+        if (!accessToken) {
+          if (isMounted) setStatus('error');
+          return;
+        }
+
+        const res = await fetch(
+          `/api/checkout-session?session_id=${encodeURIComponent(sessionId)}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok || data?.payment_status !== 'paid') {
@@ -91,8 +100,8 @@ export default function CheckoutSuccess() {
           return;
         }
 
-        const localProductType = String(data?.metadata?.productType || '');
-        const localQuantity = Math.max(1, Number.parseInt(data?.metadata?.quantity, 10) || 1);
+        const localProductType = String(data?.productType || '');
+        const localQuantity = Math.max(1, Number.parseInt(data?.quantity, 10) || 1);
         if (isMounted) setProductType(localProductType);
         if (isMounted) setQuantity(localQuantity);
 

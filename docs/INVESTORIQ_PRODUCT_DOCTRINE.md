@@ -1,5 +1,35 @@
 # InvestorIQ Product Doctrine
 
+## H0 Owner and Authority Freeze - July 27, 2026
+
+The controlling H0 owner decisions are recorded in
+[INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md](INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md).
+That receipt controls current product name, pricing, launch composition, lane
+authority, supporting-document admission, remedies, and doctrine precedence.
+
+Where older text in this file conflicts with the H0 receipt, the H0 receipt
+controls. In particular:
+
+- Screening launches at $199.
+- Full Underwriting launches at $499.
+- The target launch bundle is approximately $699 for exactly two Screening
+  entitlements and one Full Underwriting entitlement.
+- Screening and Full Underwriting launch together, or neither launches.
+- V2/base is the only permitted Full Underwriting launch foundation.
+- Legacy Underwriting and Acquisition Memo V1 are historical only and cannot
+  supply factual authority.
+- Premium Acquisition Underwriting remains false, is not the launch lane, and
+  is not a fallback.
+- Full Underwriting is admitted only after accepted usable T12, accepted usable
+  Rent Roll, and at least one additional readable adjudicable support document
+  are established before entitlement consumption.
+- After generation begins, weak, irrelevant, incomplete, contradictory, or
+  unusable optional support cannot block a valid-core report. Only dependent
+  analysis may qualify, collapse, or omit.
+
+Older $299 Screening, $999 Underwriting, Premium-launch-bridge, Screening-first,
+and later-Full-Underwriting statements remain historical context only.
+
 InvestorIQ is a document-driven real estate decision engine that produces institutional-grade investment memoranda based strictly on uploaded source documents.
 
 ## Controlling Underwriting Doctrine

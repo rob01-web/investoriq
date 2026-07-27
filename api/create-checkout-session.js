@@ -1,6 +1,6 @@
 // api/create-checkout-session.js
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { resolveAuthenticatedActor } from "./_lib/authenticated-actor.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
@@ -57,7 +57,15 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const { productType, planKey, successUrl, cancelUrl, userId, userEmail, quantity } = req.body || {};
+    const auth = await resolveAuthenticatedActor(req);
+    if (!auth.ok) {
+      return res.status(auth.status).json({
+        error: auth.error,
+        ...(auth.missing ? { missing: auth.missing } : {}),
+      });
+    }
+
+    const { productType, planKey, quantity } = req.body || {};
     const normalizedQuantity = Math.max(1, Math.min(5, Number.parseInt(quantity, 10) || 1));
 
     const normalizedProductType = normalizeProductType({ productType, planKey });
@@ -81,18 +89,6 @@ export default async function handler(req, res) {
       });
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return res.status(500).json({
-        error: "Server misconfigured: missing Supabase env vars.",
-        missing: [
-          !supabaseUrl ? "SUPABASE_URL" : null,
-          !supabaseServiceKey ? "SUPABASE_SERVICE_ROLE_KEY" : null,
-        ].filter(Boolean),
-      });
-    }
-
     const baseUrl = process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
 
     const finalSuccessUrl = `${baseUrl}/dashboard?checkout=success`;
@@ -112,9 +108,10 @@ export default async function handler(req, res) {
       allow_promotion_codes: true,
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
+      client_reference_id: auth.actor.id,
+      ...(auth.actor.email ? { customer_email: auth.actor.email } : {}),
       metadata: {
-        // 🔒 webhook should trust THIS canonical value
-        userId: userId || "",
+        userId: auth.actor.id,
         productType: normalizedProductType || "",
         quantity: String(normalizedQuantity),
       },

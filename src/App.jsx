@@ -35,24 +35,38 @@ const FONTS = `
 
 //  DASHBOARD SWITCH (admin vs user) 
 function DashboardSwitch() {
-  const [ready, setReady]   = React.useState(false);
-  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [destination, setDestination] = React.useState('loading');
 
   React.useEffect(() => {
     let mounted = true;
     const run = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const adminEmail = "hello@investoriq.tech";
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      if (!token) {
+        if (mounted) setDestination('login');
+        return;
+      }
+
+      const response = await fetch('/api/checkout-session?auth_context=1', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!mounted) return;
-      setIsAdmin(user?.email === adminEmail);
-      setReady(true);
+      if (!response.ok) {
+        setDestination('login');
+        return;
+      }
+      const result = await response.json().catch(() => ({}));
+      setDestination(result?.destination === 'admin' ? 'admin' : 'customer');
     };
     run();
     return () => { mounted = false; };
   }, []);
 
-  if (!ready) return null;
-  return isAdmin ? <AdminDashboard /> : <Dashboard />;
+  if (destination === 'loading') return null;
+  if (destination === 'login') {
+    return <Navigate to="/login?next=/dashboard" replace />;
+  }
+  return destination === 'admin' ? <AdminDashboard /> : <Dashboard />;
 }
 
 //  LEGAL SHELL 

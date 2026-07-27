@@ -298,7 +298,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
 
 //  MAIN COMPONENT 
 export default function PricingPage() {
-  const { user } = useAuth();
+  const { session } = useAuth();
   const [loadingKey, setLoadingKey]   = useState(null);
   const [isAuthed, setIsAuthed]       = useState(false);
   const pricingConfig                  = getValidatedPriceConfig();
@@ -332,15 +332,21 @@ export default function PricingPage() {
       }
 
       setLoadingKey(productType);
+      const accessToken = session?.access_token || '';
+      if (!accessToken) {
+        window.location.href = `/login?next=/pricing`;
+        return;
+      }
 
       const res = await fetch('/api/create-checkout-session', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           productType,
           quantity,
-          userId:    user.id,
-          userEmail: user.email,
         }),
       });
 
