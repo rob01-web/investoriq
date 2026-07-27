@@ -8,7 +8,7 @@ Read before every stage. Append bounded evidence. Never delete or renumber findi
 
 ## Repository census and checklist status
 
-Remote Git tree enumeration is the authoritative tracked-file listing, equivalent to `git ls-files`; no local clone was available. The complete `tests/qa` inventory is closed at **151 tracked files**, 144 harness files plus 7 fixture files. The full path-level human-authored checklist remains controlling: `[ ]` uninspected, `[x]` inspected, `[~]` partial.
+Remote Git tree enumeration is the authoritative tracked-file listing, equivalent to `git ls-files`; no local clone was available. The complete `tests/qa` inventory is closed at **151 tracked files**, 144 harness files plus 7 fixtures. The full path-level human-authored checklist remains controlling: `[ ]` uninspected, `[x]` inspected, `[~]` partial.
 
 | Subsystem | Status | Behavior files inspected | Notes |
 |---|---:|---:|---|
@@ -21,42 +21,41 @@ Remote Git tree enumeration is the authoritative tracked-file listing, equivalen
 | S7 migrations/RLS | `[x]` | 19 | Stage 8 complete; base schema/storage definitions not present in repository |
 | S8 tests/QA | `[~]` | inventory complete | Behavior not executed; 151 entries inventoried |
 | S9 config/build | `[~]` | routing/timeouts | Full config stage pending |
-| S10 doctrine/archive | `[ ]` | 0 | Stage 10 |
+| S10 doctrine/archive | `[x]` | 84 doctrine/archive files classified | Archive semantic reachability reviewed; no runtime imports found |
 
 **Cumulative behavior files inspected: 109.** Census-only listings are not counted. Full path-level checklist remains controlling.
 
 ## Finding register
 
-Previously recorded findings F-001 through F-065 remain unchanged and `PROVEN`; their descriptions and evidence are preserved in Stages 2 through 8. Stage 9 adds:
+Previously recorded findings F-001 through F-071 remain unchanged and `PROVEN`; their descriptions and evidence are preserved in Stages 2 through 9. Stage 10 adds:
 
 | ID | Status | Severity | Owner | Finding | Doctrine impact | Evidence |
 |---|---|---|---|---|---|---|
-| F-066 | PROVEN | BLOCKER | frontend/customer-surface | Frontend collapses published-with-limitations, publication hold, and clean publication into Ready/Failed | Customer outcomes must distinguish blocked, limited, and clean publication | [Stage 09](investigation/STAGE-09-FRONTEND-AND-CUSTOMER-SURFACES.md) |
-| F-067 | PROVEN | HIGH | frontend/history | Active report history is split from dead ReportHistory page and dead page cannot download reports | One active history authority and working tenant-bound downloads are required | [Stage 09](investigation/STAGE-09-FRONTEND-AND-CUSTOMER-SURFACES.md) |
-| F-068 | PROVEN | HIGH | frontend/auth/admin | Dashboard has no explicit authentication route guard and admin routing depends on client-visible email comparison | Customer/admin boundaries need explicit authorization | [Stage 09](investigation/STAGE-09-FRONTEND-AND-CUSTOMER-SURFACES.md) |
-| F-069 | PROVEN | HIGH | frontend/state | Customer state is refresh-driven and can remain stale across purchase, failure, restoration, and publication | Paid and credit state must converge visibly | [Stage 09](investigation/STAGE-09-FRONTEND-AND-CUSTOMER-SURFACES.md) |
-| F-070 | PROVEN | HIGH | frontend/auth/billing/legal | Purchase and legal UI sends user-controlled identity fields | Actor identity must be server-derived | [Stage 09](investigation/STAGE-09-FRONTEND-AND-CUSTOMER-SURFACES.md) |
-| F-071 | PROVEN | HIGH | frontend/remediation | No active corrected-rerun, replacement-document, or revision-request customer path exists | Terminal failures need owned, linked remedies | [Stage 09](investigation/STAGE-09-FRONTEND-AND-CUSTOMER-SURFACES.md) |
+| F-072 | PROVEN | BLOCKER | doctrine/launch governance | Doctrine authority is duplicated and current operational status contradicts itself | One current authority and explicit status receipt are required | [Stage 10](investigation/STAGE-10-DOCTRINE-AND-ARCHIVE-RECONCILIATION.md) |
+| F-073 | PROVEN | HIGH | doctrine/archive hygiene | Archived doctrine remains semantically reachable and can pollute future authority decisions | Stale records must be explicitly non-authoritative | [Stage 10](investigation/STAGE-10-DOCTRINE-AND-ARCHIVE-RECONCILIATION.md) |
+| F-074 | PROVEN | HIGH | launch/SRE governance | The 99.999% publication objective has no enforceable implementation contract | Reliability objectives need denominator, SLO, error budget, and rollback rules | [Stage 10](investigation/STAGE-10-DOCTRINE-AND-ARCHIVE-RECONCILIATION.md) |
+| F-075 | PROVEN | HIGH | product identity/architecture | Doctrine and runtime do not share one terminology contract for report identity | One normalized identity must cross all boundaries | [Stage 10](investigation/STAGE-10-DOCTRINE-AND-ARCHIVE-RECONCILIATION.md) |
+| F-076 | PROVEN | HIGH | customer remediation | Remedy doctrine is ahead of executable customer remediation | Every terminal state needs an owned remedy path | [Stage 10](investigation/STAGE-10-DOCTRINE-AND-ARCHIVE-RECONCILIATION.md) |
 
-## Authority graph, customer-journey map, and remedy matrix
+## Doctrine hierarchy, matrices, and authority graph
 
-`pricing/dashboard selector` -> checkout API -> Stripe/webhook entitlement -> Dashboard entitlement count -> client upload gate -> staged object -> atomic job/file/consumption RPC -> queue -> worker -> canonical delivery decision/artifacts -> Dashboard active/failure/history surface -> signed report download. The active customer journey matrix, all 15 requested journeys, and remedy matrix are recorded in Stage 09.
+The controlling hierarchy, doctrine-to-runtime compliance matrix, archive reachability matrix, and six contradiction families are recorded in [Stage 10](investigation/STAGE-10-DOCTRINE-AND-ARCHIVE-RECONCILIATION.md). The single authority graph is:
 
-Customer outcome authority is not yet fully represented at the frontend boundary: canonical backend delivery decisions can be reduced to Ready/Failed, while restoration, limited publication, replacement, and revision state are separate or absent.
+`Product Doctrine` -> `Premium Doctrine` -> `Premium Activation Runbook` -> `canonical Source Truth / delivery / PDF Boss contracts` -> `worker publication enforcement` -> `customer/admin projections`. Archived ledgers and roadmaps are historical evidence only.
 
 ## Core-blocker matrix
 
-The constitutionally valid whole-report core blocker count remains **3 families**: missing/unusable T12, missing/unusable Rent Roll, and true core contradiction/system contract failure. Technical causes must retain distinct ownership and remedy.
+The constitutionally valid whole-report core blocker count remains **3 families**: missing/unusable T12, missing/unusable Rent Roll, and true core contradiction/system contract failure. Optional support, reconciliation variance, missing current debt, missing appraisal/renovation, and provider outage are not independent constitutional blockers.
 
 ## Launch-blocker summary
 
-**Current blocker count: 9:** F-001, F-002, F-012, F-013, F-041, F-049, F-050, F-061, F-066. F-009 remains `PROVEN`, not cleared. This is not launch approval.
+**Current blocker count: 10:** F-001, F-002, F-012, F-013, F-041, F-049, F-050, F-061, F-066, F-072. F-009 remains `PROVEN`, not cleared. This is not launch approval.
 
 ## Stage log
 
 | Stage | Scope | Status | New behavior files/entries | Cumulative behavior files |
 |---|---|---:|---:|---:|
-| 1 | Census/checklist | COMPLETE | 0 behavior files; full tree census | 0 |
+| 1 | Census/checklist | COMPLETE | 0 | 0 |
 | 2 | S1 entrypoints/routing | COMPLETE | 8 | 8 |
 | 3 | QA inventory + S4 worker/queue/revision | COMPLETE | 9 target/support entries; 151 QA entries | 17 |
 | 4 | S2 contract layer | COMPLETE | 18 | 35 |
@@ -65,8 +64,8 @@ The constitutionally valid whole-report core blocker count remains **3 families*
 | 7 | S3 ingest/parsing | COMPLETE | 11 | 76 |
 | 8 | S7 migrations/RLS, including F-009 | COMPLETE | 19 | 95 |
 | 9 | S5 frontend | COMPLETE | 14 | 109 |
-| 10 | S10 doctrine/archive | NEXT | - | - |
-| 11 | Final 12-deliverable synthesis | PLANNED | - | - |
+| 10 | S10 doctrine/archive | COMPLETE | 84 doctrine/archive files classified | 109 |
+| 11 | Final 12-deliverable synthesis | NEXT | - | - |
 
 ## F-009 status
 
@@ -74,8 +73,8 @@ The constitutionally valid whole-report core blocker count remains **3 families*
 
 ## Preliminary launch lane
 
-**Do not make Premium Acquisition Underwriting V1 the base Full Underwriting lane yet.** Preliminary base remains the existing **V2/base Underwriting lane**, pending Stage 10 doctrine/archive proof. Premium remains feature-flagged and externally certified.
+**Do not make Premium Acquisition Underwriting V1 the base Full Underwriting lane yet.** Preliminary base remains the existing **V2/base Underwriting lane**, pending Stage 11 synthesis and explicit remediation authorization. Premium remains feature-flagged and externally certified.
 
 ## Final conclusions
 
-Not yet available. Do not produce the final 12-deliverable report until all scheduled stages are complete and findings are classified.
+Not yet available. Do not produce the final 12-deliverable report until Stage 11 synthesis is complete and findings are classified.
