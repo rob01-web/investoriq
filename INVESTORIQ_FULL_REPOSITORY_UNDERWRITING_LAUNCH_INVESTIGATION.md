@@ -13,17 +13,17 @@ Remote Git tree enumeration is the authoritative tracked-file listing, equivalen
 | Subsystem | Status | Behavior files inspected | Notes |
 |---|---:|---:|---|
 | S1 entrypoints/routing | `[x]` | 8 | Complete |
-| S2 underwriting core | `[~]` | 50 | Contracts, deterministic layer, memo lanes; full dispatch/parser remains |
-| S3 ingest/parsing | `[ ]` | 0 | Stage 7 |
-| S4 worker/queue/revision | `[x]` | 7 | Stage 3 scope complete |
+| S2 underwriting core | `[~]` | 50 | Contracts, deterministic layer, memo lanes |
+| S3 ingest/parsing | `[~]` | 11 | Stage 7 bounded ingest batch; full parser tail remains |
+| S4 worker/queue/revision | `[x]` | 7 | Complete for Stage 3 scope |
 | S5 frontend | `[ ]` | 0 | Stage 9 |
-| S6 shared runtime | `[~]` | 0 direct | Only imported deterministic dependencies inspected |
-| S7 migrations/RLS | `[~]` | 2 support migrations | Stage 8 |
+| S6 shared runtime | `[~]` | 0 direct | Imported dependencies only |
+| S7 migrations/RLS | `[~]` | 3 support migrations | Full stage pending |
 | S8 tests/QA | `[~]` | inventory complete | Behavior not executed; 151 entries inventoried |
 | S9 config/build | `[~]` | routing/timeouts | Full config stage pending |
 | S10 doctrine/archive | `[ ]` | 0 | Stage 10 |
 
-**Cumulative behavior files inspected: 65.**
+**Cumulative behavior files inspected: 76.** Census-only listings are not counted. Full path-level checklist remains controlling.
 
 ## Finding register
 
@@ -71,7 +71,7 @@ Severity: `BLOCKER`, `HIGH`, `MEDIUM`, `LOW`. Every finding has stable ID, statu
 | F-038 | PROVEN | MEDIUM | capital plan/source binding | Timing ambiguity collapses the entire timing fact set | Optional ambiguity should constrain affected section | Stage 5 |
 | F-039 | PROVEN | MEDIUM | Premium/customer surface | Premium renderer and validated model use separate renderability schemas | Surface mapping needs one explicit boundary | Stage 5 |
 | F-040 | PROVEN | LOW | capital-plan policy | Objective capital comparisons expose no adequacy policy | Arithmetic and classification must stay separate | Stage 5 |
-| F-041 | PROVEN | BLOCKER | lane identity/dispatch | V1 and V2 share production identity while owning different schemas/sections | Full Underwriting promise must be immutable and unambiguous | [Stage 06](investigation/STAGE-06-MEMO-V1-V2-LANE-RESOLUTION.md) |
+| F-041 | PROVEN | BLOCKER | lane identity/dispatch | V1 and V2 share production identity while owning different schemas/sections | Full Underwriting promise must be immutable and unambiguous | Stage 6 |
 | F-042 | PROVEN | HIGH | V2 compatibility | V1 factual fallback logic remains reachable inside V2 contract path | Legacy facts must not override canonical Source Truth | Stage 6 |
 | F-043 | PROVEN | HIGH | lane schema | V2 renderer, V1 projection, and Premium model use different renderability schemas | Producer/renderer/certifier need one explicit schema | Stage 6 |
 | F-044 | PROVEN | HIGH | Premium activation/worker | Premium external failure has no governed base Full Underwriting fallback | Optional expansion must not erase valid base availability | Stage 6 |
@@ -79,18 +79,42 @@ Severity: `BLOCKER`, `HIGH`, `MEDIUM`, `LOW`. Every finding has stable ID, statu
 | F-046 | PROVEN | MEDIUM | QA/sample parity | Public sample/internal tests exercise direct helpers, not paid production dispatch | Samples cannot substitute for production-path proof | Stage 6 |
 | F-047 | PROVEN | MEDIUM | lane API | Similar `renderAcquisitionMemo` and `renderCompleteAcquisitionMemoV2Html` APIs invite wrong final-renderer use | One final renderer should be obvious | Stage 6 |
 | F-048 | PROVEN | LOW | Premium product definition | Premium renderer section set is narrower than Full Underwriting universe | Premium promise must state expansion vs complete report | Stage 6 |
+| F-049 | PROVEN | BLOCKER | ingest/classification | Rules classifier can misclassify core/support documents and has no tie-safe outcome | Ambiguity must fail closed to unclassified | [Stage 07](investigation/STAGE-07-DOCUMENT-INGEST-AND-PARSING.md) |
+| F-050 | PROVEN | BLOCKER | ingest/error classification | Unsupported types are skipped without durable parse failure or customer reason | Source defects must be actionable and distinguishable | Stage 7 |
+| F-051 | PROVEN | HIGH | extraction/evidence | PDF fallback has no page-level provenance and flattened text can be ambiguous | Audit facts need page/table lineage | Stage 7 |
+| F-052 | PROVEN | HIGH | ingest/persistence | Artifact writes and parse-status updates are non-transactional | Success must follow durable evidence persistence | Stage 7 |
+| F-053 | PROVEN | HIGH | ingest/provider | AI recovery has no retry count and can be the only remaining core path | Provider/system failure must be classified separately | Stage 7 |
+| F-054 | PROVEN | HIGH | spreadsheet ingest | Formula/display-value policy is unspecified | Spreadsheet facts need explicit value policy and cell lineage | Stage 7 |
+| F-055 | PROVEN | HIGH | ingest/Source Truth | Duplicate core uploads compete without source version/replacement semantics | Replacements need explicit deterministic authority | Stage 7 |
+| F-056 | PROVEN | MEDIUM | upload/classification | Upload gate relies on filename and declared client type before content validation | Filename is a hint, never core authority | Stage 7 |
+| F-057 | PROVEN | MEDIUM | support recovery | AI support candidate mixes source facts with derived fields | Derived values must remain visibly separate | Stage 7 |
+| F-058 | PROVEN | MEDIUM | core parser/usability | Fallback order can reject partial usable Rent Roll because optional market totals are absent | Partial valid core should be constrained, not overblocked | Stage 7 |
+| F-059 | PROVEN | MEDIUM | ingest/worker/remediation | Provider, unreadable-input, unsupported-type, and persistence failures collapse to generic missing-core outcomes | Remedy requires customer/system ownership distinction | Stage 7 |
+| F-060 | PROVEN | LOW | upload UI | Legacy UploadModal is dead; active upload behavior is elsewhere | Test evidence must follow active Dashboard path | Stage 7 |
 
-## Lane matrix
+## Ingest authority graph
 
-Detailed lane matrix is in [Stage 06](investigation/STAGE-06-MEMO-V1-V2-LANE-RESOLUTION.md). Preliminary status: Screening active and separate; legacy Underwriting active compatibility; Acquisition Memo V1 is a projection/presentation adapter; V2 is the current complete memo lane; Premium is staged/default-off and not the default base; IC is accepted by request resolver but has no canonical identity.
+`active Dashboard uploader` -> staged object + `analysis_job_files` -> server filename/type hint -> extraction engine (Textract, pdf-parse, Office XML, plain text) -> normalized text/table artifact -> deterministic T12/Rent Roll/support parser -> optional AI candidate recovery -> candidate diagnostics and parsed artifacts -> Source Truth core selection/support adjudication -> core usability state and constitutionally valid blockers -> downstream deterministic contracts.
 
-## Authority graph
+AI confidence, parser `validated`, filename, and document classification confidence are not authority. Source Truth admission is authority.
 
-`request/job type` -> type/mode resolver -> report implementation dispatch -> Source Truth -> receipt-only deterministic contracts -> V2 customer-surface/orchestrator -> deterministic QA/delivery decision -> PDF identity/certification -> publication/storage. Premium overlays Underwriting: job-start receipt -> external generation -> validated model -> Premium renderer/observer -> external certification -> worker enforcement. V1 remains a compatibility adapter, not a safe factual authority.
+## Core-blocker matrix
+
+The constitutionally valid whole-report core blocker count is **3 families**:
+
+1. **Missing or unusable T12**, including absence of an accepted EGI/OpEx/NOI bundle or a true T12 structural/equation failure.
+2. **Missing or unusable Rent Roll**, including absence of accepted unit/rent structure.
+3. **True core contradiction or system contract failure**, where the accepted T12/Rent Roll package cannot be treated as coherent or safely publishable.
+
+A reconciliation variance alone, optional support failure, missing current debt, missing appraisal/renovation, low AI confidence, provider outage, or unsupported optional document is not independently a constitutional whole-report blocker. Provider/persistence failures may surface as one of the three technical blocker families operationally, but their ownership must remain distinct.
+
+## Authority graph and lane status
+
+`request/job type` -> type/mode resolver -> report dispatch -> Source Truth -> deterministic receipt contracts -> V2 customer-surface/orchestrator -> QA/delivery -> PDF identity/certification -> publication/storage. Premium overlays Underwriting with a job-start receipt, validated model, renderer, observer, external certification, and worker enforcement. Legacy V1 remains a compatibility/presentation adapter, not factual authority.
 
 ## Launch-blocker summary
 
-**Current blocker count: 5:** F-001, F-002, F-012, F-013, F-041. High-severity lane/fallback/lineage findings remain open. F-009 and full migrations/RLS remain open for Stage 8.
+**Current blocker count: 7:** F-001, F-002, F-012, F-013, F-041, F-049, F-050. This is not launch approval. F-009 and full migrations/RLS remain open for Stage 8.
 
 ## Stage log
 
@@ -102,15 +126,15 @@ Detailed lane matrix is in [Stage 06](investigation/STAGE-06-MEMO-V1-V2-LANE-RES
 | 4 | S2 contract layer | COMPLETE | 18 | 35 |
 | 5 | S2 deterministic analysis | COMPLETE | 20 | 55 |
 | 6 | Memo V1 vs V2 lane resolution | COMPLETE | 10 | 65 |
-| 7 | S3 ingest/parsing | NEXT | - | - |
-| 8 | S7 migrations/RLS, including F-009 | PLANNED | - | - |
+| 7 | S3 ingest/parsing | COMPLETE | 11 | 76 |
+| 8 | S7 migrations/RLS, including F-009 | NEXT | - | - |
 | 9 | S5 frontend | PLANNED | - | - |
-| 10 | S10 doctrine reconciliation | PLANNED | - | - |
+| 10 | S10 doctrine/archive | PLANNED | - | - |
 | 11 | Final 12-deliverable synthesis | PLANNED | - | - |
 
 ## Preliminary launch lane
 
-**Do not make Premium Acquisition Underwriting V1 the base Full Underwriting lane yet.** Preliminary base: existing **V2/base Underwriting lane**, pending proof through remaining dispatch, parser, migration, PDF, frontend, and doctrine stages. Premium remains a feature-flagged, externally certified overlay/expansion until identity, completeness, and governed fallback are resolved.
+**Do not make Premium Acquisition Underwriting V1 the base Full Underwriting lane yet.** Preliminary base remains the existing **V2/base Underwriting lane**, pending Stage 8 migrations/RLS and later frontend/doctrine proof. Premium remains feature-flagged and externally certified.
 
 ## Final conclusions
 
