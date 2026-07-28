@@ -19,6 +19,21 @@ Current authority:
 Current phase:
 - H0-A documentation-only owner and authority freeze.
 
+Local completion status:
+- Branch: `investigation/full-repo-underwriting-audit`
+- H0-A commit: `aaaa29f` - add active status and roadmap docs
+- H0-B commit: `e72247b` - archive cleanup only
+- Working tree: clean after H0-B
+- No runtime code changed
+- No deployment
+- No migration
+- No production data change
+- No Premium activation
+- No RETEST 39
+
+Next boundary:
+- H0.5 step 1.1 determinism controls on factual recovery paths
+
 Next authorized step:
 - Establish `docs/ROADMAP.md` as the stable companion roadmap for daily handoff use.
 - After H0-A review and explicit authorization, continue only with the next bounded phase.
