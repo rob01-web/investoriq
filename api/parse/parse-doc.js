@@ -20,8 +20,47 @@ import {
   evaluateFinancingSemanticEvidence,
   resolveFinancingParserRoute,
 } from '../_lib/support-doc-semantic-evidence.js';
+import {
+  buildCacheDiagnostics,
+  loadCachedRecoveryPayload,
+} from '../_lib/recovery-content-hash-cache.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
+
+const RECOVERY_CACHE_ARTIFACT_TYPES = {
+  acquisition_purchase_assumptions: 'loan_term_sheet_parsed',
+  current_mortgage: 'mortgage_statement_parsed',
+  renovation: 'renovation_parsed',
+  property_tax: 'property_tax_parsed',
+  appraisal: 'appraisal_parsed',
+  rent_roll: 'rent_roll_parsed',
+  t12: 't12_parsed',
+};
+
+const loadCachedRecoveryResult = async ({
+  supabaseAdmin,
+  recoveryKind,
+  sourceContentSha256,
+}) => {
+  const artifactType = RECOVERY_CACHE_ARTIFACT_TYPES[recoveryKind];
+  if (!artifactType || !sourceContentSha256) return null;
+  const payload = await loadCachedRecoveryPayload({
+    supabaseAdmin,
+    artifactType,
+    recoveryKind,
+    sourceContentSha256,
+  });
+  if (!payload) return null;
+  return {
+    payload,
+    diagnostics: buildCacheDiagnostics({
+      artifactType,
+      recoveryKind,
+      sourceContentSha256,
+      cacheHit: true,
+    }),
+  };
+};
 
 const attachSupportDocTaxonomy = (payload, {
   declaredDocType = null,
@@ -2985,6 +3024,7 @@ export default async function handler(req, res) {
                   .order('created_at', { ascending: false })
                   .limit(1)
                   .maybeSingle();
+                const sourceContentSha256 = String(textArtifact?.payload?.source_content_sha256 || '').trim() || null;
                 const extractedText = textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '';
                 const deterministicResult = parseRentRollFromTextSummary(extractedText, {
                   includeDiagnostics: true,
@@ -2994,13 +3034,20 @@ export default async function handler(req, res) {
                 if (deterministicTextSummary && Array.isArray(deterministicDiagnostics?.validation_reasons)) {
                   deterministicTextSummary.parser_diagnostics = deterministicDiagnostics;
                 }
-                const aiRecoveryResult = await recoverRentRollWithAI({
-                  text: extractedText,
-                  tables: [],
-                  filename: file.original_filename,
-                  jobId,
-                  includeDiagnostics: true,
+                const cachedAiRecoveryResult = await loadCachedRecoveryResult({
+                  supabaseAdmin,
+                  recoveryKind: 'rent_roll',
+                  sourceContentSha256,
                 });
+                const aiRecoveryResult =
+                  cachedAiRecoveryResult ||
+                  (await recoverRentRollWithAI({
+                    text: extractedText,
+                    tables: [],
+                    filename: file.original_filename,
+                    jobId,
+                    includeDiagnostics: true,
+                  }));
                 aiRecoveredRentRoll = aiRecoveryResult?.payload || null;
                 aiRecoveryDiagnostics = aiRecoveryResult?.diagnostics || null;
                 await writeAiRentRollRecoveryDiagnostic({
@@ -3045,6 +3092,8 @@ export default async function handler(req, res) {
                       units: Array.isArray(acceptedFallbackPayload.units) ? acceptedFallbackPayload.units : [],
                       column_map: acceptedFallbackPayload.column_map || null,
                       coherence: acceptedFallbackPayload.coherence || null,
+                      recovery_kind: 'rent_roll',
+                      source_content_sha256: sourceContentSha256,
                       parse_warnings: Array.isArray(acceptedFallbackPayload.parse_warnings)
                         ? acceptedFallbackPayload.parse_warnings
                         : [],
@@ -3199,6 +3248,7 @@ export default async function handler(req, res) {
                   .order('created_at', { ascending: false })
                   .limit(1)
                   .maybeSingle();
+                const sourceContentSha256 = String(textArtifact?.payload?.source_content_sha256 || '').trim() || null;
                 const extractedText = textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '';
                 const deterministicResult = parseRentRollFromTextSummary(extractedText, {
                   includeDiagnostics: true,
@@ -3208,13 +3258,20 @@ export default async function handler(req, res) {
                 if (deterministicTextSummary && Array.isArray(deterministicDiagnostics?.validation_reasons)) {
                   deterministicTextSummary.parser_diagnostics = deterministicDiagnostics;
                 }
-                const aiRecoveryResult = await recoverRentRollWithAI({
-                  text: extractedText,
-                  tables: tablesPayload?.tables,
-                  filename: file.original_filename,
-                  jobId,
-                  includeDiagnostics: true,
+                const cachedAiRecoveryResult = await loadCachedRecoveryResult({
+                  supabaseAdmin,
+                  recoveryKind: 'rent_roll',
+                  sourceContentSha256,
                 });
+                const aiRecoveryResult =
+                  cachedAiRecoveryResult ||
+                  (await recoverRentRollWithAI({
+                    text: extractedText,
+                    tables: tablesPayload?.tables,
+                    filename: file.original_filename,
+                    jobId,
+                    includeDiagnostics: true,
+                  }));
                 aiRecoveredRentRoll = aiRecoveryResult?.payload || null;
                 aiRecoveryDiagnostics = aiRecoveryResult?.diagnostics || null;
                 await writeAiRentRollRecoveryDiagnostic({
@@ -3267,6 +3324,8 @@ export default async function handler(req, res) {
                       units: Array.isArray(acceptedFallbackPayload.units) ? acceptedFallbackPayload.units : [],
                       column_map: acceptedFallbackPayload.column_map || null,
                       coherence: acceptedFallbackPayload.coherence || null,
+                      recovery_kind: 'rent_roll',
+                      source_content_sha256: sourceContentSha256,
                       parse_warnings: aiParseWarnings,
                       parser_diagnostics: deterministicDiagnostics || acceptedFallbackPayload.parser_diagnostics || parserDiagnostics || null,
                       ai_recovery_diagnostics: aiRecoveryDiagnostics,
@@ -3372,6 +3431,8 @@ export default async function handler(req, res) {
                   occupancy,
                   units,
                   column_map: columnMap,
+                  recovery_kind: 'rent_roll',
+                  source_content_sha256: null,
                   parse_warnings: parseWarnings,
                   parser_diagnostics: parserDiagnostics || null,
                 },
@@ -3589,6 +3650,8 @@ export default async function handler(req, res) {
                     units: Array.isArray(aiRecoveredRentRoll.units) ? aiRecoveredRentRoll.units : [],
                     column_map: aiRecoveredRentRoll.column_map || null,
                     parse_warnings: aiParseWarnings,
+                    recovery_kind: 'rent_roll',
+                    source_content_sha256: sourceContentSha256,
                     ai_recovery_diagnostics: aiRecoveryDiagnostics,
                   },
                 },
@@ -3656,6 +3719,8 @@ export default async function handler(req, res) {
                   from_declared_doc_type: 'rent_roll',
                   accepted_as_doc_type: 't12',
                 },
+                recovery_kind: 't12',
+                source_content_sha256: sourceContentSha256,
               };
 
               await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
@@ -3772,6 +3837,8 @@ export default async function handler(req, res) {
                 occupancy,
                 units,
                 column_map: columnMap,
+                recovery_kind: 'rent_roll',
+                source_content_sha256: null,
                 parse_warnings: parseWarnings,
                 parser_diagnostics: parserDiagnostics || null,
               },
@@ -3907,6 +3974,7 @@ export default async function handler(req, res) {
               .limit(1)
               .maybeSingle();
 
+            const sourceContentSha256 = String(textArtifact?.payload?.source_content_sha256 || '').trim() || null;
             const rawText = String(textArtifact?.payload?.excerpt || textArtifact?.payload?.text || '');
             const extractDollarNear = (text, labels) => {
               for (const label of labels) {
@@ -3947,12 +4015,19 @@ export default async function handler(req, res) {
             if (declaredTypeMismatch) parse_warnings.push('declared_doc_type_mismatch');
 
             const tryAiT12Recovery = async () => {
-              const aiRecoveryResult = await recoverT12WithAI({
-                text: textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '',
-                filename: file.original_filename,
-                jobId,
-                includeDiagnostics: true,
+              const cachedAiRecoveryResult = await loadCachedRecoveryResult({
+                supabaseAdmin,
+                recoveryKind: 't12',
+                sourceContentSha256,
               });
+              const aiRecoveryResult =
+                cachedAiRecoveryResult ||
+                (await recoverT12WithAI({
+                  text: textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '',
+                  filename: file.original_filename,
+                  jobId,
+                  includeDiagnostics: true,
+                }));
               const aiCandidate = aiRecoveryResult?.payload || null;
               await writeAiT12RecoveryDiagnostic({
                 supabaseAdmin,
@@ -3987,6 +4062,8 @@ export default async function handler(req, res) {
                     ai_recovery_diagnostics: aiRecoveryResult?.diagnostics || null,
                     parse_branch: aiCoreValidation.parse_branch,
                     core_t12_validation: aiCoreValidation,
+                    recovery_kind: 't12',
+                    source_content_sha256: sourceContentSha256,
                   },
                 },
               ]);
@@ -4120,6 +4197,8 @@ export default async function handler(req, res) {
                             expense_lines: Array.isArray(parsedT12FromTables?.expense_lines) ? parsedT12FromTables.expense_lines : [],
                             column_map: parsedT12FromTables?.column_map || null,
                             parse_warnings: fallbackParseWarnings,
+                            recovery_kind: 't12',
+                            source_content_sha256: sourceContentSha256,
                           },
                         },
                       ]);
@@ -4238,6 +4317,8 @@ export default async function handler(req, res) {
                   expense_lines_found: textLineItems.expense_lines_found,
                   column_map: textLineItems.expense_lines_found > 0 ? { line_items: 'text_excerpt_lines' } : null,
                   parse_warnings,
+                  recovery_kind: 't12',
+                  source_content_sha256: sourceContentSha256,
                 },
               },
             ]);
@@ -4709,14 +4790,16 @@ export default async function handler(req, res) {
                     payload: {
                       ...rescuedRentRollPayload,
                       declared_doc_type: declaredDocType,
-                      detected_doc_type: detectedDocType,
-                      classifier_score: classifierScore,
-                      classifier_signals: classifierSignals,
-                      parse_warnings: rescuedWarnings,
-                      opposite_core_parser_rescue: {
-                        from_declared_doc_type: 't12',
-                        accepted_as_doc_type: 'rent_roll',
-                      },
+                    detected_doc_type: detectedDocType,
+                    classifier_score: classifierScore,
+                    classifier_signals: classifierSignals,
+                    recovery_kind: 'rent_roll',
+                    source_content_sha256: sourceContentSha256,
+                    parse_warnings: rescuedWarnings,
+                    opposite_core_parser_rescue: {
+                      from_declared_doc_type: 't12',
+                      accepted_as_doc_type: 'rent_roll',
+                    },
                     },
                   },
                 ]);
@@ -4800,6 +4883,8 @@ export default async function handler(req, res) {
             parse_branch: coreT12Validation.parse_branch,
             core_t12_validation: coreT12Validation,
             parser_diagnostics: parserDiagnostics || null,
+            recovery_kind: 't12',
+            source_content_sha256: sourceContentSha256,
           };
 
           await deleteExistingT12Artifacts(supabaseAdmin, jobId, file.id);
@@ -4970,6 +5055,7 @@ export default async function handler(req, res) {
           .maybeSingle();
 
         const rawText = String(textArtifact?.payload?.text || textArtifact?.payload?.excerpt || '');
+        const sourceContentSha256 = String(textArtifact?.payload?.source_content_sha256 || '').trim() || null;
         const lowerText = rawText.toLowerCase();
 
         // Helper: extract dollar value near a label in raw text
@@ -5199,13 +5285,19 @@ export default async function handler(req, res) {
             Number.isFinite(value) && value >= 0 && value <= 20;
 
           const eligibleAcquisitionRecovery = shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText);
+          const cachedAcquisitionRecoveryResult = await loadCachedRecoveryResult({
+            supabaseAdmin,
+            recoveryKind: 'acquisition_purchase_assumptions',
+            sourceContentSha256,
+          });
           const acquisitionRecoveryResult = eligibleAcquisitionRecovery
-            ? await recoverAcquisitionPurchaseAssumptionsWithAI({
+            ? cachedAcquisitionRecoveryResult ||
+              (await recoverAcquisitionPurchaseAssumptionsWithAI({
                 text: rawText,
                 filename: fileRow.original_filename,
                 jobId,
                 includeDiagnostics: true,
-              })
+              }))
             : { payload: null, diagnostics: null };
           const maybeAiAcquisitionRecovery = acquisitionRecoveryResult?.payload || null;
           const acquisitionRecoveryDiagnostics = acquisitionRecoveryResult?.diagnostics || null;
@@ -5381,13 +5473,19 @@ export default async function handler(req, res) {
             parse_warnings.push('budget_line_items_do_not_sum_to_total');
           }
           const eligibleRenovationRecovery = shouldAttemptRenovationRecovery(rawText);
+          const cachedRenovationRecoveryResult = await loadCachedRecoveryResult({
+            supabaseAdmin,
+            recoveryKind: 'renovation',
+            sourceContentSha256,
+          });
           const renovationRecoveryResult = eligibleRenovationRecovery
-            ? await recoverRenovationWithAI({
+            ? cachedRenovationRecoveryResult ||
+              (await recoverRenovationWithAI({
                 text: rawText,
                 filename: fileRow.original_filename,
                 jobId,
                 includeDiagnostics: true,
-              })
+              }))
             : { payload: null, diagnostics: null };
           const maybeAiRenovationRecovery = renovationRecoveryResult?.payload || null;
           const renovationRecoveryDiagnostics = renovationRecoveryResult?.diagnostics || null;
@@ -5505,13 +5603,19 @@ export default async function handler(req, res) {
         } else if (effectiveDocType === 'mortgage_statement') {
           const deterministicMortgagePayload = parseMortgageStatementFromText(rawText, fileRow);
           const eligibleCurrentMortgageRecovery = shouldAttemptCurrentMortgageRecovery(rawText);
+          const cachedCurrentMortgageRecoveryResult = await loadCachedRecoveryResult({
+            supabaseAdmin,
+            recoveryKind: 'current_mortgage',
+            sourceContentSha256,
+          });
           const currentMortgageRecoveryResult = eligibleCurrentMortgageRecovery
-            ? await recoverCurrentMortgageWithAI({
+            ? cachedCurrentMortgageRecoveryResult ||
+              (await recoverCurrentMortgageWithAI({
                 text: rawText,
                 filename: fileRow.original_filename,
                 jobId,
                 includeDiagnostics: true,
-              })
+              }))
             : { payload: null, diagnostics: null };
           const maybeAiCurrentMortgageRecovery = currentMortgageRecoveryResult?.payload || null;
           const currentMortgageRecoveryDiagnostics = currentMortgageRecoveryResult?.diagnostics || null;
@@ -5631,13 +5735,19 @@ export default async function handler(req, res) {
           };
 
           const eligibleAppraisalRecovery = shouldAttemptAppraisalRecovery(rawText);
+          const cachedAppraisalRecoveryResult = await loadCachedRecoveryResult({
+            supabaseAdmin,
+            recoveryKind: 'appraisal',
+            sourceContentSha256,
+          });
           const appraisalRecoveryResult = eligibleAppraisalRecovery
-            ? await recoverAppraisalWithAI({
+            ? cachedAppraisalRecoveryResult ||
+              (await recoverAppraisalWithAI({
                 text: rawText,
                 filename: fileRow.original_filename,
                 jobId,
                 includeDiagnostics: true,
-              })
+              }))
             : { payload: null, diagnostics: null };
           const maybeAiAppraisalRecovery = appraisalRecoveryResult?.payload || null;
           const appraisalRecoveryDiagnostics = appraisalRecoveryResult?.diagnostics || null;
@@ -5725,12 +5835,19 @@ export default async function handler(req, res) {
 
           const eligibleAcquisitionRecovery = shouldAttemptAcquisitionPurchaseAssumptionsRecovery(rawText);
           if (eligibleAcquisitionRecovery) {
-            const acquisitionRecoveryResult = await recoverAcquisitionPurchaseAssumptionsWithAI({
-              text: rawText,
-              filename: fileRow.original_filename,
-              jobId,
-              includeDiagnostics: true,
+            const cachedAcquisitionRecoveryResult = await loadCachedRecoveryResult({
+              supabaseAdmin,
+              recoveryKind: 'acquisition_purchase_assumptions',
+              sourceContentSha256,
             });
+            const acquisitionRecoveryResult =
+              cachedAcquisitionRecoveryResult ||
+              (await recoverAcquisitionPurchaseAssumptionsWithAI({
+                text: rawText,
+                filename: fileRow.original_filename,
+                jobId,
+                includeDiagnostics: true,
+              }));
             const acquisitionRecovery = acquisitionRecoveryResult?.payload || null;
             const acquisitionRecoveryDiagnostics = acquisitionRecoveryResult?.diagnostics || null;
             if (acquisitionRecovery) {
@@ -5760,6 +5877,8 @@ export default async function handler(req, res) {
                 originalFilename: fileRow.original_filename,
                 rawText,
               });
+              acquisitionArtifactPayload.recovery_kind = 'acquisition_purchase_assumptions';
+              acquisitionArtifactPayload.source_content_sha256 = sourceContentSha256;
               const { error: acquisitionArtifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
                 {
                   job_id: jobId,
@@ -5803,13 +5922,19 @@ export default async function handler(req, res) {
           }
 
           const eligiblePropertyTaxRecovery = shouldAttemptPropertyTaxRecovery(rawText);
+          const cachedPropertyTaxRecoveryResult = await loadCachedRecoveryResult({
+            supabaseAdmin,
+            recoveryKind: 'property_tax',
+            sourceContentSha256,
+          });
           const propertyTaxRecoveryResult = eligiblePropertyTaxRecovery
-            ? await recoverPropertyTaxWithAI({
+            ? cachedPropertyTaxRecoveryResult ||
+              (await recoverPropertyTaxWithAI({
                 text: rawText,
                 filename: fileRow.original_filename,
                 jobId,
                 includeDiagnostics: true,
-              })
+              }))
             : { payload: null, diagnostics: null };
           const maybeAiPropertyTaxRecovery = propertyTaxRecoveryResult?.payload || null;
           const propertyTaxRecoveryDiagnostics = propertyTaxRecoveryResult?.diagnostics || null;
@@ -5894,6 +6019,12 @@ export default async function handler(req, res) {
             parse_warnings,
           };
         }
+
+        payload = {
+          ...payload,
+          recovery_kind: effectiveDocType,
+          source_content_sha256: sourceContentSha256,
+        };
 
         const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
           {

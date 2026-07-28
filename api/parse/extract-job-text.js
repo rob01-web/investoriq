@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import JSZip from 'jszip';
 import pdfParse from 'pdf-parse';
 import { analyzeTables } from '../../lib/textractClient.js';
+import { buildSourceContentSha256 } from '../_lib/recovery-content-hash-cache.js';
 import { textractTablesToMatrix } from '../../lib/textractTablesToMatrix.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
@@ -138,6 +139,7 @@ export default async function handler(req, res) {
       }
 
       try {
+        let reusableTextArtifacts = [];
         const { data: existingTextArtifacts, error: existingTextErr } = await supabaseAdmin
           .from('analysis_artifacts')
           .select('id, payload')
@@ -151,7 +153,7 @@ export default async function handler(req, res) {
           throw new Error(existingTextErr.message || 'Failed to fetch existing extracted text artifacts');
         }
 
-        const reusableTextArtifacts = (existingTextArtifacts || []).filter((artifact) => {
+        reusableTextArtifacts = (existingTextArtifacts || []).filter((artifact) => {
           const payload = artifact?.payload || {};
           const sameBucket = String(payload.bucket || '') === String(file.bucket || '');
           const sameObjectPath = String(payload.object_path || '') === String(file.object_path || '');
@@ -193,6 +195,27 @@ export default async function handler(req, res) {
 
         const arrayBuffer = await fileData.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        const sourceContentSha256 = buildSourceContentSha256(buffer);
+
+        if (reusableTextArtifacts.length === 0 && sourceContentSha256) {
+          const { data: hashedTextArtifacts, error: hashedTextErr } = await supabaseAdmin
+            .from('analysis_artifacts')
+            .select('id, payload')
+            .eq('job_id', jobId)
+            .eq('type', 'document_text_extracted')
+            .eq('payload->>source_content_sha256', sourceContentSha256)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (hashedTextErr) {
+            throw new Error(hashedTextErr.message || 'Failed to fetch hashed extracted text artifacts');
+          }
+
+          reusableTextArtifacts = (hashedTextArtifacts || []).filter((artifact) => {
+            const payload = artifact?.payload || {};
+            return String(payload.excerpt || payload.text || '').trim().length > 0;
+          });
+        }
 
         if (isPlainText) {
           const text = buffer.toString('utf-8').trim();
@@ -204,19 +227,20 @@ export default async function handler(req, res) {
               job_id: jobId,
               user_id: file.user_id || null,
               type: 'document_text_extracted',
-              bucket: 'internal',
-              object_path: `analysis_jobs/${jobId}/document_text_extracted/${file.id}/${safeTimestamp(nowIso)}.json`,
-              payload: {
-                file_id: file.id,
-                original_filename: file.original_filename,
-                bucket: file.bucket,
-                object_path: file.object_path,
-                bytes: buffer.length,
-                chars,
-                text,
-                excerpt,
-                method: 'plain_text',
-              },
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/document_text_extracted/${file.id}/${safeTimestamp(nowIso)}.json`,
+                payload: {
+                  file_id: file.id,
+                  original_filename: file.original_filename,
+                  bucket: file.bucket,
+                  object_path: file.object_path,
+                  bytes: buffer.length,
+                  source_content_sha256: sourceContentSha256,
+                  chars,
+                  text,
+                  excerpt,
+                  method: 'plain_text',
+                },
             },
           ]);
 
@@ -253,19 +277,20 @@ export default async function handler(req, res) {
               job_id: jobId,
               user_id: file.user_id || null,
               type: 'document_text_extracted',
-              bucket: 'internal',
-              object_path: `analysis_jobs/${jobId}/document_text_extracted/${file.id}/${safeTimestamp(nowIso)}.json`,
-              payload: {
-                file_id: file.id,
-                original_filename: file.original_filename,
-                bucket: file.bucket,
-                object_path: file.object_path,
-                bytes: buffer.length,
-                chars,
-                text,
-                excerpt,
-                method: 'office_xml',
-              },
+                bucket: 'internal',
+                object_path: `analysis_jobs/${jobId}/document_text_extracted/${file.id}/${safeTimestamp(nowIso)}.json`,
+                payload: {
+                  file_id: file.id,
+                  original_filename: file.original_filename,
+                  bucket: file.bucket,
+                  object_path: file.object_path,
+                  bytes: buffer.length,
+                  source_content_sha256: sourceContentSha256,
+                  chars,
+                  text,
+                  excerpt,
+                  method: 'office_xml',
+                },
             },
           ]);
 
@@ -349,6 +374,7 @@ export default async function handler(req, res) {
               payload: {
                 source_file_id: file.id,
                 source_mime: mimeType,
+                source_content_sha256: sourceContentSha256,
                 parser: 'aws_textract_tables',
                 tables_summary: tablesSummary,
                 timestamp: nowIso,
@@ -452,6 +478,7 @@ export default async function handler(req, res) {
               object_path: file.object_path,
               pages,
               chars,
+              source_content_sha256: sourceContentSha256,
               text,
               excerpt,
             },
