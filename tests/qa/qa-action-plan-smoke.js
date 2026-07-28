@@ -472,7 +472,16 @@ assert.equal(hardComplianceAction.requires_code_patch, true);
 
 const managerSuppressedMethodologyPlan = buildQaActionPlan({
   reportQaFlags: [],
-  sourceReportCoverageQa: { deterministic_flags: [] },
+  sourceReportCoverageQa: {
+    deterministic_flags: [
+      {
+        code: "T12_LINE_ITEM_DETAIL_MISSING",
+        severity: "medium",
+        message: "T12 line-item detail did not reach the report.",
+        evidence: { income_line_count: 0, expense_line_count: 0 },
+      },
+    ],
+  },
   renderedReportQa: {
     findings: [
       {
@@ -480,7 +489,7 @@ const managerSuppressedMethodologyPlan = buildQaActionPlan({
         severity: "critical",
         issue: "The report uses the term 'InvestorIQ estimates' which could imply proprietary or guaranteed accuracy.",
         excerpt: "InvestorIQ estimates are document-backed and framework-constrained.",
-        suggested_review: "Review whether this implies guaranteed accuracy.",
+        suggested_review: "Review whether this implies a real problem.",
       },
     ],
   },
@@ -492,7 +501,7 @@ const managerSuppressedMethodologyPlan = buildQaActionPlan({
         source_artifact: "rendered_report_qa_advisory",
         classification: "false_positive",
         severity: "info",
-        rationale: "Allowed methodology language.",
+        rationale: "Advisory only; do not suppress deterministic findings.",
         evidence_excerpt: "InvestorIQ estimates are document-backed and framework-constrained.",
         recommended_action_type: "no_action",
         requires_code_patch: false,
@@ -505,8 +514,14 @@ const managerSuppressedMethodologyPlan = buildQaActionPlan({
   },
 });
 assert.equal(managerSuppressedMethodologyPlan.customer_delivery_ready, false);
-assert.equal(managerSuppressedMethodologyPlan.action_counts.requires_code_patch, 0);
-assert.equal(managerSuppressedMethodologyPlan.prioritized_actions.length, 0);
+assert.equal(
+  managerSuppressedMethodologyPlan.prioritized_actions.some((action) => action.code === "T12_LINE_ITEM_DETAIL_MISSING"),
+  true
+);
+assert.equal(
+  managerSuppressedMethodologyPlan.prioritized_actions.some((action) => action.code === "RENDERED_LANGUAGE_REVIEW"),
+  true
+);
 
 const managerUnsupportedFilenamePlan = buildQaActionPlan({
   reportQaFlags: [],
@@ -1027,7 +1042,7 @@ assert.equal(
   "Review rent roll unit rows, rent roll summary totals, and T12 GPR. Confirm which source total should control before regenerating."
 );
 assert.equal(managerContradictionAction.blocks_customer_delivery, false);
-assert.equal(managerContradictionAction.blocks_public_sample, true);
+assert.equal(managerContradictionAction.blocks_public_sample, false);
 
 const genericContradictionAction = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
@@ -1063,8 +1078,8 @@ const managerContradictionGate = buildDeliveryGateDecision({
 });
 assert.equal(managerContradictionGate.delivery_gate_status, "deliverable");
 assert.equal(managerContradictionGate.customer_delivery_ready, true);
-assert.equal(managerContradictionGate.public_sample_ready, false);
-assert.equal(managerContradictionGate.high_value_outreach_ready, false);
+assert.equal(managerContradictionGate.public_sample_ready, true);
+assert.equal(managerContradictionGate.high_value_outreach_ready, true);
 assert.equal(managerContradictionGate.report_publishable, true);
 
 const advisoryOnlyGate = buildDeliveryGateDecision({
@@ -1111,7 +1126,7 @@ const sourceTotalsVerificationAction = buildQaActionPlan({
 assert.equal(sourceTotalsVerificationAction.action_type, "source_document_limitation");
 assert.equal(sourceTotalsVerificationAction.owner_area, "source_reconciliation");
 assert.equal(sourceTotalsVerificationAction.blocks_customer_delivery, false);
-assert.equal(sourceTotalsVerificationAction.blocks_public_sample, true);
+assert.equal(sourceTotalsVerificationAction.blocks_public_sample, false);
 
 const retest8SourceReconciliationState = buildSourceReconciliationState({
   computedRentRoll: {

@@ -639,9 +639,7 @@ function actionForManagerDecision(decision) {
     action_type: sourceTotalsVerification
       ? "source_document_limitation"
       : contradictionReview
-      ? contradictionBlocksCustomer
-        ? "admin_review_required"
-        : "source_reconciliation_review_recommended"
+      ? "source_reconciliation_review_recommended"
       : hardPublicLanguage
       ? "code_patch_required"
       : speculativePublicLanguage
@@ -663,21 +661,9 @@ function actionForManagerDecision(decision) {
       : decision?.recommended_action_type || "Review QA manager decision.",
     requires_code_patch: requiresCodePatch,
     requires_regeneration: Boolean(decision?.requires_regeneration),
-    blocks_customer_delivery: sourceTotalsVerification
-      ? false
-      : contradictionReview
-      ? contradictionBlocksCustomer
-      : hardPublicLanguage,
-    blocks_public_sample: sourceTotalsVerification
-      ? true
-      : contradictionReview
-      ? true
-      : !speculativePublicLanguage && (Boolean(decision?.blocks_public_sample) || hardPublicLanguage),
-    blocks_high_value_outreach: sourceTotalsVerification
-      ? true
-      : contradictionReview
-      ? true
-      : !speculativePublicLanguage && (Boolean(decision?.blocks_high_value_outreach) || hardPublicLanguage),
+    blocks_customer_delivery: false,
+    blocks_public_sample: false,
+    blocks_high_value_outreach: false,
     safe_to_auto_fix: false,
     evidence: {
       classification,
@@ -1973,10 +1959,7 @@ export function buildDeliveryGateDecision({
     /source_report_reconciliation|report_contradiction/i.test(String(violation?.category || ""))
   ) || null;
   const managerContradictionAction = prioritizedActions.find(isManagerContradictionAction) || null;
-  const managerContradictionBlocksCustomer = !coreValidRequiredCoverage && isManagerContradictionCustomerBlocking(managerContradictionAction, {
-    contractViolations,
-    deterministicFlags,
-  });
+  const managerContradictionBlocksCustomer = false;
   const contractCustomerBlockingViolation =
     contractViolations.find((violation) =>
       isCustomerPublishBlockingViolationWithContext(violation, { coreSufficiencyPublishable }) &&
@@ -2010,12 +1993,11 @@ export function buildDeliveryGateDecision({
       )
     )?.action ||
     contractCustomerBlockingViolation ||
-    (managerContradictionBlocksCustomer ? managerContradictionAction : null) ||
     null;
   const publicOrOutreachOnlyAction =
     actionImpactRows.find((row) => row.impact === "public_or_outreach_only_blocker")?.action ||
     null;
-  const adminReviewAction = customerDeliveryBlockerAction || (managerContradictionBlocksCustomer ? managerContradictionAction : null) || null;
+  const adminReviewAction = customerDeliveryBlockerAction || null;
   const directorMismatch =
     String(qaDirectorReview?.overall_director_decision || "") !== "no_missed_issue_detected" &&
     Boolean(adminReviewAction || (reconciliationViolation && isCustomerPublishBlockingViolationWithContext(reconciliationViolation, { coreSufficiencyPublishable })));
@@ -2036,7 +2018,7 @@ export function buildDeliveryGateDecision({
   const adminReviewBlockingAction =
     customerDeliveryBlockerAction ||
     customerBlockingReconciliationViolation ||
-    (managerContradictionBlocksCustomer ? managerContradictionAction : null);
+    null;
   if (!sourceReportCoverageQa || !coreValidRequiredCoverage) {
     const gateReason = resolveNeedsDocumentsReasonCode({
       sourceDocumentAction,
@@ -2506,7 +2488,6 @@ export function buildQaActionPlan({
     if (action) pushAction(actions, action);
   }
   for (const finding of Array.isArray(renderedReportQa?.findings) ? renderedReportQa.findings : []) {
-    if (managerSuppressesRenderedFinding(qaManagerReview, finding)) continue;
     const action = actionForRenderedFinding(finding);
     if (action) pushAction(actions, action);
   }
