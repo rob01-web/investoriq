@@ -16,7 +16,8 @@ const tier2Map = buildTerminalFailureSectionStateMap({
   issueCodes: [TERMINAL_FAILURE_CODES.REPORT_CONTRACT_FAILED],
 });
 
-assert.equal(tier2Map.report_state, "rendered");
+assert.equal(tier2Map.report_state, "qualified");
+assert.equal(tier2Map.section_states.report.state, "qualified");
 assert.equal(tier2Map.section_states.report_contract.state, "qualified");
 assert.equal(tier2Map.section_states.customer_surface.state, "collapsed");
 assert.equal(tier2Map.section_states.qa.state, "omitted_not_applicable");

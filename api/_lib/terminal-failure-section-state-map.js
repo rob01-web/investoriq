@@ -47,12 +47,16 @@ export function buildTerminalFailureSectionStateMap({ issueCodes = [] } = {}) {
     storage_publication: createSectionState(),
     delivery_gate: createSectionState(),
   };
+  let hasTier1 = false;
+  let hasTier2 = false;
+  let hasTier3 = false;
 
   for (const code of codes) {
     const descriptor = TERMINAL_FAILURE_TIER_MAP[code] || null;
     if (!descriptor) continue;
 
     if (descriptor.tier === 1) {
+      hasTier1 = true;
       for (const key of CORE_SECTION_KEYS) {
         applyState(sectionStates, key, "blocked", code);
       }
@@ -60,6 +64,7 @@ export function buildTerminalFailureSectionStateMap({ issueCodes = [] } = {}) {
     }
 
     if (descriptor.tier === 2) {
+      hasTier2 = true;
       for (const key of descriptor.affected_sections || []) {
         const state = TIER2_SECTION_STATE_BY_KEY[key];
         if (state) applyState(sectionStates, key, state, code);
@@ -68,6 +73,7 @@ export function buildTerminalFailureSectionStateMap({ issueCodes = [] } = {}) {
     }
 
     if (descriptor.tier === 3) {
+      hasTier3 = true;
       for (const key of descriptor.affected_sections || []) {
         const state = TIER3_SECTION_STATE_BY_KEY[key];
         if (state) applyState(sectionStates, key, state, code);
@@ -76,11 +82,14 @@ export function buildTerminalFailureSectionStateMap({ issueCodes = [] } = {}) {
     }
   }
 
-  const hasTier1 = codes.some((code) => (TERMINAL_FAILURE_TIER_MAP[code] || {}).tier === 1);
-  const hasTier3 = codes.some((code) => (TERMINAL_FAILURE_TIER_MAP[code] || {}).tier === 3);
+  if (hasTier1) {
+    applyState(sectionStates, "report", "blocked", "tier1");
+  } else if (hasTier2) {
+    applyState(sectionStates, "report", "qualified", "tier2");
+  }
 
   return Object.freeze({
-    report_state: hasTier1 ? "blocked" : DEFAULT_STATE,
+    report_state: hasTier1 ? "blocked" : hasTier2 ? "qualified" : DEFAULT_STATE,
     publication_state: hasTier3 ? "recovery_required" : DEFAULT_STATE,
     delivery_state: hasTier3 ? "blocked_pending_recovery" : DEFAULT_STATE,
     section_states: Object.freeze(sectionStates),
