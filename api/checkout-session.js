@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import {
   isInvestorIQAdmin,
+  resolveAuthenticatedResourceOwnership,
   resolveAuthenticatedActor,
 } from "./_lib/authenticated-actor.js";
 
@@ -37,8 +38,15 @@ export default async function handler(req, res) {
     const session = await stripe.checkout.sessions.retrieve(session_id);
     const sessionOwnerId =
       session?.client_reference_id || session?.metadata?.userId || "";
-    if (!sessionOwnerId || sessionOwnerId !== auth.actor.id) {
-      return res.status(403).json({ error: "FORBIDDEN" });
+    const ownership = resolveAuthenticatedResourceOwnership({
+      auth,
+      resourceOwnerId: sessionOwnerId,
+      allowAdminBypass: false,
+      requireResourceOwnerId: true,
+      resourceType: "checkout_session",
+    });
+    if (!ownership.ok) {
+      return res.status(ownership.status).json({ error: ownership.error });
     }
 
     return res.status(200).json({

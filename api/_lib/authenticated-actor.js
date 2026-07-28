@@ -19,6 +19,66 @@ export function isInvestorIQAdmin(actor) {
   return Boolean(email) && getAdminEmails().includes(email);
 }
 
+function normalizeOwnershipId(value) {
+  return String(value || '').trim();
+}
+
+export function resolveAuthenticatedResourceOwnership({
+  auth = null,
+  resourceOwnerId = null,
+  allowAdminBypass = false,
+  requireResourceOwnerId = true,
+  resourceType = 'resource',
+} = {}) {
+  if (!auth || auth.ok !== true) {
+    return {
+      ok: false,
+      status: auth?.status || 401,
+      error: auth?.error || 'UNAUTHORIZED',
+    };
+  }
+
+  const actor = auth.actor || null;
+  const actorId = normalizeOwnershipId(actor?.id);
+  const ownerId = normalizeOwnershipId(resourceOwnerId);
+  const adminAuthorized = allowAdminBypass && isInvestorIQAdmin(actor);
+
+  if (!actorId) {
+    return { ok: false, status: 401, error: 'UNAUTHORIZED' };
+  }
+
+  if (!ownerId && requireResourceOwnerId) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'FORBIDDEN',
+      resourceType,
+      actorId,
+      resourceOwnerId: ownerId || null,
+    };
+  }
+
+  if (ownerId && ownerId !== actorId && !adminAuthorized) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'FORBIDDEN',
+      resourceType,
+      actorId,
+      resourceOwnerId: ownerId,
+    };
+  }
+
+  return {
+    ok: true,
+    actor,
+    actorId,
+    adminAuthorized,
+    resourceType,
+    resourceOwnerId: ownerId || actorId,
+  };
+}
+
 export async function resolveAuthenticatedActor(
   req,
   { createClientImpl = null } = {},

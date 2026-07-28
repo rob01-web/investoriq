@@ -115,6 +115,7 @@ import {
 import {
   resolveReportTypeAndTier,
   constantTimeEqual,
+  resolveReportGenerationOwnership,
 } from "./report-request-context.js";
 import {
   isNil,
@@ -2803,11 +2804,11 @@ export default async function handler(req, res) {
       supporting_documents = [],
     } = body;
     const jobId = body?.job_id || body?.jobId;
-    effectiveUserId = bodyUserId || null;
     let jobReportType = null;
     let jobUserId = null;
     let jobPropertyName = null;
     let premiumJobStartSurfaceReceipt = null;
+    const adminAuthorized = isAdminRegen || Boolean(headerKey && headerKey === adminRunKey);
     if (jobId) {
       const { data: jobRow } = await supabase
         .from("analysis_jobs")
@@ -2855,13 +2856,18 @@ export default async function handler(req, res) {
       if (typeof jobId !== "string" || !jobId.trim()) {
         return res.status(400).json({ error: "job_id is required" });
       }
-      if (!effectiveUserId) {
-        if (!jobUserId) {
-          return res.status(404).json({ error: "Job not found" });
-        }
-        effectiveUserId = jobUserId;
-      }
     }
+    const ownershipResolution = resolveReportGenerationOwnership({
+      bodyUserId,
+      jobId,
+      jobUserId,
+      authenticatedActorId: null,
+      adminAuthorized,
+    });
+    if (!ownershipResolution.ok) {
+      return res.status(ownershipResolution.status).json({ error: ownershipResolution.error });
+    }
+    effectiveUserId = ownershipResolution.effectiveUserId;
     const reportTypeResolution = resolveReportTypeAndTier({
       bodyReportType: body?.report_type ?? null,
       jobReportType: jobReportType ?? null,

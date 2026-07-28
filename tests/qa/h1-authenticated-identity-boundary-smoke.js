@@ -7,8 +7,10 @@ process.env.INVESTORIQ_ADMIN_EMAILS ||= 'owner@example.com';
 
 const {
   isInvestorIQAdmin,
+  resolveAuthenticatedResourceOwnership,
   resolveAuthenticatedActor,
 } = await import('../../api/_lib/authenticated-actor.js');
+const { resolveReportGenerationOwnership } = await import('../../api/_lib/report-request-context.js');
 
 const noAuth = await resolveAuthenticatedActor({ headers: {} });
 assert.deepEqual(noAuth, { ok: false, status: 401, error: 'UNAUTHORIZED' });
@@ -41,6 +43,66 @@ assert.equal(authenticated.actor.id, 'actor-1');
 assert.equal(isInvestorIQAdmin(authenticated.actor), true);
 assert.equal(isInvestorIQAdmin({ email: 'customer@example.com' }), false);
 
+const ownedResource = resolveAuthenticatedResourceOwnership({
+  auth: authenticated,
+  resourceOwnerId: 'actor-1',
+  resourceType: 'report',
+});
+assert.equal(ownedResource.ok, true);
+assert.equal(ownedResource.resourceOwnerId, 'actor-1');
+
+const crossUserResource = resolveAuthenticatedResourceOwnership({
+  auth: authenticated,
+  resourceOwnerId: 'someone-else',
+  resourceType: 'report',
+});
+assert.equal(crossUserResource.ok, false);
+assert.equal(crossUserResource.status, 403);
+assert.equal(crossUserResource.error, 'FORBIDDEN');
+
+const adminOwnedResource = resolveAuthenticatedResourceOwnership({
+  auth: {
+    ok: true,
+    actor: { id: 'admin-1', email: 'owner@example.com' },
+  },
+  resourceOwnerId: 'someone-else',
+  allowAdminBypass: true,
+  resourceType: 'report',
+});
+assert.equal(adminOwnedResource.ok, true);
+assert.equal(adminOwnedResource.adminAuthorized, true);
+
+const reportGenerationOwned = resolveReportGenerationOwnership({
+  bodyUserId: 'actor-1',
+  jobId: 'job-1',
+  jobUserId: 'actor-1',
+  authenticatedActorId: 'actor-1',
+  adminAuthorized: false,
+});
+assert.equal(reportGenerationOwned.ok, true);
+assert.equal(reportGenerationOwned.effectiveUserId, 'actor-1');
+assert.equal(reportGenerationOwned.ownershipSource, 'analysis_jobs.user_id');
+
+const reportGenerationMismatch = resolveReportGenerationOwnership({
+  bodyUserId: 'wrong-user',
+  jobId: 'job-1',
+  jobUserId: 'actor-1',
+  authenticatedActorId: 'actor-1',
+  adminAuthorized: false,
+});
+assert.equal(reportGenerationMismatch.ok, false);
+assert.equal(reportGenerationMismatch.status, 403);
+assert.equal(reportGenerationMismatch.error, 'JOB_OWNERSHIP_MISMATCH');
+
+const reportGenerationAdmin = resolveReportGenerationOwnership({
+  bodyUserId: 'someone-else',
+  authenticatedActorId: 'actor-1',
+  adminAuthorized: true,
+});
+assert.equal(reportGenerationAdmin.ok, true);
+assert.equal(reportGenerationAdmin.effectiveUserId, 'someone-else');
+assert.equal(reportGenerationAdmin.ownershipSource, 'admin_authorized_body_user_id');
+
 const checkoutCreate = fs.readFileSync('api/create-checkout-session.js', 'utf8');
 assert.match(checkoutCreate, /resolveAuthenticatedActor\(req\)/);
 assert.match(checkoutCreate, /userId: auth\.actor\.id/);
@@ -50,7 +112,8 @@ assert.doesNotMatch(checkoutCreate, /const \{[^}]*userEmail[^}]*\} = req\.body/)
 
 const checkoutRead = fs.readFileSync('api/checkout-session.js', 'utf8');
 assert.match(checkoutRead, /resolveAuthenticatedActor\(req\)/);
-assert.match(checkoutRead, /sessionOwnerId !== auth\.actor\.id/);
+assert.match(checkoutRead, /resolveAuthenticatedResourceOwnership\(/);
+assert.match(checkoutRead, /allowAdminBypass: false/);
 assert.match(checkoutRead, /destination: isInvestorIQAdmin\(auth\.actor\)/);
 assert.doesNotMatch(checkoutRead, /metadata: session\.metadata/);
 
@@ -81,5 +144,16 @@ const checkoutSuccess = fs.readFileSync('src/pages/CheckoutSuccess.jsx', 'utf8')
 assert.match(checkoutSuccess, /Authorization: `Bearer \$\{accessToken\}`/);
 assert.match(checkoutSuccess, /data\?\.productType/);
 assert.doesNotMatch(checkoutSuccess, /data\?\.metadata\?\.productType/);
+
+const reportRequestContext = fs.readFileSync('api/_lib/report-request-context.js', 'utf8');
+assert.match(reportRequestContext, /resolveReportGenerationOwnership/);
+assert.match(reportRequestContext, /JOB_OWNERSHIP_MISMATCH/);
+assert.match(reportRequestContext, /admin_authorized_body_user_id/);
+
+const generatorSource = fs.readFileSync('api/_lib/generate-client-report-impl.js', 'utf8');
+assert.match(generatorSource, /resolveReportGenerationOwnership/);
+assert.match(generatorSource, /adminAuthorized = isAdminRegen \|\| Boolean\(headerKey && headerKey === adminRunKey\)/);
+assert.match(generatorSource, /effectiveUserId = ownershipResolution\.effectiveUserId/);
+assert.doesNotMatch(generatorSource, /effectiveUserId = bodyUserId \|\| null;/);
 
 console.log('h1-authenticated-identity-boundary-smoke: PASS');

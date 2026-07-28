@@ -74,3 +74,58 @@ export function constantTimeEqual(a, b) {
   }
   return result === 0;
 }
+
+function normalizeOwnershipId(value) {
+  return String(value || "").trim();
+}
+
+export function resolveReportGenerationOwnership({
+  bodyUserId = null,
+  jobId = null,
+  jobUserId = null,
+  authenticatedActorId = null,
+  adminAuthorized = false,
+} = {}) {
+  const normalizedBodyUserId = normalizeOwnershipId(bodyUserId);
+  const normalizedJobId = normalizeOwnershipId(jobId);
+  const normalizedJobUserId = normalizeOwnershipId(jobUserId);
+  const normalizedActorId = normalizeOwnershipId(authenticatedActorId);
+
+  if (normalizedJobId) {
+    if (!normalizedJobUserId) {
+      return { ok: false, status: 404, error: "JOB_NOT_FOUND" };
+    }
+    if (normalizedBodyUserId && normalizedBodyUserId !== normalizedJobUserId) {
+      return { ok: false, status: 403, error: "JOB_OWNERSHIP_MISMATCH" };
+    }
+    return {
+      ok: true,
+      effectiveUserId: normalizedJobUserId,
+      ownershipSource: "analysis_jobs.user_id",
+    };
+  }
+
+  if (normalizedBodyUserId) {
+    if (!adminAuthorized && normalizedActorId && normalizedBodyUserId !== normalizedActorId) {
+      return { ok: false, status: 403, error: "FORBIDDEN" };
+    }
+    if (!adminAuthorized && !normalizedActorId) {
+      return { ok: false, status: 401, error: "UNAUTHORIZED" };
+    }
+    return {
+      ok: true,
+      effectiveUserId: normalizedBodyUserId,
+      ownershipSource: adminAuthorized ? "admin_authorized_body_user_id" : "authenticated_actor",
+    };
+  }
+
+  if (normalizedActorId && !adminAuthorized) {
+    return {
+      ok: true,
+      effectiveUserId: normalizedActorId,
+      ownershipSource: "authenticated_actor",
+    };
+  }
+
+  return { ok: false, status: 400, error: "Missing userId" };
+}
