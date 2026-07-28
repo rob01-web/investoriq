@@ -2,6 +2,19 @@ import assert from "node:assert/strict";
 import { TERMINAL_FAILURE_CODES } from "../../lib/terminal-failure-taxonomy.js";
 import { buildTerminalFailureSectionStateMap } from "../../api/_lib/terminal-failure-section-state-map.js";
 
+function assertTier2PublishOrCollapseScenario(scenarioName) {
+  const map = buildTerminalFailureSectionStateMap({
+    issueCodes: [TERMINAL_FAILURE_CODES.REPORT_CONTRACT_FAILED],
+  });
+
+  assert.equal(map.report_state, "qualified", `${scenarioName}: whole-report should not block`);
+  assert.equal(map.section_states.report.state, "qualified", `${scenarioName}: report section should qualify`);
+  assert.equal(map.section_states.report_contract.state, "qualified", `${scenarioName}: contract section should qualify`);
+  assert.equal(map.section_states.customer_surface.state, "collapsed", `${scenarioName}: customer surface should collapse`);
+  assert.equal(map.section_states.qa.state, "omitted_not_applicable", `${scenarioName}: QA section should omit`);
+  assert.equal(map.section_states.report_contract.source_codes[0], TERMINAL_FAILURE_CODES.REPORT_CONTRACT_FAILED);
+}
+
 const tier1Map = buildTerminalFailureSectionStateMap({
   issueCodes: [TERMINAL_FAILURE_CODES.CORE_T12_CATASTROPHICALLY_UNUSABLE],
 });
@@ -12,16 +25,8 @@ assert.equal(tier1Map.section_states.rent_roll.state, "blocked");
 assert.equal(tier1Map.section_states.source_truth_package.state, "blocked");
 assert.equal(tier1Map.section_states.customer_delivery.state, "blocked");
 
-const tier2Map = buildTerminalFailureSectionStateMap({
-  issueCodes: [TERMINAL_FAILURE_CODES.REPORT_CONTRACT_FAILED],
-});
-
-assert.equal(tier2Map.report_state, "qualified");
-assert.equal(tier2Map.section_states.report.state, "qualified");
-assert.equal(tier2Map.section_states.report_contract.state, "qualified");
-assert.equal(tier2Map.section_states.customer_surface.state, "collapsed");
-assert.equal(tier2Map.section_states.qa.state, "omitted_not_applicable");
-assert.equal(tier2Map.section_states.report_contract.source_codes[0], TERMINAL_FAILURE_CODES.REPORT_CONTRACT_FAILED);
+assertTier2PublishOrCollapseScenario("corrupt support document");
+assertTier2PublishOrCollapseScenario("contradictory support document");
 
 const tier3Map = buildTerminalFailureSectionStateMap({
   issueCodes: [TERMINAL_FAILURE_CODES.REPORT_RENDER_FAILED, TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED],
