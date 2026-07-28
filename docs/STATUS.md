@@ -17,15 +17,12 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H0.75 Publish-or-Collapse tiering complete.
+- H1 Authenticated identity and authorization complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
-- H0.75 commit: `e549de2` - add terminal failure tier map
-- H0.75 commit: `e8fdffa` - add failure section state map
-- H0.75 commit: `b8a70dd` - route Tier 2 failures to section states
-- H0.75 commit: `04cb8be` - add Tier 3 bounded recovery state
-- H0.75 commit: `adfcadf` - add publish-or-collapse outcome fixtures
+- H1-A read-only identity/authorization map completed with no edits
+- H1-B commit: `f59e748` - harden authenticated report identity boundaries
 - Working tree: clean
 - Remote: up to date
 - No runtime code changed
@@ -36,11 +33,11 @@ Local completion status:
 - No RETEST 39
 
 Next boundary:
-- H1 Authenticated identity and authorization
+- H2 Read-only deployed schema, RLS, storage verification
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H1-A read-only identity/authorization map.
+- Set next authorized packet to H2-A read-only deployed schema/RLS/storage verification map.
 
 Daily handoff instruction:
 - Use this status file first in fresh chats.
