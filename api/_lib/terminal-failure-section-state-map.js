@@ -92,6 +92,8 @@ export function buildTerminalFailureSectionStateMap({ issueCodes = [] } = {}) {
     report_state: hasTier1 ? "blocked" : hasTier2 ? "qualified" : DEFAULT_STATE,
     publication_state: hasTier3 ? "recovery_required" : DEFAULT_STATE,
     delivery_state: hasTier3 ? "blocked_pending_recovery" : DEFAULT_STATE,
+    tier3_recovery_state: hasTier3 ? "bounded_recovery" : "not_required",
+    tier3_final_block_state: hasTier3 ? "not_yet" : "not_required",
     section_states: Object.freeze(sectionStates),
     issue_codes: Object.freeze(codes),
   });

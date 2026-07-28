@@ -29,6 +29,9 @@ const tier3Map = buildTerminalFailureSectionStateMap({
 
 assert.equal(tier3Map.publication_state, "recovery_required");
 assert.equal(tier3Map.delivery_state, "blocked_pending_recovery");
+assert.equal(tier3Map.tier3_recovery_state, "bounded_recovery");
+assert.equal(tier3Map.tier3_final_block_state, "not_yet");
+assert.equal(tier3Map.report_state, "rendered");
 assert.equal(tier3Map.section_states.renderer.state, "recovery_required");
 assert.equal(tier3Map.section_states.pdf_artifact.state, "blocked_pending_recovery");
 assert.equal(tier3Map.section_states.storage_publication.state, "blocked_pending_recovery");
