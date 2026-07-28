@@ -17,13 +17,17 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H0-A documentation-only owner and authority freeze.
+- H0.5 deterministic recovery and QA authority hardening complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
-- H0-A commit: `aaaa29f` - add active status and roadmap docs
-- H0-B commit: `e72247b` - archive cleanup only
-- Working tree: clean after H0-B
+- H0.5 commit: `d78c7bb` - pin deterministic recovery requests
+- H0.5 commit: `eb3284c` - add content hash recovery cache
+- H0.5 commit: `85da832` - demote LLM QA from publish authority
+- H0.5 commit: `d47eb97` - add Textract client dependency
+- H0.5 commit: `35d34fc` - add deterministic recovery reproducibility smoke
+- Working tree: clean
+- Remote: up to date
 - No runtime code changed
 - No deployment
 - No migration
@@ -32,7 +36,7 @@ Local completion status:
 - No RETEST 39
 
 Next boundary:
-- H0.5 step 1.1 determinism controls on factual recovery paths
+- H0.75 Publish-or-Collapse tiering
 
 Next authorized step:
 - Establish `docs/ROADMAP.md` as the stable companion roadmap for daily handoff use.
