@@ -7,8 +7,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 // Canonical productType contract (LOCKED):
-// screening, underwriting
-function normalizeProductType({ productType, planKey }) {
+// screening, underwriting, bundle
+export function normalizeProductType({ productType, planKey }) {
   const raw = productType || planKey || "";
   if (!raw) return "";
 
@@ -16,6 +16,7 @@ function normalizeProductType({ productType, planKey }) {
     // Canonical
     screening: "screening",
     underwriting: "underwriting",
+    bundle: "bundle",
   };
 
   return map[raw] || "";
@@ -24,14 +25,16 @@ function normalizeProductType({ productType, planKey }) {
 export const PRICE_CONFIG = {
   screening: { priceId: process.env.STRIPE_PRICE_SCREENING, mode: "payment" },
   underwriting: { priceId: process.env.STRIPE_PRICE_UNDERWRITING, mode: "payment" },
+  bundle: { priceId: process.env.STRIPE_PRICE_BUNDLE, mode: "payment" },
 };
 
-export const ALLOWED_PRODUCT_TYPES = ["screening", "underwriting"];
+export const ALLOWED_PRODUCT_TYPES = ["screening", "underwriting", "bundle"];
 
 function requiredEnvFor(productType) {
   switch (productType) {
     case "screening": return "STRIPE_PRICE_SCREENING";
     case "underwriting": return "STRIPE_PRICE_UNDERWRITING";
+    case "bundle": return "STRIPE_PRICE_BUNDLE";
     default: return "UNKNOWN";
   }
 }
@@ -47,6 +50,88 @@ export function getValidatedPriceConfig() {
     ok: missing.length === 0,
     missing,
     config: PRICE_CONFIG,
+  };
+}
+
+export function getValidatedPriceConfigForProduct(productType, priceConfig = PRICE_CONFIG) {
+  const normalizedProductType = normalizeProductType({ productType });
+  if (!normalizedProductType) {
+    return {
+      ok: false,
+      missing: [],
+      config: null,
+      normalizedProductType: "",
+    };
+  }
+
+  const config = priceConfig?.[normalizedProductType];
+  if (!config?.priceId) {
+    return {
+      ok: false,
+      missing: [requiredEnvFor(normalizedProductType)],
+      config: null,
+      normalizedProductType,
+    };
+  }
+
+  return {
+    ok: true,
+    missing: [],
+    config,
+    normalizedProductType,
+  };
+}
+
+function normalizeStandaloneQuantity(quantity) {
+  const parsed = Number.parseInt(quantity, 10);
+  return Math.max(1, Math.min(5, Number.isFinite(parsed) ? parsed : 1));
+}
+
+function normalizeBundleQuantity(quantity) {
+  if (quantity === undefined || quantity === null || String(quantity).trim() === "") {
+    return 1;
+  }
+  if (typeof quantity === "number") {
+    return quantity === 1 ? 1 : null;
+  }
+  if (typeof quantity === "string") {
+    return /^\s*1\s*$/.test(quantity) ? 1 : null;
+  }
+  return null;
+}
+
+export function normalizeCheckoutQuantity({ productType, quantity }) {
+  if (productType === "bundle") {
+    return normalizeBundleQuantity(quantity);
+  }
+  return normalizeStandaloneQuantity(quantity);
+}
+
+export function buildCheckoutLineItem({ normalizedProductType, normalizedQuantity, priceId }) {
+  const lineItem = { price: priceId };
+  if (normalizedProductType === "bundle") {
+    return {
+      ...lineItem,
+      quantity: 1,
+    };
+  }
+
+  return {
+    ...lineItem,
+    quantity: normalizedQuantity,
+    adjustable_quantity: {
+      enabled: true,
+      minimum: 1,
+      maximum: 5,
+    },
+  };
+}
+
+export function buildCheckoutMetadata({ actorId, normalizedProductType, normalizedQuantity }) {
+  return {
+    userId: actorId,
+    productType: normalizedProductType || "",
+    quantity: String(normalizedQuantity),
   };
 }
 
@@ -66,26 +151,22 @@ export default async function handler(req, res) {
     }
 
     const { productType, planKey, quantity } = req.body || {};
-    const normalizedQuantity = Math.max(1, Math.min(5, Number.parseInt(quantity, 10) || 1));
 
     const normalizedProductType = normalizeProductType({ productType, planKey });
-    const { ok: configOk, missing, config: configMap } = getValidatedPriceConfig();
-    if (!configOk) {
-      return res.status(500).json({
-        error: "Server misconfigured: missing Stripe Price ID env vars.",
-        missing,
-      });
-    }
-    const config = configMap[normalizedProductType];
-
-    if (!config) {
+    if (!normalizedProductType) {
       return res.status(400).json({ error: "Invalid productType" });
     }
 
-    if (!config.priceId) {
+    const normalizedQuantity = normalizeCheckoutQuantity({ productType: normalizedProductType, quantity });
+    if (normalizedQuantity === null) {
+      return res.status(400).json({ error: "Invalid quantity" });
+    }
+
+    const { ok: configOk, missing, config } = getValidatedPriceConfigForProduct(normalizedProductType);
+    if (!configOk) {
       return res.status(500).json({
         error: `Missing Stripe Price ID env var for "${normalizedProductType}".`,
-        expectedEnv: requiredEnvFor(normalizedProductType),
+        missing,
       });
     }
 
@@ -97,13 +178,11 @@ export default async function handler(req, res) {
     const session = await stripe.checkout.sessions.create({
       mode: config.mode,
       line_items: [{
-        price: config.priceId,
-        quantity: normalizedQuantity,
-        adjustable_quantity: {
-          enabled: true,
-          minimum: 1,
-          maximum: 5,
-        },
+        ...buildCheckoutLineItem({
+          normalizedProductType,
+          normalizedQuantity,
+          priceId: config.priceId,
+        }),
       }],
       allow_promotion_codes: true,
       success_url: finalSuccessUrl,
@@ -111,9 +190,12 @@ export default async function handler(req, res) {
       client_reference_id: auth.actor.id,
       ...(auth.actor.email ? { customer_email: auth.actor.email } : {}),
       metadata: {
+        ...buildCheckoutMetadata({
+          actorId: auth.actor.id,
+          normalizedProductType,
+          normalizedQuantity,
+        }),
         userId: auth.actor.id,
-        productType: normalizedProductType || "",
-        quantity: String(normalizedQuantity),
       },
     });
 

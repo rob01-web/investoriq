@@ -1,32 +1,43 @@
 // src/lib/pricingConfig.js
 // ─────────────────────────────────────────────────────────────────────────────
 // Validates that Stripe price IDs are present in the environment.
-// Pricing: $499 Screening / $1,499 Underwriting (updated April 2026)
+// Pricing: Screening / Underwriting / Bundle availability
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function getValidatedPriceConfig() {
-  const screeningId    = String(import.meta.env.VITE_STRIPE_PRICE_ID_SCREENING    || '').trim();
-  const underwritingId = String(import.meta.env.VITE_STRIPE_PRICE_ID_UNDERWRITING || '').trim();
+const PRICE_ENV_BY_PRODUCT = {
+  screening: 'VITE_STRIPE_PRICE_ID_SCREENING',
+  underwriting: 'VITE_STRIPE_PRICE_ID_UNDERWRITING',
+  bundle: 'VITE_STRIPE_PRICE_ID_BUNDLE',
+};
 
-  const missing = [];
-  if (!screeningId)    missing.push('VITE_STRIPE_PRICE_ID_SCREENING');
-  if (!underwritingId) missing.push('VITE_STRIPE_PRICE_ID_UNDERWRITING');
+export function getProductPricingAvailability(productType, pricingEnv = import.meta.env) {
+  const normalizedProductType = String(productType || '').trim();
+  const envKey = PRICE_ENV_BY_PRODUCT[normalizedProductType];
 
+  if (!envKey) {
+    return {
+      ok: false,
+      missing: [],
+      priceId: null,
+      envKey: null,
+      productType: normalizedProductType,
+    };
+  }
+
+  const priceId = String(pricingEnv?.[envKey] || '').trim();
   return {
-    ok: missing.length === 0,
-    missing,
-    prices: {
-      screening: {
-        amount:   499,
-        currency: 'USD',
-        label:    'Screening Report',
-      },
-      underwriting: {
-        priceId:  underwritingId || null,
-        amount:   1499,
-        currency: 'USD',
-        label:    'Underwriting Report',
-      },
-    },
+    ok: Boolean(priceId),
+    missing: priceId ? [] : [envKey],
+    priceId: priceId || null,
+    envKey,
+    productType: normalizedProductType,
+  };
+}
+
+export function getPricingAvailabilityMap(pricingEnv = import.meta.env) {
+  return {
+    screening: getProductPricingAvailability('screening', pricingEnv),
+    underwriting: getProductPricingAvailability('underwriting', pricingEnv),
+    bundle: getProductPricingAvailability('bundle', pricingEnv),
   };
 }

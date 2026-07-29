@@ -8,6 +8,9 @@ export const config = {
   },
 };
 
+export const CHECKOUT_PRODUCT_TYPES = ["screening", "underwriting", "bundle"];
+export const ENTITLEMENT_PRODUCT_TYPES = ["screening", "underwriting"];
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
 });
@@ -35,16 +38,79 @@ function isUniqueViolationError(error) {
   return error?.code === "23505" || isDuplicateInsertError(error);
 }
 
-function hasExpectedPurchases(rows, expectedSessionIds, userId, productType) {
+export function buildExpectedPurchaseSpecs({ sessionId, productType, quantity, userId }) {
+  if (!sessionId || !productType) return [];
+
+  if (productType === "bundle") {
+    return [
+      {
+        stripe_session_id: sessionId,
+        user_id: userId,
+        product_type: "screening",
+        bundle_slot: "screening_1",
+      },
+      {
+        stripe_session_id: `${sessionId}#2`,
+        user_id: userId,
+        product_type: "screening",
+        bundle_slot: "screening_2",
+      },
+      {
+        stripe_session_id: `${sessionId}#3`,
+        user_id: userId,
+        product_type: "underwriting",
+        bundle_slot: "underwriting_1",
+      },
+    ];
+  }
+
+  const normalizedQuantity = Math.max(1, Math.min(5, Number.parseInt(quantity, 10) || 1));
+  return Array.from({ length: normalizedQuantity }, (_value, index) => ({
+    stripe_session_id: index === 0 ? sessionId : `${sessionId}#${index + 1}`,
+    user_id: userId,
+    product_type: productType,
+    bundle_slot: null,
+  }));
+}
+
+export function verifyExpectedPurchaseSpecs(rows, expectedPurchaseSpecs) {
   const rowsBySessionId = new Map(rows.map((row) => [row.stripe_session_id, row]));
-  return expectedSessionIds.every((expectedSessionId) => {
-    const purchase = expectedSessionId ? rowsBySessionId.get(expectedSessionId) : null;
-    return Boolean(
-      purchase &&
-        purchase.user_id === userId &&
-        purchase.product_type === productType
-    );
-  });
+  const missing = [];
+  const mismatches = [];
+
+  for (const expected of expectedPurchaseSpecs) {
+    const actual = rowsBySessionId.get(expected.stripe_session_id);
+    if (!actual) {
+      missing.push(expected);
+      continue;
+    }
+
+    if (actual.user_id !== expected.user_id || actual.product_type !== expected.product_type) {
+      mismatches.push({ expected, actual });
+    }
+  }
+
+  return {
+    missing,
+    mismatches,
+    complete: missing.length === 0 && mismatches.length === 0,
+  };
+}
+
+export function buildMissingPurchaseRows(existingPurchases, expectedPurchaseSpecs) {
+  const existingSessionIds = new Set(
+    existingPurchases.map((row) => row.stripe_session_id).filter(Boolean)
+  );
+
+  return expectedPurchaseSpecs
+    .filter((spec) => !existingSessionIds.has(spec.stripe_session_id))
+    .map((spec) => ({
+      user_id: spec.user_id,
+      product_type: spec.product_type,
+      job_id: null,
+      consumed_at: null,
+      stripe_session_id: spec.stripe_session_id,
+    }));
 }
 
 export default async function handler(req, res) {
@@ -89,7 +155,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing metadata userId or productType" });
   }
 
-  if (productType !== "screening" && productType !== "underwriting") {
+  if (productType !== "screening" && productType !== "underwriting" && productType !== "bundle") {
     console.warn("Unknown productType:", productType);
     return res.status(400).json({ error: "Invalid productType" });
   }
@@ -109,14 +175,18 @@ export default async function handler(req, res) {
     }
   }
 
-  const expectedSessionIds = Array.from({ length: quantity }, (_value, index) =>
-    index === 0 ? (sessionId || null) : `${sessionId}#${index + 1}`
-  );
+  const expectedPurchaseSpecs = buildExpectedPurchaseSpecs({
+    sessionId,
+    productType,
+    quantity,
+    userId,
+  });
+  const expectedSessionIdsForLoad = expectedPurchaseSpecs.map((spec) => spec.stripe_session_id);
 
   const loadExistingPurchases = async () => {
     if (!sessionId) return { rows: [], error: null };
 
-    const filters = expectedSessionIds
+    const filters = expectedSessionIdsForLoad
       .filter(Boolean)
       .map((value) => `stripe_session_id.eq.${value}`)
       .join(",");
@@ -146,14 +216,24 @@ export default async function handler(req, res) {
         console.error("Failed to verify existing report purchases for duplicate event:", existingErr);
         return res.status(500).json({ error: "Webhook purchase verification failed" });
       }
-      if (hasExpectedPurchases(existingRows, expectedSessionIds, userId, productType)) {
+      const verification = verifyExpectedPurchaseSpecs(existingRows, expectedPurchaseSpecs);
+      if (verification.mismatches.length > 0) {
+        console.error("Duplicate Stripe event found with mismatched entitlement rows:", {
+          eventId,
+          sessionId,
+          expected: expectedPurchaseSpecs.length,
+          mismatched: verification.mismatches.length,
+        });
+        return res.status(500).json({ error: "Webhook purchase verification failed" });
+      }
+      if (verification.complete) {
         console.log("Stripe event already processed:", eventId);
         return res.status(200).json({ received: true });
       }
       console.warn("Duplicate Stripe event found without complete entitlement rows; continuing purchase creation:", {
         eventId,
         sessionId,
-        expected: quantity,
+        expected: expectedPurchaseSpecs.length,
         existing: existingRows.length,
       });
     } else {
@@ -168,42 +248,25 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Report purchase verification failed" });
   }
 
-  const expectedSessionIdSet = new Set(expectedSessionIds.filter(Boolean));
-  const mismatchedExistingPurchases = existingPurchases.filter(
-    (row) =>
-      expectedSessionIdSet.has(row.stripe_session_id) &&
-      (row.user_id !== userId || row.product_type !== productType)
-  );
-  if (mismatchedExistingPurchases.length > 0) {
+  const verification = verifyExpectedPurchaseSpecs(existingPurchases, expectedPurchaseSpecs);
+  if (verification.mismatches.length > 0) {
     console.error("Existing report purchases do not match expected ownership or product type:", {
       eventId,
       sessionId,
-      expected: quantity,
-      mismatched: mismatchedExistingPurchases.length,
+      expected: expectedPurchaseSpecs.length,
+      mismatched: verification.mismatches.length,
     });
     return res.status(500).json({ error: "Report purchase verification failed" });
   }
 
-  const existingSessionIds = new Set(
-    existingPurchases.map((row) => row.stripe_session_id).filter(Boolean)
-  );
-
-  const purchaseRows = expectedSessionIds
-    .filter((purchaseSessionId) => !purchaseSessionId || !existingSessionIds.has(purchaseSessionId))
-    .map((purchaseSessionId) => ({
-      user_id: userId,
-      product_type: productType,
-      job_id: null,
-      consumed_at: null,
-      stripe_session_id: purchaseSessionId,
-    }));
+  const purchaseRows = buildMissingPurchaseRows(existingPurchases, expectedPurchaseSpecs);
 
   if (purchaseRows.length === 0) {
-    if (!hasExpectedPurchases(existingPurchases, expectedSessionIds, userId, productType)) {
+    if (!verification.complete) {
       console.error("Existing report purchases do not match expected ownership or product type:", {
         eventId,
         sessionId,
-        expected: quantity,
+        expected: expectedPurchaseSpecs.length,
         existing: existingPurchases.length,
       });
       return res.status(500).json({ error: "Report purchase verification failed" });
@@ -225,18 +288,16 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: "Report purchase insert failed" });
       }
 
-      const allExpectedPurchasesPresent = hasExpectedPurchases(
+      const recoveredVerification = verifyExpectedPurchaseSpecs(
         recoveredPurchases,
-        expectedSessionIds,
-        userId,
-        productType
+        expectedPurchaseSpecs
       );
 
-      if (allExpectedPurchasesPresent) {
+      if (recoveredVerification.complete) {
         console.log("Recovered report purchases after unique violation:", {
           eventId,
           sessionId,
-          expected: quantity,
+          expected: expectedPurchaseSpecs.length,
           recovered: recoveredPurchases.length,
         });
         return res.status(200).json({ received: true });
@@ -245,7 +306,7 @@ export default async function handler(req, res) {
       console.error("Report purchase unique violation without matching entitlement rows:", {
         eventId,
         sessionId,
-        expected: quantity,
+        expected: expectedPurchaseSpecs.length,
         recovered: recoveredPurchases.length,
       });
     }

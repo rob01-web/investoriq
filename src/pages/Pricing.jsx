@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { getValidatedPriceConfig } from '@/lib/pricingConfig';
+import { getPricingAvailabilityMap } from '@/lib/pricingConfig';
 import { supabase } from '@/lib/customSupabaseClient';
 
 //  DESIGN TOKENS 
@@ -55,7 +55,7 @@ const stagger = {
 const tiers = [
   {
     title:       'Screening Report',
-    price:       '$499',
+    price:       '$199',
     productType: 'screening',
     eyebrow:     'Acquisition Screening',
     valueLine:   'Rapid risk screening from document-backed inputs with missing inputs disclosed.',
@@ -72,7 +72,7 @@ const tiers = [
   },
   {
     title:       'Underwriting Report',
-    price:       '$1,499',
+    price:       '$499',
     productType: 'underwriting',
     eyebrow:     'Investment Committee Underwriting',
     valueLine:   'Full institutional-grade refinance and downside risk modeling.',
@@ -87,16 +87,35 @@ const tiers = [
     cta: 'Run Full Underwriting',
     highlight: true,
   },
+  {
+    title:       'Launch Bundle',
+    price:       '$699',
+    productType: 'bundle',
+    eyebrow:     'Frozen Launch Bundle',
+    valueLine:   'Two Screening reports plus one Full Underwriting report in one fixed-price package.',
+    description: 'Two Screening reports plus one Full Underwriting report in one fixed-price package.',
+    pricingNote: 'Frozen bundle composition',
+    features: [
+      '2 Screening reports',
+      '1 Full Underwriting report',
+      'One checkout, one authenticated owner',
+      'Bundle composition is fixed server-side',
+    ],
+    cta: 'Purchase Bundle',
+    highlight: false,
+  },
 ];
 
+const comparisonTiers = tiers.filter((tier) => tier.productType !== 'bundle');
+
 //  PRICING TILE 
-function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk }) {
+function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAvailable }) {
   const isLoading = loadingKey === tier.productType;
   const [hovered, setHovered] = useState(false);
 
   const buttonLabel = isLoading
     ? 'Redirecting...'
-    : !pricingOk
+    : !pricingAvailable
     ? 'Pricing unavailable'
     : !isAuthenticated
     ? 'Log in to purchase'
@@ -203,7 +222,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
           marginTop:    4,
           display:      'block',
         }}>
-          Flat fee | One property
+          {tier.productType === 'bundle' ? 'Flat fee | 3 report credits' : 'Flat fee | One property'}
         </span>
         <span className="pricing-note">
           {tier.pricingNote}
@@ -269,7 +288,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
       <button
         type="button"
         onClick={() => onCheckout(tier.productType, 1)}
-        disabled={isLoading || !pricingOk}
+        disabled={isLoading || !pricingAvailable}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -281,11 +300,11 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingOk 
           letterSpacing:'0.14em',
           textTransform:'uppercase',
           fontWeight:   500,
-          background:   hovered && !isLoading && pricingOk ? T.gold : T.green,
-          color:        hovered && !isLoading && pricingOk ? T.green : T.gold,
+          background:   hovered && !isLoading && pricingAvailable ? T.gold : T.green,
+          color:        hovered && !isLoading && pricingAvailable ? T.green : T.gold,
           border:       `1px solid ${T.green}`,
-          cursor:       isLoading || !pricingOk ? 'not-allowed' : 'pointer',
-          opacity:      isLoading || !pricingOk ? 0.5 : 1,
+          cursor:       isLoading || !pricingAvailable ? 'not-allowed' : 'pointer',
+          opacity:      isLoading || !pricingAvailable ? 0.5 : 1,
           transition:   'background 0.18s, color 0.18s',
         }}
       >
@@ -301,8 +320,8 @@ export default function PricingPage() {
   const { session } = useAuth();
   const [loadingKey, setLoadingKey]   = useState(null);
   const [isAuthed, setIsAuthed]       = useState(false);
-  const pricingConfig                  = getValidatedPriceConfig();
-  const pricingOk                      = pricingConfig.ok;
+  const pricingAvailability            = getPricingAvailabilityMap();
+  const hasAnyPricingAvailable         = Object.values(pricingAvailability).some((entry) => entry.ok);
 
   useEffect(() => {
     let mounted = true;
@@ -490,7 +509,7 @@ export default function PricingPage() {
             padding:  '72px 48px',
           }}>
 
-            {!pricingOk && (
+            {!hasAnyPricingAvailable && (
               <div style={{
                 fontFamily:   "'DM Mono', monospace",
                 fontSize:     11,
@@ -524,7 +543,7 @@ export default function PricingPage() {
                   onCheckout={handleCheckout}
                   loadingKey={loadingKey}
                   isAuthenticated={isAuthed}
-                  pricingOk={pricingOk}
+                  pricingAvailable={pricingAvailability[tier.productType]?.ok ?? false}
                 />
               ))}
             </motion.div>
@@ -653,7 +672,7 @@ export default function PricingPage() {
                       }}>
                         Report Element
                       </th>
-                      {tiers.map((t) => (
+                      {comparisonTiers.map((t) => (
                         <th key={t.title} style={{
                           textAlign:    'center',
                           padding:      '0 12px 10px',

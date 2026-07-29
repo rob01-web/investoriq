@@ -390,6 +390,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
   const [rentRollCoverage, setRentRollCoverage] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState('screening');
+  const [selectedPurchaseType, setSelectedPurchaseType] = useState('screening');
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [issueMessage, setIssueMessage] = useState('');
   const [issueFile, setIssueFile] = useState(null);
@@ -664,7 +665,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (productType = selectedPurchaseType) => {
     try {
       setCheckoutLoading(true);
       const accessToken = session?.access_token || '';
@@ -680,7 +681,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          productType: selectedReportType,
+          productType,
           quantity: 1,
         }),
       });
@@ -1496,7 +1497,10 @@ useEffect(() => {
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setSelectedReportType(type)}
+                    onClick={() => {
+                      setSelectedReportType(type);
+                      setSelectedPurchaseType(type);
+                    }}
                     style={{
                       fontFamily:   "'DM Mono', monospace",
                       fontSize:     10,
@@ -1532,20 +1536,66 @@ useEffect(() => {
               </div>
             )}
 
+            <div style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setSelectedPurchaseType('bundle')}
+                style={{
+                  fontFamily:   "'DM Mono', monospace",
+                  fontSize:     10,
+                  letterSpacing:'0.14em',
+                  textTransform:'uppercase',
+                  fontWeight:   500,
+                  padding:      '9px 20px',
+                  background:   selectedPurchaseType === 'bundle' ? T.green : T.white,
+                  color:        selectedPurchaseType === 'bundle' ? T.gold : T.ink3,
+                  border:       `1px solid ${selectedPurchaseType === 'bundle' ? T.green : T.hairlineMid}`,
+                  cursor:       'pointer',
+                  transition:   'all 0.15s',
+                }}
+              >
+                Bundle Purchase
+              </button>
+              {selectedPurchaseType === 'bundle' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:3, marginTop:12 }}>
+                  <span style={{ ...bodySmall, fontSize:12 }}>2 Screening reports</span>
+                  <span style={{ ...bodySmall, fontSize:12 }}>1 Full Underwriting report</span>
+                  <span style={{ ...bodySmall, fontSize:12 }}>$699 flat fee bundle.</span>
+                </div>
+              )}
+            </div>
+
             {/* Entitlement status */}
-            {entitlements.error ? (
+            {selectedPurchaseType === 'bundle' ? (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:T.okBg, border:`1px solid ${T.okBorder}`, flexWrap:'wrap', gap:10 }}>
+                <div>
+                  <span style={{ ...labelMono, color: T.okGreen }}>
+                    Launch bundle selected
+                  </span>
+                  <div style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:24, fontWeight:500, color: T.okGreen, lineHeight:1, marginTop:4 }}>
+                    2 Screening + 1 Underwriting
+                  </div>
+                  <div style={{ ...bodySmall, fontSize:12, color:T.okGreen, marginTop:4 }}>
+                    $699 flat fee bundle.
+                  </div>
+                </div>
+                <PrimaryBtn onClick={() => handleCheckout('bundle')} loading={checkoutLoading}>
+                  Purchase Bundle
+                </PrimaryBtn>
+              </div>
+            ) : entitlements.error ? (
               <NoticeBox type="error">Unable to confirm report availability. Refresh to retry.</NoticeBox>
             ) : (
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:hasAvailableReport ? T.okBg : T.errorBg, border:`1px solid ${hasAvailableReport ? T.okBorder : T.errorBorder}`, flexWrap:'wrap', gap:10 }}>
                 <div>
                   <span style={{ ...labelMono, color: hasAvailableReport ? T.okGreen : T.errorRed }}>
-                    {selectedReportType === 'screening' ? 'Screening' : 'Underwriting'} credits available
+                    {selectedPurchaseType === 'screening' ? 'Screening' : 'Underwriting'} credits available
                   </span>
                   <div style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:24, fontWeight:500, color: hasAvailableReport ? T.okGreen : T.errorRed, lineHeight:1, marginTop:4 }}>
-                    {availableReportsCount}
+                    {selectedPurchaseType === 'screening' ? (entitlements.screening ?? 0) : (entitlements.underwriting ?? 0)}
                   </div>
                 </div>
-                <PrimaryBtn onClick={handleCheckout} loading={checkoutLoading}>
+                <PrimaryBtn onClick={() => handleCheckout(selectedPurchaseType)} loading={checkoutLoading}>
                   Purchase Report
                 </PrimaryBtn>
               </div>
