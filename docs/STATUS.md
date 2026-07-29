@@ -52,13 +52,17 @@ Local completion status:
 - Premium remains false
 - RETEST 39 remains unauthorized
 - H6-A read-only worker claim, lease, fencing, deadline, and dead-letter recovery map completed
-- H6-B implementation commit: `bfc73f3` - Harden worker claim lease and fencing
+- H6 correction completed
+- H6-B implementation commit: `f2ed885` - Harden H6 worker ownership and restoration
+- Claimed-by identity is part of the worker fence
 - Explicit worker attempt identity added
 - Lease expiry and deterministic reclaim behavior added
 - Stale worker writes are fenced by the current attempt identity
-- Entitlement restoration is fenced to the current attempt
+- Entitlement restoration is atomic and fenced to the current attempt
+- Expired leases terminalize through a dedicated current-attempt recovery RPC
 - Retry exhaustion now produces an explicit dead-letter boundary
 - Undefined split claim/requeue authority is replaced by repository-defined contracts
+- H6 is complete only after all validations pass
 - No migration has been applied
 - No deployment occurred
 - No production data changed

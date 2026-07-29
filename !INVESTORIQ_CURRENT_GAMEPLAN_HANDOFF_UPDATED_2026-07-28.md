@@ -20,7 +20,7 @@ H2: complete
 H3: complete
 H4: complete
 H5: complete
-Latest closeout commit: bfc73f3 Harden worker claim lease and fencing
+Latest closeout commit: f2ed885 Harden H6 worker ownership and restoration
 Working tree: clean
 Remote: not updated because no push is authorized
 Next boundary: H7 Core/support classification, taxonomy, and causal taxonomy
@@ -109,13 +109,17 @@ Current forbidden actions remain:
 
 ### H6 completion facts
 - `H6-A` read-only worker claim, lease, fencing, deadline, and dead-letter recovery map completed.
-- `H6-B` implementation commit: `bfc73f3` - Harden worker claim lease and fencing.
+- H6 correction completed.
+- `H6-B` implementation commit: `f2ed885` - Harden H6 worker ownership and restoration.
+- Claimed-by identity is part of the worker fence.
 - Explicit worker attempt identity is persisted and fenced on every worker-owned mutation.
 - Lease expiry and deterministic reclaim behavior are persisted in the database.
 - Stale worker writes cannot advance, publish, fail, restore entitlement, or overwrite a newer attempt.
-- Entitlement restoration is fenced to the current authorized attempt.
+- Entitlement restoration is atomic and fenced to the current authorized attempt.
+- Expired leases terminalize through a dedicated current-attempt recovery RPC.
 - Retry exhaustion produces an explicit dead-letter terminal state.
 - Repository-defined claim and requeue contracts replace the undefined split authority.
+- H6 complete only after all validations pass.
 - No migration has been applied.
 - No deployment occurred.
 - No production data changed.
@@ -187,7 +191,7 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H3 complete.
 - H4 complete.
 - H5 complete.
-- H6 complete.
+- H6 correction completed.
 - H7 next.
 
 ## 5. Fresh-chat operating order

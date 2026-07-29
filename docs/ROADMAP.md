@@ -26,7 +26,7 @@ Current state:
 - H3 complete.
 - H4 complete.
 - H5 complete.
-- H6 complete.
+- H6 correction completed.
 - H7 next.
 - Operating mode from H2 forward: bounded packet mode.
 
