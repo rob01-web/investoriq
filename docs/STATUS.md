@@ -1,6 +1,6 @@
 # InvestorIQ Status
 
-Current date: July 28, 2026
+Current date: July 29, 2026
 
 Current authority:
 - Treat the uploaded `!INVESTORIQ_CURRENT_GAMEPLAN_HANDOFF_UPDATED_2026-07-28.md` file as the practical daily handoff until this structure is fully established.
@@ -17,7 +17,7 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H2 Read-only deployed schema, RLS, storage verification complete.
+- H3 Stripe receipt and standalone entitlement atomicity complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
@@ -27,6 +27,9 @@ Local completion status:
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
+- H3 duplicate Stripe webhook delivery is idempotently recovered
+- H3 existing, partial-existing, and concurrent unique-conflict entitlement rows are validated against user_id and product_type
+- H3 consume_purchase_and_create_job remains the atomic entitlement-consumption path
 - Working tree: clean
 - Remote: up to date
 - No runtime code changed
@@ -38,11 +41,11 @@ Local completion status:
 - No RETEST 39
 
 Next boundary:
-- H3 Stripe receipt and standalone entitlement atomicity
+- H4 Bundle entitlement creation
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H3-A read-only receipt/entitlement atomicity map.
+- Set next authorized packet to H4-A read-only bundle entitlement creation map.
 
 Operating mode:
 - bounded packet mode

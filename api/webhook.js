@@ -31,6 +31,22 @@ function isDuplicateInsertError(error) {
   return msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists");
 }
 
+function isUniqueViolationError(error) {
+  return error?.code === "23505" || isDuplicateInsertError(error);
+}
+
+function hasExpectedPurchases(rows, expectedSessionIds, userId, productType) {
+  const rowsBySessionId = new Map(rows.map((row) => [row.stripe_session_id, row]));
+  return expectedSessionIds.every((expectedSessionId) => {
+    const purchase = expectedSessionId ? rowsBySessionId.get(expectedSessionId) : null;
+    return Boolean(
+      purchase &&
+        purchase.user_id === userId &&
+        purchase.product_type === productType
+    );
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -109,7 +125,7 @@ export default async function handler(req, res) {
 
     const { data, error } = await supabaseAdmin
       .from("report_purchases")
-      .select("id, stripe_session_id")
+      .select("id, stripe_session_id, user_id, product_type")
       .or(filters);
 
     return { rows: data || [], error };
@@ -130,7 +146,7 @@ export default async function handler(req, res) {
         console.error("Failed to verify existing report purchases for duplicate event:", existingErr);
         return res.status(500).json({ error: "Webhook purchase verification failed" });
       }
-      if (existingRows.length >= quantity) {
+      if (hasExpectedPurchases(existingRows, expectedSessionIds, userId, productType)) {
         console.log("Stripe event already processed:", eventId);
         return res.status(200).json({ received: true });
       }
@@ -152,6 +168,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Report purchase verification failed" });
   }
 
+  const expectedSessionIdSet = new Set(expectedSessionIds.filter(Boolean));
+  const mismatchedExistingPurchases = existingPurchases.filter(
+    (row) =>
+      expectedSessionIdSet.has(row.stripe_session_id) &&
+      (row.user_id !== userId || row.product_type !== productType)
+  );
+  if (mismatchedExistingPurchases.length > 0) {
+    console.error("Existing report purchases do not match expected ownership or product type:", {
+      eventId,
+      sessionId,
+      expected: quantity,
+      mismatched: mismatchedExistingPurchases.length,
+    });
+    return res.status(500).json({ error: "Report purchase verification failed" });
+  }
+
   const existingSessionIds = new Set(
     existingPurchases.map((row) => row.stripe_session_id).filter(Boolean)
   );
@@ -167,6 +199,15 @@ export default async function handler(req, res) {
     }));
 
   if (purchaseRows.length === 0) {
+    if (!hasExpectedPurchases(existingPurchases, expectedSessionIds, userId, productType)) {
+      console.error("Existing report purchases do not match expected ownership or product type:", {
+        eventId,
+        sessionId,
+        expected: quantity,
+        existing: existingPurchases.length,
+      });
+      return res.status(500).json({ error: "Report purchase verification failed" });
+    }
     console.log("Entitlement rows already present for event:", eventId);
     return res.status(200).json({ received: true });
   }
@@ -177,6 +218,38 @@ export default async function handler(req, res) {
     .select("id");
 
   if (purchaseErr) {
+    if (isUniqueViolationError(purchaseErr)) {
+      const { rows: recoveredPurchases, error: recoveredErr } = await loadExistingPurchases();
+      if (recoveredErr) {
+        console.error("Failed to reload report purchases after unique violation:", recoveredErr);
+        return res.status(500).json({ error: "Report purchase insert failed" });
+      }
+
+      const allExpectedPurchasesPresent = hasExpectedPurchases(
+        recoveredPurchases,
+        expectedSessionIds,
+        userId,
+        productType
+      );
+
+      if (allExpectedPurchasesPresent) {
+        console.log("Recovered report purchases after unique violation:", {
+          eventId,
+          sessionId,
+          expected: quantity,
+          recovered: recoveredPurchases.length,
+        });
+        return res.status(200).json({ received: true });
+      }
+
+      console.error("Report purchase unique violation without matching entitlement rows:", {
+        eventId,
+        sessionId,
+        expected: quantity,
+        recovered: recoveredPurchases.length,
+      });
+    }
+
     console.error("Failed to record report purchase:", purchaseErr);
     return res.status(500).json({ error: "Report purchase insert failed" });
   }
