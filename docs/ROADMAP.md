@@ -26,7 +26,8 @@ Current state:
 - H3 complete.
 - H4 complete.
 - H5 complete.
-- H6 next.
+- H6 complete.
+- H7 next.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -41,7 +42,7 @@ Phase playbook:
 | H3 | Stripe receipt and standalone entitlement atomicity | Read-only verification and smallest fixes around receipt creation, entitlement consumption, and idempotency | Bundle work, later launch phases, production data changes, Premium, RETEST 39 | H3-A receipt/entitlement map; H3-B smallest atomicity patch | Receipt and entitlement consumption are atomic, idempotent, and owner-bound | Complete |
 | H4 | Bundle entitlement creation | Bundle SKU wiring, entitlement creation, and purchase-path checks | Later phase work, production changes, Premium, RETEST 39 | H4-A bundle map; H4-B smallest bundle creation patch | Bundle purchase creates exactly the required entitlements and nothing extra | Complete |
 | H5 | Submission, adjudication, reservation, source registration | Intake, adjudication, reservation, and source-registration logic | Later phase work, production changes, Premium, RETEST 39 | H5-A flow map; H5-B smallest reservation/adjudication patch | Submission state, reservation, and source registration are deterministic and recoverable | Complete |
-| H6 | Worker claim, lease, fencing, deadlines | Worker claim semantics, lease fencing, deadline handling, and dead-letter recovery | Later phase work, production changes, Premium, RETEST 39 | H6-A worker map; H6-B smallest fencing patch | One claim per job, leases expire safely, and stale work cannot win | Not started |
+| H6 | Worker claim, lease, fencing, deadlines | Worker claim semantics, lease fencing, deadline handling, and dead-letter recovery | Later phase work, production changes, Premium, RETEST 39 | H6-A worker map; H6-B smallest fencing patch | One claim per job, leases expire safely, and stale work cannot win | Complete |
 | H7 | Core/support classification and causal taxonomy | Source/evidence classification and failure taxonomy alignment | Later phase work, production changes, Premium, RETEST 39 | H7-A taxonomy map; H7-B smallest classifier patch | Core vs support taxonomy is stable, explicit, and testable | Not started |
 | H8 | Terminal outcome, manifest, restoration | Terminal states, report manifesting, and exactly-once restoration behavior | Later phase work, production changes, Premium, RETEST 39 | H8-A terminal map; H8-B restoration patch | Terminal outcomes are explicit and restoration paths do not double-grant or duplicate work | Not started |
 | H9 | Corrected and replacement revisions | Corrected reruns, replacement revisions, and lineage-preserving reroute logic | Later phase work, production changes, Premium, RETEST 39 | H9-A revision map; H9-B smallest correction patch | Corrected and replacement revisions preserve lineage and avoid duplicate charge or duplicate report state | Not started |

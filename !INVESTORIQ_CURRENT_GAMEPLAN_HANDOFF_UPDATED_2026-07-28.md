@@ -20,11 +20,11 @@ H2: complete
 H3: complete
 H4: complete
 H5: complete
-Latest closeout commit: 4834cb3 Record H5 completion status
+Latest closeout commit: bfc73f3 Harden worker claim lease and fencing
 Working tree: clean
 Remote: not updated because no push is authorized
-Next boundary: H6 Worker claim, lease, fencing, deadlines
-Next authorized packet: H6-A read-only worker claim, lease, fencing, deadline, and dead-letter recovery map
+Next boundary: H7 Core/support classification, taxonomy, and causal taxonomy
+Next authorized packet: H7-A read-only core/support classification and causal-taxonomy map
 Operating mode from H2 forward: bounded packet mode
 ```
 
@@ -43,7 +43,8 @@ Current forbidden actions remain:
 - ChatGPT Keeper recommendation remains: pass as an amendment, hold as a replacement.
 - H0, H0.5, H0.75, H1, H2, H3, and H4 are complete.
 - H5 is complete.
-- H6 is next.
+- H6 is complete.
+- H7 is next.
 - Operating mode from H2 forward is bounded packet mode.
 
 ## 2. Audit v3 preservation
@@ -99,6 +100,22 @@ Current forbidden actions remain:
 - Missing, forged, duplicated, unsafe, cross-user, or materially mismatched staged sources fail closed.
 - Entitlement selection still uses `FOR UPDATE SKIP LOCKED`.
 - Job creation, source registration, and entitlement consumption remain atomic inside `consume_purchase_and_create_job`.
+- No migration has been applied.
+- No deployment occurred.
+- No production data changed.
+- No Stripe configuration changed.
+- Premium remains false.
+- RETEST 39 remains unauthorized.
+
+### H6 completion facts
+- `H6-A` read-only worker claim, lease, fencing, deadline, and dead-letter recovery map completed.
+- `H6-B` implementation commit: `bfc73f3` - Harden worker claim lease and fencing.
+- Explicit worker attempt identity is persisted and fenced on every worker-owned mutation.
+- Lease expiry and deterministic reclaim behavior are persisted in the database.
+- Stale worker writes cannot advance, publish, fail, restore entitlement, or overwrite a newer attempt.
+- Entitlement restoration is fenced to the current authorized attempt.
+- Retry exhaustion produces an explicit dead-letter terminal state.
+- Repository-defined claim and requeue contracts replace the undefined split authority.
 - No migration has been applied.
 - No deployment occurred.
 - No production data changed.
@@ -170,7 +187,8 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H3 complete.
 - H4 complete.
 - H5 complete.
-- H6 next.
+- H6 complete.
+- H7 next.
 
 ## 5. Fresh-chat operating order
 

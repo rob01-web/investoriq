@@ -17,13 +17,13 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H5 Submission, adjudication, reservation, and source registration complete.
+- H6 Worker claim, lease, fencing, deadlines, and dead-letter recovery complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
 - H1-A read-only identity/authorization map completed with no edits
 - H1-B commit: `f59e748` - harden authenticated report identity boundaries
-- Latest closeout commit: `4834cb3` - Record H5 completion status
+- Latest closeout commit: `bfc73f3` - Harden worker claim lease and fencing
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
@@ -51,6 +51,20 @@ Local completion status:
 - No Stripe configuration changed
 - Premium remains false
 - RETEST 39 remains unauthorized
+- H6-A read-only worker claim, lease, fencing, deadline, and dead-letter recovery map completed
+- H6-B implementation commit: `bfc73f3` - Harden worker claim lease and fencing
+- Explicit worker attempt identity added
+- Lease expiry and deterministic reclaim behavior added
+- Stale worker writes are fenced by the current attempt identity
+- Entitlement restoration is fenced to the current attempt
+- Retry exhaustion now produces an explicit dead-letter boundary
+- Undefined split claim/requeue authority is replaced by repository-defined contracts
+- No migration has been applied
+- No deployment occurred
+- No production data changed
+- No Stripe configuration changed
+- Premium remains false
+- RETEST 39 remains unauthorized
 - Working tree: clean after the documentation commit
 - Remote: not updated because no push is authorized
 - No runtime code changed
@@ -62,11 +76,11 @@ Local completion status:
 - No RETEST 39
 
 Next boundary:
-- H6 Worker claim, lease, fencing, deadlines
+- H7 Core/support classification, taxonomy, and causal taxonomy
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H6-A read-only worker claim, lease, fencing, deadline, and dead-letter recovery map.
+- Set next authorized packet to H7-A read-only core/support classification and causal-taxonomy map.
 
 Operating mode:
 - bounded packet mode
