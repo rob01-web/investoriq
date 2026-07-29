@@ -17,13 +17,16 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H1 Authenticated identity and authorization complete.
+- H2 Read-only deployed schema, RLS, storage verification complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
 - H1-A read-only identity/authorization map completed with no edits
 - H1-B commit: `f59e748` - harden authenticated report identity boundaries
 - Latest closeout commit: `872da1a` - Record H1 completion status
+- H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
+- H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
+- Deployed verification: PASS
 - Working tree: clean
 - Remote: up to date
 - No runtime code changed
@@ -35,11 +38,11 @@ Local completion status:
 - No RETEST 39
 
 Next boundary:
-- H2 Read-only deployed schema, RLS, storage verification
+- H3 Stripe receipt and standalone entitlement atomicity
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H2-A read-only deployed schema/RLS/storage verification map.
+- Set next authorized packet to H3-A read-only receipt/entitlement atomicity map.
 
 Operating mode:
 - bounded packet mode

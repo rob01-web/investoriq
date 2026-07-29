@@ -22,7 +22,8 @@ Current state:
 - H0.5 complete.
 - H0.75 complete.
 - H1 complete.
-- H2 next.
+- H2 complete.
+- H3 next.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -33,7 +34,7 @@ Phase playbook:
 | H0.5 | Determinism proof and flakiness containment | Deterministic runtime/test patches only for factual recovery paths and proof harnesses | Broad audit, renderer, Stripe, deploy, migration, production data, Premium, RETEST 39 | H0.5-1.1 pin recovery requests; 1.2 content-hash cache; 1.3 demote LLM QA authority; 1.4 Textract dependency; 1.5 3x reproducibility harness | Identical fixture inputs produce identical canonical outputs, and the harness stays green on a clean checkout | Complete |
 | H0.75 | Publish-or-Collapse tiering | Declarative failure-tier maps, section-state maps, and targeted proof fixtures | Delivery behavior changes beyond the new tier/state wiring, renderer changes, Stripe, deploy, migration, production data, Premium, RETEST 39 | 2.1 tier map; 2.2 section-state map; 2.3 Tier 2 routing; 2.4 Tier 3 bounded recovery; 2.5 outcome fixtures | Tier 1 still blocks core truth failures, Tier 2 collapses or qualifies sections, Tier 3 recovers before final block | Complete |
 | H1 | Authenticated identity and authorization | Server-side ownership enforcement for report access and report start/generation authority | UI redesign, renderer, Stripe, deploy, migration, production data, Premium, RETEST 39 | H1-A read-only identity map; H1-B runtime hardening smoke | Owner access works, cross-user access fails, admin bypass stays on the intended path, and mismatched identity inputs are rejected | Complete |
-| H2 | Read-only deployed schema, RLS, storage verification | Read-only inspection of deployed schema evidence, RLS policies, and storage path assumptions | Edits, migrations, production changes, runtime behavior changes, Premium, RETEST 39 | H2-A read-only map; H2-B smallest schema/RLS/storage repair plan only if H2-A finds a gap | Deployed schema, policy, and storage evidence either matches code assumptions or the gaps are documented | Not started |
+| H2 | Read-only deployed schema, RLS, storage verification | Read-only inspection of deployed schema evidence, RLS policies, and storage path assumptions | Edits, migrations, production changes, runtime behavior changes, Premium, RETEST 39 | H2-A read-only map; H2-B smallest schema/RLS/storage repair plan only if H2-A finds a gap | Deployed schema, policy, and storage evidence either matches code assumptions or the gaps are documented | Complete |
 | H3 | Stripe receipt and standalone entitlement atomicity | Read-only verification and smallest fixes around receipt creation, entitlement consumption, and idempotency | Bundle work, later launch phases, production data changes, Premium, RETEST 39 | H3-A receipt/entitlement map; H3-B smallest atomicity patch | Receipt and entitlement consumption are atomic, idempotent, and owner-bound | Not started |
 | H4 | Bundle entitlement creation | Bundle SKU wiring, entitlement creation, and purchase-path checks | Later phase work, production changes, Premium, RETEST 39 | H4-A bundle map; H4-B smallest bundle creation patch | Bundle purchase creates exactly the required entitlements and nothing extra | Not started |
 | H5 | Submission, adjudication, reservation, source registration | Intake, adjudication, reservation, and source-registration logic | Later phase work, production changes, Premium, RETEST 39 | H5-A flow map; H5-B smallest reservation/adjudication patch | Submission state, reservation, and source registration are deterministic and recoverable | Not started |
