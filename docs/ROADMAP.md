@@ -24,7 +24,8 @@ Current state:
 - H1 complete.
 - H2 complete.
 - H3 complete.
-- H4 next.
+- H4 complete.
+- H5 next.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -37,7 +38,7 @@ Phase playbook:
 | H1 | Authenticated identity and authorization | Server-side ownership enforcement for report access and report start/generation authority | UI redesign, renderer, Stripe, deploy, migration, production data, Premium, RETEST 39 | H1-A read-only identity map; H1-B runtime hardening smoke | Owner access works, cross-user access fails, admin bypass stays on the intended path, and mismatched identity inputs are rejected | Complete |
 | H2 | Read-only deployed schema, RLS, storage verification | Read-only inspection of deployed schema evidence, RLS policies, and storage path assumptions | Edits, migrations, production changes, runtime behavior changes, Premium, RETEST 39 | H2-A read-only map; H2-B smallest schema/RLS/storage repair plan only if H2-A finds a gap | Deployed schema, policy, and storage evidence either matches code assumptions or the gaps are documented | Complete |
 | H3 | Stripe receipt and standalone entitlement atomicity | Read-only verification and smallest fixes around receipt creation, entitlement consumption, and idempotency | Bundle work, later launch phases, production data changes, Premium, RETEST 39 | H3-A receipt/entitlement map; H3-B smallest atomicity patch | Receipt and entitlement consumption are atomic, idempotent, and owner-bound | Complete |
-| H4 | Bundle entitlement creation | Bundle SKU wiring, entitlement creation, and purchase-path checks | Later phase work, production changes, Premium, RETEST 39 | H4-A bundle map; H4-B smallest bundle creation patch | Bundle purchase creates exactly the required entitlements and nothing extra | Not started |
+| H4 | Bundle entitlement creation | Bundle SKU wiring, entitlement creation, and purchase-path checks | Later phase work, production changes, Premium, RETEST 39 | H4-A bundle map; H4-B smallest bundle creation patch | Bundle purchase creates exactly the required entitlements and nothing extra | Complete |
 | H5 | Submission, adjudication, reservation, source registration | Intake, adjudication, reservation, and source-registration logic | Later phase work, production changes, Premium, RETEST 39 | H5-A flow map; H5-B smallest reservation/adjudication patch | Submission state, reservation, and source registration are deterministic and recoverable | Not started |
 | H6 | Worker claim, lease, fencing, deadlines | Worker claim semantics, lease fencing, deadline handling, and dead-letter recovery | Later phase work, production changes, Premium, RETEST 39 | H6-A worker map; H6-B smallest fencing patch | One claim per job, leases expire safely, and stale work cannot win | Not started |
 | H7 | Core/support classification and causal taxonomy | Source/evidence classification and failure taxonomy alignment | Later phase work, production changes, Premium, RETEST 39 | H7-A taxonomy map; H7-B smallest classifier patch | Core vs support taxonomy is stable, explicit, and testable | Not started |

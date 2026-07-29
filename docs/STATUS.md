@@ -17,7 +17,7 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H3 Stripe receipt and standalone entitlement atomicity complete.
+- H4 Bundle entitlement creation complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
@@ -30,6 +30,13 @@ Local completion status:
 - H3 duplicate Stripe webhook delivery is idempotently recovered
 - H3 existing, partial-existing, and concurrent unique-conflict entitlement rows are validated against user_id and product_type
 - H3 consume_purchase_and_create_job remains the atomic entitlement-consumption path
+- H4 implementation commit: `98625f2` - Implement atomic bundle entitlement creation
+- Bundle composition is exactly 2 Screening entitlements and 1 Underwriting entitlement
+- Bundle entitlement identifiers are deterministic: `sessionId`, `sessionId#2`, `sessionId#3`
+- Bundle quantity is fixed to exactly one per checkout
+- No `bundle` value is persisted as `report_purchases.product_type`
+- Duplicate, partial-existing, and concurrent bundle delivery recovery are verified
+- Frozen prices are Screening `$199`, Full Underwriting `$499`, and Bundle `$699`
 - Working tree: clean
 - Remote: up to date
 - No runtime code changed
@@ -41,11 +48,11 @@ Local completion status:
 - No RETEST 39
 
 Next boundary:
-- H4 Bundle entitlement creation
+- H5 Submission, adjudication, reservation, and source registration
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H4-A read-only bundle entitlement creation map.
+- Set next authorized packet to H5-A read-only submission, adjudication, reservation, and source-registration map.
 
 Operating mode:
 - bounded packet mode
