@@ -19,11 +19,12 @@ H1: complete
 H2: complete
 H3: complete
 H4: complete
-Latest closeout commit: 47ee83c Record H4 completion status
+H5: complete
+Latest closeout commit: c7aea52 Harden staged source registration
 Working tree: clean
-Remote: up to date
-Next boundary: H5 Submission, adjudication, reservation, and source registration
-Next authorized packet: H5-A read-only submission, adjudication, reservation, and source-registration map
+Remote: not updated because no push is authorized
+Next boundary: H6 Worker claim, lease, fencing, deadlines
+Next authorized packet: H6-A read-only worker claim, lease, fencing, deadline, and dead-letter recovery map
 Operating mode from H2 forward: bounded packet mode
 ```
 
@@ -41,7 +42,8 @@ Current forbidden actions remain:
 - The July 28 independent audit v3 is an amendment, not a replacement.
 - ChatGPT Keeper recommendation remains: pass as an amendment, hold as a replacement.
 - H0, H0.5, H0.75, H1, H2, H3, and H4 are complete.
-- H5 is next.
+- H5 is complete.
+- H6 is next.
 - Operating mode from H2 forward is bounded packet mode.
 
 ## 2. Audit v3 preservation
@@ -87,6 +89,22 @@ Current forbidden actions remain:
 - Bundle quantity is fixed to one.
 - No `bundle` value is persisted as `report_purchases.product_type`.
 - Duplicate, partial-existing, and concurrent recovery are verified.
+
+### H5 completion facts
+- `H5-A` read-only mapping completed.
+- `H5-B` staged-source registration hardening completed.
+- The authoritative staged-source manifest is validated before entitlement selection or job/source creation.
+- Every staged path uses the authenticated `staged/{auth.uid()}/` prefix, remains unique, and is matched against a locked `storage.objects` row in `staged_uploads`.
+- `doc_type` is explicit and restricted to approved aliases.
+- Missing, forged, duplicated, unsafe, cross-user, or materially mismatched staged sources fail closed.
+- Entitlement selection still uses `FOR UPDATE SKIP LOCKED`.
+- Job creation, source registration, and entitlement consumption remain atomic inside `consume_purchase_and_create_job`.
+- No migration has been applied.
+- No deployment occurred.
+- No production data changed.
+- No Stripe configuration changed.
+- Premium remains false.
+- RETEST 39 remains unauthorized.
 
 ### Still not proven until later
 - Production runtime behavior.
@@ -151,14 +169,15 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H2 complete.
 - H3 complete.
 - H4 complete.
-- H5 next.
+- H5 complete.
+- H6 next.
 
 ## 5. Fresh-chat operating order
 
 - Upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use the stale H0-A wording for the current next step. The current next packet is H5-A.
+- Do not use stale H5-next wording for the current next step. The current next packet is H6-A.
 
 ## 6. Keep the handoff short and useful
 

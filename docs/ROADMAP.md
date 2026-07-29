@@ -25,7 +25,8 @@ Current state:
 - H2 complete.
 - H3 complete.
 - H4 complete.
-- H5 next.
+- H5 complete.
+- H6 next.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -39,7 +40,7 @@ Phase playbook:
 | H2 | Read-only deployed schema, RLS, storage verification | Read-only inspection of deployed schema evidence, RLS policies, and storage path assumptions | Edits, migrations, production changes, runtime behavior changes, Premium, RETEST 39 | H2-A read-only map; H2-B smallest schema/RLS/storage repair plan only if H2-A finds a gap | Deployed schema, policy, and storage evidence either matches code assumptions or the gaps are documented | Complete |
 | H3 | Stripe receipt and standalone entitlement atomicity | Read-only verification and smallest fixes around receipt creation, entitlement consumption, and idempotency | Bundle work, later launch phases, production data changes, Premium, RETEST 39 | H3-A receipt/entitlement map; H3-B smallest atomicity patch | Receipt and entitlement consumption are atomic, idempotent, and owner-bound | Complete |
 | H4 | Bundle entitlement creation | Bundle SKU wiring, entitlement creation, and purchase-path checks | Later phase work, production changes, Premium, RETEST 39 | H4-A bundle map; H4-B smallest bundle creation patch | Bundle purchase creates exactly the required entitlements and nothing extra | Complete |
-| H5 | Submission, adjudication, reservation, source registration | Intake, adjudication, reservation, and source-registration logic | Later phase work, production changes, Premium, RETEST 39 | H5-A flow map; H5-B smallest reservation/adjudication patch | Submission state, reservation, and source registration are deterministic and recoverable | Not started |
+| H5 | Submission, adjudication, reservation, source registration | Intake, adjudication, reservation, and source-registration logic | Later phase work, production changes, Premium, RETEST 39 | H5-A flow map; H5-B smallest reservation/adjudication patch | Submission state, reservation, and source registration are deterministic and recoverable | Complete |
 | H6 | Worker claim, lease, fencing, deadlines | Worker claim semantics, lease fencing, deadline handling, and dead-letter recovery | Later phase work, production changes, Premium, RETEST 39 | H6-A worker map; H6-B smallest fencing patch | One claim per job, leases expire safely, and stale work cannot win | Not started |
 | H7 | Core/support classification and causal taxonomy | Source/evidence classification and failure taxonomy alignment | Later phase work, production changes, Premium, RETEST 39 | H7-A taxonomy map; H7-B smallest classifier patch | Core vs support taxonomy is stable, explicit, and testable | Not started |
 | H8 | Terminal outcome, manifest, restoration | Terminal states, report manifesting, and exactly-once restoration behavior | Later phase work, production changes, Premium, RETEST 39 | H8-A terminal map; H8-B restoration patch | Terminal outcomes are explicit and restoration paths do not double-grant or duplicate work | Not started |
@@ -54,6 +55,13 @@ Phase playbook:
 | H17 | Controlled replays | Deterministic replay harnesses and fixture control | Unsanctioned launch changes, production changes, Premium, RETEST 39 | H17-A replay map; H17-B smallest replay patch | Controlled replays remain stable and reproduce the same canonical outputs | Not started |
 | H18 | Governed canary | Governed pilot launch control, rollback, and evidence logging | Uncontrolled launch, production changes, Premium, RETEST 39 | H18-A canary map; H18-B smallest pilot-control patch | Canary rules, rollback, and evidence logs are explicit and enforceable | Not started |
 | H19 | Simultaneous launch certification | Final certification that Screening and Full Underwriting can launch together | Partial launch claims, production changes, Premium, RETEST 39 | H19-A certification map; H19-B smallest final certification patch | Screening and Full Underwriting both meet the governed launch bar together, or neither launches | Not started |
+
+H5 closure note:
+- Authoritative staged-source registration is now in place.
+- `doc_type` validation is explicit and limited to approved aliases.
+- `storage.objects` is checked through a locked row lookup before entitlement selection.
+- Entitlement/job/source registration remains atomic.
+- Targeted regression proof is in the H5 staged-source smoke.
 
 H2 packet details:
 - H2-A is read-only only.

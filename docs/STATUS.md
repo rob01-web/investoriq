@@ -17,7 +17,7 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H4 Bundle entitlement creation complete.
+- H5 Submission, adjudication, reservation, and source registration complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
@@ -37,8 +37,22 @@ Local completion status:
 - No `bundle` value is persisted as `report_purchases.product_type`
 - Duplicate, partial-existing, and concurrent bundle delivery recovery are verified
 - Frozen prices are Screening `$199`, Full Underwriting `$499`, and Bundle `$699`
-- Working tree: clean
-- Remote: up to date
+- H5-A read-only flow map completed
+- H5-B implementation commit: `c7aea52` - Harden staged source registration
+- Staged-source manifest is validated before entitlement selection or job/source creation
+- Each staged path uses the authenticated `staged/{auth.uid()}/` prefix, is unique, safe, and matched against a locked `storage.objects` row in `staged_uploads`
+- `doc_type` is explicit and restricted to approved aliases
+- Missing, forged, duplicated, unsafe, cross-user, or materially mismatched staged sources fail closed
+- Entitlement selection still uses `FOR UPDATE SKIP LOCKED`
+- Job creation, source registration, and entitlement consumption remain atomic inside `consume_purchase_and_create_job`
+- No migration has been applied
+- No deployment occurred
+- No production data changed
+- No Stripe configuration changed
+- Premium remains false
+- RETEST 39 remains unauthorized
+- Working tree: clean after the documentation commit
+- Remote: not updated because no push is authorized
 - No runtime code changed
 - No deployment
 - No migration
@@ -48,11 +62,11 @@ Local completion status:
 - No RETEST 39
 
 Next boundary:
-- H5 Submission, adjudication, reservation, and source registration
+- H6 Worker claim, lease, fencing, deadlines
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H5-A read-only submission, adjudication, reservation, and source-registration map.
+- Set next authorized packet to H6-A read-only worker claim, lease, fencing, deadline, and dead-letter recovery map.
 
 Operating mode:
 - bounded packet mode
