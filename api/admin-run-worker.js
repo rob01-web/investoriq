@@ -159,6 +159,7 @@ export default async function handler(req, res) {
 
     const now = new Date();
     let nowIso = now.toISOString();
+    const workerInvocationId = safeTimestamp(nowIso);
     const jobLimit = Math.max(1, Number(req.headers['x-job-limit'] || req.query?.limit || 25));
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
     const inProgressStatuses = [
@@ -327,6 +328,21 @@ export default async function handler(req, res) {
       return staleErr;
     };
 
+    const assertCurrentWorkerInvocationOwnership = async (job, stage, meta = {}) => {
+      const currentWorkerClaimedBy = String(job?.worker_claimed_by || '');
+      if (!job?.id || !job?.worker_attempt_id || !workerInvocationId || currentWorkerClaimedBy !== workerInvocationId) {
+        await writeStaleWorkerAttemptEvent(job, job?.worker_attempt_id || null, stage || job?.status || 'unknown', {
+          reason: 'worker_invocation_ownership_mismatch',
+          worker_claimed_by: job?.worker_claimed_by || null,
+          worker_invocation_id: workerInvocationId || null,
+          ...meta,
+        });
+        throw makeStaleWorkerAttemptError('worker_invocation_ownership_mismatch');
+      }
+
+      return workerInvocationId;
+    };
+
     const writeWorkerAttemptEvent = async ({
       job,
       eventType,
@@ -380,6 +396,9 @@ export default async function handler(req, res) {
 
     const renewWorkerLeaseForJob = async (job, attemptId = null, claimedBy = null) => {
       const currentAttemptId = attemptId || job?.worker_attempt_id || null;
+      await assertCurrentWorkerInvocationOwnership(job, job?.status || 'unknown', {
+        reason: 'lease_renewal_ownership_check',
+      });
       if (!currentAttemptId) {
         await writeStaleWorkerAttemptEvent(job, currentAttemptId, job?.status || 'unknown', {
           reason: 'missing_worker_attempt_id_for_lease_renewal',
@@ -391,7 +410,7 @@ export default async function handler(req, res) {
       const { data: renewedRows, error: renewErr } = await supabaseAdmin.rpc('renew_worker_lease', {
         p_job_id: job.id,
         p_worker_attempt_id: currentAttemptId,
-        p_claimed_by: claimedBy || job.worker_claimed_by || null,
+        p_claimed_by: workerInvocationId,
       });
 
       if (renewErr) {
@@ -427,6 +446,10 @@ export default async function handler(req, res) {
 
     const transitionWorkerJob = async (job, fromStatus, toStatus, meta = {}) => {
       const attemptId = job.worker_attempt_id || null;
+      await assertCurrentWorkerInvocationOwnership(job, fromStatus || job?.status || 'unknown', {
+        reason: 'transition_ownership_check',
+        to_status: toStatus,
+      });
       if (!attemptId) {
         await writeStaleWorkerAttemptEvent(job, attemptId, fromStatus || job?.status || 'unknown', {
           reason: 'missing_worker_attempt_id_for_transition',
@@ -440,7 +463,7 @@ export default async function handler(req, res) {
         p_worker_attempt_id: attemptId,
         p_expected_current_status: fromStatus,
         p_next_status: toStatus,
-        p_claimed_by: job.worker_claimed_by || null,
+        p_claimed_by: workerInvocationId,
       });
 
       if (transitionErr) {
@@ -611,93 +634,32 @@ export default async function handler(req, res) {
         return { skipped: true };
       }
 
-      const { data: failedJobRow, error: failedJobErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .select('purchase_id, status, worker_attempt_id, dead_lettered_at')
-        .eq('id', job.id)
-        .maybeSingle();
+      await assertCurrentWorkerInvocationOwnership(job, job.status || 'unknown', {
+        reason: 'entitlement_restore_ownership_check',
+      });
 
-      if (failedJobErr) {
-        throw new Error(`Failed to fetch purchase_id for entitlement restore: ${failedJobErr.message}`);
-      }
-
-      if (
-        !failedJobRow?.worker_attempt_id ||
-        String(failedJobRow.worker_attempt_id) !== String(currentAttemptId) ||
-        !['failed', 'dead_letter'].includes(String(failedJobRow.status || ''))
-      ) {
-        return { skipped: true };
-      }
-
-      let restorePurchaseId = failedJobRow?.purchase_id || null;
-      if (!restorePurchaseId) {
-        const { data: purchaseByJobRow, error: purchaseByJobErr } = await supabaseAdmin
-          .from('report_purchases')
-          .select('id')
-          .eq('job_id', job.id)
-          .not('consumed_at', 'is', null)
-          .limit(1)
-          .maybeSingle();
-
-        if (purchaseByJobErr) {
-          throw new Error(`Failed to locate purchase for entitlement restore: ${purchaseByJobErr.message}`);
+      const { data: restoreRows, error: restoreErr } = await supabaseAdmin.rpc(
+        'restore_failed_worker_entitlement',
+        {
+          p_job_id: job.id,
+          p_worker_attempt_id: currentAttemptId,
+          p_claimed_by: workerInvocationId,
+          p_terminal_status: job.status,
+          p_restore_reason: restoreReason || null,
+          p_restore_error_code: restoreErrorCode || null,
         }
+      );
 
-        restorePurchaseId = purchaseByJobRow?.id || null;
+      if (restoreErr) {
+        throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
       }
 
-      if (!restorePurchaseId) {
+      const restoreRow = Array.isArray(restoreRows) ? restoreRows[0] : restoreRows;
+      if (!restoreRow?.restored) {
         return { skipped: true };
       }
 
-      const { data: purchaseRow, error: purchaseRowErr } = await supabaseAdmin
-        .from('report_purchases')
-        .select('id, consumed_at, job_id')
-        .eq('id', restorePurchaseId)
-        .maybeSingle();
-
-      if (purchaseRowErr) {
-        throw new Error(`Failed to inspect purchase for entitlement restore: ${purchaseRowErr.message}`);
-      }
-
-      if (!purchaseRow?.id) {
-        return { skipped: true };
-      }
-
-      const { data: publishedReportRow, error: publishedReportErr } = await supabaseAdmin
-        .from('reports')
-        .select('id')
-        .eq('job_id', job.id)
-        .eq('status', 'published')
-        .limit(1)
-        .maybeSingle();
-
-      if (publishedReportErr) {
-        throw new Error(`Failed to inspect published report before entitlement restore: ${publishedReportErr.message}`);
-      }
-
-      if (publishedReportRow?.id) {
-        return { skipped: true };
-      }
-
-      if (purchaseRow?.consumed_at) {
-        const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
-          .from('report_purchases')
-          .update({ consumed_at: null, job_id: null })
-          .eq('id', restorePurchaseId)
-          .eq('job_id', job.id)
-          .not('consumed_at', 'is', null)
-          .select('id')
-          .maybeSingle();
-
-        if (restorePurchaseErr) {
-          throw new Error(`Failed to restore entitlement: ${restorePurchaseErr.message}`);
-        }
-
-        if (!restoredPurchase?.id) {
-          return { skipped: true };
-        }
-      }
+      const restorePurchaseId = restoreRow.purchase_id || null;
 
       const entitlementRestoredPayload = {
         reason: restoreReason,
@@ -736,15 +698,8 @@ export default async function handler(req, res) {
 
       // eq('worker_attempt_id', currentAttemptId)
       // eq('worker_attempt_id', workerAttemptId)
-      const { error: clearPurchaseLinkErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .update({ purchase_id: null })
-        .eq('id', job.id)
-        .eq('worker_attempt_id', currentAttemptId)
-        .eq('status', failedJobRow.status);
-
-      if (clearPurchaseLinkErr) {
-        throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
+      if (job.purchase_id && job.purchase_id !== restorePurchaseId) {
+        throw new Error(`Restore returned mismatched purchase_id for job ${job.id}`);
       }
 
       return { restored: true, purchase_id: restorePurchaseId, signal_written: true };
@@ -1096,6 +1051,9 @@ export default async function handler(req, res) {
 
       const workerAttemptId = job.worker_attempt_id || null;
       const guardedCurrentStatus = expectedCurrentStatus || fromStatus || job.status || null;
+      await assertCurrentWorkerInvocationOwnership(job, guardedCurrentStatus, {
+        reason: 'terminal_failure_ownership_check',
+      });
       if (!workerAttemptId || !guardedCurrentStatus) {
         await writeStaleWorkerAttemptEvent(job, workerAttemptId, guardedCurrentStatus || 'unknown', {
           reason: 'missing_worker_attempt_id',
@@ -1110,7 +1068,7 @@ export default async function handler(req, res) {
         p_error_code: errorCode || null,
         p_error_message: errorMessage || null,
         p_failure_reason: failureReason || null,
-        p_claimed_by: job.worker_claimed_by || null,
+        p_claimed_by: workerInvocationId,
       });
 
       if (failErr) {
@@ -1229,7 +1187,7 @@ export default async function handler(req, res) {
         p_worker_attempt_id: workerAttemptId,
         p_expected_current_status: publishExpectedStatus,
         p_next_status: 'published',
-        p_claimed_by: job.worker_claimed_by || null,
+        p_claimed_by: workerInvocationId,
       });
 
       let publishRecord = Array.isArray(publishedRows) ? publishedRows[0] : publishedRows;
@@ -1524,7 +1482,8 @@ export default async function handler(req, res) {
     const { data: inProgressJobs, error: inProgressError } = await supabase
       .from('analysis_jobs')
       .select('id, user_id, status, started_at, created_at, error_code, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
-      .in('status', inProgressStatuses);
+      .in('status', inProgressStatuses)
+      .eq('worker_claimed_by', workerInvocationId);
 
     if (inProgressError) {
       return res.status(500).json({
@@ -1556,14 +1515,14 @@ export default async function handler(req, res) {
             },
           });
 
-          const { data: timeoutRows, error: timeoutErr } = await supabaseAdmin.rpc('fail_worker_job', {
+          const { data: timeoutRows, error: timeoutErr } = await supabaseAdmin.rpc('fail_expired_worker_job', {
             p_job_id: job.id,
             p_worker_attempt_id: job.worker_attempt_id || null,
             p_expected_current_status: job.status,
             p_error_code: 'TIMEOUT',
             p_error_message: 'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.',
             p_failure_reason: 'worker_timeout',
-            p_claimed_by: job.worker_claimed_by || null,
+            p_claimed_by: workerInvocationId,
           });
 
           if (timeoutErr) {
@@ -1602,6 +1561,29 @@ export default async function handler(req, res) {
               threshold_minutes: 30,
             },
           });
+
+          const timeoutRestoreResult = await restoreEntitlementForFailedJob(
+            timeoutRow,
+            'worker_timeout',
+            'TIMEOUT',
+            timeoutRow.worker_attempt_id || job.worker_attempt_id || null
+          );
+          if (timeoutRestoreResult?.restored) {
+            await writeWorkerAttemptEvent({
+              job: timeoutRow,
+              eventType: 'entitlement_restored',
+              attemptId: timeoutRow.worker_attempt_id || job.worker_attempt_id || null,
+              fromStatus: timeoutRow.status,
+              toStatus: timeoutRow.status,
+              meta: {
+                reason: 'worker_timeout',
+                error_code: 'TIMEOUT',
+                purchase_id: timeoutRestoreResult.purchase_id || null,
+                worker_claimed_by: timeoutRow.worker_claimed_by || null,
+                worker_attempt_id: timeoutRow.worker_attempt_id || null,
+              },
+            });
+          }
         } catch (err) {
           return res.status(500).json({
             error: 'Failed to apply timeout failure outcome',
@@ -1638,7 +1620,6 @@ export default async function handler(req, res) {
     const blockedJobIds = [];
     const failedJobIds = [];
     const rollupWrittenJobIds = new Set();
-    const workerInvocationId = safeTimestamp(nowIso);
     let passesRun = 0;
     const maxPasses = 10;
     const maxSeconds = 55;
@@ -1789,6 +1770,7 @@ export default async function handler(req, res) {
         .from('analysis_jobs')
         .select('id, user_id, status, started_at, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
         .eq('status', 'extracting')
+        .eq('worker_claimed_by', workerInvocationId)
         .order('created_at', { ascending: true })
         .limit(jobLimit);
 
@@ -2523,6 +2505,7 @@ export default async function handler(req, res) {
         .from('analysis_jobs')
         .select('id, user_id, status, started_at, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
         .eq('status', 'underwriting')
+        .eq('worker_claimed_by', workerInvocationId)
         .order('created_at', { ascending: true })
         .limit(jobLimit);
 
@@ -2569,10 +2552,11 @@ export default async function handler(req, res) {
         }
       }
 
-         const { data: scoringJobs, error: scoringErr } = await supabaseAdmin
+      const { data: scoringJobs, error: scoringErr } = await supabaseAdmin
         .from('analysis_jobs')
         .select('id, user_id, status, created_at, property_name, report_type, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
         .eq('status', 'scoring')
+        .eq('worker_claimed_by', workerInvocationId)
         .order('created_at', { ascending: true })
         .limit(Math.min(jobLimit, 5));
 

@@ -50,6 +50,10 @@ declare
   v_now timestamptz := now();
   v_claimed_by text := nullif(btrim(coalesce(p_claimed_by, '')), '');
 begin
+  if v_claimed_by is null then
+    return;
+  end if;
+
   return query
   with target as (
     select j.id
@@ -130,10 +134,10 @@ begin
   return query
   update public.analysis_jobs j
      set worker_last_heartbeat_at = v_now,
-         worker_lease_expires_at = v_now + public.worker_lease_duration(),
-         worker_claimed_by = coalesce(v_claimed_by, j.worker_claimed_by)
+         worker_lease_expires_at = v_now + public.worker_lease_duration()
    where j.id = p_job_id
      and j.worker_attempt_id = p_worker_attempt_id
+     and j.worker_claimed_by = v_claimed_by
      and j.dead_lettered_at is null
      and j.status in ('extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing')
      and j.worker_lease_expires_at is not null
@@ -165,10 +169,10 @@ begin
          worker_lease_expires_at = case
            when p_next_status in ('published', 'failed', 'dead_letter') then null
            else v_now + public.worker_lease_duration()
-         end,
-         worker_claimed_by = coalesce(v_claimed_by, j.worker_claimed_by)
+         end
    where j.id = p_job_id
      and j.worker_attempt_id = p_worker_attempt_id
+     and j.worker_claimed_by = v_claimed_by
      and j.status = p_expected_current_status
      and j.dead_lettered_at is null
      and (
@@ -206,7 +210,6 @@ begin
          end,
          worker_last_heartbeat_at = v_now,
          worker_lease_expires_at = null,
-         worker_claimed_by = coalesce(v_claimed_by, j.worker_claimed_by),
          dead_lettered_at = case
            when coalesce(j.worker_attempt_count, 0) >= v_retry_limit then v_now
            else j.dead_lettered_at
@@ -216,10 +219,56 @@ begin
          failure_reason = case when p_failure_reason is null then j.failure_reason else p_failure_reason end
    where j.id = p_job_id
      and j.worker_attempt_id = p_worker_attempt_id
+     and j.worker_claimed_by = v_claimed_by
      and j.status = p_expected_current_status
      and j.dead_lettered_at is null
      and j.worker_lease_expires_at is not null
      and j.worker_lease_expires_at > v_now
+  returning j.*;
+end;
+$$;
+
+create or replace function public.fail_expired_worker_job(
+  p_job_id uuid,
+  p_worker_attempt_id uuid,
+  p_expected_current_status text,
+  p_error_code text default null,
+  p_error_message text default null,
+  p_failure_reason text default null,
+  p_claimed_by text default null
+)
+returns setof public.analysis_jobs
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now timestamptz := now();
+  v_claimed_by text := nullif(btrim(coalesce(p_claimed_by, '')), '');
+  v_retry_limit integer := public.worker_max_attempt_count();
+begin
+  return query
+  update public.analysis_jobs j
+     set status = case
+           when coalesce(j.worker_attempt_count, 0) >= v_retry_limit then 'dead_letter'
+           else 'failed'
+         end,
+         worker_last_heartbeat_at = v_now,
+         worker_lease_expires_at = null,
+         dead_lettered_at = case
+           when coalesce(j.worker_attempt_count, 0) >= v_retry_limit then v_now
+           else j.dead_lettered_at
+         end,
+         error_code = case when p_error_code is null then j.error_code else p_error_code end,
+         error_message = case when p_error_message is null then j.error_message else p_error_message end,
+         failure_reason = case when p_failure_reason is null then j.failure_reason else p_failure_reason end
+   where j.id = p_job_id
+     and j.worker_attempt_id = p_worker_attempt_id
+     and j.worker_claimed_by = v_claimed_by
+     and j.status = p_expected_current_status
+     and j.dead_lettered_at is null
+     and j.worker_lease_expires_at is not null
+     and j.worker_lease_expires_at <= v_now
   returning j.*;
 end;
 $$;
@@ -265,6 +314,101 @@ begin
 end;
 $$;
 
+create or replace function public.restore_failed_worker_entitlement(
+  p_job_id uuid,
+  p_worker_attempt_id uuid,
+  p_claimed_by text,
+  p_terminal_status text,
+  p_restore_reason text default null,
+  p_restore_error_code text default null
+)
+returns table(restored boolean, purchase_id uuid, job_id uuid)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now timestamptz := now();
+  v_claimed_by text := nullif(btrim(coalesce(p_claimed_by, '')), '');
+  v_purchase_id uuid := null;
+  v_job public.analysis_jobs%rowtype;
+begin
+  if v_claimed_by is null then
+    return;
+  end if;
+
+  select *
+    into v_job
+  from public.analysis_jobs j
+  where j.id = p_job_id
+  for update;
+
+  if not found then
+    return;
+  end if;
+
+  if v_job.worker_attempt_id is null
+     or v_job.worker_attempt_id <> p_worker_attempt_id
+     or v_job.worker_claimed_by is null
+     or v_job.worker_claimed_by <> v_claimed_by
+     or v_job.status <> p_terminal_status
+     or v_job.status not in ('failed', 'dead_letter')
+  then
+    return;
+  end if;
+
+  if exists (
+    select 1
+    from public.reports r
+    where r.job_id = p_job_id
+      and r.status = 'published'
+  ) then
+    return;
+  end if;
+
+  select rp.id
+    into v_purchase_id
+  from public.report_purchases rp
+  where rp.job_id = p_job_id
+    and rp.consumed_at is not null
+  order by rp.created_at asc, rp.id asc
+  for update
+  limit 1;
+
+  if v_purchase_id is null then
+    return;
+  end if;
+
+  update public.report_purchases rp
+     set consumed_at = null,
+         job_id = null
+   where rp.id = v_purchase_id
+     and rp.job_id = p_job_id
+     and rp.consumed_at is not null;
+
+  if not found then
+    return;
+  end if;
+
+  update public.analysis_jobs j
+     set purchase_id = null
+   where j.id = p_job_id
+     and j.worker_attempt_id = p_worker_attempt_id
+     and j.worker_claimed_by = v_claimed_by
+     and j.status = p_terminal_status
+     and j.purchase_id = v_purchase_id;
+
+  if not found then
+    raise exception 'restore_failed_worker_entitlement lost fenced ownership for job %', p_job_id;
+  end if;
+
+  restored := true;
+  purchase_id := v_purchase_id;
+  job_id := p_job_id;
+  return next;
+end;
+$$;
+
 create or replace function public.claim_next_job()
 returns setof public.analysis_jobs
 language sql
@@ -293,7 +437,9 @@ revoke all on function public.claim_next_worker_job(text) from public;
 revoke all on function public.renew_worker_lease(uuid, uuid, text) from public;
 revoke all on function public.transition_worker_job(uuid, uuid, text, text, text) from public;
 revoke all on function public.fail_worker_job(uuid, uuid, text, text, text, text, text) from public;
+revoke all on function public.fail_expired_worker_job(uuid, uuid, text, text, text, text, text) from public;
 revoke all on function public.requeue_worker_job(uuid, text, boolean) from public;
+revoke all on function public.restore_failed_worker_entitlement(uuid, uuid, text, text, text, text) from public;
 revoke all on function public.claim_next_job() from public;
 revoke all on function public.admin_requeue_job(uuid, text) from public;
 
@@ -304,6 +450,8 @@ grant execute on function public.claim_next_worker_job(text) to service_role;
 grant execute on function public.renew_worker_lease(uuid, uuid, text) to service_role;
 grant execute on function public.transition_worker_job(uuid, uuid, text, text, text) to service_role;
 grant execute on function public.fail_worker_job(uuid, uuid, text, text, text, text, text) to service_role;
+grant execute on function public.fail_expired_worker_job(uuid, uuid, text, text, text, text, text) to service_role;
 grant execute on function public.requeue_worker_job(uuid, text, boolean) to service_role;
+grant execute on function public.restore_failed_worker_entitlement(uuid, uuid, text, text, text, text) to service_role;
 grant execute on function public.claim_next_job() to service_role;
 grant execute on function public.admin_requeue_job(uuid, text) to service_role;
