@@ -1,5 +1,5 @@
 # InvestorIQ Canonical Handoff and Playbook
-## Updated July 28, 2026 - Canonical merged handoff/playbook
+## Updated July 29, 2026 - Canonical merged handoff/playbook
 
 This is the canonical merged handoff/playbook, not merely a summary.
 
@@ -16,11 +16,14 @@ H0: complete
 H0.5: complete
 H0.75: complete
 H1: complete
-Latest closeout commit: 872da1a Record H1 completion status
+H2: complete
+H3: complete
+H4: complete
+Latest closeout commit: 47ee83c Record H4 completion status
 Working tree: clean
 Remote: up to date
-Next boundary: H2 Read-only deployed schema, RLS, storage verification
-Next authorized packet: H2-A read-only deployed schema/RLS/storage verification map
+Next boundary: H5 Submission, adjudication, reservation, and source registration
+Next authorized packet: H5-A read-only submission, adjudication, reservation, and source-registration map
 Operating mode from H2 forward: bounded packet mode
 ```
 
@@ -37,8 +40,8 @@ Current forbidden actions remain:
 - The July 27 canonical Opus/Claude game plan remains the launch constitution and blocker map.
 - The July 28 independent audit v3 is an amendment, not a replacement.
 - ChatGPT Keeper recommendation remains: pass as an amendment, hold as a replacement.
-- H0, H0.5, H0.75, and H1 are complete.
-- H2 is next.
+- H0, H0.5, H0.75, H1, H2, H3, and H4 are complete.
+- H5 is next.
 - Operating mode from H2 forward is bounded packet mode.
 
 ## 2. Audit v3 preservation
@@ -77,6 +80,13 @@ Current forbidden actions remain:
 - Routed Tier 2 failures to section states.
 - Added Tier 3 bounded recovery state.
 - Added publish-or-collapse outcome fixtures.
+
+### H4 completion facts
+- Bundle creates exactly 2 Screening entitlements and 1 Underwriting entitlement.
+- Deterministic IDs are `sessionId`, `sessionId#2`, and `sessionId#3`.
+- Bundle quantity is fixed to one.
+- No `bundle` value is persisted as `report_purchases.product_type`.
+- Duplicate, partial-existing, and concurrent recovery are verified.
 
 ### Still not proven until later
 - Production runtime behavior.
@@ -138,14 +148,17 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H0.5 complete.
 - H0.75 complete.
 - H1 complete.
-- H2 next.
+- H2 complete.
+- H3 complete.
+- H4 complete.
+- H5 next.
 
 ## 5. Fresh-chat operating order
 
 - Upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use the stale H0-A wording for the current next step. The current next packet is H2-A.
+- Do not use the stale H0-A wording for the current next step. The current next packet is H5-A.
 
 ## 6. Keep the handoff short and useful
 
