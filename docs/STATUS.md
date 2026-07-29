@@ -23,7 +23,7 @@ Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
 - H1-A read-only identity/authorization map completed with no edits
 - H1-B commit: `f59e748` - harden authenticated report identity boundaries
-- Latest closeout commit: `872da1a` - Record H1 completion status
+- Latest closeout commit: `4834cb3` - Record H5 completion status
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS

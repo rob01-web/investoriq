@@ -20,7 +20,7 @@ H2: complete
 H3: complete
 H4: complete
 H5: complete
-Latest closeout commit: c7aea52 Harden staged source registration
+Latest closeout commit: 4834cb3 Record H5 completion status
 Working tree: clean
 Remote: not updated because no push is authorized
 Next boundary: H6 Worker claim, lease, fencing, deadlines

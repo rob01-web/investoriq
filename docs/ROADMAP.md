@@ -132,4 +132,4 @@ Daily handoff instruction:
 - In a fresh chat, upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use the stale H0-A wording for the current next step; H2-A is now the next packet.
+- Do not use stale earlier-phase wording for the current next step; H6-A is now the next packet.
