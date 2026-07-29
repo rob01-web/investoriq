@@ -122,6 +122,7 @@ function StatusBadge({ status }) {
     queued:          { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
     in_progress:     { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
     failed:          { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
+    dead_letter:     { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
     needs_documents: { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
     open:            { bg:T.errBg,   border:T.errBorder,   color:T.errRed    },
     reviewing:       { bg:T.warnBg,  border:T.warnBorder,  color:T.warnAmber },
@@ -1400,22 +1401,29 @@ export default function AdminDashboard() {
                   <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.6, color:T.ink2, marginBottom:10 }}>
                     Operational recovery only. Does not approve reports, publish reports, notify customers, regenerate PDFs, or change credits.
                   </div>
+                  {(() => {
+                    const selectedStatus = String(selectedFixQueueDetail?.job?.status || '').toLowerCase();
+                    const canRequeue = selectedStatus === 'failed' || selectedStatus === 'dead_letter';
+                    const requeueLabel = selectedStatus === 'dead_letter'
+                      ? 'Requeue dead-letter job'
+                      : 'Requeue failed job';
+                    return (
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10 }}>
                     <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
                       <Btn
-                        title="Requeue failed job"
+                        title={requeueLabel}
                         onClick={() => runControlledFixQueueAction('requeue_failed_job')}
                         disabled={
                           !!fixQueueActionLoading ||
-                          !(selectedFixQueueDetail?.job?.status === 'failed')
+                          !canRequeue
                         }
                         variant="danger"
                         style={{ width:'100%', justifyContent:'center', padding:'6px 10px' }}
                       >
-                        {controlledActionLabel('requeue_failed_job', 'Requeue failed job')}
+                        {controlledActionLabel('requeue_failed_job', requeueLabel)}
                       </Btn>
                       <div style={{ marginTop:6, fontFamily:"'DM Sans',sans-serif", fontSize:11, lineHeight:1.45, color:T.ink3 }}>
-                        Only enabled when the selected job is failed.
+                        Only enabled when the selected job is failed or dead-lettered.
                       </div>
                     </div>
                     <div style={{ padding:10, border:`1px solid ${T.warnBorder}`, background:T.white }}>
@@ -1456,6 +1464,8 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                    );
+                  })()}
                   {(fixQueueActionMessage || fixQueueActionError) && (
                     <div style={{ marginTop:10, padding:'8px 10px', border:`1px solid ${fixQueueActionError ? T.errBorder : T.okBorder}`, background:fixQueueActionError ? T.errBg : T.okBg, color:fixQueueActionError ? T.errRed : T.okGreen, fontFamily:"'DM Sans',sans-serif", fontSize:12, lineHeight:1.55 }}>
                       {fixQueueActionError || fixQueueActionMessage}

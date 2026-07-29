@@ -228,7 +228,7 @@ export default async function handler(req, res) {
 
       const { data: forcedJob, error: forcedErr } = await supabase
         .from('analysis_jobs')
-        .select('id, user_id, status')
+        .select('id, user_id, status, worker_attempt_id, worker_lease_expires_at, dead_lettered_at')
         .eq('id', forceJobId)
         .maybeSingle();
 
@@ -236,12 +236,18 @@ export default async function handler(req, res) {
         return res.status(404).json({ ok: false });
       }
 
-      const { data: requeued, error: rqErr } = await supabase.rpc(
-        'admin_requeue_job',
-        { p_job_id: forceJobId, p_reason: 'admin_run_once_force_job' }
-      );
+      const activeStatuses = ['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'];
+      const leaseExpired = forcedJob?.worker_lease_expires_at
+        ? new Date(forcedJob.worker_lease_expires_at) <= new Date()
+        : false;
+      const { data: requeued, error: rqErr } = await supabase.rpc('requeue_worker_job', {
+        p_job_id: forceJobId,
+        p_claimed_by: 'admin-run-eligible-jobs-once',
+        p_allow_expired_lease_recovery: activeStatuses.includes(String(forcedJob.status || '')) && leaseExpired,
+      });
 
-      if (rqErr || !requeued) {
+      const requeuedJob = Array.isArray(requeued) ? requeued[0] : requeued;
+      if (rqErr || !requeuedJob?.id) {
         return res.status(500).json({ ok: false, error: 'ADMIN_REQUEUE_FAILED' });
       }
 
@@ -269,22 +275,25 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data: claimedJob, error: claimErr } = await supabase.rpc('claim_next_job');
+    // supabase.rpc('claim_next_job')
+    const { data: claimedJobRows, error: claimErr } = await supabase.rpc('claim_next_worker_job', {
+      p_claimed_by: 'admin-run-eligible-jobs-once',
+    });
 
     if (claimErr) {
-      return res.status(500).json({ ok: false, error: 'CLAIM_NEXT_JOB_FAILED' });
+      return res.status(500).json({ ok: false, error: 'CLAIM_NEXT_WORKER_JOB_FAILED' });
     }
 
-    if (!claimedJob || (Array.isArray(claimedJob) && claimedJob.length === 0)) {
+    const claimedJob = Array.isArray(claimedJobRows) ? claimedJobRows[0] : claimedJobRows;
+    if (!claimedJob?.id) {
       return res.status(200).json({ ok: true, claimed: false });
     }
 
-    const jobRow = Array.isArray(claimedJob) ? claimedJob[0] : claimedJob;
     const { data: claimedSurfaceJob, error: claimedSurfaceJobError } =
       await supabase
         .from('analysis_jobs')
-        .select('id, user_id, created_at, report_type')
-        .eq('id', jobRow.id)
+        .select('id, user_id, created_at, report_type, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
+        .eq('id', claimedJob.id)
         .maybeSingle();
     if (claimedSurfaceJobError || !claimedSurfaceJob?.id) {
       return res.status(500).json({
@@ -314,16 +323,18 @@ export default async function handler(req, res) {
       });
     }
     console.log('Claimed job:', {
-      id: jobRow?.id,
-      attempts: jobRow?.attempts,
-      claimed_at: jobRow?.claimed_at,
+      id: claimedJob?.id,
+      worker_attempt_id: claimedJob?.worker_attempt_id,
+      worker_lease_expires_at: claimedJob?.worker_lease_expires_at,
     });
 
     return res.json({
       ok: true,
       claimed: true,
-      claimed_job_id: jobRow.id,
-      job: jobRow,
+      claimed_job_id: claimedJob.id,
+      worker_attempt_id: claimedJob.worker_attempt_id || null,
+      worker_lease_expires_at: claimedJob.worker_lease_expires_at || null,
+      job: claimedJob,
     });
   } catch (err) {
     console.error('Admin run endpoint error:', err);

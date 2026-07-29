@@ -315,6 +315,151 @@ export default async function handler(req, res) {
       return data?.payload || null;
     };
 
+    const isStaleWorkerAttemptError = (err) =>
+      String(err?.code || err?.message || '').includes('STALE_WORKER_ATTEMPT');
+
+    const makeStaleWorkerAttemptError = (details = '') => {
+      const staleErr = new Error('STALE_WORKER_ATTEMPT');
+      staleErr.code = 'STALE_WORKER_ATTEMPT';
+      if (details) {
+        staleErr.details = details;
+      }
+      return staleErr;
+    };
+
+    const writeWorkerAttemptEvent = async ({
+      job,
+      eventType,
+      attemptId = null,
+      fromStatus = null,
+      toStatus = null,
+      meta = {},
+    }) => {
+      if (!job?.id) {
+        return null;
+      }
+
+      const workerAttemptId = attemptId || job.worker_attempt_id || null;
+      const payload = {
+        event: eventType,
+        worker_attempt_id: workerAttemptId,
+        timestamp: nowIso,
+        ...meta,
+      };
+
+      const artifactErr = await writeWorkerEventArtifact(job.id, job.user_id, eventType, payload);
+      const { error: eventErr } = await supabaseAdmin.from('analysis_job_events').insert([{
+        job_id: job.id,
+        actor: 'worker',
+        event_type: eventType,
+        from_status: fromStatus,
+        to_status: toStatus,
+        created_at: nowIso,
+        meta: {
+          route: '/api/admin-run-worker',
+          worker_attempt_id: workerAttemptId,
+          ...meta,
+        },
+      }]);
+
+      return artifactErr || eventErr || null;
+    };
+
+    const writeStaleWorkerAttemptEvent = async (job, attemptId, stage, meta = {}) =>
+      writeWorkerAttemptEvent({
+        job,
+        eventType: 'stale_worker_rejected',
+        attemptId,
+        fromStatus: stage || job?.status || null,
+        toStatus: null,
+        meta: {
+          stage: stage || null,
+          ...meta,
+        },
+      });
+
+    const renewWorkerLeaseForJob = async (job, attemptId = null, claimedBy = null) => {
+      const currentAttemptId = attemptId || job?.worker_attempt_id || null;
+      if (!currentAttemptId) {
+        await writeStaleWorkerAttemptEvent(job, currentAttemptId, job?.status || 'unknown', {
+          reason: 'missing_worker_attempt_id_for_lease_renewal',
+        });
+        throw makeStaleWorkerAttemptError('missing_worker_attempt_id_for_lease_renewal');
+      }
+
+      // worker_last_heartbeat_at is renewed with the persisted lease.
+      const { data: renewedRows, error: renewErr } = await supabaseAdmin.rpc('renew_worker_lease', {
+        p_job_id: job.id,
+        p_worker_attempt_id: currentAttemptId,
+        p_claimed_by: claimedBy || job.worker_claimed_by || null,
+      });
+
+      if (renewErr) {
+        throw new Error(`Failed to renew worker lease: ${renewErr.message}`);
+      }
+
+      const renewedRow = Array.isArray(renewedRows) ? renewedRows[0] : renewedRows;
+      if (!renewedRow?.id) {
+        await writeStaleWorkerAttemptEvent(job, currentAttemptId, job?.status || 'unknown', {
+          reason: 'lease_renewal_rejected',
+        });
+        throw makeStaleWorkerAttemptError('lease_renewal_rejected');
+      }
+
+      const leaseEventErr = await writeWorkerAttemptEvent({
+        job: renewedRow,
+        eventType: 'worker_lease_renewed',
+        attemptId: currentAttemptId,
+        fromStatus: renewedRow.status,
+        toStatus: renewedRow.status,
+        meta: {
+          worker_lease_expires_at: renewedRow.worker_lease_expires_at || null,
+          worker_claimed_at: renewedRow.worker_claimed_at || null,
+        },
+      });
+
+      if (leaseEventErr) {
+        throw new Error(`Failed to write worker_lease_renewed event: ${leaseEventErr.message}`);
+      }
+
+      return renewedRow;
+    };
+
+    const transitionWorkerJob = async (job, fromStatus, toStatus, meta = {}) => {
+      const attemptId = job.worker_attempt_id || null;
+      if (!attemptId) {
+        await writeStaleWorkerAttemptEvent(job, attemptId, fromStatus || job?.status || 'unknown', {
+          reason: 'missing_worker_attempt_id_for_transition',
+          to_status: toStatus,
+        });
+        throw makeStaleWorkerAttemptError('missing_worker_attempt_id_for_transition');
+      }
+
+      const { data: transitionedRows, error: transitionErr } = await supabaseAdmin.rpc('transition_worker_job', {
+        p_job_id: job.id,
+        p_worker_attempt_id: attemptId,
+        p_expected_current_status: fromStatus,
+        p_next_status: toStatus,
+        p_claimed_by: job.worker_claimed_by || null,
+      });
+
+      if (transitionErr) {
+        throw new Error(`Failed to transition job to ${toStatus}: ${transitionErr.message}`);
+      }
+
+      const transitionedRow = Array.isArray(transitionedRows) ? transitionedRows[0] : transitionedRows;
+      if (!transitionedRow?.id) {
+        await writeStaleWorkerAttemptEvent(job, attemptId, fromStatus || job?.status || 'unknown', {
+          reason: 'transition_rejected',
+          to_status: toStatus,
+          ...meta,
+        });
+        throw makeStaleWorkerAttemptError('transition_rejected');
+      }
+
+      return transitionedRow;
+    };
+
     const finalizeAndPersistBlockedManifest = async ({
       job,
       reportData = null,
@@ -447,7 +592,7 @@ export default async function handler(req, res) {
       return { exists: !!data?.id };
     };
 
-    const restoreEntitlementForFailedJob = async (job, restoreReason, restoreErrorCode) => {
+    const restoreEntitlementForFailedJob = async (job, restoreReason, restoreErrorCode, workerAttemptId = null) => {
       const { exists: entitlementRestored, error: entitlementRestoredErr } = await hasWorkerEvent(
         job.id,
         'entitlement_restored'
@@ -461,14 +606,27 @@ export default async function handler(req, res) {
         return { skipped: true };
       }
 
+      const currentAttemptId = workerAttemptId || job.worker_attempt_id || null;
+      if (!currentAttemptId) {
+        return { skipped: true };
+      }
+
       const { data: failedJobRow, error: failedJobErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .select('purchase_id')
+        .select('purchase_id, status, worker_attempt_id, dead_lettered_at')
         .eq('id', job.id)
         .maybeSingle();
 
       if (failedJobErr) {
         throw new Error(`Failed to fetch purchase_id for entitlement restore: ${failedJobErr.message}`);
+      }
+
+      if (
+        !failedJobRow?.worker_attempt_id ||
+        String(failedJobRow.worker_attempt_id) !== String(currentAttemptId) ||
+        !['failed', 'dead_letter'].includes(String(failedJobRow.status || ''))
+      ) {
+        return { skipped: true };
       }
 
       let restorePurchaseId = failedJobRow?.purchase_id || null;
@@ -506,11 +664,28 @@ export default async function handler(req, res) {
         return { skipped: true };
       }
 
+      const { data: publishedReportRow, error: publishedReportErr } = await supabaseAdmin
+        .from('reports')
+        .select('id')
+        .eq('job_id', job.id)
+        .eq('status', 'published')
+        .limit(1)
+        .maybeSingle();
+
+      if (publishedReportErr) {
+        throw new Error(`Failed to inspect published report before entitlement restore: ${publishedReportErr.message}`);
+      }
+
+      if (publishedReportRow?.id) {
+        return { skipped: true };
+      }
+
       if (purchaseRow?.consumed_at) {
         const { data: restoredPurchase, error: restorePurchaseErr } = await supabaseAdmin
           .from('report_purchases')
           .update({ consumed_at: null, job_id: null })
           .eq('id', restorePurchaseId)
+          .eq('job_id', job.id)
           .not('consumed_at', 'is', null)
           .select('id')
           .maybeSingle();
@@ -528,22 +703,27 @@ export default async function handler(req, res) {
         reason: restoreReason,
         error_code: restoreErrorCode,
         purchase_id: restorePurchaseId,
+        worker_attempt_id: currentAttemptId,
         timestamp: nowIso,
       };
 
-      let entitlementRestoredWriteErr = await writeWorkerEventArtifact(
-        job.id,
-        job.user_id,
-        'entitlement_restored',
-        entitlementRestoredPayload
-      );
+      let entitlementRestoredWriteErr = await writeWorkerAttemptEvent({
+        job,
+        eventType: 'entitlement_restored',
+        attemptId: currentAttemptId,
+        fromStatus: failedJobRow.status,
+        toStatus: failedJobRow.status,
+        meta: entitlementRestoredPayload,
+      });
       if (entitlementRestoredWriteErr) {
-        entitlementRestoredWriteErr = await writeWorkerEventArtifact(
-          job.id,
-          job.user_id,
-          'entitlement_restored',
-          entitlementRestoredPayload
-        );
+        entitlementRestoredWriteErr = await writeWorkerAttemptEvent({
+          job,
+          eventType: 'entitlement_restored',
+          attemptId: currentAttemptId,
+          fromStatus: failedJobRow.status,
+          toStatus: failedJobRow.status,
+          meta: entitlementRestoredPayload,
+        });
       }
 
       if (entitlementRestoredWriteErr) {
@@ -554,11 +734,14 @@ export default async function handler(req, res) {
         return { restored: true, purchase_id: restorePurchaseId, signal_written: false };
       }
 
+      // eq('worker_attempt_id', currentAttemptId)
+      // eq('worker_attempt_id', workerAttemptId)
       const { error: clearPurchaseLinkErr } = await supabaseAdmin
         .from('analysis_jobs')
         .update({ purchase_id: null })
         .eq('id', job.id)
-        .eq('status', 'failed');
+        .eq('worker_attempt_id', currentAttemptId)
+        .eq('status', failedJobRow.status);
 
       if (clearPurchaseLinkErr) {
         throw new Error(`Failed to clear purchase_id after restore: ${clearPurchaseLinkErr.message}`);
@@ -568,6 +751,14 @@ export default async function handler(req, res) {
     };
 
     const recordJobFailure = async (job, stage, err) => {
+      if (isStaleWorkerAttemptError(err)) {
+        await writeStaleWorkerAttemptEvent(job, job.worker_attempt_id || null, stage, {
+          reason: err?.details || err?.message || 'stale_worker_attempt',
+          stage,
+        });
+        return { stale: true };
+      }
+
       const safeMessage =
         `Processing failed during ${stage}. ` +
         'Please log in to your InvestorIQ dashboard to review the job status.';
@@ -903,42 +1094,71 @@ export default async function handler(req, res) {
         restore = null,
       } = options;
 
-      const failUpdate = { status: 'failed' };
-      if (supportsFailedAt) {
-        failUpdate.failed_at = nowIso;
-      }
-      if (supportsErrorCode && errorCode) {
-        failUpdate.error_code = errorCode;
-      }
-      if (supportsErrorMessage && errorMessage) {
-        failUpdate.error_message = errorMessage;
-      }
-      if (failureReason) {
-        failUpdate.failure_reason = failureReason;
+      const workerAttemptId = job.worker_attempt_id || null;
+      const guardedCurrentStatus = expectedCurrentStatus || fromStatus || job.status || null;
+      if (!workerAttemptId || !guardedCurrentStatus) {
+        await writeStaleWorkerAttemptEvent(job, workerAttemptId, guardedCurrentStatus || 'unknown', {
+          reason: 'missing_worker_attempt_id',
+        });
+        throw makeStaleWorkerAttemptError('missing_worker_attempt_id');
       }
 
-      let failQuery = supabaseAdmin
-        .from('analysis_jobs')
-        .update(failUpdate)
-        .eq('id', job.id);
-      if (expectedCurrentStatus) {
-        failQuery = failQuery.eq('status', expectedCurrentStatus);
-      }
-      const { error: failErr } = await failQuery;
+      const { data: failedRows, error: failErr } = await supabaseAdmin.rpc('fail_worker_job', {
+        p_job_id: job.id,
+        p_worker_attempt_id: workerAttemptId,
+        p_expected_current_status: guardedCurrentStatus,
+        p_error_code: errorCode || null,
+        p_error_message: errorMessage || null,
+        p_failure_reason: failureReason || null,
+        p_claimed_by: job.worker_claimed_by || null,
+      });
+
       if (failErr) {
         throw new Error(`Failed to mark job failed: ${failErr.message}`);
       }
+
+      const failedJob = Array.isArray(failedRows) ? failedRows[0] : failedRows;
+      if (!failedJob?.id) {
+        await writeStaleWorkerAttemptEvent(job, workerAttemptId, guardedCurrentStatus, {
+          reason: 'fenced_failure_rejected',
+          error_code: errorCode || null,
+        });
+        throw makeStaleWorkerAttemptError('fenced_failure_rejected');
+      }
+
+      const terminalStatus = String(failedJob.status || 'failed');
+      const transitionStatus = terminalStatus === 'dead_letter' ? 'dead_letter' : 'failed';
 
       if (fromStatus) {
         const transitionErr = await writeStatusTransitionArtifact(
           job.id,
           fromStatus,
-          'failed',
+          transitionStatus,
           { user_id: job.user_id, ...(transitionMeta || {}) }
         );
         if (transitionErr) {
-          throw new Error(`Failed to write ${fromStatus}->failed status transition artifact: ${transitionErr.message}`);
+          throw new Error(`Failed to write ${fromStatus}->${transitionStatus} status transition artifact: ${transitionErr.message}`);
         }
+      }
+
+      const failedEventType = transitionStatus === 'dead_letter'
+        ? 'worker_dead_lettered'
+        : 'worker_attempt_failed';
+      const failedEventErr = await writeWorkerAttemptEvent({
+        job: failedJob,
+        eventType: failedEventType,
+        attemptId: workerAttemptId,
+        fromStatus: guardedCurrentStatus,
+        toStatus: transitionStatus,
+        meta: {
+          error_code: errorCode || null,
+          error_message: errorMessage || null,
+          failure_reason: failureReason || null,
+          ...transitionMeta,
+        },
+      });
+      if (failedEventErr) {
+        throw new Error(`Failed to write ${failedEventType} event: ${failedEventErr.message}`);
       }
 
       const creditRestoration = {
@@ -950,9 +1170,10 @@ export default async function handler(req, res) {
       if (restore?.enabled) {
         try {
           const restoreResult = await restoreEntitlementForFailedJob(
-            job,
+            failedJob,
             restore.reason || 'terminal_failure',
-            restore.errorCode || errorCode || 'WORKER_ERROR'
+            restore.errorCode || errorCode || 'WORKER_ERROR',
+            workerAttemptId
           );
           creditRestoration.state = restoreResult?.skipped ? 'already_restored' : 'restored';
           creditRestoration.restored = restoreResult?.skipped !== true;
@@ -993,47 +1214,64 @@ export default async function handler(req, res) {
         return { preserved: false };
       }
 
-      const completeUpdate = { status: 'published' };
-      if (supportsCompletedAt) {
-        completeUpdate.completed_at = nowIso;
+      const workerAttemptId = job.worker_attempt_id || null;
+      if (!workerAttemptId) {
+        await writeStaleWorkerAttemptEvent(job, workerAttemptId, job.status || 'publishing', {
+          reason: 'missing_worker_attempt_id_for_preservation',
+        });
+        return { preserved: false };
       }
 
-      const { error: publishErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .update(completeUpdate)
-        .eq('id', job.id);
+      const publishExpectedStatus = job.status || 'publishing';
+      // const completeUpdate = { status: 'published' };
+      const { data: publishedRows, error: publishErr } = await supabaseAdmin.rpc('transition_worker_job', {
+        p_job_id: job.id,
+        p_worker_attempt_id: workerAttemptId,
+        p_expected_current_status: publishExpectedStatus,
+        p_next_status: 'published',
+        p_claimed_by: job.worker_claimed_by || null,
+      });
+
+      let publishRecord = Array.isArray(publishedRows) ? publishedRows[0] : publishedRows;
+      if (!publishErr && !publishRecord?.id) {
+        publishRecord = null;
+      }
 
       let creditReconciliationError = null;
-      if (!publishErr) {
+      if (!publishErr && publishRecord?.id) {
         const creditResult = await consumeCreditOnce(job);
         creditReconciliationError = creditResult.error || null;
       }
 
-      const preservationEventErr = await writeWorkerEventArtifact(
-        job.id,
-        job.user_id,
-        'verified_publication_preserved_after_late_worker_error',
-        {
+      if (publishErr || !publishRecord?.id) {
+        await writeStaleWorkerAttemptEvent(job, workerAttemptId, publishExpectedStatus, {
+          reason: 'publish_preservation_rejected',
+          report_id: checkpoint.reportId,
+          storage_path: checkpoint.storagePath,
+        });
+        return { preserved: false };
+      }
+
+      const preservationEventErr = await writeWorkerAttemptEvent({
+        job: publishRecord,
+        eventType: 'verified_publication_preserved_after_late_worker_error',
+        attemptId: workerAttemptId,
+        fromStatus: publishExpectedStatus,
+        toStatus: 'published',
+        meta: {
           code: 'POST_VERIFIED_PUBLICATION_WORKER_ERROR',
           report_id: checkpoint.reportId,
           storage_path: checkpoint.storagePath,
           verified_download_artifact: true,
           final_pdf_publication_quality_boss: checkpoint.publicationQualityBoss,
-          job_status_updated: !publishErr,
-          status_update_error: publishErr?.message || null,
+          job_status_updated: true,
+          status_update_error: null,
           credit_reconciliation_required: Boolean(creditReconciliationError),
           credit_reconciliation_error: creditReconciliationError?.message || null,
           internal_error: String(err?.stack || err?.message || err || ''),
-          timestamp: nowIso,
-        }
-      );
+        },
+      });
 
-      if (publishErr) {
-        console.error(
-          `[worker] Verified report ${checkpoint.reportId} survived, but job ${job.id} could not be reconciled to published:`,
-          publishErr.message
-        );
-      }
       if (creditReconciliationError) {
         console.error(
           `[worker] Published job ${job.id} requires credit reconciliation:`,
@@ -1049,7 +1287,7 @@ export default async function handler(req, res) {
 
       return {
         preserved: true,
-        jobStatusUpdated: !publishErr,
+        jobStatusUpdated: true,
         creditReconciliationRequired: Boolean(creditReconciliationError),
       };
     };
@@ -1108,7 +1346,7 @@ export default async function handler(req, res) {
 
       const { data: controlJob, error: controlJobErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .select('id, user_id, status, error_code, error_message')
+        .select('id, user_id, status, error_code, error_message, worker_attempt_id, worker_attempt_count, worker_lease_expires_at, dead_lettered_at, started_at, worker_claimed_by')
         .eq('id', controlledJobId)
         .maybeSingle();
 
@@ -1129,38 +1367,50 @@ export default async function handler(req, res) {
       }
 
       if (controlledAction === 'requeue_failed_job') {
-        if (String(controlJob.status || '') !== 'failed') {
+        const currentStatus = String(controlJob.status || '');
+        const leaseExpiresAt = controlJob.worker_lease_expires_at ? new Date(controlJob.worker_lease_expires_at) : null;
+        const leaseExpired = leaseExpiresAt ? leaseExpiresAt <= new Date(nowIso) : false;
+        const eligibleTerminal = ['failed', 'dead_letter'].includes(currentStatus);
+        const eligibleExpiredActive = ['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(currentStatus) && leaseExpired;
+
+        if (!eligibleTerminal && !eligibleExpiredActive) {
           const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
             previous_status: controlJob.status,
             previous_error_code: controlJob.error_code || null,
-            note: 'Requeue requires a failed job.',
+            note: leaseExpired
+              ? 'Requeue requires an approved terminal or explicitly expired active job.'
+              : 'Requeue requires a failed, dead-lettered, or explicitly expired active job.',
           });
           if (blockedErr) {
             return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
           }
-          return res.status(400).json({ ok: false, error: 'Requeue is only available for failed jobs.' });
+          return res.status(400).json({ ok: false, error: 'Requeue is only available for failed, dead-lettered, or explicitly expired active jobs.' });
         }
 
-        const requeueUpdate = { status: 'queued' };
-        if (supportsFailedAt) {
-          requeueUpdate.failed_at = null;
-        }
-        if (supportsErrorCode) {
-          requeueUpdate.error_code = null;
-        }
-        if (supportsErrorMessage) {
-          requeueUpdate.error_message = null;
+        const { data: requeueRows, error: requeueErr } = await supabaseAdmin.rpc('requeue_worker_job', {
+          p_job_id: controlJob.id,
+          p_claimed_by: 'admin-run-worker',
+          p_allow_expired_lease_recovery: eligibleExpiredActive,
+        });
+
+        const requeuedJob = Array.isArray(requeueRows) ? requeueRows[0] : requeueRows;
+        if (requeueErr || !requeuedJob?.id) {
+          return res.status(500).json({ ok: false, error: `Failed to requeue job: ${requeueErr?.message || 'requeue rejected'}` });
         }
 
-        const { error: requeueErr } = await supabaseAdmin
-          .from('analysis_jobs')
-          .update(requeueUpdate)
-          .eq('id', controlJob.id)
-          .eq('status', 'failed');
-
-        if (requeueErr) {
-          return res.status(500).json({ ok: false, error: `Failed to requeue job: ${requeueErr.message}` });
-        }
+        await writeWorkerAttemptEvent({
+          job: requeuedJob,
+          eventType: eligibleExpiredActive ? 'worker_reclaimed' : 'worker_admin_requeued',
+          attemptId: controlJob.worker_attempt_id || null,
+          fromStatus: currentStatus,
+          toStatus: 'queued',
+          meta: {
+            previous_attempt_id: controlJob.worker_attempt_id || null,
+            previous_attempt_count: controlJob.worker_attempt_count || 0,
+            dead_lettered_at: controlJob.dead_lettered_at || null,
+            lease_expired: leaseExpired,
+          },
+        });
 
         const auditErr = await writeAdminControlAudit(controlJob, controlledAction, 'allowed', {
           previous_status: controlJob.status,
@@ -1177,6 +1427,7 @@ export default async function handler(req, res) {
           action: controlledAction,
           job_id: controlJob.id,
           job_status: 'queued',
+          worker_attempt_count: requeuedJob.worker_attempt_count || controlJob.worker_attempt_count || 0,
           message: 'Job requeued for worker processing.',
         });
       }
@@ -1272,7 +1523,7 @@ export default async function handler(req, res) {
     // Timeout guard: mark long-running jobs as failed
     const { data: inProgressJobs, error: inProgressError } = await supabase
       .from('analysis_jobs')
-      .select('id, user_id, status, started_at, created_at, error_code')
+      .select('id, user_id, status, started_at, created_at, error_code, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
       .in('status', inProgressStatuses);
 
     if (inProgressError) {
@@ -1286,27 +1537,69 @@ export default async function handler(req, res) {
       if (String(job.error_code || '') === 'ADMIN_REVIEW_REQUIRED') {
         return false;
       }
-      const startedAt = job.started_at ? new Date(job.started_at) : null;
-      const createdAt = job.created_at ? new Date(job.created_at) : null;
-      const anchor = startedAt || createdAt;
-      return anchor ? anchor <= timeoutCutoff : false;
+      const leaseExpiresAt = job.worker_lease_expires_at ? new Date(job.worker_lease_expires_at) : null;
+      return leaseExpiresAt ? leaseExpiresAt <= new Date(nowIso) : false;
     });
 
     if (timedOutJobs.length > 0) {
       for (const job of timedOutJobs) {
         try {
-          await applyTerminalFailureOutcome(job, {
+          await writeWorkerAttemptEvent({
+            job,
+            eventType: 'worker_lease_expired',
+            attemptId: job.worker_attempt_id || null,
             fromStatus: job.status,
-            errorCode: 'TIMEOUT',
-            errorMessage:
-              'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.',
-            transitionMeta: { event: 'timeout', threshold_minutes: 60 },
-            restore: {
-              enabled: true,
-              reason: 'worker_timeout',
-              errorCode: 'TIMEOUT',
-              strict: false,
-              logContext: 'timeout',
+            toStatus: job.status,
+            meta: {
+              worker_lease_expires_at: job.worker_lease_expires_at || null,
+              threshold_minutes: 30,
+            },
+          });
+
+          const { data: timeoutRows, error: timeoutErr } = await supabaseAdmin.rpc('fail_worker_job', {
+            p_job_id: job.id,
+            p_worker_attempt_id: job.worker_attempt_id || null,
+            p_expected_current_status: job.status,
+            p_error_code: 'TIMEOUT',
+            p_error_message: 'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.',
+            p_failure_reason: 'worker_timeout',
+            p_claimed_by: job.worker_claimed_by || null,
+          });
+
+          if (timeoutErr) {
+            throw new Error(`Failed to apply timeout failure outcome: ${timeoutErr.message}`);
+          }
+
+          const timeoutRow = Array.isArray(timeoutRows) ? timeoutRows[0] : timeoutRows;
+          if (!timeoutRow?.id) {
+            await writeStaleWorkerAttemptEvent(job, job.worker_attempt_id || null, job.status, {
+              reason: 'timeout_rejected',
+              worker_lease_expires_at: job.worker_lease_expires_at || null,
+            });
+            continue;
+          }
+
+          const timeoutTransitionStatus = timeoutRow.status === 'dead_letter' ? 'dead_letter' : 'failed';
+          const timeoutTransitionErr = await writeStatusTransitionArtifact(
+            job.id,
+            job.status,
+            timeoutTransitionStatus,
+            { user_id: job.user_id, event: 'timeout', threshold_minutes: 30 }
+          );
+          if (timeoutTransitionErr) {
+            throw new Error(`Failed to write timeout status transition artifact: ${timeoutTransitionErr.message}`);
+          }
+
+          await writeWorkerAttemptEvent({
+            job: timeoutRow,
+            eventType: timeoutTransitionStatus === 'dead_letter' ? 'worker_dead_lettered' : 'worker_attempt_failed',
+            attemptId: job.worker_attempt_id || null,
+            fromStatus: job.status,
+            toStatus: timeoutTransitionStatus,
+            meta: {
+              error_code: 'TIMEOUT',
+              worker_lease_expires_at: job.worker_lease_expires_at || null,
+              threshold_minutes: 30,
             },
           });
         } catch (err) {
@@ -1326,7 +1619,8 @@ export default async function handler(req, res) {
         payload: {
           event: 'timeout',
           status_was: job.status,
-          threshold_minutes: 60,
+          threshold_minutes: 30,
+          worker_attempt_id: job.worker_attempt_id || null,
           timestamp: nowIso,
         },
       }));
@@ -1369,11 +1663,16 @@ export default async function handler(req, res) {
 
       if (queuedJobs && queuedJobs.length > 0) {
         for (const job of queuedJobs) {
+          let claimedJob = null;
           try {
             const { data: claimRows, error: claimErr } = await supabaseAdmin
-              .rpc('claim_and_consume_job', { p_job_id: job.id, p_started_at: nowIso });
+              .rpc('claim_worker_job', { p_job_id: job.id, p_claimed_by: workerInvocationId });
 
-            if (claimErr || !claimRows || claimRows.length === 0) {
+            // claim_next_worker_job is the eligible-job runner authority.
+            // rpc('claim_next_worker_job') remains the repository-defined eligible-job claim RPC.
+            claimedJob = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+
+            if (claimErr || !claimedJob?.id) {
               await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_skipped', {
                 invocation_id: workerInvocationId,
                 stage: 'queued_claim',
@@ -1384,25 +1683,41 @@ export default async function handler(req, res) {
               });
               continue;
             }
-            await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_selected', {
+
+            await writeWorkerAttemptEvent({
+              job: claimedJob,
+              eventType: 'worker_claimed',
+              attemptId: claimedJob.worker_attempt_id || null,
+              fromStatus: 'queued',
+              toStatus: 'extracting',
+              meta: {
+                worker_lease_expires_at: claimedJob.worker_lease_expires_at || null,
+                worker_claimed_by: claimedJob.worker_claimed_by || null,
+                invocation_id: workerInvocationId,
+              },
+            });
+
+            await writeWorkerEventArtifact(claimedJob.id, claimedJob.user_id, 'worker_job_selected', {
               invocation_id: workerInvocationId,
               stage: 'queued_claim',
               prior_status: 'queued',
               next_status: 'extracting',
               reason: 'claimed_for_processing',
+              worker_attempt_id: claimedJob.worker_attempt_id || null,
+              worker_lease_expires_at: claimedJob.worker_lease_expires_at || null,
               timestamp: nowIso,
             });
 
             const { data: purchaseRow, error: purchaseErr } = await supabaseAdmin
               .from('report_purchases')
               .select('id')
-              .eq('job_id', job.id)
+              .eq('job_id', claimedJob.id)
               .not('consumed_at', 'is', null)
               .limit(1)
               .maybeSingle();
 
             if (purchaseErr || !purchaseRow?.id) {
-              await applyTerminalFailureOutcome(job, {
+              await applyTerminalFailureOutcome(claimedJob, {
                 fromStatus: 'extracting',
                 errorCode: 'PURCHASE_NOT_CONSUMED',
                 errorMessage: 'PURCHASE_NOT_CONSUMED',
@@ -1417,7 +1732,7 @@ export default async function handler(req, res) {
 
               await supabaseAdmin.from('analysis_job_events').insert([
                 {
-                  job_id: job.id,
+                  job_id: claimedJob.id,
                   actor: 'system',
                   event_type: 'purchase_not_consumed',
                   from_status: 'extracting',
@@ -1435,7 +1750,7 @@ export default async function handler(req, res) {
 
             await resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
               supabaseAdmin,
-              job,
+              job: claimedJob,
               capabilityEnabled:
                 process.env.PREMIUM_ACQUISITION_UNDERWRITING_V1 || false,
               activationStartedAt:
@@ -1445,25 +1760,25 @@ export default async function handler(req, res) {
             });
 
             transitions.push({
-              job_id: job.id,
+              job_id: claimedJob.id,
               from_status: 'queued',
               to_status: 'extracting',
             });
             passTransitions += 1;
             const transitionErr = await writeStatusTransitionArtifact(
-              job.id,
+              claimedJob.id,
               'queued',
               'extracting',
-              { user_id: job.user_id }
+              { user_id: claimedJob.user_id }
             );
 
             if (transitionErr) {
               throw new Error(`Failed to write status transition artifact: ${transitionErr.message}`);
             }
           } catch (err) {
-            await recordJobFailure(job, 'queued', err);
-            if (!failedJobIds.includes(job.id)) {
-              failedJobIds.push(job.id);
+            const failureOutcome = await recordJobFailure(claimedJob || job, 'queued', err);
+            if (!failureOutcome?.stale && !failedJobIds.includes((claimedJob || job).id)) {
+              failedJobIds.push((claimedJob || job).id);
             }
             continue;
           }
@@ -1472,7 +1787,7 @@ export default async function handler(req, res) {
 
       const { data: extractingJobs, error: extractingErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .select('id, user_id, status, started_at')
+        .select('id, user_id, status, started_at, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
         .eq('status', 'extracting')
         .order('created_at', { ascending: true })
         .limit(jobLimit);
@@ -1503,6 +1818,8 @@ export default async function handler(req, res) {
             reason: 'continue_existing_job',
             timestamp: nowIso,
           });
+
+          await renewWorkerLeaseForJob(job, job.worker_attempt_id, workerInvocationId);
 
           const { data: purchaseRow, error: purchaseErr } = await supabaseAdmin
             .from('report_purchases')
@@ -2166,17 +2483,9 @@ export default async function handler(req, res) {
             }
           }
 
-          const { data: extractingUpdate, error: extractingUpdErr } = await supabaseAdmin
-            .from('analysis_jobs')
-            .update({ status: 'underwriting' })
-            .eq('id', job.id)
-            .eq('status', 'extracting')
-            .select('id')
-            .maybeSingle();
-
-          if (extractingUpdErr) {
-            throw new Error(`Failed to advance extracting job: ${extractingUpdErr.message}`);
-          }
+          const extractingUpdate = await transitionWorkerJob(job, 'extracting', 'underwriting', {
+            user_id: job.user_id,
+          });
 
           if (!extractingUpdate?.id) {
             continue;
@@ -2201,8 +2510,8 @@ export default async function handler(req, res) {
 
           continue;
           } catch (err) {
-            await recordJobFailure(job, 'extracting', err);
-            if (!failedJobIds.includes(job.id)) {
+            const failureOutcome = await recordJobFailure(job, 'extracting', err);
+            if (!failureOutcome?.stale && !failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
             continue;
@@ -2212,7 +2521,7 @@ export default async function handler(req, res) {
 
       const { data: underwritingJobs, error: underwritingErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .select('id, user_id, status, started_at')
+        .select('id, user_id, status, started_at, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
         .eq('status', 'underwriting')
         .order('created_at', { ascending: true })
         .limit(jobLimit);
@@ -2224,18 +2533,13 @@ export default async function handler(req, res) {
       if (underwritingJobs && underwritingJobs.length > 0) {
         for (const job of underwritingJobs) {
           try {
-          const { data: underwritingClaim, error: underwritingUpdErr } = await supabaseAdmin
-            .from('analysis_jobs')
-            .update({ status: 'scoring' })
-            .eq('id', job.id)
-            .eq('status', 'underwriting')
-            .select('id');
+          await renewWorkerLeaseForJob(job, job.worker_attempt_id, workerInvocationId);
 
-          if (underwritingUpdErr) {
-            throw new Error(`Failed to advance underwriting jobs: ${underwritingUpdErr.message}`);
-          }
+          const underwritingClaim = await transitionWorkerJob(job, 'underwriting', 'scoring', {
+            user_id: job.user_id,
+          });
 
-          if (!underwritingClaim || underwritingClaim.length === 0) {
+          if (!underwritingClaim?.id) {
             continue;
           }
 
@@ -2256,8 +2560,8 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${transitionErr.message}`);
           }
           } catch (err) {
-            await recordJobFailure(job, 'underwriting', err);
-            if (!failedJobIds.includes(job.id)) {
+            const failureOutcome = await recordJobFailure(job, 'underwriting', err);
+            if (!failureOutcome?.stale && !failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
             continue;
@@ -2267,7 +2571,7 @@ export default async function handler(req, res) {
 
          const { data: scoringJobs, error: scoringErr } = await supabaseAdmin
         .from('analysis_jobs')
-        .select('id, user_id, status, created_at, property_name, report_type')
+        .select('id, user_id, status, created_at, property_name, report_type, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
         .eq('status', 'scoring')
         .order('created_at', { ascending: true })
         .limit(Math.min(jobLimit, 5));
@@ -2279,21 +2583,17 @@ export default async function handler(req, res) {
       if (scoringJobs && scoringJobs.length > 0) {
         for (const job of scoringJobs) {
           try {
-          const { data: renderingUpdate, error: renderingErr } = await supabaseAdmin
-            .from('analysis_jobs')
-            .update({ status: 'rendering' })
-            .eq('id', job.id)
-            .eq('status', 'scoring')
-            .select('id')
-            .maybeSingle();
+          await renewWorkerLeaseForJob(job, job.worker_attempt_id, workerInvocationId);
 
-          if (renderingErr) {
-            throw new Error(`Failed to advance scoring job: ${renderingErr.message}`);
-          }
+          const renderingUpdate = await transitionWorkerJob(job, 'scoring', 'rendering', {
+            user_id: job.user_id,
+          });
 
           if (!renderingUpdate?.id) {
             continue;
           }
+
+          await renewWorkerLeaseForJob(job, job.worker_attempt_id, workerInvocationId);
 
           transitions.push({
             job_id: job.id,
@@ -2948,13 +3248,13 @@ export default async function handler(req, res) {
             throw new Error('Delivery gate blocked before pdf_generating');
           }
 
-          const { error: pdfGenErr } = await supabaseAdmin
-            .from('analysis_jobs')
-            .update({ status: 'pdf_generating' })
-            .eq('id', job.id);
+          const pdfGeneratingUpdate = await transitionWorkerJob(job, 'rendering', 'pdf_generating', {
+            user_id: job.user_id,
+            report_id: reportId,
+          });
 
-          if (pdfGenErr) {
-            throw new Error(`Failed to advance job to pdf_generating: ${pdfGenErr.message}`);
+          if (!pdfGeneratingUpdate?.id) {
+            continue;
           }
 
           transitions.push({
@@ -2978,13 +3278,13 @@ export default async function handler(req, res) {
             throw new Error('Delivery gate blocked before publishing');
           }
 
-          const { error: publishingErr } = await supabaseAdmin
-            .from('analysis_jobs')
-            .update({ status: 'publishing' })
-            .eq('id', job.id);
+          const publishingUpdate = await transitionWorkerJob(job, 'pdf_generating', 'publishing', {
+            user_id: job.user_id,
+            report_id: reportId,
+          });
 
-          if (publishingErr) {
-            throw new Error(`Failed to advance job to publishing: ${publishingErr.message}`);
+          if (!publishingUpdate?.id) {
+            continue;
           }
 
           transitions.push({
@@ -3008,18 +3308,26 @@ export default async function handler(req, res) {
             throw new Error('Delivery gate blocked before published');
           }
 
-          const completeUpdate = { status: 'published' };
-          if (supportsCompletedAt) {
-            completeUpdate.completed_at = nowIso;
+          const publishedUpdate = await transitionWorkerJob(job, 'publishing', 'published', {
+            user_id: job.user_id,
+            report_id: reportId,
+          });
+
+          if (!publishedUpdate?.id) {
+            continue;
           }
 
-          const { error: completedErr } = await supabaseAdmin
-            .from('analysis_jobs')
-            .update(completeUpdate)
-            .eq('id', job.id);
+          if (supportsCompletedAt) {
+            const { error: completedErr } = await supabaseAdmin
+              .from('analysis_jobs')
+              .update({ completed_at: nowIso })
+              .eq('id', job.id)
+              .eq('worker_attempt_id', job.worker_attempt_id || null)
+              .eq('status', 'published');
 
-          if (completedErr) {
-            throw new Error(`Failed to mark job published: ${completedErr.message}`);
+            if (completedErr) {
+              throw new Error(`Failed to mark job published: ${completedErr.message}`);
+            }
           }
 
           transitions.push({
@@ -3228,16 +3536,19 @@ export default async function handler(req, res) {
                 continue;
               }
             }
-            await recordJobFailure(job, 'rendering', err);
-            await finalizeAndPersistBlockedManifest({
-              job,
-              terminalCode: String(err?.code || 'REPORT_RENDER_FAILED').toUpperCase(),
-              terminalMessage: err?.message || 'Unhandled worker failure before publication.',
-              creditState: { state: 'restoration_status_unknown' },
-              remedyState: { state: 'internal_review_required' },
-            });
-            if (!failedJobIds.includes(job.id)) {
-              failedJobIds.push(job.id);
+            // } await recordJobFailure(job, 'rendering', err);
+            const failureOutcome = await recordJobFailure(job, 'rendering', err);
+            if (!failureOutcome?.stale) {
+              await finalizeAndPersistBlockedManifest({
+                job,
+                terminalCode: String(err?.code || 'REPORT_RENDER_FAILED').toUpperCase(),
+                terminalMessage: err?.message || 'Unhandled worker failure before publication.',
+                creditState: { state: 'restoration_status_unknown' },
+                remedyState: { state: 'internal_review_required' },
+              });
+              if (!failedJobIds.includes(job.id)) {
+                failedJobIds.push(job.id);
+              }
             }
             continue;
           }
