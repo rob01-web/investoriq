@@ -22,7 +22,8 @@ H4: complete
 H5: complete
 H6: complete
 H7: complete
-Latest closeout commit: c517b90 Lock deterministic H7 support taxonomy authority
+Latest implementation commit: c517b90 Lock deterministic H7 support taxonomy authority
+Latest documentation commit: 386d19d Record H7 deterministic taxonomy completion
 Working tree: clean
 Remote: not updated because no push is authorized
 Next boundary: H8 Terminal outcome, manifest, and restoration
@@ -201,8 +202,9 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H3 complete.
 - H4 complete.
 - H5 complete.
-- H6 correction completed.
-- H7 next.
+- H6 complete.
+- H7 complete.
+- H8 next.
 
 ## 5. Fresh-chat operating order
 
