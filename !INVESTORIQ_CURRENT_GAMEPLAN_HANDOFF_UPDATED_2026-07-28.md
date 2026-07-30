@@ -23,22 +23,24 @@ H5: complete
 H6: complete
 H7: complete
 H8: complete
-Latest implementation commit: f092457d5fdbab60fd3aae341d78fe255a668489 Implement revision lineage and current report authority
-Latest documentation commit: Record H9 H10 completion
+H9/H10 migration created but not applied: supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql
+H11: complete
+Latest implementation commit: 121c96b Harden customer and admin state convergence
+Latest documentation commit: Record H11 completion
 Working tree: clean
 Remote: not updated because no push is authorized
-Next boundary: H11 Customer/admin state convergence
-Next authorized packet: H11 single-pass customer/admin state convergence map, smallest proven repair, behavioral proof, and documentation closeout
+Next boundary: H12-H13 Full Underwriting identity, legacy firewall, view model, and source binding
+Next authorized packet: H12-H13 single-pass Full Underwriting identity firewall and source-binding map, smallest proven repair, behavioral proof, and documentation closeout
 Operating mode from H2 forward: bounded packet mode
 ```
 
 Current forbidden actions remain:
 - No deployment.
-- No migration.
+- No migration application.
 - No production data change.
 - No Stripe configuration change.
-- No Premium activation.
-- No RETEST 39.
+- Premium remains exactly false.
+- RETEST 39 remains unauthorized.
 
 ## 1. Canonical relationship
 
@@ -218,14 +220,15 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H8 complete.
 - H9 complete.
 - H10 complete.
-- H11 next.
+- H11 complete.
+- H12-H13 is the next combined boundary.
 
 ## 5. Fresh-chat operating order
 
 - Upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale H7-next wording for the current next step. The current next packet is H11 single-pass customer/admin state convergence map, smallest proven repair, behavioral proof, and documentation closeout.
+- Do not use stale H7-next wording for the current next step. The current next packet is H12-H13 single-pass Full Underwriting identity firewall and source-binding map, smallest proven repair, behavioral proof, and documentation closeout.
 
 ## 6. Keep the handoff short and useful
 

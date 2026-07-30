@@ -35,7 +35,8 @@ Current state:
 - H8 closure note: read-only terminal outcome, manifest, publication-handoff, and restoration completed; entitlement-restoration event consistency completed; `restoreEntitlementForFailedJob` is the sole authoritative writer of successful `entitlement_restored` events; failed and dead-letter restoration events record the actual terminal status; timeout restoration produces exactly one restoration RPC success, one restoration artifact, and one restoration database event; duplicate, stale, published, queued, active, and requeued restoration attempts fail safely; existing H6 worker-attempt, claimed-by, terminal-status, and exactly-once restoration fencing remains unchanged; H8 implementation commits are `697d652` - Repair H8 restoration event consistency and `e0ab1fd3e16e9407a037a66592a1f25dac68104f` - Complete H8 restoration event consistency.
 - H9 complete.
 - H10 complete.
-- H11 next.
+- H11 complete.
+- H12-H13 next combined boundary.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -55,9 +56,9 @@ Phase playbook:
 | H8 | Terminal outcome, manifest, restoration | Terminal states, report manifesting, and exactly-once restoration behavior | Later phase work, production changes, Premium, RETEST 39 | Completed in the H8 restoration packet | Terminal outcomes are explicit and restoration paths do not double-grant or duplicate work | Complete |
 | H9 | Corrected and replacement revisions | Corrected reruns, replacement revisions, and lineage-preserving reroute logic | Later phase work, production changes, Premium, RETEST 39 | Completed in the H9-H10 packet | Corrected and replacement revisions preserve lineage and avoid duplicate charge or duplicate report state | Complete |
 | H10 | Publication, artifacts, Report History | Publication persistence, artifact tracking, and report-history surfaces | Later phase work, production changes, Premium, RETEST 39 | Completed in the H9-H10 packet | Published artifacts and report history match the actual delivery state | Complete |
-| H11 | Customer/admin state convergence | Reconciliation between customer-visible and admin-visible state | Later phase work, production changes, Premium, RETEST 39 | H11 single-pass customer/admin state convergence map, smallest proven repair, behavioral proof, and documentation closeout | Customer and admin surfaces agree on report state, blockers, and resolution status | Not started |
-| H12 | Full Underwriting identity and legacy firewall | Full Underwriting identity boundaries and legacy-path exclusion | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H12-A identity/firewall map; H12-B smallest firewall patch | Legacy paths cannot masquerade as current Full Underwriting authority | Not started |
-| H13 | Full Underwriting view model and source binding | View-model assembly and source-truth binding | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H13-A view-model map; H13-B smallest source-binding patch | Every displayed Full Underwriting value ties back to an approved source basis | Not started |
+| H11 | Customer/admin state convergence | Reconciliation between customer-visible and admin-visible state | Later phase work, production changes, Premium, RETEST 39 | H11 single-pass customer/admin state convergence map, smallest proven repair, behavioral proof, and documentation closeout | Customer and admin surfaces agree on report state, blockers, and resolution status | Complete |
+| H12 | Full Underwriting identity and legacy firewall | Full Underwriting identity boundaries and legacy-path exclusion | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H12-A identity/firewall map; H12-B smallest firewall patch | Legacy paths cannot masquerade as current Full Underwriting authority | Next combined boundary |
+| H13 | Full Underwriting view model and source binding | View-model assembly and source-truth binding | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H13-A view-model map; H13-B smallest source-binding patch | Every displayed Full Underwriting value ties back to an approved source basis | Next combined boundary |
 | H14 | Full Underwriting calculations and lender metrics | Calculation logic, lender metrics, and approved sensitivity analysis | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H14-A metrics map; H14-B smallest calculation patch | Every financial metric is reproducible, labeled, and sourced | Not started |
 | H15 | Full Underwriting renderer/content contract | Renderer contract, content boundaries, and section integrity | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H15-A renderer contract map; H15-B smallest rendering patch | The renderer obeys the approved content contract without inventing unsupported narrative | Not started |
 | H16 | Manifest/PDF certification | Manifest coupling, PDF certification, and bounded recovery | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H16-A certification map; H16-B smallest certification patch | Manifest, PDF, and certification state agree before any customer release | Not started |
@@ -92,7 +93,8 @@ H7 closure note:
 - H8 complete.
 - H9 complete.
 - H10 complete.
-- H11 next.
+- H11 complete.
+- H12-H13 next combined boundary.
 
 H2 packet details:
 - H2-A is read-only only.
@@ -163,4 +165,4 @@ Daily handoff instruction:
 - In a fresh chat, upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale earlier-phase wording for the current next step; the next packet is `H11 single-pass customer/admin state convergence map, smallest proven repair, behavioral proof, and documentation closeout`.
+- Do not use stale earlier-phase wording for the current next step; the next packet is `H12-H13 single-pass Full Underwriting identity firewall and source-binding map, smallest proven repair, behavioral proof, and documentation closeout`.
