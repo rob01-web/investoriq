@@ -17,7 +17,7 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H7 Deterministic support taxonomy authority complete.
+- H8 Terminal outcome, manifest, and restoration complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
@@ -80,6 +80,15 @@ Local completion status:
 - Existing deterministic support classifications remain unchanged
 - Three-run repeatability is proven by the H7 contract smoke
 - H7 complete
+- H8-A read-only terminal outcome, manifest, publication-handoff, and restoration map completed
+- H8-B entitlement-restoration event consistency completed
+- `restoreEntitlementForFailedJob` is the sole authoritative writer of successful `entitlement_restored` events
+- Failed and dead-letter restoration events record the actual terminal status
+- Timeout restoration produces exactly one restoration RPC success, one restoration artifact, and one restoration database event
+- Duplicate, stale, published, queued, active, and requeued restoration attempts fail safely
+- Existing H6 worker-attempt, claimed-by, terminal-status, and exactly-once restoration fencing remains unchanged
+- H8 implementation commits are `697d652` - Repair H8 restoration event consistency and `e0ab1fd3e16e9407a037a66592a1f25dac68104f` - Complete H8 restoration event consistency
+- H8 complete
 - No migration has been applied
 - No deployment occurred
 - No production data changed
@@ -88,11 +97,11 @@ Local completion status:
 - RETEST 39 remains unauthorized
 
 Next boundary:
-- H8 Terminal outcome, manifest, and restoration
+- H9 Corrected and replacement revisions
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H8-A read-only terminal outcome, manifest, publication-handoff, and restoration map.
+- Set next authorized packet to H9-A read-only corrected/replacement revision, lineage, reroute, duplicate-charge, and duplicate-report-state map.
 
 Operating mode:
 - bounded packet mode

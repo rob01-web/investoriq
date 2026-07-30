@@ -22,12 +22,13 @@ H4: complete
 H5: complete
 H6: complete
 H7: complete
-Latest implementation commit: c517b90 Lock deterministic H7 support taxonomy authority
+H8: complete
+Latest implementation commits: 697d652 Repair H8 restoration event consistency; e0ab1fd3e16e9407a037a66592a1f25dac68104f Complete H8 restoration event consistency
 Latest documentation commit: 386d19d Record H7 deterministic taxonomy completion
 Working tree: clean
 Remote: not updated because no push is authorized
-Next boundary: H8 Terminal outcome, manifest, and restoration
-Next authorized packet: H8-A read-only terminal outcome, manifest, publication-handoff, and restoration map
+Next boundary: H9 Corrected and replacement revisions
+Next authorized packet: H9-A read-only corrected/replacement revision, lineage, reroute, duplicate-charge, and duplicate-report-state map
 Operating mode from H2 forward: bounded packet mode
 ```
 
@@ -55,7 +56,16 @@ Current forbidden actions remain:
 - Long-tail support resolves to `other_support` and remains non-quantitative.
 - Existing deterministic support classifications remain unchanged.
 - Three-run repeatability is proven by the H7 contract smoke.
-- H8 is next.
+- H8-A read-only terminal outcome, manifest, publication-handoff, and restoration map completed.
+- H8-B entitlement-restoration event consistency completed.
+- `restoreEntitlementForFailedJob` is the sole authoritative writer of successful `entitlement_restored` events.
+- Failed and dead-letter restoration events record the actual terminal status.
+- Timeout restoration produces exactly one restoration RPC success, one restoration artifact, and one restoration database event.
+- Duplicate, stale, published, queued, active, and requeued restoration attempts fail safely.
+- Existing H6 worker-attempt, claimed-by, terminal-status, and exactly-once restoration fencing remains unchanged.
+- H8 implementation commits are `697d652` `Repair H8 restoration event consistency` and `e0ab1fd3e16e9407a037a66592a1f25dac68104f` `Complete H8 restoration event consistency`.
+- H8 complete.
+- H9 is next.
 - Operating mode from H2 forward is bounded packet mode.
 
 ## 2. Audit v3 preservation
@@ -204,7 +214,8 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H5 complete.
 - H6 complete.
 - H7 complete.
-- H8 next.
+- H8 complete.
+- H9 next.
 
 ## 5. Fresh-chat operating order
 
