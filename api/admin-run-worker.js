@@ -1479,11 +1479,12 @@ export default async function handler(req, res) {
     }
 
     // Timeout guard: mark long-running jobs as failed
-    const { data: inProgressJobs, error: inProgressError } = await supabase
+    const { data: expiredRecoveryJobs, error: inProgressError } = await supabase
       .from('analysis_jobs')
       .select('id, user_id, status, started_at, created_at, error_code, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
       .in('status', inProgressStatuses)
-      .eq('worker_claimed_by', workerInvocationId);
+      .not('worker_lease_expires_at', 'is', null)
+      .lte('worker_lease_expires_at', nowIso);
 
     if (inProgressError) {
       return res.status(500).json({
@@ -1492,12 +1493,11 @@ export default async function handler(req, res) {
       });
     }
 
-    const timedOutJobs = (inProgressJobs || []).filter((job) => {
+    const timedOutJobs = (expiredRecoveryJobs || []).filter((job) => {
       if (String(job.error_code || '') === 'ADMIN_REVIEW_REQUIRED') {
         return false;
       }
-      const leaseExpiresAt = job.worker_lease_expires_at ? new Date(job.worker_lease_expires_at) : null;
-      return leaseExpiresAt ? leaseExpiresAt <= new Date(nowIso) : false;
+      return !!job.worker_lease_expires_at;
     });
 
     if (timedOutJobs.length > 0) {
@@ -1522,7 +1522,7 @@ export default async function handler(req, res) {
             p_error_code: 'TIMEOUT',
             p_error_message: 'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.',
             p_failure_reason: 'worker_timeout',
-            p_claimed_by: workerInvocationId,
+            p_claimed_by: job.worker_claimed_by || null,
           });
 
           if (timeoutErr) {

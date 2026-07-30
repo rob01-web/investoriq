@@ -97,6 +97,9 @@ assert.match(workerSource, /rpc\('requeue_worker_job'/);
 assert.match(workerSource, /eq\('worker_attempt_id', currentAttemptId\)/);
 assert.match(workerSource, /eq\('worker_attempt_id', workerAttemptId\)/);
 assert.match(workerSource, /eq\('worker_claimed_by', workerInvocationId\)/);
+assert.match(workerSource, /\.not\('worker_lease_expires_at', 'is', null\)/);
+assert.match(workerSource, /\.lte\('worker_lease_expires_at', nowIso\)/);
+assert.match(workerSource, /p_claimed_by: job\.worker_claimed_by \|\| null/);
 assert.match(workerSource, /transitionWorkerJob\(job, 'rendering', 'pdf_generating'/);
 assert.match(workerSource, /transitionWorkerJob\(job, 'pdf_generating', 'publishing'/);
 assert.match(workerSource, /transitionWorkerJob\(job, 'publishing', 'published'/);
@@ -244,6 +247,27 @@ const restoreEntitlement = (state, attemptId, claimedBy, terminalStatus) => {
   return true;
 };
 const canActiveStageProcess = (job, claimedBy) => job.worker_claimed_by === claimedBy && !!job.worker_attempt_id;
+const activeWorkerStatuses = new Set(['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing']);
+const selectExpiredRecoveryJobs = (jobs, nowValue) =>
+  jobs.filter(
+    (job) =>
+      activeWorkerStatuses.has(job.status) &&
+      !!job.worker_lease_expires_at &&
+      Date.parse(job.worker_lease_expires_at) <= nowValue &&
+      !job.dead_lettered_at
+  );
+const runExpiredRecoverySweep = (jobs, nowValue, recoveryInvocationId) =>
+  selectExpiredRecoveryJobs(jobs, nowValue).map((job) => {
+    const recovered = failJob({ job }, job.worker_attempt_id, job.worker_claimed_by, job.status, true);
+    return {
+      recoveryInvocationId,
+      jobId: job.id,
+      attemptId: job.worker_attempt_id,
+      claimedBy: job.worker_claimed_by,
+      status: job.status,
+      recovered,
+    };
+  });
 
 {
   const state = makeState();
@@ -256,6 +280,28 @@ const canActiveStageProcess = (job, claimedBy) => job.worker_claimed_by === clai
   assert.equal(failJob(state, attemptA, 'worker-b', 'extracting'), false);
   assert.equal(canActiveStageProcess(state.job, 'worker-b'), false);
   assert.equal(canActiveStageProcess(state.job, 'worker-a'), true);
+}
+
+{
+  const state = makeState({
+    status: 'extracting',
+    worker_attempt_count: 1,
+    worker_attempt_id: 'attempt-expired-a',
+    worker_lease_expires_at: expiredLeaseExpiry(),
+    worker_claimed_by: 'worker-a',
+    worker_claimed_at: '2026-07-29T11:00:00.000Z',
+    worker_last_heartbeat_at: '2026-07-29T11:00:00.000Z',
+  });
+  const expiredRows = selectExpiredRecoveryJobs([state.job], fixedNow);
+  assert.equal(expiredRows.length, 1);
+  assert.equal(expiredRows[0].worker_claimed_by, 'worker-a');
+  const recoveryResults = runExpiredRecoverySweep([state.job], fixedNow, 'worker-b');
+  assert.equal(recoveryResults.length, 1);
+  assert.equal(recoveryResults[0].recoveryInvocationId, 'worker-b');
+  assert.equal(recoveryResults[0].claimedBy, 'worker-a');
+  assert.equal(recoveryResults[0].attemptId, 'attempt-expired-a');
+  assert.equal(recoveryResults[0].recovered, true);
+  assert.equal(state.job.status, 'failed');
 }
 
 {
@@ -327,6 +373,21 @@ const canActiveStageProcess = (job, claimedBy) => job.worker_claimed_by === clai
   const attemptB = claimNext(state, 'worker-b');
   assert.ok(attemptB);
   assert.equal(restoreEntitlement(state, 'attempt-expired', 'worker-a', 'failed'), false);
+}
+
+{
+  const state = makeState({
+    status: 'extracting',
+    worker_attempt_count: 1,
+    worker_attempt_id: 'attempt-live-b',
+    worker_lease_expires_at: liveLeaseExpiry(),
+    worker_claimed_by: 'worker-a',
+  });
+  const expiredRows = selectExpiredRecoveryJobs([state.job], fixedNow);
+  assert.equal(expiredRows.length, 0);
+  assert.equal(canActiveStageProcess(state.job, 'worker-b'), false);
+  assert.equal(renewLease(state, 'attempt-live-b', 'worker-b'), false);
+  assert.equal(transitionJob(state, 'attempt-live-b', 'worker-b', 'extracting', 'underwriting'), false);
 }
 
 {
