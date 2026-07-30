@@ -12,6 +12,8 @@ import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 import DiagnosticsIntelligence from "@/components/Admin/DiagnosticsIntelligence.jsx";
 import QualityIncidentDashboard from "@/components/Admin/QualityIncidentDashboard.jsx";
+import { resolveReportSurfaceState } from "@/lib/reportSurfaceState";
+import { sortReportRevisions } from "@/lib/reportRevisionAuthority";
 
 // DESIGN TOKENS
 const T = {
@@ -416,10 +418,10 @@ export default function AdminDashboard() {
   const fetchReports = useCallback(async (page = 0, search = '', filter = 'all') => {
     setRptLoading(true);
     try {
-      // reports table: id, user_id, property_name, storage_path, created_at, report_type
+      // reports table: id, user_id, property_name, storage_path, created_at, report_type, status, revision state
       let q = supabase
         .from('reports')
-        .select('id, user_id, property_name, storage_path, created_at, report_type', { count:'exact' });
+        .select('id, user_id, property_name, storage_path, created_at, report_type, status, revision_kind, revision_number, revision_family_key, revision_root_report_id, revision_parent_report_id, revision_request_key, revision_source_job_id, is_current_revision, revision_published_at', { count:'exact' });
 
       if (search.trim()) q = q.ilike('property_name', `%${search.trim()}%`);
 
@@ -428,7 +430,7 @@ export default function AdminDashboard() {
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
       if (error) throw error;
-      setReports(data || []);
+      setReports(sortReportRevisions(data || []));
       setRptTotal(count || 0);
     } catch (e) {
       toast({ title:'Failed to load reports', variant:'destructive' });
@@ -920,6 +922,8 @@ export default function AdminDashboard() {
                     <tbody>
                       {reports.map((r, i) => {
                         const isExpanded = expandedRpt === r.id;
+                        const surfaceState = resolveReportSurfaceState({ report: r, reports });
+                        const revisionState = surfaceState.revisionState;
                         return (
                           <React.Fragment key={r.id}>
                             <tr
@@ -935,7 +939,14 @@ export default function AdminDashboard() {
                               <TblTd mono style={{ fontSize:9 }}>{r.user_id?.slice(0,8) || '-'}</TblTd>
                               <TblTd mono style={{ fontSize:9 }}>{r.report_type || '-'}</TblTd>
                               <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
-                              <TblTd><StatusBadge status={r.report_type} /></TblTd>
+                              <TblTd>
+                                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                                  <StatusBadge status={r.status || (revisionState.isCurrent ? 'published' : 'historical')} />
+                                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.12em', textTransform:'uppercase', color: revisionState.isCurrent ? T.okGreen : T.goldDark }}>
+                                    {surfaceState.adminStatusLabel}
+                                  </span>
+                                </div>
+                              </TblTd>
                               <TblTd right onClick={e => e.stopPropagation()}>
                                 <div style={{ display:'flex', gap:5, justifyContent:'flex-end', flexWrap:'wrap' }}>
                                   {r.storage_path && (

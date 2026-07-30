@@ -6,10 +6,9 @@ import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/lib/customSupabaseClient";
 import BackButton from "@/components/BackButton";
 import {
-  getReportRevisionDisplayState,
-  selectCurrentPublishedReportRevision,
   sortReportRevisions,
 } from "@/lib/reportRevisionAuthority";
+import { resolveReportSurfaceState } from "@/lib/reportSurfaceState";
 
 // ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
 const T = {
@@ -151,8 +150,6 @@ export default function ReportHistory() {
 
     fetchReports();
   }, [user]);
-
-  const currentPublishedReport = selectCurrentPublishedReportRevision(reports);
 
   return (
     <>
@@ -313,7 +310,8 @@ export default function ReportHistory() {
                   </thead>
                   <tbody>
                     {reports.map((r, i) => {
-                      const revisionState = getReportRevisionDisplayState(r, currentPublishedReport);
+                      const surfaceState = resolveReportSurfaceState({ report: r, reports });
+                      const revisionState = surfaceState.revisionState;
                       const isCurrentRevision = revisionState.isCurrent;
                       return (
                       <tr
@@ -359,7 +357,7 @@ export default function ReportHistory() {
                                 window.open(data.signedUrl, '_blank');
                               }}
                             >
-                              {revisionState.downloadLabel}
+                              {surfaceState.customerDownloadLabel}
                             </DownloadBtn>
                           ) : (
                             <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.ink4 }}>

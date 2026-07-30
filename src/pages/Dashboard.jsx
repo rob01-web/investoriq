@@ -9,10 +9,9 @@ import { Button } from '@/components/ui/button';
 import { buildCustomerFailureMessage, buildEntitlementRestoredMap } from '@/lib/jobFailureMessaging';
 import { formatReportUploadGateErrorMessage, resolveCoreUploadDocType, resolveReportUploadGate } from '@/lib/reportUploadGate';
 import {
-  getReportRevisionDisplayState,
-  selectCurrentPublishedReportRevision,
   sortReportRevisions,
 } from '@/lib/reportRevisionAuthority';
+import { resolveReportSurfaceState } from '@/lib/reportSurfaceState';
 import {
   DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE,
   formatDashboardCustomerStatusLabel,
@@ -450,11 +449,10 @@ const DASHBOARD_DIAG_MINIMAL = false;
   }, [profile?.id]);
 
   const orderedReports = useMemo(() => sortReportRevisions(reports), [reports]);
-  const currentPublishedReport = useMemo(() => selectCurrentPublishedReportRevision(orderedReports), [orderedReports]);
-
   const reportHistoryCards = useMemo(() => (
     orderedReports.map((report) => {
-      const revisionState = getReportRevisionDisplayState(report, currentPublishedReport);
+      const surfaceState = resolveReportSurfaceState({ report, reports: orderedReports });
+      const revisionState = surfaceState.revisionState;
       const isCurrentRevision = revisionState.isCurrent;
       return (
       <div key={report.id} style={{ border:`1px solid ${T.hairline}`, background:T.white, padding:'14px 16px' }}>
@@ -489,7 +487,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
               }}
               style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.goldDark, background:'none', border:'none', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4, padding:0 }}
             >
-              <FileDown style={{ width:11, height:11 }} /> {revisionState.downloadLabel}
+              <FileDown style={{ width:11, height:11 }} /> {surfaceState.customerDownloadLabel}
             </button>
           )}
           <button
@@ -518,7 +516,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
       </div>
       );
     })
-  ), [orderedReports, currentPublishedReport, fetchReports, toast]);
+  ), [orderedReports, fetchReports, toast]);
 
   const readyReports = orderedReports.filter((r) => r.storage_path);
 
