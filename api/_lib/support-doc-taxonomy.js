@@ -466,33 +466,6 @@ export function resolveCanonicalSupportDocAuthority({
     };
   }
 
-  const aiConfidence = Number(aiRecoveryHints?.confidence);
-  if (Number.isFinite(aiConfidence) && aiConfidence > 0.8) {
-    const aiRole = normalizeCanonicalSupportDocRole(String(
-      aiRecoveryHints?.semantic_doc_role ||
-      aiRecoveryHints?.role ||
-      aiRecoveryHints?.doc_role ||
-      ""
-    ));
-    return {
-      role: aiRole || "other_support",
-      displayLabel: String(
-        aiRecoveryHints?.semantic_doc_display_label ||
-        aiRecoveryHints?.display_label ||
-        aiRecoveryHints?.document_role_label ||
-        "Other Support Document"
-      ).trim() || "Other Support Document",
-      category: categoryForRole(aiRole || "other_support"),
-      treatment: String(aiRecoveryHints?.treatment_label || aiRecoveryHints?.treatment || "Context only").trim() || "Context only",
-      use: String(aiRecoveryHints?.use_label || aiRecoveryHints?.use || "Listed for auditability only; not used quantitatively.").trim() || "Listed for auditability only; not used quantitatively.",
-      authoritySource: "ai_recovery",
-      confidence: aiConfidence,
-      fileId: String(fileId || "").trim() || null,
-      originalFilename: String(originalFilename || "").trim() || null,
-      ...collectSupportDocSourceFacts(aiRecoveryHints?.payload || effectivePayload),
-    };
-  }
-
   const parsedTaxonomy = buildSupportDocTaxonomyState({
     declaredDocType,
     detectedDocType,
