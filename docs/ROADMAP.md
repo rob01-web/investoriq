@@ -65,8 +65,8 @@ Phase playbook:
 | H13 | Full Underwriting view model and source binding | View-model assembly and source-truth binding | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H13-A view-model map; H13-B smallest source-binding patch | Every displayed Full Underwriting value ties back to an approved source basis | Complete |
 | H14 | Full Underwriting calculations and lender metrics | Calculation logic, lender metrics, and approved sensitivity analysis | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | Completed in the H14-H15 packet | Every financial metric is reproducible, labeled, and sourced | Complete |
 | H15 | Full Underwriting renderer/content contract | Renderer contract, content boundaries, and section integrity | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | Completed in the H14-H15 packet | The renderer obeys the approved content contract without inventing unsupported narrative | Complete |
-| H16 | Manifest/PDF certification | Manifest coupling, PDF certification, and bounded recovery | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H16-A certification map; H16-B smallest certification patch | Manifest, PDF, and certification state agree before any customer release | Not started |
-| H17 | Controlled replays | Deterministic replay harnesses and fixture control | Unsanctioned launch changes, production changes, Premium, RETEST 39 | H17-A replay map; H17-B smallest replay patch | Controlled replays remain stable and reproduce the same canonical outputs | Not started |
+| H16 | Manifest/PDF certification | Manifest coupling, PDF certification, and bounded recovery | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H16-A certification map; H16-B smallest certification patch | Manifest, PDF, and certification state agree before any customer release | Complete |
+| H17 | Controlled replays | Deterministic replay harnesses and fixture control | Unsanctioned launch changes, production changes, Premium, RETEST 39 | H17-A replay map; H17-B smallest replay patch | Controlled replays remain stable and reproduce the same canonical outputs | Complete |
 | H18 | Governed canary | Governed pilot launch control, rollback, and evidence logging | Uncontrolled launch, production changes, Premium, RETEST 39 | H18-A canary map; H18-B smallest pilot-control patch | Canary rules, rollback, and evidence logs are explicit and enforceable | Not started |
 | H19 | Simultaneous launch certification | Final certification that Screening and Full Underwriting can launch together | Partial launch claims, production changes, Premium, RETEST 39 | H19-A certification map; H19-B smallest final certification patch | Screening and Full Underwriting both meet the governed launch bar together, or neither launches | Not started |
 
@@ -101,7 +101,7 @@ H7 closure note:
 - H12 complete.
 - H13 complete.
 - H14-H15 complete.
-- H16-H17 next combined boundary.
+- H18-H19 next combined boundary.
 
 H12-H13 closure note:
 - `1697db7` - `Prove Full Underwriting identity and source binding`.
@@ -186,4 +186,4 @@ Daily handoff instruction:
 - In a fresh chat, upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale earlier-phase wording for the current next step; the next packet is `H16-H17 single-pass manifest-PDF certification and controlled-replay map, smallest proven repair, behavioral proof, and documentation closeout`.
+- Do not use stale earlier-phase wording for the current next step; the next packet is `H18-H19 single-pass governed-canary and simultaneous-launch certification map, smallest proven repair, behavioral proof, and documentation closeout`.

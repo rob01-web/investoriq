@@ -22,7 +22,8 @@ Current phase:
 - H11 Customer/admin state convergence complete.
 - H12-H13 Full Underwriting identity, legacy firewall, view model, and source binding complete.
 - H14-H15 Full Underwriting calculations and renderer/content contract complete.
-- H16-H17 Manifest/PDF certification and controlled replays is next.
+- H16-H17 Manifest/PDF certification and controlled replays complete.
+- H18-H19 Governed canary and simultaneous launch certification is next.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
@@ -34,9 +35,11 @@ Local completion status:
 - H12-H13 complete: canonical public Full Underwriting identity, legacy firewall, source binding, manifest agreement, and renderer fence proved
 - H14 complete: deterministic lender metrics, formula labels, provenance, and explicit unavailable states proved
 - H15 complete: renderer/content contract, methodology, limitations, and prohibited-content boundaries proved
-- Latest implementation commit: `ab7a47d` - Harden lender calculations and Full Underwriting renderer contract
+- H16 complete: manifest/PDF certification, bounded recovery, and artifact binding proved
+- H17 complete: controlled replay determinism, normalized PDF equivalence, and duplicate artifact prevention proved
+- Latest implementation commit: `3150754` - Prove manifest PDF certification and controlled replay
 - Migration created but not applied: `20260730000100_h9_h10_report_revision_lineage.sql`
-- Latest documentation commit: `Record H14 H15 completion`
+- Latest documentation commit: `Record H16 H17 completion`
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
@@ -109,11 +112,11 @@ Local completion status:
 - RETEST 39 remains unauthorized
 
 Next boundary:
-- H16-H17 Manifest/PDF certification and controlled replays
+- H18-H19 Governed canary and simultaneous launch certification
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H16-H17 single-pass manifest-PDF certification and controlled-replay map, smallest proven repair, behavioral proof, and documentation closeout.
+- Set next authorized packet to H18-H19 single-pass governed-canary and simultaneous-launch certification map, smallest proven repair, behavioral proof, and documentation closeout.
 
 Operating mode:
 - bounded packet mode
