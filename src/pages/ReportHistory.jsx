@@ -5,6 +5,11 @@ import { FileText, Loader2, FileDown } from "lucide-react";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { supabase } from "@/lib/customSupabaseClient";
 import BackButton from "@/components/BackButton";
+import {
+  getReportRevisionDisplayState,
+  selectCurrentPublishedReportRevision,
+  sortReportRevisions,
+} from "@/lib/reportRevisionAuthority";
 
 // ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
 const T = {
@@ -57,7 +62,7 @@ function StatusBadge({ status }) {
 }
 
 // Download button
-function DownloadBtn({ onClick }) {
+function DownloadBtn({ onClick, children = "Download" }) {
   const [hov, setHov] = useState(false);
   return (
     <button
@@ -83,7 +88,7 @@ function DownloadBtn({ onClick }) {
       }}
     >
       <FileDown style={{ width: 11, height: 11 }} />
-      Download
+      {children}
     </button>
   );
 }
@@ -130,13 +135,13 @@ export default function ReportHistory() {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from("properties")
-          .select("id, property_address, created_at, status")
+          .from("reports")
+          .select("id, user_id, property_name, report_type, created_at, storage_path, status, revision_kind, revision_number, revision_family_key, revision_root_report_id, revision_parent_report_id, revision_request_key, revision_source_job_id, is_current_revision, revision_published_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        setReports(data || []);
+        setReports(sortReportRevisions(data || []));
       } catch (err) {
         console.error("Error fetching reports:", err);
       } finally {
@@ -146,6 +151,8 @@ export default function ReportHistory() {
 
     fetchReports();
   }, [user]);
+
+  const currentPublishedReport = selectCurrentPublishedReportRevision(reports);
 
   return (
     <>
@@ -287,7 +294,7 @@ export default function ReportHistory() {
                 <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:"'DM Sans', sans-serif", fontSize:13 }}>
                   <thead>
                     <tr style={{ borderBottom:`1.5px solid ${T.ink}` }}>
-                      {['Property Address', 'Created', 'Status', 'Action'].map((h, i) => (
+                      {['Property', 'Created', 'Revision', 'Action'].map((h, i) => (
                         <th key={h} style={{
                           fontFamily:   "'DM Mono', monospace",
                           fontSize:     9,
@@ -305,7 +312,10 @@ export default function ReportHistory() {
                     </tr>
                   </thead>
                   <tbody>
-                    {reports.map((r, i) => (
+                    {reports.map((r, i) => {
+                      const revisionState = getReportRevisionDisplayState(r, currentPublishedReport);
+                      const isCurrentRevision = revisionState.isCurrent;
+                      return (
                       <tr
                         key={r.id}
                         style={{
@@ -314,7 +324,7 @@ export default function ReportHistory() {
                         }}
                       >
                         <td style={{ padding:'11px 12px', color:T.ink2, fontWeight:400 }}>
-                          {r.property_address || '-'}
+                          {r.property_name || '-'}
                         </td>
                         <td style={{
                           padding:    '11px 12px',
@@ -327,17 +337,39 @@ export default function ReportHistory() {
                           {new Date(r.created_at).toLocaleDateString()}
                         </td>
                         <td style={{ padding:'11px 12px' }}>
-                          <StatusBadge status={r.status} />
+                          <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                            <StatusBadge status={isCurrentRevision ? 'Completed' : 'Processing'} />
+                            <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:isCurrentRevision ? T.okGreen : T.goldDark }}>
+                              {revisionState.label}
+                            </span>
+                            <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.ink4 }}>
+                              {revisionState.badge}
+                            </span>
+                          </div>
                         </td>
                         <td style={{ padding:'11px 12px', textAlign:'right' }}>
-                          <DownloadBtn
-                            onClick={() =>
-                              alert(`Download for ${r.property_address} coming soon.`)
-                            }
-                          />
+                          {r.storage_path ? (
+                            <DownloadBtn
+                              onClick={async () => {
+                                const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(r.storage_path, 300);
+                                if (error || !data?.signedUrl) {
+                                  alert(error?.message || 'Unable to generate link.');
+                                  return;
+                                }
+                                window.open(data.signedUrl, '_blank');
+                              }}
+                            >
+                              {revisionState.downloadLabel}
+                            </DownloadBtn>
+                          ) : (
+                            <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.ink4 }}>
+                              -
+                            </span>
+                          )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

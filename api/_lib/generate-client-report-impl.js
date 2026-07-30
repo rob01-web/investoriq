@@ -100,6 +100,10 @@ import {
   sanitizeTypography,
 } from "./report-delivery-output.js";
 import {
+  buildReportRevisionRequestKey,
+  normalizeReportRevisionKind,
+} from "../../src/lib/reportRevisionAuthority.js";
+import {
   inspectFinalPdfPublicationQuality,
   isFinalPdfCustomerDeliveryAllowed,
 } from "./final-pdf-publication-quality-boss.js";
@@ -2801,6 +2805,7 @@ export default async function handler(req, res) {
       property_name,
       property_address,
       property_title,
+      revision = null,
       supporting_documents = [],
     } = body;
     const jobId = body?.job_id || body?.jobId;
@@ -9072,37 +9077,143 @@ try {
       console.error("Report publication invariant failed:", err?.context || publicationContext, err?.message || err);
       throw err;
     }
+    const explicitRevision = revision && typeof revision === "object" ? revision : {};
+    const revisionKind = normalizeReportRevisionKind(
+      explicitRevision.revision_kind ??
+        explicitRevision.kind ??
+        "original",
+      "original",
+    );
+    const revisionRootReportId = String(
+      explicitRevision.revision_root_report_id ??
+        explicitRevision.root_report_id ??
+        "",
+    ).trim() || null;
+    const revisionParentReportId = String(
+      explicitRevision.revision_parent_report_id ??
+        explicitRevision.parent_report_id ??
+        "",
+    ).trim() || null;
+    const explicitRevisionNumber = Number(explicitRevision.revision_number ?? explicitRevision.number ?? NaN);
+    const revisionNumber =
+      Number.isInteger(explicitRevisionNumber) && explicitRevisionNumber >= 1
+        ? explicitRevisionNumber
+        : revisionKind === "original"
+          ? 1
+          : null;
+    const revisionFamilyKey = String(
+      explicitRevision.revision_family_key ??
+        explicitRevision.family_key ??
+        revisionRootReportId ??
+        "",
+    ).trim() || null;
+    const revisionSourceJobId = String(
+      explicitRevision.revision_source_job_id ??
+        explicitRevision.source_job_id ??
+        jobId ??
+        "",
+    ).trim() || null;
+    const revisionRequestKey = String(
+      explicitRevision.revision_request_key ??
+        buildReportRevisionRequestKey({
+          revisionKind,
+          revisionFamilyKey: revisionFamilyKey || revisionRootReportId || jobId || publicationSeed,
+          revisionNumber,
+          revisionParentReportId,
+          revisionSourceJobId,
+        }),
+    ).trim() || null;
+    if (revisionKind !== "original") {
+      if (!revisionRootReportId) {
+        const revisionError = new Error(`Missing revision root report id for ${revisionKind} report publication`);
+        revisionError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        throw revisionError;
+      }
+      if (!revisionNumber) {
+        const revisionError = new Error(`Missing revision number for ${revisionKind} report publication`);
+        revisionError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        throw revisionError;
+      }
+    }
+    const reportPublicationColumns = [
+      "id",
+      "storage_path",
+      "revision_kind",
+      "revision_family_key",
+      "revision_root_report_id",
+      "revision_parent_report_id",
+      "revision_number",
+      "revision_request_key",
+      "revision_source_job_id",
+      "is_current_revision",
+      "revision_published_at",
+    ].join(", ");
+    let reportRow = null;
+    if (revisionRequestKey) {
+      const { data: existingReportRow, error: existingReportError } = await supabase
+        .from("reports")
+        .select(reportPublicationColumns)
+        .eq("revision_request_key", revisionRequestKey)
+        .maybeSingle();
+      if (existingReportError) {
+        console.error("Existing revision lookup failed:", existingReportError, publicationContext);
+        throw existingReportError;
+      }
+      if (existingReportRow?.id) {
+        reportRow = existingReportRow;
+        validatedStoragePath = existingReportRow.storage_path || validatedStoragePath;
+      }
+    }
     // 10. Persist PDF to Supabase Storage using required contract: {user_id}/{publicationSeed}.pdf
-    const { error: uploadError } = await supabase.storage
-      .from("generated_reports")
-      .upload(validatedStoragePath, pdfResponse.data, {
-        contentType: "application/pdf",
-        cacheControl: "3600",
-        upsert: false,
-      });
-    if (uploadError) {
-      console.error("Storage Upload Error:", uploadError);
-      const storageError = new Error("Failed to upload report to storage");
-      storageError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
-      throw storageError;
+    if (!reportRow?.id) {
+      const { error: uploadError } = await supabase.storage
+        .from("generated_reports")
+        .upload(validatedStoragePath, pdfResponse.data, {
+          contentType: "application/pdf",
+          cacheControl: "3600",
+          upsert: false,
+        });
+      if (uploadError) {
+        console.error("Storage Upload Error:", uploadError);
+        const storageError = new Error("Failed to upload report to storage");
+        storageError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        throw storageError;
+      }
     }
     // 11. Create DB row only after a valid upload path exists
-    const { data: reportRow, error: reportCreateError } = await supabase
-      .from("reports")
-      .insert({
+    let reportCreateError = null;
+    if (!reportRow?.id) {
+      const revisionInsertPayload = {
         user_id: effectiveUserId,
         property_name: propertyNameDisplay || propertyName || "Property",
         report_type: reportType,
         storage_path: validatedStoragePath,
-      })
-      .select("id")
-      .single();
+        revision_kind: revisionKind,
+        revision_family_key: revisionKind === "original" ? null : revisionFamilyKey || revisionRootReportId,
+        revision_root_report_id: revisionKind === "original" ? null : revisionRootReportId,
+        revision_parent_report_id: revisionParentReportId || null,
+        revision_number: revisionNumber,
+        revision_request_key: revisionRequestKey,
+        revision_source_job_id: revisionSourceJobId || null,
+        is_current_revision: false,
+        revision_published_at: null,
+      };
+      const insertResult = await supabase
+        .from("reports")
+        .insert(revisionInsertPayload)
+        .select(reportPublicationColumns)
+        .single();
+      reportRow = insertResult?.data || null;
+      reportCreateError = insertResult?.error || null;
+    }
     if (reportCreateError || !reportRow?.id) {
       console.error("Report DB Create Error:", reportCreateError, publicationContext);
-      try {
-        await supabase.storage.from("generated_reports").remove([validatedStoragePath]);
-      } catch (cleanupErr) {
-        console.error("Failed to cleanup uploaded report after DB insert failure:", cleanupErr);
+      if (!revisionRequestKey) {
+        try {
+          await supabase.storage.from("generated_reports").remove([validatedStoragePath]);
+        } catch (cleanupErr) {
+          console.error("Failed to cleanup uploaded report after DB insert failure:", cleanupErr);
+        }
       }
       const publicationError = new Error("Failed to create report record");
       publicationError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;

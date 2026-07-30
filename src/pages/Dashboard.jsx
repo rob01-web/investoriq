@@ -9,6 +9,11 @@ import { Button } from '@/components/ui/button';
 import { buildCustomerFailureMessage, buildEntitlementRestoredMap } from '@/lib/jobFailureMessaging';
 import { formatReportUploadGateErrorMessage, resolveCoreUploadDocType, resolveReportUploadGate } from '@/lib/reportUploadGate';
 import {
+  getReportRevisionDisplayState,
+  selectCurrentPublishedReportRevision,
+  sortReportRevisions,
+} from '@/lib/reportRevisionAuthority';
+import {
   DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE,
   formatDashboardCustomerStatusLabel,
   getCustomerFacingJobStatus,
@@ -430,22 +435,28 @@ const DASHBOARD_DIAG_MINIMAL = false;
       setReportsLoading(true);
       const { data, error } = await supabase
         .from('reports')
-        .select('id, property_name, report_type, created_at, storage_path')
+        .select('id, property_name, report_type, created_at, storage_path, status, revision_kind, revision_number, revision_family_key, revision_root_report_id, revision_parent_report_id, revision_request_key, revision_source_job_id, is_current_revision, revision_published_at')
         .eq('user_id', profile?.id)
         .order('created_at', { ascending: false })
         .limit(25);
       if (error) throw error;
-      const rows = data || [];
+      const rows = sortReportRevisions(data || []);
       setReports((prev) => {
-        const serialize = (items) => items.map((report) => `${report.id}|${report.property_name || ''}|${report.report_type || ''}|${report.created_at || ''}|${report.storage_path || ''}`).join('||');
+        const serialize = (items) => items.map((report) => `${report.id}|${report.property_name || ''}|${report.report_type || ''}|${report.created_at || ''}|${report.storage_path || ''}|${report.revision_kind || ''}|${report.revision_number || ''}|${report.revision_family_key || ''}|${report.revision_request_key || ''}|${report.is_current_revision ? '1' : '0'}`).join('||');
         return serialize(prev) === serialize(rows) ? prev : rows;
       });
     } catch (err) { console.error('Error fetching reports FULL:', JSON.stringify(err, null, 2)); }
     finally { setReportsLoading(false); }
   }, [profile?.id]);
 
+  const orderedReports = useMemo(() => sortReportRevisions(reports), [reports]);
+  const currentPublishedReport = useMemo(() => selectCurrentPublishedReportRevision(orderedReports), [orderedReports]);
+
   const reportHistoryCards = useMemo(() => (
-    reports.map((report) => (
+    orderedReports.map((report) => {
+      const revisionState = getReportRevisionDisplayState(report, currentPublishedReport);
+      const isCurrentRevision = revisionState.isCurrent;
+      return (
       <div key={report.id} style={{ border:`1px solid ${T.hairline}`, background:T.white, padding:'14px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom:10 }}>
           <div style={{ minWidth:0, flex:'1 1 260px' }}>
@@ -454,12 +465,18 @@ const DASHBOARD_DIAG_MINIMAL = false;
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
               <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink3 }}>{report.report_type || '-'}</span>
+              <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:isCurrentRevision ? T.okGreen : T.goldDark }}>
+                {revisionState.label}
+              </span>
+              <span style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:T.ink4 }}>
+                {revisionState.badge}
+              </span>
               <span style={{ ...bodySmall, fontSize:12, color:T.ink4 }}>
                 {report.created_at ? new Date(report.created_at).toLocaleDateString() : '-'}
               </span>
             </div>
           </div>
-          <StatusBadge status={report.status || 'published'} />
+          <StatusBadge status={report.status || (isCurrentRevision ? 'published' : 'historical')} />
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
           {report.storage_path && (
@@ -472,7 +489,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
               }}
               style={{ fontFamily:"'DM Mono', monospace", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:T.goldDark, background:'none', border:'none', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4, padding:0 }}
             >
-              <FileDown style={{ width:11, height:11 }} /> Download
+              <FileDown style={{ width:11, height:11 }} /> {revisionState.downloadLabel}
             </button>
           )}
           <button
@@ -499,10 +516,11 @@ const DASHBOARD_DIAG_MINIMAL = false;
           </button>
         </div>
       </div>
-    ))
-  ), [reports, fetchReports, toast]);
+      );
+    })
+  ), [orderedReports, currentPublishedReport, fetchReports, toast]);
 
-  const readyReports = reports.filter((r) => r.storage_path);
+  const readyReports = orderedReports.filter((r) => r.storage_path);
 
   const fetchJobEvents = async (jobIds) => {
     if (!jobIds || jobIds.length === 0) { setJobEvents({}); return; }

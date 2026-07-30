@@ -5,6 +5,7 @@ import { classifyTerminalFailureCode } from '../lib/terminal-failure-taxonomy.js
 import {
   buildReportStoragePath,
   ensureReportDownloadArtifact,
+  promoteReportRevisionToCurrent,
   resolveOrCreateReportPublicationRecord,
 } from './_lib/report-delivery-output.js';
 import {
@@ -2988,6 +2989,30 @@ export default async function handler(req, res) {
                       publicationResolution?.publicationSource ||
                       generatorSource;
                     const publicationQualityBoss = artifactResolution?.publicationQualityBoss || null;
+                    let revisionPromotionResolution = null;
+                    try {
+                      revisionPromotionResolution = await promoteReportRevisionToCurrent({
+                        supabaseAdmin,
+                        reportId,
+                      });
+                    } catch (promotionErr) {
+                      generatorErrorCode = 'REPORT_PUBLICATION_FAILED';
+                      generatorError = promotionErr?.message || 'Report generation failed (report promotion failed)';
+                      generatorFailurePayload = {
+                        error: generatorError,
+                        has_report_data: Boolean(reportData),
+                        has_final_html: Boolean(reportData?.final_html),
+                        target_url: fetchUrl,
+                        report_id: reportId,
+                        storage_path: storagePath,
+                      };
+                    }
+                    if (!generatorError && revisionPromotionResolution?.stale === true) {
+                      console.warn(
+                        `[worker] Skipping current-revision promotion for stale report ${reportId}:`,
+                        revisionPromotionResolution,
+                      );
+                    }
                     if (
                       resolvedDeliveryDecision.deliveryGateStatus === 'deliverable' &&
                       resolvedDeliveryDecision.holdDelivery !== true &&

@@ -1,6 +1,10 @@
 import axios from "axios";
 import { sanitizeFinalCustomerHtml } from "./report-surface-contracts.js";
 import {
+  buildReportRevisionRequestKey,
+  normalizeReportRevisionKind,
+} from "../../src/lib/reportRevisionAuthority.js";
+import {
   assertFinalPdfPublicationQuality,
   isFinalPdfCustomerDeliveryAllowed,
 } from "./final-pdf-publication-quality-boss.js";
@@ -120,6 +124,130 @@ export function buildReportStoragePath({ effectiveUserId, reportSeed } = {}) {
   const seedPart = String(reportSeed ?? "").trim();
   if (!userPart || !seedPart) return "";
   return `${userPart}/${seedPart}.pdf`;
+}
+
+function buildReportRevisionInsertValues({
+  job = {},
+  reportData = {},
+  revision = null,
+  existingReportId = null,
+} = {}) {
+  const explicitRevision =
+    revision && typeof revision === "object" ? revision :
+    reportData?.revision && typeof reportData.revision === "object" ? reportData.revision :
+    {};
+  const effectiveJobId = String(job?.id ?? reportData?.jobId ?? reportData?.job_id ?? "").trim() || null;
+  const revisionKind = normalizeReportRevisionKind(
+    explicitRevision.revision_kind ??
+      explicitRevision.kind ??
+      reportData?.revision_kind ??
+      reportData?.revision?.kind ??
+      "original",
+    "original",
+  );
+  const revisionRootReportId = String(
+    explicitRevision.revision_root_report_id ??
+      reportData?.revision_root_report_id ??
+      reportData?.revision?.root_report_id ??
+      "",
+  ).trim() || null;
+  const revisionParentReportId = String(
+    explicitRevision.revision_parent_report_id ??
+      reportData?.revision_parent_report_id ??
+      reportData?.revision?.parent_report_id ??
+      "",
+  ).trim() || null;
+  const explicitRevisionNumber = Number(
+    explicitRevision.revision_number ??
+      reportData?.revision_number ??
+      reportData?.revision?.number ??
+      NaN,
+  );
+  const revisionNumber =
+    Number.isInteger(explicitRevisionNumber) && explicitRevisionNumber >= 1
+      ? explicitRevisionNumber
+      : revisionKind === "original"
+        ? 1
+        : null;
+  const revisionFamilyKey = String(
+    explicitRevision.revision_family_key ??
+      reportData?.revision_family_key ??
+      reportData?.revision?.family_key ??
+      revisionRootReportId ??
+      "",
+  ).trim() || null;
+  const revisionSourceJobId = String(
+    explicitRevision.revision_source_job_id ??
+      reportData?.revision_source_job_id ??
+      effectiveJobId ??
+      "",
+  ).trim() || null;
+  const revisionRequestKey = String(
+    explicitRevision.revision_request_key ??
+      reportData?.revision_request_key ??
+      buildReportRevisionRequestKey({
+        revisionKind,
+        revisionFamilyKey: revisionFamilyKey || revisionRootReportId || existingReportId,
+        revisionNumber,
+        revisionParentReportId,
+        revisionSourceJobId,
+      }),
+  ).trim() || null;
+
+  if (revisionKind !== "original") {
+    if (!revisionRootReportId) {
+      const err = new Error(`Missing revision root report id for ${revisionKind} report publication`);
+      err.code = "REPORT_GENERATION_FAILED";
+      err.context = { revisionKind };
+      throw err;
+    }
+    if (!revisionNumber) {
+      const err = new Error(`Missing revision number for ${revisionKind} report publication`);
+      err.code = "REPORT_GENERATION_FAILED";
+      err.context = { revisionKind, revisionRootReportId };
+      throw err;
+    }
+  }
+
+  return {
+    revision_kind: revisionKind,
+    revision_family_key: revisionFamilyKey,
+    revision_root_report_id: revisionRootReportId,
+    revision_parent_report_id: revisionParentReportId,
+    revision_number: revisionNumber,
+    revision_request_key: revisionRequestKey,
+    revision_source_job_id: revisionSourceJobId,
+    is_current_revision: false,
+    revision_published_at: null,
+  };
+}
+
+export async function promoteReportRevisionToCurrent({
+  supabaseAdmin,
+  reportId = null,
+} = {}) {
+  if (!supabaseAdmin?.rpc) {
+    throw new Error("Missing report promotion database client");
+  }
+  const trimmedReportId = String(reportId ?? "").trim();
+  if (!trimmedReportId) {
+    throw new Error("Missing report id for revision promotion");
+  }
+  const { data, error } = await supabaseAdmin.rpc("promote_report_revision_to_current", {
+    p_report_id: trimmedReportId,
+  });
+  if (error) {
+    throw error;
+  }
+  const resolved = Array.isArray(data) ? data[0] : data;
+  return {
+    promoted: Boolean(resolved?.promoted),
+    stale: Boolean(resolved?.stale),
+    reportId: String(resolved?.report_id ?? trimmedReportId).trim() || trimmedReportId,
+    demotedReportId: String(resolved?.demoted_report_id ?? "").trim() || null,
+    revisionFamilyKey: String(resolved?.revision_family_key ?? "").trim() || null,
+    revisionNumber: Number.isInteger(Number(resolved?.revision_number)) ? Number(resolved.revision_number) : null,
+  };
 }
 
 function normalizeReportDownloadArtifactMode(reportDownloadArtifactMode = "") {
@@ -557,6 +685,7 @@ export async function resolveOrCreateReportPublicationRecord({
   reportData = {},
   existingReportId = null,
   existingStoragePath = null,
+  revision = null,
   allowCreate = true,
   deliveryGateStatus = null,
   holdDelivery = false,
@@ -637,6 +766,46 @@ export async function resolveOrCreateReportPublicationRecord({
 
   const storagePath = buildReportStoragePath({ effectiveUserId, reportSeed });
   const propertyName = String(job?.property_name ?? "").trim() || "Property";
+  const revisionValues = buildReportRevisionInsertValues({
+    job,
+    reportData,
+    revision,
+    existingReportId,
+  });
+  const selectedColumns = [
+    "id",
+    "storage_path",
+    "revision_kind",
+    "revision_family_key",
+    "revision_root_report_id",
+    "revision_parent_report_id",
+    "revision_number",
+    "revision_request_key",
+    "revision_source_job_id",
+    "is_current_revision",
+    "revision_published_at",
+  ].join(", ");
+
+  if (revisionValues.revision_request_key) {
+    const { data: existingRevisionRow, error: existingRevisionError } = await supabaseAdmin
+      .from("reports")
+      .select(selectedColumns)
+      .eq("revision_request_key", revisionValues.revision_request_key)
+      .maybeSingle();
+    if (existingRevisionError) {
+      throw existingRevisionError;
+    }
+    if (existingRevisionRow?.id) {
+      return {
+        reportId: existingRevisionRow.id,
+        storagePath: existingRevisionRow.storage_path || storagePath || null,
+        publicationSource: revisionValues.revision_kind === "original" ? "existing_report" : "existing_revision",
+        createdReportRecord: false,
+        revision: existingRevisionRow,
+      };
+    }
+  }
+
   const { data: reportRow, error: reportCreateError } = await supabaseAdmin
     .from("reports")
     .insert([
@@ -645,12 +814,37 @@ export async function resolveOrCreateReportPublicationRecord({
         property_name: propertyName,
         report_type: reportType,
         storage_path: storagePath,
+        ...revisionValues,
       },
     ])
-    .select("id")
+    .select(selectedColumns)
     .single();
 
   if (reportCreateError || !reportRow?.id) {
+    const duplicateKeyHints = [
+      "duplicate key value violates unique constraint",
+      "23505",
+    ];
+    const isPotentialDuplicate = duplicateKeyHints.some((hint) =>
+      String(reportCreateError?.message || "").toLowerCase().includes(String(hint).toLowerCase()) ||
+      String(reportCreateError?.code || "").includes(hint)
+    );
+    if (isPotentialDuplicate && revisionValues.revision_request_key) {
+      const { data: conflictingReportRow, error: conflictingLookupError } = await supabaseAdmin
+        .from("reports")
+        .select(selectedColumns)
+        .eq("revision_request_key", revisionValues.revision_request_key)
+        .maybeSingle();
+      if (!conflictingLookupError && conflictingReportRow?.id) {
+        return {
+          reportId: conflictingReportRow.id,
+          storagePath: conflictingReportRow.storage_path || storagePath || null,
+          publicationSource: revisionValues.revision_kind === "original" ? "conflicting_report" : "conflicting_revision",
+          createdReportRecord: false,
+          revision: conflictingReportRow,
+        };
+      }
+    }
     const err = new Error(`Failed to create report record: ${reportCreateError?.message || "unknown error"}`);
     err.code = "REPORT_GENERATION_FAILED";
     err.context = {
@@ -659,15 +853,19 @@ export async function resolveOrCreateReportPublicationRecord({
       report_type: reportType || null,
       storage_path: storagePath || null,
       report_seed: reportSeed || null,
+      revision_kind: revisionValues.revision_kind || null,
+      revision_request_key: revisionValues.revision_request_key || null,
+      revision_number: revisionValues.revision_number || null,
     };
     throw err;
   }
 
   return {
     reportId: reportRow.id,
-    storagePath,
-    publicationSource: "created_report",
+    storagePath: reportRow.storage_path || storagePath,
+    publicationSource: revisionValues.revision_kind === "original" ? "created_report" : "created_revision",
     createdReportRecord: true,
+    revision: reportRow,
   };
 }
 

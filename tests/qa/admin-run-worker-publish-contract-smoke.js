@@ -7,8 +7,13 @@ import {
   buildReportStoragePath,
   ensureReportDownloadArtifact,
   renderReportPdfBuffer,
+  promoteReportRevisionToCurrent,
   resolveOrCreateReportPublicationRecord,
 } from "../../api/_lib/report-delivery-output.js";
+import {
+  getReportRevisionDisplayState,
+  selectCurrentPublishedReportRevision,
+} from "../../src/lib/reportRevisionAuthority.js";
 
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
@@ -32,7 +37,7 @@ assert.deepEqual(
 
 assert.match(
   workerSource,
-  /import \{\s*buildReportStoragePath,\s*ensureReportDownloadArtifact,\s*resolveOrCreateReportPublicationRecord,\s*\} from '\.\/_lib\/report-delivery-output\.js';/
+  /import \{\s*buildReportStoragePath,\s*ensureReportDownloadArtifact,\s*promoteReportRevisionToCurrent,\s*resolveOrCreateReportPublicationRecord,\s*\} from '\.\/_lib\/report-delivery-output\.js';/
 );
 assert.match(workerSource, /allowCreate:\s*!shouldHoldDeliveryOutcome/);
 assert.match(workerSource, /ensureReportDownloadArtifact\(\{/);
@@ -447,6 +452,182 @@ try {
   restoreEnv();
 }
 
+function createRevisionSmokeState() {
+  return {
+    reports: [],
+    purchaseTouched: false,
+    nextReportNumber: 0,
+  };
+}
+
+function normalizeRevisionRowForSmoke(entry, fallbackId, fallbackCreatedAt) {
+  const row = {
+    id: entry.id || fallbackId,
+    status: entry.status || "published",
+    created_at: entry.created_at || fallbackCreatedAt,
+    ...entry,
+  };
+  if (!row.revision_kind) row.revision_kind = "original";
+  if (row.revision_kind === "original") {
+    if (!row.revision_root_report_id) row.revision_root_report_id = row.id;
+    if (!row.revision_family_key) row.revision_family_key = row.revision_root_report_id;
+    if (!row.revision_number) row.revision_number = 1;
+    if (!row.revision_request_key) row.revision_request_key = `original:${row.revision_source_job_id || row.id}`;
+    row.revision_parent_report_id = null;
+  } else {
+    if (!row.revision_family_key) row.revision_family_key = row.revision_root_report_id;
+    if (!row.revision_request_key) {
+      row.revision_request_key = `${row.revision_kind}:${row.revision_family_key}:${row.revision_number}:${row.revision_parent_report_id || "root"}:${row.revision_source_job_id || row.id}`;
+    }
+  }
+  if (row.is_current_revision !== true) {
+    row.is_current_revision = false;
+  }
+  if (row.is_current_revision === true && row.status !== "published") {
+    row.is_current_revision = false;
+  }
+  return row;
+}
+
+function createRevisionSmokeSupabase(state) {
+  const matchRows = (filters = []) =>
+    state.reports.filter((row) =>
+      filters.every(({ field, value }) => String(row?.[field] ?? "") === String(value ?? ""))
+    );
+
+  return {
+    from(tableName) {
+      if (tableName === "report_purchases") {
+        state.purchaseTouched = true;
+        throw new Error("report_purchases must not be touched by revision publication helpers");
+      }
+      assert.equal(tableName, "reports");
+      const filters = [];
+      return {
+        select() {
+          return this;
+        },
+        eq(field, value) {
+          filters.push({ field, value });
+          return this;
+        },
+        maybeSingle() {
+          const rows = matchRows(filters);
+          return Promise.resolve({ data: rows[0] || null, error: null });
+        },
+        single() {
+          const rows = matchRows(filters);
+          return Promise.resolve({ data: rows[0] || null, error: null });
+        },
+        insert(rows) {
+          const entries = Array.isArray(rows) ? rows : [rows];
+          const normalizedRows = entries.map((entry) => {
+            const fallbackId = entry.id || `revision-report-${++state.nextReportNumber}`;
+            const fallbackCreatedAt = `2026-07-30T12:00:${String(state.nextReportNumber).padStart(2, "0")}.000Z`;
+            return normalizeRevisionRowForSmoke(entry, fallbackId, fallbackCreatedAt);
+          });
+          for (const row of normalizedRows) {
+            const duplicate = state.reports.find((existing) =>
+              String(existing.revision_request_key || "") === String(row.revision_request_key || "") ||
+              (
+                String(existing.revision_family_key || "") === String(row.revision_family_key || "") &&
+                String(existing.revision_number || "") === String(row.revision_number || "")
+              )
+            );
+            if (duplicate) {
+              return Promise.resolve({
+                data: null,
+                error: { code: "23505", message: "duplicate key value violates unique constraint" },
+              });
+            }
+            state.reports.push(row);
+          }
+          return {
+            select() {
+              return this;
+            },
+            single() {
+              return Promise.resolve({ data: normalizedRows[0] || null, error: null });
+            },
+          };
+        },
+      };
+    },
+    rpc(name, args = {}) {
+      if (name !== "promote_report_revision_to_current") {
+        return Promise.resolve({ data: [], error: null });
+      }
+      const reportId = String(args.p_report_id || "").trim();
+      const target = state.reports.find((row) => String(row.id || "") === reportId) || null;
+      if (!target) {
+        return Promise.resolve({ data: [], error: new Error("Missing revision") });
+      }
+      if (String(target.status || "") !== "published") {
+        return Promise.resolve({
+          data: [{
+            promoted: false,
+            stale: false,
+            report_id: target.id,
+            demoted_report_id: null,
+            revision_family_key: target.revision_family_key || null,
+            revision_number: target.revision_number || null,
+          }],
+          error: null,
+        });
+      }
+      const familyKey = target.revision_family_key || target.revision_root_report_id || target.id;
+      const familyRows = state.reports.filter((row) =>
+        String(row.revision_family_key || row.revision_root_report_id || row.id || "") === String(familyKey || "")
+      );
+      const current = familyRows.find((row) => row.is_current_revision === true && String(row.status || "") === "published") || null;
+      if (current && String(current.id || "") === String(target.id || "")) {
+        target.is_current_revision = true;
+        target.revision_published_at = target.revision_published_at || "2026-07-30T12:00:00.000Z";
+        return Promise.resolve({
+          data: [{
+            promoted: true,
+            stale: false,
+            report_id: target.id,
+            demoted_report_id: null,
+            revision_family_key: familyKey,
+            revision_number: target.revision_number || null,
+          }],
+          error: null,
+        });
+      }
+      if (current && Number(current.revision_number || 0) > Number(target.revision_number || 0)) {
+        return Promise.resolve({
+          data: [{
+            promoted: false,
+            stale: true,
+            report_id: target.id,
+            demoted_report_id: null,
+            revision_family_key: familyKey,
+            revision_number: target.revision_number || null,
+          }],
+          error: null,
+        });
+      }
+      if (current) {
+        current.is_current_revision = false;
+      }
+      target.is_current_revision = true;
+      target.revision_published_at = target.revision_published_at || "2026-07-30T12:00:00.000Z";
+      return Promise.resolve({
+        data: [{
+          promoted: true,
+          stale: false,
+          report_id: target.id,
+          demoted_report_id: current?.id || null,
+          revision_family_key: familyKey,
+          revision_number: target.revision_number || null,
+        }],
+        error: null,
+      });
+    },
+  };
+}
+
 let cleanupCount = 0;
 const failingSupabaseAdmin = {
   storage: {
@@ -504,5 +685,204 @@ await assert.rejects(
   /Failed to upload report to storage/
 );
 assert.equal(cleanupCount, 1);
+
+const revisionSmokeState = createRevisionSmokeState();
+const revisionSupabase = createRevisionSmokeSupabase(revisionSmokeState);
+const originalRevisionJob = {
+  id: "job-original-revision-1",
+  user_id: "user-123",
+  report_type: "underwriting",
+  property_name: "Lineage Property",
+};
+const originalRevisionPublication = await resolveOrCreateReportPublicationRecord({
+  supabaseAdmin: revisionSupabase,
+  job: originalRevisionJob,
+  reportData: {
+    report_type: "underwriting",
+    final_html: "<html><body>original lineage report</body></html>",
+  },
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
+});
+assert.equal(originalRevisionPublication.createdReportRecord, true);
+assert.equal(originalRevisionPublication.publicationSource, "created_report");
+assert.equal(originalRevisionPublication.revision.revision_kind, "original");
+assert.equal(originalRevisionPublication.revision.revision_number, 1);
+assert.equal(originalRevisionPublication.revision.revision_root_report_id, originalRevisionPublication.reportId);
+assert.equal(originalRevisionPublication.revision.revision_family_key, originalRevisionPublication.reportId);
+assert.equal(originalRevisionPublication.revision.revision_parent_report_id, null);
+assert.equal(revisionSmokeState.purchaseTouched, false);
+assert.equal(revisionSmokeState.reports.length, 1);
+const promotedOriginalRevision = await promoteReportRevisionToCurrent({
+  supabaseAdmin: revisionSupabase,
+  reportId: originalRevisionPublication.reportId,
+});
+assert.equal(promotedOriginalRevision.promoted, true);
+assert.equal(promotedOriginalRevision.stale, false);
+assert.equal(
+  revisionSmokeState.reports.find((row) => row.id === originalRevisionPublication.reportId)?.is_current_revision,
+  true,
+);
+
+const duplicateOriginalRevision = await resolveOrCreateReportPublicationRecord({
+  supabaseAdmin: revisionSupabase,
+  job: originalRevisionJob,
+  reportData: {
+    report_type: "underwriting",
+    final_html: "<html><body>original lineage report</body></html>",
+  },
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
+});
+assert.equal(duplicateOriginalRevision.reportId, originalRevisionPublication.reportId);
+assert.equal(duplicateOriginalRevision.createdReportRecord, false);
+assert.equal(revisionSmokeState.reports.length, 1);
+
+const correctedRevisionPublication = await resolveOrCreateReportPublicationRecord({
+  supabaseAdmin: revisionSupabase,
+  job: {
+    id: "job-corrected-revision-1",
+    user_id: "user-123",
+    report_type: "underwriting",
+    property_name: "Lineage Property",
+  },
+  reportData: {
+    report_type: "underwriting",
+    final_html: "<html><body>corrected lineage report</body></html>",
+    revision: {
+      kind: "corrected",
+      revision_root_report_id: originalRevisionPublication.reportId,
+      revision_parent_report_id: originalRevisionPublication.reportId,
+      revision_number: 2,
+      revision_source_job_id: "job-corrected-revision-1",
+    },
+  },
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
+});
+assert.equal(correctedRevisionPublication.createdReportRecord, true);
+assert.equal(correctedRevisionPublication.revision.revision_kind, "corrected");
+assert.equal(correctedRevisionPublication.revision.revision_root_report_id, originalRevisionPublication.reportId);
+assert.equal(correctedRevisionPublication.revision.revision_parent_report_id, originalRevisionPublication.reportId);
+assert.equal(correctedRevisionPublication.revision.revision_number, 2);
+assert.equal(correctedRevisionPublication.revision.is_current_revision, false);
+const correctedPromotion = await promoteReportRevisionToCurrent({
+  supabaseAdmin: revisionSupabase,
+  reportId: correctedRevisionPublication.reportId,
+});
+assert.equal(correctedPromotion.promoted, true);
+assert.equal(correctedPromotion.stale, false);
+assert.equal(
+  revisionSmokeState.reports.find((row) => row.id === originalRevisionPublication.reportId)?.is_current_revision,
+  false,
+);
+assert.equal(
+  revisionSmokeState.reports.find((row) => row.id === correctedRevisionPublication.reportId)?.is_current_revision,
+  true,
+);
+
+const replacementRevisionPublication = await resolveOrCreateReportPublicationRecord({
+  supabaseAdmin: revisionSupabase,
+  job: {
+    id: "job-replacement-revision-1",
+    user_id: "user-123",
+    report_type: "underwriting",
+    property_name: "Lineage Property",
+  },
+  reportData: {
+    report_type: "underwriting",
+    final_html: "<html><body>replacement lineage report</body></html>",
+    revision: {
+      kind: "replacement",
+      revision_root_report_id: originalRevisionPublication.reportId,
+      revision_parent_report_id: correctedRevisionPublication.reportId,
+      revision_number: 3,
+      revision_source_job_id: "job-replacement-revision-1",
+    },
+  },
+  deliveryGateStatus: "deliverable",
+  holdDelivery: false,
+});
+assert.equal(replacementRevisionPublication.createdReportRecord, true);
+assert.equal(replacementRevisionPublication.revision.revision_kind, "replacement");
+assert.equal(replacementRevisionPublication.revision.revision_root_report_id, originalRevisionPublication.reportId);
+assert.equal(replacementRevisionPublication.revision.revision_parent_report_id, correctedRevisionPublication.reportId);
+assert.equal(replacementRevisionPublication.revision.revision_number, 3);
+const replacementPromotion = await promoteReportRevisionToCurrent({
+  supabaseAdmin: revisionSupabase,
+  reportId: replacementRevisionPublication.reportId,
+});
+assert.equal(replacementPromotion.promoted, true);
+assert.equal(
+  revisionSmokeState.reports.find((row) => row.id === correctedRevisionPublication.reportId)?.is_current_revision,
+  false,
+);
+assert.equal(
+  revisionSmokeState.reports.find((row) => row.id === replacementRevisionPublication.reportId)?.is_current_revision,
+  true,
+);
+
+const stalePromotion = await promoteReportRevisionToCurrent({
+  supabaseAdmin: revisionSupabase,
+  reportId: originalRevisionPublication.reportId,
+});
+assert.equal(stalePromotion.promoted, false);
+assert.equal(stalePromotion.stale, true);
+assert.equal(
+  selectCurrentPublishedReportRevision(revisionSmokeState.reports)?.id,
+  replacementRevisionPublication.reportId,
+);
+assert.equal(
+  getReportRevisionDisplayState(
+    revisionSmokeState.reports.find((row) => row.id === originalRevisionPublication.reportId),
+    selectCurrentPublishedReportRevision(revisionSmokeState.reports),
+  ).label,
+  "Historical published revision",
+);
+
+revisionSmokeState.reports.push(
+  normalizeRevisionRowForSmoke(
+    {
+      id: "revision-blocked-1",
+      status: "queued",
+      revision_kind: "corrected",
+      revision_root_report_id: originalRevisionPublication.reportId,
+      revision_parent_report_id: replacementRevisionPublication.reportId,
+      revision_number: 4,
+      revision_source_job_id: "job-blocked-revision-1",
+      is_current_revision: false,
+    },
+    "revision-blocked-1",
+    "2026-07-30T12:00:30.000Z",
+  ),
+);
+const blockedPromotion = await promoteReportRevisionToCurrent({
+  supabaseAdmin: revisionSupabase,
+  reportId: "revision-blocked-1",
+});
+assert.equal(blockedPromotion.promoted, false);
+assert.equal(blockedPromotion.stale, false);
+assert.equal(
+  selectCurrentPublishedReportRevision(revisionSmokeState.reports)?.id,
+  replacementRevisionPublication.reportId,
+);
+const explicitSelection = selectCurrentPublishedReportRevision([
+  {
+    id: "older-current-revision",
+    status: "published",
+    is_current_revision: true,
+    revision_number: 1,
+    created_at: "2026-07-01T00:00:00.000Z",
+  },
+  {
+    id: "newer-historical-revision",
+    status: "published",
+    is_current_revision: false,
+    revision_number: 2,
+    created_at: "2026-07-30T00:00:00.000Z",
+  },
+]);
+assert.equal(explicitSelection?.id, "older-current-revision");
+assert.equal(revisionSmokeState.purchaseTouched, false);
 
 console.log("admin-run-worker-publish-contract smoke PASS");
