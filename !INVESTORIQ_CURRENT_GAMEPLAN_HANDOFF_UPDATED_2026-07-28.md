@@ -20,11 +20,13 @@ H2: complete
 H3: complete
 H4: complete
 H5: complete
-Latest closeout commit: 9950ab0 Repair expired worker recovery discovery
+H6: complete
+H7: complete
+Latest closeout commit: c517b90 Lock deterministic H7 support taxonomy authority
 Working tree: clean
 Remote: not updated because no push is authorized
-Next boundary: H7 Core/support classification, taxonomy, and causal taxonomy
-Next authorized packet: H7-A read-only core/support classification and causal-taxonomy map
+Next boundary: H8 Terminal outcome, manifest, and restoration
+Next authorized packet: H8-A read-only terminal outcome, manifest, publication-handoff, and restoration map
 Operating mode from H2 forward: bounded packet mode
 ```
 
@@ -44,7 +46,15 @@ Current forbidden actions remain:
 - H0, H0.5, H0.75, H1, H2, H3, and H4 are complete.
 - H5 is complete.
 - H6 is complete.
-- H7 is next.
+- H7 is complete.
+- H7 implementation commit is `c517b90` - Lock deterministic H7 support taxonomy authority.
+- Deterministic support taxonomy is repository-defined.
+- AI hints cannot influence canonical support classification.
+- H5 admission and H7 semantic adjudication remain separate.
+- Long-tail support resolves to `other_support` and remains non-quantitative.
+- Existing deterministic support classifications remain unchanged.
+- Three-run repeatability is proven by the H7 contract smoke.
+- H8 is next.
 - Operating mode from H2 forward is bounded packet mode.
 
 ## 2. Audit v3 preservation
@@ -199,7 +209,7 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - Upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale H5-next wording for the current next step. The current next packet is H6-A.
+- Do not use stale H7-next wording for the current next step. The current next packet is H8-A.
 
 ## 6. Keep the handoff short and useful
 

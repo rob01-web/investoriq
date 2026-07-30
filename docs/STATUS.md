@@ -17,13 +17,13 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H6 Worker claim, lease, fencing, deadlines, and dead-letter recovery complete.
+- H7 Deterministic support taxonomy authority complete.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
 - H1-A read-only identity/authorization map completed with no edits
 - H1-B commit: `f59e748` - harden authenticated report identity boundaries
-- Latest closeout commit: `9950ab0` - Repair expired worker recovery discovery
+- Latest closeout commit: `c517b90` - Lock deterministic H7 support taxonomy authority
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
@@ -69,22 +69,29 @@ Local completion status:
 - No Stripe configuration changed
 - Premium remains false
 - RETEST 39 remains unauthorized
-- Working tree: clean after the documentation commit
-- Remote: not updated because no push is authorized
-- No runtime code changed
-- No deployment
-- No migration
-- No production data change
-- No Stripe configuration change
-- No Premium activation
-- No RETEST 39
+- H7-A read-only core/support classification and causal-taxonomy map completed
+- H7 correction completed
+- H7-B implementation commit: `c517b90` - Lock deterministic H7 support taxonomy authority
+- Deterministic support taxonomy is now repository-defined
+- AI hints cannot influence canonical support classification
+- H5 admission and H7 semantic adjudication remain separate
+- Long-tail support resolves to `other_support` and remains non-quantitative
+- Existing deterministic support classifications remain unchanged
+- Three-run repeatability is proven by the H7 contract smoke
+- H7 complete
+- No migration has been applied
+- No deployment occurred
+- No production data changed
+- No Stripe configuration changed
+- Premium remains false
+- RETEST 39 remains unauthorized
 
 Next boundary:
-- H7 Core/support classification, taxonomy, and causal taxonomy
+- H8 Terminal outcome, manifest, and restoration
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H7-A read-only core/support classification and causal-taxonomy map.
+- Set next authorized packet to H8-A read-only terminal outcome, manifest, publication-handoff, and restoration map.
 
 Operating mode:
 - bounded packet mode

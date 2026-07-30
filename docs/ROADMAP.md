@@ -29,7 +29,9 @@ Current state:
 - H6 correction completed.
 - H6 correction commit: `9950ab0` - Repair expired worker recovery discovery.
 - H6 complete.
-- H7 next.
+- H7 complete.
+- H7 correction commit: `c517b90` - Lock deterministic H7 support taxonomy authority.
+- H8 next.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -45,7 +47,7 @@ Phase playbook:
 | H4 | Bundle entitlement creation | Bundle SKU wiring, entitlement creation, and purchase-path checks | Later phase work, production changes, Premium, RETEST 39 | H4-A bundle map; H4-B smallest bundle creation patch | Bundle purchase creates exactly the required entitlements and nothing extra | Complete |
 | H5 | Submission, adjudication, reservation, source registration | Intake, adjudication, reservation, and source-registration logic | Later phase work, production changes, Premium, RETEST 39 | H5-A flow map; H5-B smallest reservation/adjudication patch | Submission state, reservation, and source registration are deterministic and recoverable | Complete |
 | H6 | Worker claim, lease, fencing, deadlines | Worker claim semantics, lease fencing, deadline handling, and dead-letter recovery | Later phase work, production changes, Premium, RETEST 39 | H6-A worker map; H6-B smallest fencing patch | One claim per job, leases expire safely, and stale work cannot win | Complete |
-| H7 | Core/support classification and causal taxonomy | Source/evidence classification and failure taxonomy alignment | Later phase work, production changes, Premium, RETEST 39 | H7-A taxonomy map; H7-B smallest classifier patch | Core vs support taxonomy is stable, explicit, and testable | Not started |
+| H7 | Core/support classification and causal taxonomy | Source/evidence classification and failure taxonomy alignment | Later phase work, production changes, Premium, RETEST 39 | H7-A taxonomy map; H7-B smallest classifier patch | Core vs support taxonomy is stable, explicit, and testable | Complete |
 | H8 | Terminal outcome, manifest, restoration | Terminal states, report manifesting, and exactly-once restoration behavior | Later phase work, production changes, Premium, RETEST 39 | H8-A terminal map; H8-B restoration patch | Terminal outcomes are explicit and restoration paths do not double-grant or duplicate work | Not started |
 | H9 | Corrected and replacement revisions | Corrected reruns, replacement revisions, and lineage-preserving reroute logic | Later phase work, production changes, Premium, RETEST 39 | H9-A revision map; H9-B smallest correction patch | Corrected and replacement revisions preserve lineage and avoid duplicate charge or duplicate report state | Not started |
 | H10 | Publication, artifacts, Report History | Publication persistence, artifact tracking, and report-history surfaces | Later phase work, production changes, Premium, RETEST 39 | H10-A publication map; H10-B smallest history/artifact patch | Published artifacts and report history match the actual delivery state | Not started |
@@ -65,6 +67,17 @@ H5 closure note:
 - `storage.objects` is checked through a locked row lookup before entitlement selection.
 - Entitlement/job/source registration remains atomic.
 - Targeted regression proof is in the H5 staged-source smoke.
+
+H7 closure note:
+- Deterministic support taxonomy is now repository-defined.
+- `aiRecoveryHints` cannot influence canonical support classification.
+- H5 admission and H7 semantic adjudication remain separate.
+- Long-tail support resolves to `other_support` and remains non-quantitative.
+- Existing deterministic support classifications remain unchanged.
+- Three-run repeatability is proven by the H7 contract smoke.
+- H7 implementation commit: `c517b90` - Lock deterministic H7 support taxonomy authority.
+- H7 complete.
+- H8 is next.
 
 H2 packet details:
 - H2-A is read-only only.
