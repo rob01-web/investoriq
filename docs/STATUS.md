@@ -20,7 +20,8 @@ Current phase:
 - H9 Corrected and replacement revisions complete.
 - H10 Publication, artifacts, and Report History complete.
 - H11 Customer/admin state convergence complete.
-- H12-H13 Full Underwriting identity, legacy firewall, view model, and source binding is next.
+- H12-H13 Full Underwriting identity, legacy firewall, view model, and source binding complete.
+- H14-H15 Full Underwriting calculations and renderer/content contract is next.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
@@ -29,9 +30,10 @@ Local completion status:
 - H9 complete: corrected/replacement lineage, idempotency, no-double-charge, and current-revision authority proved
 - H10 complete: publication persistence, artifact/history agreement, and current-download selection proved
 - H11 complete: shared customer/admin state resolver, explicit current-authority selection, and convergence smoke proved
-- Latest implementation commit: `121c96b` - Harden customer and admin state convergence
+- H12-H13 complete: canonical public Full Underwriting identity, legacy firewall, source binding, manifest agreement, and renderer fence proved
+- Latest implementation commit: `1697db7` - Prove Full Underwriting identity and source binding
 - Migration created but not applied: `20260730000100_h9_h10_report_revision_lineage.sql`
-- Latest documentation commit: `Record H11 completion`
+- Latest documentation commit: `Record H12 H13 completion`
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
@@ -104,11 +106,11 @@ Local completion status:
 - RETEST 39 remains unauthorized
 
 Next boundary:
-- H12-H13 Full Underwriting identity, legacy firewall, view model, and source binding
+- H14-H15 Full Underwriting calculations, lender metrics, renderer, and content contract
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H12-H13 single-pass Full Underwriting identity firewall and source-binding map, smallest proven repair, behavioral proof, and documentation closeout.
+- Set next authorized packet to H14-H15 single-pass lender-calculation and renderer-contract map, smallest proven repair, behavioral proof, and documentation closeout.
 
 Operating mode:
 - bounded packet mode
