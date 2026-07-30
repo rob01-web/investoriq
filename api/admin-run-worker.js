@@ -1569,22 +1569,6 @@ export default async function handler(req, res) {
             'TIMEOUT',
             timeoutRow.worker_attempt_id || job.worker_attempt_id || null
           );
-          if (timeoutRestoreResult?.restored) {
-            await writeWorkerAttemptEvent({
-              job: timeoutRow,
-              eventType: 'entitlement_restored',
-              attemptId: timeoutRow.worker_attempt_id || job.worker_attempt_id || null,
-              fromStatus: timeoutRow.status,
-              toStatus: timeoutRow.status,
-              meta: {
-                reason: 'worker_timeout',
-                error_code: 'TIMEOUT',
-                purchase_id: timeoutRestoreResult.purchase_id || null,
-                worker_claimed_by: timeoutRow.worker_claimed_by || null,
-                worker_attempt_id: timeoutRow.worker_attempt_id || null,
-              },
-            });
-          }
         } catch (err) {
           return res.status(500).json({
             error: 'Failed to apply timeout failure outcome',

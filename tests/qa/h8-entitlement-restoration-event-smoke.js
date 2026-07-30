@@ -31,15 +31,11 @@ function toFileUrl(relativePath) {
   return pathToFileURL(path.join(repoRoot, relativePath)).href;
 }
 
-function patchWorkerSource(source) {
-  return source
+function patchWorkerSource(source, { exposeRestoreHelper = false, throwAfterExpose = false } = {}) {
+  let patched = source
     .replace(
       "import { createClient } from '@supabase/supabase-js';",
       "const createClient = globalThis.__h8CreateClient;"
-    )
-    .replace(
-      "    const restoreEntitlementForFailedJob = async (job, restoreReason, restoreErrorCode, workerAttemptId = null) => {",
-      "    const restoreEntitlementForFailedJob = globalThis.__h8RestoreEntitlementForFailedJob = async (job, restoreReason, restoreErrorCode, workerAttemptId = null) => {"
     )
     .replaceAll("../lib/email-resend.js", toFileUrl('lib/email-resend.js'))
     .replaceAll("./_lib/validator-diagnostics-rollup.js", toFileUrl('api/_lib/validator-diagnostics-rollup.js'))
@@ -47,11 +43,23 @@ function patchWorkerSource(source) {
     .replaceAll("./_lib/report-delivery-output.js", toFileUrl('api/_lib/report-delivery-output.js'))
     .replaceAll("./_lib/report-quality-manifest.js", toFileUrl('api/_lib/report-quality-manifest.js'))
     .replaceAll("./_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js'))
-    .replaceAll("./_lib/premium-acquisition-underwriting-v1-external-certification.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-external-certification.js'))
-    .replace(
+    .replaceAll("./_lib/premium-acquisition-underwriting-v1-external-certification.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-external-certification.js'));
+
+  if (exposeRestoreHelper) {
+    patched = patched.replace(
+      "    const restoreEntitlementForFailedJob = async (job, restoreReason, restoreErrorCode, workerAttemptId = null) => {",
+      "    const restoreEntitlementForFailedJob = globalThis.__h8RestoreEntitlementForFailedJob = async (job, restoreReason, restoreErrorCode, workerAttemptId = null) => {"
+    );
+  }
+
+  if (throwAfterExpose) {
+    patched = patched.replace(
       "    const recordJobFailure = async (job, stage, err) => {",
       "    throw new Error('__H8_EXPOSED__');\n\n    const recordJobFailure = async (job, stage, err) => {"
     );
+  }
+
+  return patched;
 }
 
 function createRuntimeState() {
@@ -233,7 +241,27 @@ function makeSupabaseClient() {
     },
     rpc(name, args = {}) {
       if (name !== 'restore_failed_worker_entitlement') {
-        return Promise.resolve({ data: [], error: null });
+        if (name !== 'fail_expired_worker_job') {
+          return Promise.resolve({ data: [], error: null });
+        }
+        runtimeState.restoreCalls.push({ name, args: { ...args } });
+        const job = runtimeState.jobs.get(args.p_job_id);
+        if (!job) return Promise.resolve({ data: [], error: null });
+        if (String(job.worker_attempt_id || '') !== String(args.p_worker_attempt_id || '')) return Promise.resolve({ data: [], error: null });
+        if (String(job.worker_claimed_by || '') !== String(args.p_claimed_by || '')) return Promise.resolve({ data: [], error: null });
+        if (String(job.status || '') !== String(args.p_expected_current_status || '')) return Promise.resolve({ data: [], error: null });
+        if (!['extracting', 'underwriting', 'scoring', 'rendering', 'pdf_generating', 'publishing'].includes(String(job.status || ''))) {
+          return Promise.resolve({ data: [], error: null });
+        }
+        if (!job.worker_lease_expires_at || new Date(String(job.worker_lease_expires_at)).getTime() > FixedDate.now()) {
+          return Promise.resolve({ data: [], error: null });
+        }
+        const terminalStatus = Number(job.worker_attempt_count || 0) >= 3 ? 'dead_letter' : 'failed';
+        job.status = terminalStatus;
+        if (terminalStatus === 'dead_letter') {
+          job.dead_lettered_at = fixedNowIso;
+        }
+        return Promise.resolve({ data: [{ id: job.id, status: terminalStatus, worker_attempt_id: job.worker_attempt_id, worker_claimed_by: job.worker_claimed_by }], error: null });
       }
       runtimeState.restoreCalls.push({ name, args: { ...args } });
       const job = runtimeState.jobs.get(args.p_job_id);
@@ -263,7 +291,14 @@ function makeSupabaseClient() {
 
 async function loadWorkerModule() {
   const source = fs.readFileSync(workerPath, 'utf8');
-  const patchedSource = patchWorkerSource(source);
+  const patchedSource = patchWorkerSource(source, { exposeRestoreHelper: true, throwAfterExpose: true });
+  const workerModule = await import(`data:text/javascript;base64,${Buffer.from(patchedSource, 'utf8').toString('base64')}`);
+  return workerModule;
+}
+
+async function loadTimeoutWorkerModule() {
+  const source = fs.readFileSync(workerPath, 'utf8');
+  const patchedSource = patchWorkerSource(source, { exposeRestoreHelper: false, throwAfterExpose: false });
   const workerModule = await import(`data:text/javascript;base64,${Buffer.from(patchedSource, 'utf8').toString('base64')}`);
   return workerModule;
 }
@@ -371,6 +406,52 @@ assert.equal(
   runtimeState.jobEvents.filter((row) => row.job_id === 'job-dead-letter' && row.event_type === 'entitlement_restored').length,
   1
 );
+
+runtimeState = createRuntimeState();
+const timeoutJob = seedJob({
+  id: 'job-timeout',
+  user_id: 'user-1',
+  status: 'extracting',
+  worker_attempt_id: 'attempt-timeout',
+  worker_claimed_by: fixedWorkerInvocationId,
+  worker_attempt_count: 1,
+  worker_lease_expires_at: '2026-07-30T11:00:00.000Z',
+  purchase_id: 'purchase-timeout',
+});
+seedPurchase({
+  id: 'purchase-timeout',
+  job_id: 'job-timeout',
+  consumed_at: '2026-07-30T11:00:00.000Z',
+});
+const timeoutWorkerModule = await loadTimeoutWorkerModule();
+const timeoutInvocation = makeReqRes();
+await timeoutWorkerModule.default(timeoutInvocation.req, timeoutInvocation.res);
+assert.equal(timeoutInvocation.res.statusCode, 200);
+assert.equal(
+  runtimeState.restoreCalls.filter((call) => call.name === 'fail_expired_worker_job').length,
+  1
+);
+assert.equal(
+  runtimeState.restoreCalls.filter((call) => call.name === 'restore_failed_worker_entitlement').length,
+  1
+);
+assert.deepEqual(
+  runtimeState.restoreCalls.find((call) => call.name === 'restore_failed_worker_entitlement')?.args,
+  {
+    p_job_id: 'job-timeout',
+    p_worker_attempt_id: 'attempt-timeout',
+    p_claimed_by: fixedWorkerInvocationId,
+    p_terminal_status: 'failed',
+    p_restore_reason: 'worker_timeout',
+    p_restore_error_code: 'TIMEOUT',
+  }
+);
+assert.equal(runtimeState.jobEvents.filter((row) => row.job_id === 'job-timeout' && row.event_type === 'entitlement_restored').length, 1);
+assert.equal(
+  runtimeState.artifacts.filter((row) => row.job_id === 'job-timeout' && row.type === 'worker_event' && row.payload?.event === 'entitlement_restored').length,
+  1
+);
+assertRestorationEvent('job-timeout', 'failed');
 
 runtimeState = createRuntimeState();
 const staleJob = seedJob({
