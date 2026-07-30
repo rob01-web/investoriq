@@ -98,6 +98,14 @@ function formatYearsForSurface(value) {
   return `${Math.round(n)} years`;
 }
 
+function formatPercentDisplayForSurface(value) {
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const pct = Math.abs(n) <= 1 ? n * 100 : n;
+  return `${pct.toFixed(1)}%`;
+}
+
 function expectedSurfaceValuesFromModel(model) {
   const currentDebtFacts = model?.sections?.currentDebtContext?.facts || {};
   const acquisitionFacts = model?.sections?.acquisitionRequestContext?.facts || {};
@@ -107,6 +115,7 @@ function expectedSurfaceValuesFromModel(model) {
   const renovationFacts = model?.sections?.renovationContext?.facts || {};
   const marketSurveyFacts = model?.sections?.marketSurveyContext?.facts || {};
   const environmentalFacts = model?.sections?.environmentalContext?.facts || {};
+  const debtCapacityFacts = model?.sections?.debtCapacityAndCoverage?.facts || {};
   return {
     title: String(model?.identity?.reportTitle || model?.identity?.propertyName || "").trim(),
     coreT12Label: String(model?.coreSources?.coreT12?.visibleLabel || "").trim(),
@@ -118,6 +127,7 @@ function expectedSurfaceValuesFromModel(model) {
     renovationLabel: String(model?.sections?.renovationContext?.visibleLabel || "").trim(),
     marketSurveyLabel: String(model?.sections?.marketSurveyContext?.visibleLabel || "").trim(),
     environmentalLabel: String(model?.sections?.environmentalContext?.visibleLabel || "").trim(),
+    debtCapacityLabel: String(model?.sections?.debtCapacityAndCoverage?.visibleLabel || "").trim(),
     currentDebt: {
       balance: formatMoneyForSurface(currentDebtFacts.current_outstanding_balance),
       rate: formatInterestRatePercent(currentDebtFacts.interest_rate),
@@ -180,6 +190,14 @@ function expectedSurfaceValuesFromModel(model) {
       status: String(environmentalFacts.phase_i_status || "").trim() === "none_identified_in_summary"
         ? "None identified in this summary"
         : String(environmentalFacts.phase_i_status || "").trim().replace(/_/g, " "),
+    },
+    debtCapacity: {
+      proposedDebtYield: formatPercentDisplayForSurface(debtCapacityFacts.proposedDebtYield?.result),
+      proposedMortgageConstant: formatPercentDisplayForSurface(debtCapacityFacts.proposedMortgageConstant?.result),
+      currentDebtInclusiveBreakEvenOccupancy: formatPercentDisplayForSurface(debtCapacityFacts.currentDebtInclusiveBreakEvenOccupancy?.result),
+      proposedDebtInclusiveBreakEvenOccupancy: formatPercentDisplayForSurface(debtCapacityFacts.proposedDebtInclusiveBreakEvenOccupancy?.result),
+      currentDebtInclusiveBreakEvenMonthlyRentPerUnit: formatMoneyForSurface(debtCapacityFacts.currentDebtInclusiveBreakEvenMonthlyRentPerUnit?.result),
+      proposedDebtInclusiveBreakEvenMonthlyRentPerUnit: formatMoneyForSurface(debtCapacityFacts.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit?.result),
     },
   };
 }
@@ -687,14 +705,21 @@ function buildCoreSourceSnapshot(coreDoc, fallbackRole, fallbackLabel) {
       source.payload?.extracted_facts ||
       {}
   );
+  const fileId = String(source.fileId || source.file_id || source.id || "").trim();
+  const artifactId = String(source.artifactId || source.artifact_id || "").trim();
   return {
-    fileId: String(source.fileId || source.file_id || source.id || "").trim(),
+    fileId,
     originalFilename: String(source.originalFilename || source.original_filename || source.payload?.source_original_filename || "").trim(),
     canonicalRole: String(source.canonicalRole || source.role || fallbackRole || "").trim(),
     canonicalLabel: normalizeCustomerPunctuation(source.canonicalLabel || source.canonical_label || fallbackLabel || ""),
     sourceKind: String(source.sourceKind || fallbackRole || "").trim(),
     extractedFacts,
     visibleLabel: normalizeCustomerPunctuation(source.visibleLabel || source.roleLabel || source.canonicalLabel || fallbackLabel || fallbackRole || ""),
+    sourceIdentityKey: fileId
+      ? `core:file:${normalizeText(fileId)}`
+      : artifactId
+        ? `core:artifact:${normalizeText(artifactId)}`
+        : null,
   };
 }
 
@@ -1435,7 +1460,12 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
   };
   for (const doc of supportSources) {
     if (!doc?.canonicalRole) continue;
-    if (!supportSourcesByRole[doc.canonicalRole]) supportSourcesByRole[doc.canonicalRole] = doc;
+    if (!supportSourcesByRole[doc.canonicalRole]) {
+      supportSourcesByRole[doc.canonicalRole] = {
+        ...doc,
+        sourceIdentityKey: supportDocIdentityKeys(doc)[0] || null,
+      };
+    }
   }
 
   const coreT12 = buildCoreSourceSnapshot(
@@ -1504,6 +1534,44 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     },
   };
 
+  const currentDebtSourceKey = supportSourcesByRole.current_debt_context?.sourceIdentityKey || null;
+  const purchaseAssumptionsSourceKey = supportSourcesByRole.purchase_assumptions?.sourceIdentityKey || null;
+  const proposedLoanAmount = normalizeMoney(
+    coreMetrics?.proposedLoanAmount ??
+      supportSourcesByRole.purchase_assumptions?.extractedFacts?.proposed_loan_amount
+  );
+  const currentAnnualDebtService = normalizeMoney(
+    canonicalFinancialIntelligence?.analyses?.debtService?.currentDebt?.annualDebtService ??
+      canonicalFinancialIntelligence?.customerSections?.debtServiceCoverage?.facts?.currentDebt?.annualDebtService
+  );
+  const proposedAnnualDebtService = normalizeMoney(
+    canonicalFinancialIntelligence?.analyses?.debtService?.proposedFinancing?.annualDebtService ??
+      canonicalFinancialIntelligence?.customerSections?.debtServiceCoverage?.facts?.proposedFinancing?.annualDebtService
+  );
+  const debtYield = Number.isFinite(noi) && noi > 0 && Number.isFinite(proposedLoanAmount) && proposedLoanAmount > 0
+    ? noi / proposedLoanAmount
+    : null;
+  const mortgageConstant = Number.isFinite(proposedAnnualDebtService) && proposedAnnualDebtService > 0 &&
+    Number.isFinite(proposedLoanAmount) && proposedLoanAmount > 0
+    ? proposedAnnualDebtService / proposedLoanAmount
+    : null;
+  const currentDebtInclusiveOperatingBreakEvenOccupancy = Number.isFinite(opEx) && Number.isFinite(currentAnnualDebtService) && currentAnnualDebtService > 0 &&
+    Number.isFinite(grossPotentialRent) && grossPotentialRent > 0
+    ? (opEx + currentAnnualDebtService) / grossPotentialRent
+    : null;
+  const proposedDebtInclusiveOperatingBreakEvenOccupancy = Number.isFinite(opEx) && Number.isFinite(proposedAnnualDebtService) && proposedAnnualDebtService > 0 &&
+    Number.isFinite(grossPotentialRent) && grossPotentialRent > 0
+    ? (opEx + proposedAnnualDebtService) / grossPotentialRent
+    : null;
+  const currentDebtInclusiveBreakEvenMonthlyRentPerUnit = Number.isFinite(opEx) && Number.isFinite(currentAnnualDebtService) && currentAnnualDebtService > 0 &&
+    Number.isFinite(units) && units > 0
+    ? (opEx + currentAnnualDebtService) / units / 12
+    : null;
+  const proposedDebtInclusiveBreakEvenMonthlyRentPerUnit = Number.isFinite(opEx) && Number.isFinite(proposedAnnualDebtService) && proposedAnnualDebtService > 0 &&
+    Number.isFinite(units) && units > 0
+    ? (opEx + proposedAnnualDebtService) / units / 12
+    : null;
+
   const sectionMap = buildSectionMap(bossContract);
   const sections = {};
   for (const [key, section] of Object.entries(sectionMap)) {
@@ -1528,6 +1596,131 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       };
     }
   }
+  const debtCapacityTruth = {
+    proposedDebtYield: {
+      label: "Proposed Acquisition Debt Yield",
+      formula: "accepted_t12_net_operating_income_divided_by_accepted_proposed_loan_amount",
+      numeratorFact: "net_operating_income",
+      denominatorFact: "proposed_loan_amount",
+      numerator: noi,
+      denominator: proposedLoanAmount,
+      result: debtYield,
+      displayReady: Number.isFinite(debtYield),
+      units: "ratio",
+      sourceFamily: "T12 / purchase assumptions",
+      inputProvenance: [coreSources.coreT12?.sourceIdentityKey, purchaseAssumptionsSourceKey].filter(Boolean),
+      numeratorProvenance: coreSources.coreT12?.sourceIdentityKey ? [coreSources.coreT12.sourceIdentityKey] : [],
+      denominatorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
+    },
+    proposedMortgageConstant: {
+      label: "Proposed Acquisition Mortgage Constant",
+      formula: "accepted_annual_debt_service_divided_by_accepted_proposed_loan_amount",
+      numeratorFact: "annual_debt_service",
+      denominatorFact: "proposed_loan_amount",
+      numerator: proposedAnnualDebtService,
+      denominator: proposedLoanAmount,
+      result: mortgageConstant,
+      displayReady: Number.isFinite(mortgageConstant),
+      units: "ratio",
+      sourceFamily: "proposed financing / debt service",
+      inputProvenance: [purchaseAssumptionsSourceKey].filter(Boolean),
+      numeratorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
+      denominatorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
+    },
+    currentDebtInclusiveBreakEvenOccupancy: {
+      label: "Current Debt-Inclusive Operating Break-Even Ratio",
+      formula: "accepted_t12_total_operating_expenses_plus_accepted_current_annual_debt_service_divided_by_accepted_t12_gross_potential_rent",
+      numeratorFact: "total_operating_expenses_plus_current_annual_debt_service",
+      denominatorFact: "gross_potential_rent",
+      numerator: Number.isFinite(opEx) && Number.isFinite(currentAnnualDebtService) ? opEx + currentAnnualDebtService : null,
+      denominator: grossPotentialRent,
+      result: currentDebtInclusiveOperatingBreakEvenOccupancy,
+      displayReady: Number.isFinite(currentDebtInclusiveOperatingBreakEvenOccupancy),
+      units: "ratio",
+      sourceFamily: "T12 / current debt",
+      inputProvenance: [coreSources.coreT12?.sourceIdentityKey, currentDebtSourceKey].filter(Boolean),
+      numeratorProvenance: [coreSources.coreT12?.sourceIdentityKey, currentDebtSourceKey].filter(Boolean),
+      denominatorProvenance: coreSources.coreT12?.sourceIdentityKey ? [coreSources.coreT12.sourceIdentityKey] : [],
+    },
+    proposedDebtInclusiveBreakEvenOccupancy: {
+      label: "Proposed Acquisition Debt-Inclusive Operating Break-Even Ratio",
+      formula: "accepted_t12_total_operating_expenses_plus_accepted_proposed_annual_debt_service_divided_by_accepted_t12_gross_potential_rent",
+      numeratorFact: "total_operating_expenses_plus_proposed_annual_debt_service",
+      denominatorFact: "gross_potential_rent",
+      numerator: Number.isFinite(opEx) && Number.isFinite(proposedAnnualDebtService) ? opEx + proposedAnnualDebtService : null,
+      denominator: grossPotentialRent,
+      result: proposedDebtInclusiveOperatingBreakEvenOccupancy,
+      displayReady: Number.isFinite(proposedDebtInclusiveOperatingBreakEvenOccupancy),
+      units: "ratio",
+      sourceFamily: "T12 / proposed financing",
+      inputProvenance: [coreSources.coreT12?.sourceIdentityKey, purchaseAssumptionsSourceKey].filter(Boolean),
+      numeratorProvenance: [coreSources.coreT12?.sourceIdentityKey, purchaseAssumptionsSourceKey].filter(Boolean),
+      denominatorProvenance: coreSources.coreT12?.sourceIdentityKey ? [coreSources.coreT12.sourceIdentityKey] : [],
+    },
+    currentDebtInclusiveBreakEvenMonthlyRentPerUnit: {
+      label: "Current Debt-Inclusive Break-Even Monthly Rent per Unit",
+      formula: "accepted_t12_total_operating_expenses_plus_accepted_current_annual_debt_service_divided_by_accepted_total_units_divided_by_12",
+      numeratorFact: "total_operating_expenses_plus_current_annual_debt_service",
+      denominatorFact: "total_units_times_12",
+      numerator: Number.isFinite(opEx) && Number.isFinite(currentAnnualDebtService) ? opEx + currentAnnualDebtService : null,
+      denominator: Number.isFinite(units) && units > 0 ? units * 12 : null,
+      result: currentDebtInclusiveBreakEvenMonthlyRentPerUnit,
+      displayReady: Number.isFinite(currentDebtInclusiveBreakEvenMonthlyRentPerUnit),
+      units: "currency_per_unit_per_month",
+      sourceFamily: "T12 / current debt / rent roll",
+      inputProvenance: [coreSources.coreT12?.sourceIdentityKey, currentDebtSourceKey, coreSources.coreRentRoll?.sourceIdentityKey].filter(Boolean),
+      numeratorProvenance: [coreSources.coreT12?.sourceIdentityKey, currentDebtSourceKey].filter(Boolean),
+      denominatorProvenance: coreSources.coreRentRoll?.sourceIdentityKey ? [coreSources.coreRentRoll.sourceIdentityKey] : [],
+    },
+    proposedDebtInclusiveBreakEvenMonthlyRentPerUnit: {
+      label: "Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit",
+      formula: "accepted_t12_total_operating_expenses_plus_accepted_proposed_annual_debt_service_divided_by_accepted_total_units_divided_by_12",
+      numeratorFact: "total_operating_expenses_plus_proposed_annual_debt_service",
+      denominatorFact: "total_units_times_12",
+      numerator: Number.isFinite(opEx) && Number.isFinite(proposedAnnualDebtService) ? opEx + proposedAnnualDebtService : null,
+      denominator: Number.isFinite(units) && units > 0 ? units * 12 : null,
+      result: proposedDebtInclusiveBreakEvenMonthlyRentPerUnit,
+      displayReady: Number.isFinite(proposedDebtInclusiveBreakEvenMonthlyRentPerUnit),
+      units: "currency_per_unit_per_month",
+      sourceFamily: "T12 / proposed financing / rent roll",
+      inputProvenance: [coreSources.coreT12?.sourceIdentityKey, purchaseAssumptionsSourceKey, coreSources.coreRentRoll?.sourceIdentityKey].filter(Boolean),
+      numeratorProvenance: [coreSources.coreT12?.sourceIdentityKey, purchaseAssumptionsSourceKey].filter(Boolean),
+      denominatorProvenance: coreSources.coreRentRoll?.sourceIdentityKey ? [coreSources.coreRentRoll.sourceIdentityKey] : [],
+    },
+  };
+  const debtCapacityAvailableFacts = Object.entries(debtCapacityTruth)
+    .filter(([, receipt]) => receipt?.displayReady === true && Number.isFinite(Number(receipt?.result)))
+    .map(([keyName]) => keyName);
+  sections.debtCapacityAndCoverage = {
+    key: "debtCapacityAndCoverage",
+    status: debtCapacityAvailableFacts.length > 0 ? "required" : "collapsed",
+    displayReady: debtCapacityAvailableFacts.length > 0,
+    sourcePresent: Boolean(supportSourcesByRole.purchase_assumptions || supportSourcesByRole.current_debt_context),
+    roleAccepted: Boolean(supportSourcesByRole.purchase_assumptions || supportSourcesByRole.current_debt_context),
+    factAccepted: debtCapacityAvailableFacts.length > 0,
+    sourceBacked: debtCapacityAvailableFacts.length > 0,
+    facts: debtCapacityTruth,
+    requiredFacts: Object.keys(debtCapacityTruth),
+    availableFacts: debtCapacityAvailableFacts,
+    missingFacts: Object.keys(debtCapacityTruth).filter((factName) => !debtCapacityAvailableFacts.includes(factName)),
+    sourceRole: "canonical_source_package",
+    visibleLabel: "Debt Capacity and Coverage",
+    boundaries: {
+      deterministicMathOnly: true,
+      noUnsupportedScenarioInference: true,
+    },
+    factAvailability: {
+      required: Object.keys(debtCapacityTruth),
+      available: debtCapacityAvailableFacts,
+      missing: Object.keys(debtCapacityTruth).filter((factName) => !debtCapacityAvailableFacts.includes(factName)),
+      sourceBacked: debtCapacityAvailableFacts.length > 0,
+      sourcePresent: Boolean(supportSourcesByRole.purchase_assumptions || supportSourcesByRole.current_debt_context),
+      roleAccepted: Boolean(supportSourcesByRole.purchase_assumptions || supportSourcesByRole.current_debt_context),
+      factAccepted: debtCapacityAvailableFacts.length > 0,
+      sectionDisplayReady: debtCapacityAvailableFacts.length > 0,
+    },
+    sourceDoc: supportSourcesByRole.purchase_assumptions || supportSourcesByRole.current_debt_context || null,
+  };
   const acceptedSourceTruth = {
     purchaseAssumptionsPresent: supportSources.some((doc) => Boolean(doc?.acceptedPurchaseAssumptionsTruth)),
     currentDebtPresent: supportSources.some((doc) => Boolean(doc?.acceptedCurrentDebtTruth)),
@@ -1600,6 +1793,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       debtTermAnalysis: sections.debtTermAnalysis?.facts || {},
       coreReconciliation: sections.coreReconciliation?.facts || {},
       capitalPlanAnalysis: sections.capitalPlanAnalysis?.facts || {},
+      debtCapacityAndCoverage: sections.debtCapacityAndCoverage?.facts || {},
     },
     financialIntelligence: clone(canonicalFinancialIntelligence),
     valueSemantics,
@@ -1615,6 +1809,26 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
         upstreamResult: providedBreakEvenOccupancy,
         displayReady: Number.isFinite(breakEvenOccupancy),
       },
+      ...Object.fromEntries(
+        Object.entries(debtCapacityTruth).map(([key, receipt]) => [
+          key,
+          {
+            label: receipt.label,
+            formula: receipt.formula,
+            numeratorFact: receipt.numeratorFact,
+            denominatorFact: receipt.denominatorFact,
+            numerator: receipt.numerator,
+            denominator: receipt.denominator,
+            result: receipt.result,
+            displayReady: receipt.displayReady,
+            units: receipt.units,
+            sourceFamily: receipt.sourceFamily,
+            provenance: receipt.inputProvenance,
+            numeratorProvenance: receipt.numeratorProvenance,
+            denominatorProvenance: receipt.denominatorProvenance,
+          },
+        ])
+      ),
     },
     diagnostics: {
       coreGatePublishAllowed: Boolean(bossContract?.coreGate?.publishAllowed),
@@ -2005,6 +2219,11 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
       codeSuffix: "environmental_label",
       shouldValidate: Boolean(model.sections?.environmentalContext?.factAvailability?.sourceBacked) || model.sections?.environmentalContext?.status === "required" || model.sections?.environmentalContext?.status === "required_if_source_present",
     },
+    {
+      label: expected.debtCapacityLabel,
+      codeSuffix: "debt_capacity_label",
+      shouldValidate: model.sections?.debtCapacityAndCoverage?.factAvailability?.sectionDisplayReady === true,
+    },
   ];
 
   for (const { label, codeSuffix, shouldValidate } of labelChecks) {
@@ -2122,6 +2341,15 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
   const environmentalShouldValidate = model.sections?.environmentalContext?.factAvailability?.sourceBacked === true;
   if (environmentalShouldValidate && expected.environmental?.status && !containsText(htmlText, expected.environmental.status)) {
     pushIssue("HTML_ENVIRONMENTAL_STATUS_MISSING", "Accepted Phase I status is missing from customer HTML.", "critical", "html.environmentalContext.phase_i_status");
+  }
+
+  const debtCapacityShouldValidate = model.sections?.debtCapacityAndCoverage?.factAvailability?.sectionDisplayReady === true;
+  if (debtCapacityShouldValidate) {
+    for (const [field, value] of Object.entries(expected.debtCapacity || {})) {
+      if (value && !containsText(htmlText, value)) {
+        pushIssue("HTML_DEBT_CAPACITY_FACT_MISSING", `${field} is missing from customer HTML.`, "critical", `html.debtCapacity.${field}`);
+      }
+    }
   }
 
   if (containsText(htmlText, "No parsed unit mix rows were available from the canonical rent roll evidence.")) {

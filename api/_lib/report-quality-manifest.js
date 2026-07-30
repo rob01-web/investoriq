@@ -413,8 +413,12 @@ function buildCalculationReceipts(customerSurfaceModel) {
       formula: text(receipt?.formula) || null,
       formulaVersion: "customer_surface_financial_truth_v1",
       requiredInputs: unique([receipt?.numeratorFact, receipt?.denominatorFact]),
-      inputProvenance: coreIdentityKeys,
-      units: calculationKey.toLowerCase().includes("occupancy") ? "ratio" : null,
+      inputProvenance: unique([
+        ...asArray(receipt?.provenance),
+        ...asArray(receipt?.inputProvenance),
+        ...coreIdentityKeys,
+      ]),
+      units: text(receipt?.units) || (calculationKey.toLowerCase().includes("occupancy") ? "ratio" : null),
       inputs: {
         numerator: Number.isFinite(numerator) ? numerator : null,
         denominator: Number.isFinite(denominator) ? denominator : null,

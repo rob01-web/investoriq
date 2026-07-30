@@ -1161,6 +1161,48 @@ function renderDebtTermAnalysisSection(customerSurfaceModel = null) {
   );
 }
 
+function renderDebtCapacityAndCoverageSection(customerSurfaceModel = null) {
+  const section = getCustomerSurfaceSection(customerSurfaceModel, "debtCapacityAndCoverage");
+  if (!section || section?.status === "collapsed" || section?.factAvailability?.sectionDisplayReady !== true) return "";
+  const facts = section?.facts || {};
+  const metricRows = [
+    ["proposedDebtYield", "Proposed Acquisition Debt Yield", facts.proposedDebtYield, "ratio", "T12 NOI / proposed loan amount"],
+    ["proposedMortgageConstant", "Proposed Acquisition Mortgage Constant", facts.proposedMortgageConstant, "ratio", "Annual debt service / proposed loan amount"],
+    ["currentDebtInclusiveBreakEvenOccupancy", "Current Debt-Inclusive Operating Break-Even Ratio", facts.currentDebtInclusiveBreakEvenOccupancy, "ratio", "T12 operating expenses + current annual debt service / T12 gross potential rent"],
+    ["proposedDebtInclusiveBreakEvenOccupancy", "Proposed Acquisition Debt-Inclusive Operating Break-Even Ratio", facts.proposedDebtInclusiveBreakEvenOccupancy, "ratio", "T12 operating expenses + proposed annual debt service / T12 gross potential rent"],
+    ["currentDebtInclusiveBreakEvenMonthlyRentPerUnit", "Current Debt-Inclusive Break-Even Monthly Rent per Unit", facts.currentDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month", "T12 operating expenses + current annual debt service / total units / 12"],
+    ["proposedDebtInclusiveBreakEvenMonthlyRentPerUnit", "Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit", facts.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month", "T12 operating expenses + proposed annual debt service / total units / 12"],
+  ].map(([key, label, receipt, units, formula]) => {
+    const result = toFiniteNumber(receipt?.result);
+    const numerator = toFiniteNumber(receipt?.numerator);
+    const denominator = toFiniteNumber(receipt?.denominator);
+    const resultDisplay = Number.isFinite(result)
+      ? units === "ratio"
+        ? formatPercentDisplay(result)
+        : formatMoney(result)
+      : "Not available";
+    const numeratorDisplay = Number.isFinite(numerator)
+      ? formatMoney(numerator)
+      : "Not available";
+    const denominatorDisplay = Number.isFinite(denominator)
+      ? units === "currency_per_unit_per_month" && key.includes("MonthlyRentPerUnit")
+        ? `${Math.round(denominator).toLocaleString("en-US")} unit-months`
+        : formatMoney(denominator)
+      : "Not available";
+    const provenance = [...new Set([
+      ...(Array.isArray(receipt?.inputProvenance) ? receipt.inputProvenance : []),
+      ...(Array.isArray(receipt?.numeratorProvenance) ? receipt.numeratorProvenance : []),
+      ...(Array.isArray(receipt?.denominatorProvenance) ? receipt.denominatorProvenance : []),
+    ])].join(", ");
+    return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(resultDisplay)}</td><td>${escapeHtml(formula)}</td><td>${escapeHtml(`Numerator: ${numeratorDisplay}; Denominator: ${denominatorDisplay}; Sources: ${provenance || "Not available"}`)}</td></tr>`;
+  }).join("");
+  return renderSection(
+    section.visibleLabel || "Debt Capacity and Coverage",
+    `<table class="source-table"><thead><tr><th>Metric</th><th>Result</th><th>Formula</th><th>Numerator / Denominator / Sources</th></tr></thead><tbody>${metricRows}</tbody></table><p class="footer-note">Deterministic lender metrics are shown only from canonical T12, Rent Roll, current debt, and purchase assumptions. Unsupported inputs remain Not available.</p>`,
+    { pageBreakBefore: true }
+  );
+}
+
 function renderCoreReconciliationAnalysisSection(customerSurfaceModel = null) {
   const section = getCustomerSurfaceSection(customerSurfaceModel, "coreReconciliation");
   if (section?.factAvailability?.sectionDisplayReady !== true) return "";
@@ -1787,6 +1829,7 @@ export function renderCompleteAcquisitionMemoV2Html({
     const debtTermAnalysisSection = bossSections.debtTermAnalysis?.status === "required"
       ? renderSafely("Debt Term and Maturity Analysis", () => renderDebtTermAnalysisSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.debtTermAnalysis })
       : "";
+    const debtCapacityAndCoverageSection = renderSafely("Debt Capacity and Coverage", () => renderDebtCapacityAndCoverageSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: customerSurfaceModel?.sections?.debtCapacityAndCoverage || null });
     const coreReconciliationAnalysisSection = bossSections.coreReconciliation?.status === "required"
       ? renderSafely("Core Source Reconciliation", () => renderCoreReconciliationAnalysisSection(customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.coreReconciliation })
       : "";
@@ -2025,6 +2068,7 @@ export function renderCompleteAcquisitionMemoV2Html({
       ${debtServiceCoverageSection}
       ${debtVisualsSection}
       ${debtTermAnalysisSection}
+      ${debtCapacityAndCoverageSection}
       ${capitalPlanAnalysisSection}
       ${renovationContextSection}
     </section>
