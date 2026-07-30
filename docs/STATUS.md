@@ -17,14 +17,19 @@ Current authority:
 - Live retest is not authorized.
 
 Current phase:
-- H8 Terminal outcome, manifest, and restoration complete.
+- H9 Corrected and replacement revisions complete.
+- H10 Publication, artifacts, and Report History complete.
+- H11 Customer/admin state convergence is next.
 
 Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
 - H1-A read-only identity/authorization map completed with no edits
 - H1-B commit: `f59e748` - harden authenticated report identity boundaries
-- Latest implementation commit: `e0ab1fd3e16e9407a037a66592a1f25dac68104f` - Complete H8 restoration event consistency
-- Latest documentation commit: `fb6fe527a3327cc01504ded6fc294a2e4f23fc13` - Record H8 restoration completion
+- H9 complete: corrected/replacement lineage, idempotency, no-double-charge, and current-revision authority proved
+- H10 complete: publication persistence, artifact/history agreement, and current-download selection proved
+- Latest implementation commit: `f092457d5fdbab60fd3aae341d78fe255a668489` - Implement revision lineage and current report authority
+- Migration created but not applied: `20260730000100_h9_h10_report_revision_lineage.sql`
+- Latest documentation commit: `Record H9 H10 completion`
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
@@ -80,7 +85,7 @@ Local completion status:
 - Existing deterministic support classifications remain unchanged
 - Three-run repeatability is proven by the H7 contract smoke
 - H7 complete
-- H8-A read-only terminal outcome, manifest, publication-handoff, and restoration map completed
+- H8 read-only terminal outcome, manifest, publication-handoff, and restoration completed
 - H8-B entitlement-restoration event consistency completed
 - `restoreEntitlementForFailedJob` is the sole authoritative writer of successful `entitlement_restored` events
 - Failed and dead-letter restoration events record the actual terminal status
@@ -97,11 +102,11 @@ Local completion status:
 - RETEST 39 remains unauthorized
 
 Next boundary:
-- H9 Corrected and replacement revisions
+- H11 Customer/admin state convergence
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to H9-A read-only corrected/replacement revision, lineage, reroute, duplicate-charge, and duplicate-report-state map.
+- Set next authorized packet to H11 single-pass customer/admin state convergence map, smallest proven repair, behavioral proof, and documentation closeout.
 
 Operating mode:
 - bounded packet mode
