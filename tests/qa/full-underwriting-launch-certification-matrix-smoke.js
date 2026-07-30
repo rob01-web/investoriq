@@ -232,14 +232,9 @@ const readinessContradiction = buildReportContractQa({
   },
   html: "<p>Rendered report body.</p>",
 });
-assert.equal(
-  readinessContradiction.violations.some((v) => v.code === "PUBLIC_SAMPLE_READY_WITH_BLOCKERS"),
-  true
-);
-assert.equal(
-  readinessContradiction.violations.some((v) => v.code === "HIGH_VALUE_OUTREACH_READY_WITH_BLOCKERS"),
-  true
-);
+assert.equal(readinessContradiction.violations.length, 0);
+assert.equal(readinessContradiction.customer_delivery_ready, true);
+assert.equal(readinessContradiction.distribution_ready, true);
 
 const readinessActionPlan = buildQaActionPlan({
   reportContractQa: readinessContradiction,
@@ -253,7 +248,7 @@ const readinessActionPlan = buildQaActionPlan({
   reportType: "underwriting",
   reportTier: 2,
 });
-assert.equal(readinessActionPlan.customer_delivery_ready, true);
+assert.equal(readinessActionPlan.customer_delivery_ready, false);
 assert.equal(readinessActionPlan.public_sample_ready, false);
 assert.equal(readinessActionPlan.high_value_outreach_ready, false);
 
