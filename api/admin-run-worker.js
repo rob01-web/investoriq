@@ -660,6 +660,7 @@ export default async function handler(req, res) {
       }
 
       const restorePurchaseId = restoreRow.purchase_id || null;
+      const terminalStatus = String(job?.status || '').trim() || 'failed';
 
       const entitlementRestoredPayload = {
         reason: restoreReason,
@@ -673,8 +674,8 @@ export default async function handler(req, res) {
         job,
         eventType: 'entitlement_restored',
         attemptId: currentAttemptId,
-        fromStatus: failedJobRow.status,
-        toStatus: failedJobRow.status,
+        fromStatus: terminalStatus,
+        toStatus: terminalStatus,
         meta: entitlementRestoredPayload,
       });
       if (entitlementRestoredWriteErr) {
@@ -682,8 +683,8 @@ export default async function handler(req, res) {
           job,
           eventType: 'entitlement_restored',
           attemptId: currentAttemptId,
-          fromStatus: failedJobRow.status,
-          toStatus: failedJobRow.status,
+          fromStatus: terminalStatus,
+          toStatus: terminalStatus,
           meta: entitlementRestoredPayload,
         });
       }
