@@ -24,7 +24,7 @@ H6: complete
 H7: complete
 H8: complete
 Latest implementation commits: 697d652 Repair H8 restoration event consistency; e0ab1fd3e16e9407a037a66592a1f25dac68104f Complete H8 restoration event consistency
-Latest documentation commit: 386d19d Record H7 deterministic taxonomy completion
+Latest documentation commit: fb6fe527a3327cc01504ded6fc294a2e4f23fc13 Record H8 restoration completion
 Working tree: clean
 Remote: not updated because no push is authorized
 Next boundary: H9 Corrected and replacement revisions
@@ -222,7 +222,7 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - Upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale H7-next wording for the current next step. The current next packet is H8-A.
+- Do not use stale H7-next wording for the current next step. The current next packet is H9-A.
 
 ## 6. Keep the handoff short and useful
 

@@ -23,8 +23,8 @@ Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
 - H1-A read-only identity/authorization map completed with no edits
 - H1-B commit: `f59e748` - harden authenticated report identity boundaries
-- Latest implementation commit: `c517b90` - Lock deterministic H7 support taxonomy authority
-- Latest documentation commit: `386d19d` - Record H7 deterministic taxonomy completion
+- Latest implementation commit: `e0ab1fd3e16e9407a037a66592a1f25dac68104f` - Complete H8 restoration event consistency
+- Latest documentation commit: `fb6fe527a3327cc01504ded6fc294a2e4f23fc13` - Record H8 restoration completion
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
