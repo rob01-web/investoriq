@@ -1,6 +1,6 @@
 # InvestorIQ Status
 
-Current date: July 29, 2026
+Current date: July 30, 2026
 
 Current authority:
 - Treat the uploaded `!INVESTORIQ_CURRENT_GAMEPLAN_HANDOFF_UPDATED_2026-07-28.md` file as the practical daily handoff until this structure is fully established.
@@ -23,7 +23,7 @@ Local completion status:
 - Branch: `investigation/full-repo-underwriting-audit`
 - H1-A read-only identity/authorization map completed with no edits
 - H1-B commit: `f59e748` - harden authenticated report identity boundaries
-- Latest closeout commit: `bfc73f3` - Harden worker claim lease and fencing
+- Latest closeout commit: `9950ab0` - Repair expired worker recovery discovery
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
@@ -53,7 +53,7 @@ Local completion status:
 - RETEST 39 remains unauthorized
 - H6-A read-only worker claim, lease, fencing, deadline, and dead-letter recovery map completed
 - H6 correction completed
-- H6-B implementation commit: `f2ed885` - Harden H6 worker ownership and restoration
+- H6-B implementation commit: `9950ab0` - Repair expired worker recovery discovery
 - Claimed-by identity is part of the worker fence
 - Explicit worker attempt identity added
 - Lease expiry and deterministic reclaim behavior added

@@ -1,5 +1,5 @@
 # InvestorIQ Canonical Handoff and Playbook
-## Updated July 29, 2026 - Canonical merged handoff/playbook
+## Updated July 30, 2026 - Canonical merged handoff/playbook
 
 This is the canonical merged handoff/playbook, not merely a summary.
 
@@ -20,7 +20,7 @@ H2: complete
 H3: complete
 H4: complete
 H5: complete
-Latest closeout commit: f2ed885 Harden H6 worker ownership and restoration
+Latest closeout commit: 9950ab0 Repair expired worker recovery discovery
 Working tree: clean
 Remote: not updated because no push is authorized
 Next boundary: H7 Core/support classification, taxonomy, and causal taxonomy
@@ -110,7 +110,7 @@ Current forbidden actions remain:
 ### H6 completion facts
 - `H6-A` read-only worker claim, lease, fencing, deadline, and dead-letter recovery map completed.
 - H6 correction completed.
-- `H6-B` implementation commit: `f2ed885` - Harden H6 worker ownership and restoration.
+- `H6-B` implementation commit: `9950ab0` - Repair expired worker recovery discovery.
 - Claimed-by identity is part of the worker fence.
 - Explicit worker attempt identity is persisted and fenced on every worker-owned mutation.
 - Lease expiry and deterministic reclaim behavior are persisted in the database.

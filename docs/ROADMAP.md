@@ -27,6 +27,8 @@ Current state:
 - H4 complete.
 - H5 complete.
 - H6 correction completed.
+- H6 correction commit: `9950ab0` - Repair expired worker recovery discovery.
+- H6 complete.
 - H7 next.
 - Operating mode from H2 forward: bounded packet mode.
 
