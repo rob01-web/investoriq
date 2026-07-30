@@ -38,7 +38,9 @@ Current state:
 - H11 complete.
 - H12 complete.
 - H13 complete.
-- H14-H15 next combined boundary.
+- H14 complete.
+- H15 complete.
+- H16-H17 next combined boundary.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -61,8 +63,8 @@ Phase playbook:
 | H11 | Customer/admin state convergence | Reconciliation between customer-visible and admin-visible state | Later phase work, production changes, Premium, RETEST 39 | H11 single-pass customer/admin state convergence map, smallest proven repair, behavioral proof, and documentation closeout | Customer and admin surfaces agree on report state, blockers, and resolution status | Complete |
 | H12 | Full Underwriting identity and legacy firewall | Full Underwriting identity boundaries and legacy-path exclusion | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H12-A identity/firewall map; H12-B smallest firewall patch | Legacy paths cannot masquerade as current Full Underwriting authority | Complete |
 | H13 | Full Underwriting view model and source binding | View-model assembly and source-truth binding | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H13-A view-model map; H13-B smallest source-binding patch | Every displayed Full Underwriting value ties back to an approved source basis | Complete |
-| H14 | Full Underwriting calculations and lender metrics | Calculation logic, lender metrics, and approved sensitivity analysis | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H14-A metrics map; H14-B smallest calculation patch | Every financial metric is reproducible, labeled, and sourced | Not started |
-| H15 | Full Underwriting renderer/content contract | Renderer contract, content boundaries, and section integrity | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H15-A renderer contract map; H15-B smallest rendering patch | The renderer obeys the approved content contract without inventing unsupported narrative | Not started |
+| H14 | Full Underwriting calculations and lender metrics | Calculation logic, lender metrics, and approved sensitivity analysis | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | Completed in the H14-H15 packet | Every financial metric is reproducible, labeled, and sourced | Complete |
+| H15 | Full Underwriting renderer/content contract | Renderer contract, content boundaries, and section integrity | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | Completed in the H14-H15 packet | The renderer obeys the approved content contract without inventing unsupported narrative | Complete |
 | H16 | Manifest/PDF certification | Manifest coupling, PDF certification, and bounded recovery | Legacy resurrection, later phase work, production changes, Premium, RETEST 39 | H16-A certification map; H16-B smallest certification patch | Manifest, PDF, and certification state agree before any customer release | Not started |
 | H17 | Controlled replays | Deterministic replay harnesses and fixture control | Unsanctioned launch changes, production changes, Premium, RETEST 39 | H17-A replay map; H17-B smallest replay patch | Controlled replays remain stable and reproduce the same canonical outputs | Not started |
 | H18 | Governed canary | Governed pilot launch control, rollback, and evidence logging | Uncontrolled launch, production changes, Premium, RETEST 39 | H18-A canary map; H18-B smallest pilot-control patch | Canary rules, rollback, and evidence logs are explicit and enforceable | Not started |
@@ -98,7 +100,8 @@ H7 closure note:
 - H11 complete.
 - H12 complete.
 - H13 complete.
-- H14-H15 next combined boundary.
+- H14-H15 complete.
+- H16-H17 next combined boundary.
 
 H12-H13 closure note:
 - `1697db7` - `Prove Full Underwriting identity and source binding`.
@@ -106,6 +109,13 @@ H12-H13 closure note:
 - Legacy, Screening, ambiguous, or Premium paths cannot masquerade as public Full Underwriting authority while Premium remains false.
 - The canonical customer surface model, manifest candidate, and deterministic QA seal agree on source-backed values, deterministic calculations, and identity.
 - Unsupported or mismatched identity fails the publication seal instead of silently promoting a stale or legacy surface.
+
+H14-H15 closure note:
+- `ab7a47d` - `Harden lender calculations and Full Underwriting renderer contract`.
+- Deterministic lender metrics are labeled with explicit formulas, numerators, denominators, units, and provenance.
+- Unsupported inputs remain unavailable rather than fabricating values.
+- Renderer content is bound to the canonical view model, methodology, limitations, and prohibited-content contract.
+- Manifest, renderer, and QA seal agree on the same source-backed financial facts.
 
 H2 packet details:
 - H2-A is read-only only.
@@ -176,4 +186,4 @@ Daily handoff instruction:
 - In a fresh chat, upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale earlier-phase wording for the current next step; the next packet is `H12-H13 single-pass Full Underwriting identity firewall and source-binding map, smallest proven repair, behavioral proof, and documentation closeout`.
+- Do not use stale earlier-phase wording for the current next step; the next packet is `H16-H17 single-pass manifest-PDF certification and controlled-replay map, smallest proven repair, behavioral proof, and documentation closeout`.

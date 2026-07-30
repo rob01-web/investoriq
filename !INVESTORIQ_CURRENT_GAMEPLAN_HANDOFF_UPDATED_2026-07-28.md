@@ -27,12 +27,14 @@ H9/H10 migration created but not applied: supabase/migrations/20260730000100_h9_
 H11: complete
 H12: complete
 H13: complete
-Latest implementation commit: 1697db7 Prove Full Underwriting identity and source binding
-Latest documentation commit: Record H12 H13 completion
+H14: complete
+H15: complete
+Latest implementation commit: ab7a47d Harden lender calculations and Full Underwriting renderer contract
+Latest documentation commit: Record H14 H15 completion
 Working tree: clean
 Remote: not updated because no push is authorized
-Next boundary: H14-H15 Full Underwriting calculations and renderer/content contract
-Next authorized packet: H14-H15 single-pass lender-calculation and renderer-contract map, smallest proven repair, behavioral proof, and documentation closeout
+Next boundary: H16-H17 Manifest/PDF certification and controlled replays
+Next authorized packet: H16-H17 single-pass manifest-PDF certification and controlled-replay map, smallest proven repair, behavioral proof, and documentation closeout
 Operating mode from H2 forward: bounded packet mode
 ```
 
@@ -73,7 +75,9 @@ Current forbidden actions remain:
 - H11 is complete.
 - H12 is complete.
 - H13 is complete.
-- H14-H15 is next.
+- H14 is complete.
+- H15 is complete.
+- H16-H17 is next.
 - Operating mode from H2 forward is bounded packet mode.
 
 ## 2. Audit v3 preservation
@@ -226,14 +230,14 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H9 complete.
 - H10 complete.
 - H11 complete.
-- H12-H13 is the next combined boundary.
+- H14-H15 are complete; H16-H17 is the next combined boundary.
 
 ## 5. Fresh-chat operating order
 
 - Upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale H11-next or H12-H13 wording for the current next step. The current next packet is H14-H15 single-pass lender-calculation and renderer-contract map, smallest proven repair, behavioral proof, and documentation closeout.
+- Do not use stale H11-next, H12-H13, or H14-H15 wording for the current next step. The current next packet is H16-H17 single-pass manifest-PDF certification and controlled-replay map, smallest proven repair, behavioral proof, and documentation closeout.
 
 ## 6. Keep the handoff short and useful
 
