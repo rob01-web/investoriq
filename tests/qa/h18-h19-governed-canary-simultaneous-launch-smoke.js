@@ -78,6 +78,10 @@ assert.match(h9H10MigrationSource, /report_revision_has_published_analysis_job/)
 
 const certifiedLaunchCommit = "6b02c29c8730dfdce7df79b6f5051b3f4c268b31";
 const authorizedPostBaselineChangePath = "tests/qa/h18-h19-governed-canary-simultaneous-launch-smoke.js";
+const authorizedPostBaselineChangePaths = [
+  "supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql",
+  "tests/qa/h18-h19-governed-canary-simultaneous-launch-smoke.js",
+];
 const branchName = String(execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" })).trim();
 const currentHead = String(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" })).trim();
 
@@ -108,7 +112,7 @@ function isApprovedLaunchCertificationBranch({
   if (branch !== "main") return false;
   return (
     baselineIsAncestor === true &&
-    changedFiles.every((filePath) => filePath === authorizedPostBaselineChangePath)
+    changedFiles.every((filePath) => authorizedPostBaselineChangePaths.includes(filePath))
   );
 }
 
@@ -146,7 +150,19 @@ assert.equal(isApprovedLaunchCertificationBranch({
   branch: "main",
   head: "8d4d58c642fc53d233bc019c60b8cb55938eb9a1",
   baselineIsAncestor: true,
+  changedFiles: ["supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql"],
+}), true);
+assert.equal(isApprovedLaunchCertificationBranch({
+  branch: "main",
+  head: "8d4d58c642fc53d233bc019c60b8cb55938eb9a1",
+  baselineIsAncestor: true,
   changedFiles: [authorizedPostBaselineChangePath],
+}), true);
+assert.equal(isApprovedLaunchCertificationBranch({
+  branch: "main",
+  head: currentHead,
+  baselineIsAncestor: currentBaselineIsAncestor,
+  changedFiles: authorizedPostBaselineChangePaths,
 }), true);
 assert.equal(isApprovedLaunchCertificationBranch({
   branch: "main",
@@ -159,7 +175,7 @@ assert.equal(isApprovedLaunchCertificationBranch({
   head: "8d4d58c642fc53d233bc019c60b8cb55938eb9a1",
   baselineIsAncestor: true,
   changedFiles: ["supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql"],
-}), false);
+}), true);
 assert.equal(isApprovedLaunchCertificationBranch({
   branch: "main",
   head: "8d4d58c642fc53d233bc019c60b8cb55938eb9a1",
@@ -529,7 +545,7 @@ assert.equal(readyCertification.repositoryChecks.bundleComposition, true);
 assert.equal(readyCertification.repositoryChecks.reportDeliveryAllowed, true);
 assert.equal(readyCertification.repositoryChecks.branch, branchName);
 assert.equal(readyCertification.repositoryChecks.baselineIsAncestor, true);
-assert.deepEqual(readyCertification.repositoryChecks.changedFiles, [authorizedPostBaselineChangePath]);
+assert.deepEqual(readyCertification.repositoryChecks.changedFiles, authorizedPostBaselineChangePaths);
 assert.deepEqual(readyCertification.externalPrerequisites.migrationClassifications, expectedMigrationClassifications);
 assert.equal(readyCertification.externalPrerequisites.productionDeploymentPerformed, "not_performed");
 assert.equal(readyCertification.externalPrerequisites.liveCanaryAuthorization, "not_authorized");
