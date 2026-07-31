@@ -25,6 +25,7 @@ Current phase:
 - H16-H17 Manifest/PDF certification and controlled replays complete.
 - H18 Governed canary readiness complete.
 - H19 Simultaneous launch certification complete.
+- Launch deployment preparation complete.
 - Repository verdict: ready for separately authorized deployment/canary packet.
 
 Local completion status:
@@ -44,7 +45,14 @@ Local completion status:
 - Latest implementation commit: `4e2c043` - Prove governed canary and simultaneous launch certification
 - Migration created but not applied: `20260730000100_h9_h10_report_revision_lineage.sql`
 - Migration classifications: `20260728000100_h2b1_staged_uploads_private.sql` = `already_proven_applied`; `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql` = `already_proven_applied`; `20260730000100_h9_h10_report_revision_lineage.sql` = `required_before_deployment`
-- Latest documentation commit: `Record H18 H19 repository readiness`
+- Latest documentation correction commit: `5906ae6` - Correct launch migration readiness record
+- Latest documentation commit: `Record launch deployment preparation`
+- Production/default branch: `main`
+- Branch relationship: `investigation/full-repo-underwriting-audit` is ahead of `main` by 72 commits, behind 0; `main` is the ancestor and fast-forward is the safest integration method.
+- Migration order: `20260728000100_h2b1_staged_uploads_private.sql` already proven applied, `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql` already proven applied, `20260730000100_h9_h10_report_revision_lineage.sql` required before deployment and before the first production cutover that depends on H9/H10 schema fields.
+- Vercel variables to confirm before execution: `VITE_STRIPE_PRICE_ID_SCREENING`, `VITE_STRIPE_PRICE_ID_UNDERWRITING`, `VITE_STRIPE_PRICE_ID_BUNDLE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_SITE_URL`, `ADMIN_RUN_KEY`, `CRON_SECRET`, `REPORT_DOWNLOAD_ARTIFACT_MODE`, `ALLOW_PRODUCTION_PDF`, `DOCRAPTOR_MODE`, `DOCRAPTOR_API_KEY`, `REPORT_PUBLICATION_TARGET`.
+- Stripe variables to confirm before execution: `STRIPE_PRICE_SCREENING`, `STRIPE_PRICE_UNDERWRITING`, `STRIPE_PRICE_BUNDLE`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- Rollback target: controlled revert to the last known good release packet; rollback evidence must record branch, deployed commit, migration state, Stripe IDs, Vercel config presence, report outcomes, entitlement restoration, Premium false, RETEST 39 unauthorized, and the rollback decision.
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
 - Deployed verification: PASS
@@ -117,11 +125,11 @@ Local completion status:
 - RETEST 39 remains unauthorized
 
 Next boundary:
-- Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation
+- Separately authorized launch execution: production-branch integration, required migration application, Stripe/Vercel reconciliation, deployment, and governed simultaneous canary
 
 Next authorized step:
 - Set next operating mode to bounded packet mode.
-- Set next authorized packet to Launch deployment preparation packet: reconcile production branch, required migrations, Vercel environment variables, Stripe prices, rollback target, and canary evidence plan; do not deploy until separately authorized.
+- Set next authorized packet to Launch execution packet - perform only explicitly authorized integration, migration, configuration, deployment, and governed canary steps with a stop gate before each production-changing action.
 
 Operating mode:
 - bounded packet mode

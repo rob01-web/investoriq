@@ -44,7 +44,8 @@ Current state:
 - H17 complete.
 - H18 complete.
 - H19 complete.
-- Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation.
+- Launch deployment preparation complete.
+- Separately authorized launch execution is the next boundary.
 - Operating mode from H2 forward: bounded packet mode.
 
 Phase playbook:
@@ -107,7 +108,8 @@ H7 closure note:
 - H14-H15 complete.
 - H18 complete.
 - H19 complete.
-- Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation.
+- Launch deployment preparation complete.
+- Separately authorized launch execution is the next boundary.
 - Migration classifications: `20260728000100_h2b1_staged_uploads_private.sql` = `already_proven_applied`; `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql` = `already_proven_applied`; `20260730000100_h9_h10_report_revision_lineage.sql` = `required_before_deployment`.
 
 H12-H13 closure note:
@@ -193,4 +195,4 @@ Daily handoff instruction:
 - In a fresh chat, upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale earlier-phase wording for the current next step; the next packet is `Launch deployment preparation packet: reconcile production branch, required migrations, Vercel environment variables, Stripe prices, rollback target, and canary evidence plan; do not deploy until separately authorized`.
+- Do not use stale earlier-phase wording for the current next step; the next packet is `Launch execution packet - perform only explicitly authorized integration, migration, configuration, deployment, and governed canary steps with a stop gate before each production-changing action`.

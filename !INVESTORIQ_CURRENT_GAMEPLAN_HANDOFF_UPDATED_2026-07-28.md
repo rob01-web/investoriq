@@ -34,12 +34,14 @@ H17: complete
 H18: complete
 H19: complete
 Latest implementation commit: 4e2c043 Prove governed canary and simultaneous launch certification
-Latest documentation commit: Record H18 H19 repository readiness
+Latest documentation correction commit: 5906ae6 Correct launch migration readiness record
+Latest documentation commit: Record launch deployment preparation
 Migration classifications: 20260728000100_h2b1_staged_uploads_private.sql=already_proven_applied; 20260728000200_h2b2_report_purchases_update_policy_cleanup.sql=already_proven_applied; 20260730000100_h9_h10_report_revision_lineage.sql=required_before_deployment
+Launch deployment preparation complete.
 Working tree: clean
 Remote: not updated because no push is authorized
-Next boundary: Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation
-Next authorized packet: Launch deployment preparation packet: reconcile production branch, required migrations, Vercel environment variables, Stripe prices, rollback target, and canary evidence plan; do not deploy until separately authorized
+Next boundary: Separately authorized launch execution: production-branch integration, required migration application, Stripe/Vercel reconciliation, deployment, and governed simultaneous canary
+Next authorized packet: Launch execution packet - perform only explicitly authorized integration, migration, configuration, deployment, and governed canary steps with a stop gate before each production-changing action
 Operating mode from H2 forward: bounded packet mode
 ```
 
@@ -86,7 +88,7 @@ Current forbidden actions remain:
 - H17 is complete.
 - H18 is complete.
 - H19 is complete.
-- H18-H19 readiness is complete; controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation is the next boundary.
+- Launch deployment preparation is complete; separately authorized launch execution is the next boundary.
 - Operating mode from H2 forward is bounded packet mode.
 
 ## 2. Audit v3 preservation
@@ -244,14 +246,15 @@ The $499 Full Underwriting report must survive analyst and credit-officer scruti
 - H17 is complete.
 - H18 is complete.
 - H19 is complete.
-- Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation is the next combined boundary.
+- Launch deployment preparation is complete.
+- Separately authorized launch execution is the next combined boundary.
 
 ## 5. Fresh-chat operating order
 
 - Upload `docs/STATUS.md` first.
 - Upload `docs/ROADMAP.md` when broader phase detail is needed.
 - Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
-- Do not use stale H11-next, H12-H13, H14-H15, or H16-H17 wording for the current next step. The current next packet is Launch deployment preparation packet: reconcile production branch, required migrations, Vercel environment variables, Stripe prices, rollback target, and canary evidence plan; do not deploy until separately authorized.
+- Do not use stale H11-next, H12-H13, H14-H15, H16-H17, or H18-H19 wording for the current next step. The current next packet is Launch execution packet - perform only explicitly authorized integration, migration, configuration, deployment, and governed canary steps with a stop gate before each production-changing action.
 
 ## 6. Keep the handoff short and useful
 
