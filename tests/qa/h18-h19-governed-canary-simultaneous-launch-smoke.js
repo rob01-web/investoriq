@@ -53,6 +53,21 @@ const {
   getProductPricingAvailability,
 } = await import("../../src/lib/pricingConfig.js");
 
+const expectedMigrationClassifications = [
+  {
+    path: "supabase/migrations/20260728000100_h2b1_staged_uploads_private.sql",
+    status: "already_proven_applied",
+  },
+  {
+    path: "supabase/migrations/20260728000200_h2b2_report_purchases_update_policy_cleanup.sql",
+    status: "already_proven_applied",
+  },
+  {
+    path: "supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql",
+    status: "required_before_deployment",
+  },
+];
+
 const branchName = String(execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" })).trim();
 assert.equal(branchName, "investigation/full-repo-underwriting-audit");
 
@@ -262,7 +277,7 @@ function buildGovernedCanaryCertification({
   evidenceLogDestination = null,
   ownerAuthorizationRequired = true,
   ownerAuthorizationGranted = false,
-  requiredMigrations = [],
+  migrationClassifications = [],
   requiredEnvVars = [],
   requiredStripePriceIds = [],
   liveCanaryAuthorized = false,
@@ -278,8 +293,11 @@ function buildGovernedCanaryCertification({
   if (premiumEnabled) missingRepositoryChecks.push("PREMIUM_MUST_REMAIN_FALSE");
   if (!rollbackTarget) missingRepositoryChecks.push("ROLLBACK_TARGET_REQUIRED");
   if (!evidenceLogDestination) missingRepositoryChecks.push("EVIDENCE_LOG_DESTINATION_REQUIRED");
-  if (!requiredMigrations.includes("supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql")) {
-    missingRepositoryChecks.push("REQUIRED_MIGRATION_NOT_IDENTIFIED");
+  const migrationClassificationKeys = migrationClassifications.map((entry) => `${entry.path}:${entry.status}`);
+  const expectedMigrationClassificationKeys = expectedMigrationClassifications.map((entry) => `${entry.path}:${entry.status}`);
+  if (migrationClassificationKeys.length !== expectedMigrationClassificationKeys.length
+    || !migrationClassificationKeys.every((entry, index) => entry === expectedMigrationClassificationKeys[index])) {
+    missingRepositoryChecks.push("MIGRATION_CLASSIFICATIONS_REQUIRED");
   }
   if (!requiredEnvVars.includes("VITE_STRIPE_PRICE_ID_SCREENING")) missingRepositoryChecks.push("VITE_STRIPE_PRICE_ID_SCREENING_REQUIRED");
   if (!requiredEnvVars.includes("VITE_STRIPE_PRICE_ID_UNDERWRITING")) missingRepositoryChecks.push("VITE_STRIPE_PRICE_ID_UNDERWRITING_REQUIRED");
@@ -322,7 +340,7 @@ function buildGovernedCanaryCertification({
     },
     missingRepositoryChecks,
     externalPrerequisites: {
-      unappliedMigrations: ["supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql"],
+      migrationClassifications: expectedMigrationClassifications,
       requiredEnvVars: [
         "VITE_STRIPE_PRICE_ID_SCREENING",
         "VITE_STRIPE_PRICE_ID_UNDERWRITING",
@@ -357,7 +375,7 @@ function buildGovernedCanaryCertification({
 const sharedReadyInputs = {
   rollbackTarget: "controlled revert to the last known good release packet",
   evidenceLogDestination: "git history plus docs/STATUS.md, docs/ROADMAP.md, and the canonical handoff",
-  requiredMigrations: ["supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql"],
+  migrationClassifications: expectedMigrationClassifications,
   requiredEnvVars: [
     "VITE_STRIPE_PRICE_ID_SCREENING",
     "VITE_STRIPE_PRICE_ID_UNDERWRITING",
@@ -395,7 +413,7 @@ assert.equal(readyCertification.repositoryChecks.simultaneousProductReadiness, t
 assert.equal(readyCertification.repositoryChecks.pricingAvailable, true);
 assert.equal(readyCertification.repositoryChecks.bundleComposition, true);
 assert.equal(readyCertification.repositoryChecks.reportDeliveryAllowed, true);
-assert.equal(readyCertification.externalPrerequisites.unappliedMigrations[0], "supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql");
+assert.deepEqual(readyCertification.externalPrerequisites.migrationClassifications, expectedMigrationClassifications);
 assert.equal(readyCertification.externalPrerequisites.productionDeploymentPerformed, "not_performed");
 assert.equal(readyCertification.externalPrerequisites.liveCanaryAuthorization, "not_authorized");
 assert.equal(readyCertification.externalPrerequisites.retest39Authorization, "not_authorized");
@@ -466,12 +484,16 @@ assert.ok(holdDueToMissingStripePrereq.repositoryChecks.pricingAvailable);
 
 const holdDueToMissingMigrationList = buildGovernedCanaryCertification({
   ...sharedReadyInputs,
-  requiredMigrations: [],
+  migrationClassifications: [
+    expectedMigrationClassifications[0],
+    expectedMigrationClassifications[1],
+  ],
   screeningReady: true,
   underwritingReady: true,
   ownerAuthorizationGranted: true,
 });
 assert.equal(holdDueToMissingMigrationList.repositoryVerdict, "hold");
+assert.ok(holdDueToMissingMigrationList.missingRepositoryChecks.includes("MIGRATION_CLASSIFICATIONS_REQUIRED"));
 
 const holdDueToMissingEvidenceLog = buildGovernedCanaryCertification({
   ...sharedReadyInputs,
