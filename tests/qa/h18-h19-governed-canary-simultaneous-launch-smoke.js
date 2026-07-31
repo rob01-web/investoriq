@@ -68,8 +68,35 @@ const expectedMigrationClassifications = [
   },
 ];
 
+const certifiedLaunchCommit = "6b02c29c8730dfdce7df79b6f5051b3f4c268b31";
 const branchName = String(execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" })).trim();
-assert.equal(branchName, "investigation/full-repo-underwriting-audit");
+const currentHead = String(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" })).trim();
+
+function isApprovedLaunchCertificationBranch({ branch, head }) {
+  return (
+    branch === "investigation/full-repo-underwriting-audit" ||
+    (branch === "main" && head === certifiedLaunchCommit)
+  );
+}
+
+assert.equal(currentHead, certifiedLaunchCommit);
+assert.equal(isApprovedLaunchCertificationBranch({ branch: branchName, head: currentHead }), true);
+assert.equal(isApprovedLaunchCertificationBranch({
+  branch: "investigation/full-repo-underwriting-audit",
+  head: certifiedLaunchCommit,
+}), true);
+assert.equal(isApprovedLaunchCertificationBranch({
+  branch: "main",
+  head: certifiedLaunchCommit,
+}), true);
+assert.equal(isApprovedLaunchCertificationBranch({
+  branch: "main",
+  head: "33dac6f9f1bce9790f7cc31c6e70e79faa62e42d",
+}), false);
+assert.equal(isApprovedLaunchCertificationBranch({
+  branch: "feature/unrelated",
+  head: certifiedLaunchCommit,
+}), false);
 
 const pricingPageSource = readFileSync(new URL("../../src/pages/Pricing.jsx", import.meta.url), "utf8");
 assert.ok(pricingPageSource.includes("price:       '$199'"));
@@ -268,6 +295,7 @@ assert.equal(blockedDecision.report_publishable, false);
 
 function buildGovernedCanaryCertification({
   branch = branchName,
+  head = currentHead,
   environment = "production",
   repoClean = true,
   screeningReady = false,
@@ -287,7 +315,7 @@ function buildGovernedCanaryCertification({
 } = {}) {
   const missingRepositoryChecks = [];
   if (!repoClean) missingRepositoryChecks.push("REPOSITORY_DIRTY");
-  if (branch !== "investigation/full-repo-underwriting-audit") missingRepositoryChecks.push("BRANCH_TARGET_MISMATCH");
+  if (!isApprovedLaunchCertificationBranch({ branch, head })) missingRepositoryChecks.push("BRANCH_TARGET_MISMATCH");
   if (environment !== "production") missingRepositoryChecks.push("ENVIRONMENT_TARGET_MISMATCH");
   if (!screeningReady || !underwritingReady) missingRepositoryChecks.push("SIMULTANEOUS_PRODUCT_READINESS_REQUIRED");
   if (premiumEnabled) missingRepositoryChecks.push("PREMIUM_MUST_REMAIN_FALSE");
@@ -327,6 +355,7 @@ function buildGovernedCanaryCertification({
     ownerAuthorizationGranted,
     repositoryChecks: {
       branch,
+      head,
       environment,
       repoClean,
       simultaneousProductReadiness: screeningReady && underwritingReady,
@@ -413,6 +442,8 @@ assert.equal(readyCertification.repositoryChecks.simultaneousProductReadiness, t
 assert.equal(readyCertification.repositoryChecks.pricingAvailable, true);
 assert.equal(readyCertification.repositoryChecks.bundleComposition, true);
 assert.equal(readyCertification.repositoryChecks.reportDeliveryAllowed, true);
+assert.equal(readyCertification.repositoryChecks.branch, branchName);
+assert.equal(readyCertification.repositoryChecks.head, certifiedLaunchCommit);
 assert.deepEqual(readyCertification.externalPrerequisites.migrationClassifications, expectedMigrationClassifications);
 assert.equal(readyCertification.externalPrerequisites.productionDeploymentPerformed, "not_performed");
 assert.equal(readyCertification.externalPrerequisites.liveCanaryAuthorization, "not_authorized");
@@ -442,15 +473,37 @@ const holdDueToPremium = buildGovernedCanaryCertification({
 assert.equal(holdDueToPremium.repositoryVerdict, "hold");
 assert.equal(holdDueToPremium.premiumEnabled, true);
 
-const holdDueToBranch = buildGovernedCanaryCertification({
+const readyOnCertifiedInvestigationBranch = buildGovernedCanaryCertification({
   ...sharedReadyInputs,
-  branch: "main",
+  branch: "investigation/full-repo-underwriting-audit",
+  head: certifiedLaunchCommit,
   screeningReady: true,
   underwritingReady: true,
   ownerAuthorizationGranted: true,
 });
-assert.equal(holdDueToBranch.repositoryVerdict, "hold");
-assert.ok(holdDueToBranch.repositoryChecks.branch === "main");
+assert.equal(readyOnCertifiedInvestigationBranch.repositoryVerdict, "ready_for_separately_authorized_canary");
+
+const holdDueToForgedMainHead = buildGovernedCanaryCertification({
+  ...sharedReadyInputs,
+  branch: "main",
+  head: "33dac6f9f1bce9790f7cc31c6e70e79faa62e42d",
+  screeningReady: true,
+  underwritingReady: true,
+  ownerAuthorizationGranted: true,
+});
+assert.equal(holdDueToForgedMainHead.repositoryVerdict, "hold");
+assert.ok(holdDueToForgedMainHead.missingRepositoryChecks.includes("BRANCH_TARGET_MISMATCH"));
+
+const holdDueToUnrelatedBranch = buildGovernedCanaryCertification({
+  ...sharedReadyInputs,
+  branch: "feature/unrelated",
+  head: certifiedLaunchCommit,
+  screeningReady: true,
+  underwritingReady: true,
+  ownerAuthorizationGranted: true,
+});
+assert.equal(holdDueToUnrelatedBranch.repositoryVerdict, "hold");
+assert.ok(holdDueToUnrelatedBranch.missingRepositoryChecks.includes("BRANCH_TARGET_MISMATCH"));
 
 const holdDueToEnvironment = buildGovernedCanaryCertification({
   ...sharedReadyInputs,
