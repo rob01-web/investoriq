@@ -68,6 +68,14 @@ const expectedMigrationClassifications = [
   },
 ];
 
+const h9H10MigrationSource = readFileSync(
+  new URL("../../supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql", import.meta.url),
+  "utf8",
+);
+assert.equal(/reports\.status/.test(h9H10MigrationSource), false);
+assert.match(h9H10MigrationSource, /public\.analysis_jobs/);
+assert.match(h9H10MigrationSource, /report_revision_has_published_analysis_job/);
+
 const certifiedLaunchCommit = "6b02c29c8730dfdce7df79b6f5051b3f4c268b31";
 const authorizedPostBaselineChangePath = "tests/qa/h18-h19-governed-canary-simultaneous-launch-smoke.js";
 const branchName = String(execFileSync("git", ["branch", "--show-current"], { encoding: "utf8" })).trim();
