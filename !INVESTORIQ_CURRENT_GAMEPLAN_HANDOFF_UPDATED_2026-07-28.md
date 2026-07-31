@@ -35,6 +35,7 @@ H18: complete
 H19: complete
 Latest implementation commit: 4e2c043 Prove governed canary and simultaneous launch certification
 Latest documentation commit: Record H18 H19 repository readiness
+Migration classifications: 20260728000100_h2b1_staged_uploads_private.sql=already_proven_applied; 20260728000200_h2b2_report_purchases_update_policy_cleanup.sql=already_proven_applied; 20260730000100_h9_h10_report_revision_lineage.sql=required_before_deployment
 Working tree: clean
 Remote: not updated because no push is authorized
 Next boundary: Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation

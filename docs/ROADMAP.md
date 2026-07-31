@@ -40,6 +40,8 @@ Current state:
 - H13 complete.
 - H14 complete.
 - H15 complete.
+- H16 complete.
+- H17 complete.
 - H18 complete.
 - H19 complete.
 - Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation.
@@ -106,6 +108,7 @@ H7 closure note:
 - H18 complete.
 - H19 complete.
 - Controlled merge, migration, Stripe/Vercel reconciliation, deployment, and governed canary preparation.
+- Migration classifications: `20260728000100_h2b1_staged_uploads_private.sql` = `already_proven_applied`; `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql` = `already_proven_applied`; `20260730000100_h9_h10_report_revision_lineage.sql` = `required_before_deployment`.
 
 H12-H13 closure note:
 - `1697db7` - `Prove Full Underwriting identity and source binding`.

@@ -43,6 +43,7 @@ Local completion status:
 - H19 complete: repository simultaneous-launch certification, simultaneous Screening/Full Underwriting readiness, and separate deployment/canary boundary proved
 - Latest implementation commit: `4e2c043` - Prove governed canary and simultaneous launch certification
 - Migration created but not applied: `20260730000100_h9_h10_report_revision_lineage.sql`
+- Migration classifications: `20260728000100_h2b1_staged_uploads_private.sql` = `already_proven_applied`; `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql` = `already_proven_applied`; `20260730000100_h9_h10_report_revision_lineage.sql` = `required_before_deployment`
 - Latest documentation commit: `Record H18 H19 repository readiness`
 - H2-B1 migration: `20260728000100_h2b1_staged_uploads_private.sql`
 - H2-B2 migration: `20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
