@@ -54,10 +54,13 @@ function buildNeutralSystemFailureCopy({
 } = {}) {
   return {
     title: creditRestored ? 'Generation failed - credit restored' : 'Generation failed',
-    body: creditRestored
-      ? 'Generation failed before publication. No completed report was published. The issue was logged for review, and your report credit has been returned to your account.'
-      : 'Generation failed before publication. No completed report was published. If a report credit was consumed, it will be restored automatically.',
-    nextStep: 'Try generating again once. If it fails again, contact reports@investoriq.tech with the property name.',
+    body:
+      'InvestorIQ encountered a system error while processing your report. Your uploaded documents do not need to be changed.' +
+      (creditRestored
+        ? ' Your report credit has been restored.'
+        : ' If a report credit was consumed, it will be restored automatically.'),
+    nextStep:
+      'Please retry the same report after the issue is resolved, or contact support and reference this report.',
     referenceCode,
     creditLine: creditRestored ? 'Your report credit has been returned to your account.' : null,
   };
@@ -91,6 +94,14 @@ export function classifyFailure(job = {}, options = {}) {
       return { kind: 'system_failure', referenceCode: 'REPORT_GENERATION_FAILED' };
     }
     return { kind: 'document_mismatch', referenceCode: 'DOCUMENT_FINANCIAL_SCALE_MISMATCH' };
+  }
+
+  // Platform/parser exceptions must not be framed as customer document defects.
+  if (
+    /is not defined|ReferenceError|TypeError|Cannot read propert/i.test(reason) ||
+    /sourceContentSha256|source_content_sha256/i.test(reason)
+  ) {
+    return { kind: 'system_failure', referenceCode: code || 'PARSER_ERROR' };
   }
 
   if (
