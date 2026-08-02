@@ -70,3 +70,23 @@ Current forbidden actions remain:
 - ChatGPT Keeper recommendation remains: pass as an amendment, hold as a replacement.
 - H0, H0.5, H0.75, H1, H2, H3, and H4 are complete.
 - H5 is complete.
+- H6 is complete.
+- H7 is complete.
+- H8 is complete.
+- H9/H10 are complete at repository level; required migration not applied until authorized.
+- H11-H19 are complete.
+- Launch deployment preparation is complete.
+- Separately authorized launch execution is the next combined boundary.
+
+## 5. Fresh-chat operating order
+
+- Upload `docs/STATUS.md` first.
+- Upload `docs/ROADMAP.md` when broader phase detail is needed.
+- Upload this canonical handoff/playbook when deeper audit or product-doctrine context is needed.
+- Do not use stale H11-next, H12-H13, H14-H15, H16-H17, or H18-H19 wording for the current next step. The current next packet is Launch execution packet - perform only explicitly authorized integration, migration, configuration, deployment, and governed canary steps with a stop gate before each production-changing action.
+
+## 6. Keep the handoff short and useful
+
+- Keep daily handoff work focused on the current packet only.
+- Do not reintroduce archive cleanup, runtime code changes, deployment, migration, production data, Stripe configuration, Premium activation, or RETEST 39 unless explicitly authorized.
+- Preserve historical evidence in git history and the canonical docs, not in extra daily chatter.
