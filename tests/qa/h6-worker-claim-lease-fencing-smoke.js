@@ -54,8 +54,16 @@ for (const pattern of [
 assert.match(migrationSource, /check \(worker_attempt_count >= 0\)/i);
 assert.match(migrationSource, /check \(dead_lettered_at is null or status = 'dead_letter'\)/i);
 assert.match(migrationSource, /select \* from public\.claim_worker_job\(v_target_id, p_claimed_by\)/i);
-assert.match(migrationSource, /select \* from public\.claim_next_worker_job\(\)/i);
-assert.match(migrationSource, /select \* from public\.requeue_worker_job\(p_job_id, p_reason, false\)/i);
+assert.equal(/create or replace function public\.claim_next_job\s*\(/i.test(migrationSource), false);
+assert.equal(/create or replace function public\.admin_requeue_job\s*\(/i.test(migrationSource), false);
+assert.equal(/drop function(?: if exists)? public\.claim_next_job\b/i.test(migrationSource), false);
+assert.equal(/drop function(?: if exists)? public\.admin_requeue_job\b/i.test(migrationSource), false);
+assert.equal(/from public\.reports r[\s\S]*r\.job_id/i.test(migrationSource), false);
+assert.equal(/r\.status = 'published'/i.test(migrationSource), false);
+assert.match(
+  migrationSource,
+  /from public\.analysis_jobs aj[\s\S]*aj\.id = p_job_id[\s\S]*aj\.status = 'published'[\s\S]*aj\.report_id is not null/i
+);
 
 for (const pattern of [
   /claim_worker_job/,
