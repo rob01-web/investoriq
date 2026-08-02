@@ -3,10 +3,10 @@ import { createHash } from 'node:crypto';
 import { resolveAuthenticatedActor } from './_lib/authenticated-actor.js';
 
 const POLICY_TEXT =
-  'InvestorIQ produces document-backed and framework-constrained underwriting, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. No invented data or gap-filling is performed.';
+  'InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as unavailable in the report. Monetary refunds are not available once report generation begins. If an InvestorIQ system failure prevents publication, the qualifying report credit is restored.';
 const POLICY_TEXT_HASH = createHash('sha256').update(POLICY_TEXT).digest('hex');
 const POLICY_KEY = 'analysis_disclosures';
-const POLICY_VERSION = 'v2026-01-14';
+const POLICY_VERSION = 'v2026-08-02';
 
 export default async function handler(req, res) {
   try {
