@@ -1,20 +1,55 @@
 # InvestorIQ Status
 
-Current date: July 30, 2026
+Current date: August 2, 2026
 
 Current authority:
-- Treat the uploaded `!INVESTORIQ_CURRENT_GAMEPLAN_HANDOFF_UPDATED_2026-07-28.md` file as the practical daily handoff until this structure is fully established.
+- Treat `!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-07-31.md` as the practical daily handoff (with Aug 2 addendum below).
 - Product and launch decisions remain governed by `docs/INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md`.
 - Premium assignment remains `false`.
-- RETEST 39 is not authorized.
-- Implementation has not begun from the merged plan.
-- Audit work is not merged to main.
-- Production migration is not authorized.
-- Deployment is not authorized.
-- Production data change is not authorized.
-- Stripe configuration change is not authorized.
-- Live canary is not authorized.
-- Live retest is not authorized.
+- RETEST 39 has executed once after H6 production migration; it is **not authorized for requeue**.
+- RETEST 40 must **not** be created.
+- Production retry / live retest must wait until Vercel deployment for `a06b897` is Ready.
+- No broad tests, no manual deploy, no source-code edits outside explicitly authorized packets.
+
+## Aug 2, 2026 — Parser rescue and RETEST 39 record
+
+Repository state (verified):
+- Branch: `main`
+- HEAD / origin/main: `a06b897` — `fix(parser): hash spreadsheet T12 and rent-roll sources`
+- Working tree: clean
+- `api/parse/parse-doc.js` restored and verified (~259 KB, exactly three `buildSourceContentSha256` sites: import + Rent Roll spreadsheet branch + T12 spreadsheet branch; Textract path untouched)
+
+RETEST 39 incident:
+- Job `084a982e-ff6e-49b0-a7f7-473ed314aada` reached worker execution after H6 production migration was applied.
+- H6 production schema verified: 7 worker columns, 2 worker constraints, 10 H6 functions, service_role EXECUTE true for all 10.
+- Failure outcome: `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS`.
+- Root cause was **not** a customer bad-document issue.
+- T12 spreadsheet parser accepted core fields, then crashed because spreadsheet branches referenced `sourceContentSha256` without defining it.
+- Platform incorrectly discarded an otherwise valid T12 artifact and classified the result as missing structured financial artifacts.
+- Customer-facing error guidance was inadequate (did not tell the user what to do next).
+- Credit / entitlement was restored.
+- RETEST 39 has **not** been requeued.
+- RETEST 40 must **not** be created.
+- Production retry must wait until Vercel deployment for `a06b897` is Ready.
+
+Parser rescue:
+- GitHub API / large-file tool writes temporarily corrupted `api/parse/parse-doc.js` to placeholder content.
+- Local Windows repo backup preserved the full parser.
+- Branch `rescue/restore-parse-doc` restored the full parser and added:
+  1. `buildSourceContentSha256` import from `../_lib/recovery-content-hash-cache.js`
+  2. `sourceContentSha256` definition after `Buffer.from(arrayBuffer)` in the Rent Roll spreadsheet branch
+  3. `sourceContentSha256` definition after `Buffer.from(arrayBuffer)` in the T12 spreadsheet branch
+- Final repair landed on `main` as `a06b897`.
+- **Policy:** GitHub API / connected large-file write tools must **not** be used for future writes to `api/parse/parse-doc.js`. Use normal local git commit + push for this large file.
+
+Next boundary:
+- Wait for Vercel production deployment of `a06b897` to report Ready.
+- Only then consider a separately authorized production retry of the failed RETEST 39 path (do not create RETEST 40).
+- Premium remains false. No Stripe/Vercel bundle configuration change without explicit authorization.
+
+---
+
+Historical status body (pre-Aug 2; retained for evidence continuity):
 
 Current phase:
 - H9 Corrected and replacement revisions complete.

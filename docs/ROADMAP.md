@@ -4,7 +4,7 @@ Current authority:
 - `docs/INVESTORIQ_PRODUCT_DOCTRINE.md`
 - `docs/INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md`
 - `docs/PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md`
-- `!INVESTORIQ_CURRENT_GAMEPLAN_HANDOFF_UPDATED_2026-07-28.md`
+- `!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-07-31.md` (and Aug 2 STATUS/ROADMAP addenda)
 
 Operating rules:
 - Document-driven only.
@@ -47,6 +47,17 @@ Current state:
 - Launch deployment preparation complete.
 - Separately authorized launch execution is the next boundary.
 - Operating mode from H2 forward: bounded packet mode.
+
+## Aug 2, 2026 — Parser rescue and RETEST 39 status
+
+- `main` is at `a06b897` (`fix(parser): hash spreadsheet T12 and rent-roll sources`).
+- Spreadsheet T12 and Rent Roll paths now define `sourceContentSha256` via `buildSourceContentSha256(buffer)`.
+- RETEST 39 (`084a982e-ff6e-49b0-a7f7-473ed314aada`) reached worker execution after H6 production migration, then failed with `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS` because the T12 spreadsheet branch referenced an undefined `sourceContentSha256` and discarded a valid artifact.
+- Credit/entitlement restored. RETEST 39 is **not** requeued. RETEST 40 must **not** be created.
+- Production retry waits for Vercel deployment of `a06b897` to be Ready.
+- Do not use GitHub API/tool large-file writes for `api/parse/parse-doc.js`; use local git only.
+- Premium remains false. No launch canary, Stripe, or production data change without a new explicit packet.
+
 
 Phase playbook:
 
