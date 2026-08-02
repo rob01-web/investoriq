@@ -359,9 +359,10 @@ begin
 
   if exists (
     select 1
-    from public.reports r
-    where r.job_id = p_job_id
-      and r.status = 'published'
+    from public.analysis_jobs aj
+    where aj.id = p_job_id
+      and aj.status = 'published'
+      and aj.report_id is not null
   ) then
     return;
   end if;
@@ -409,27 +410,6 @@ begin
 end;
 $$;
 
-create or replace function public.claim_next_job()
-returns setof public.analysis_jobs
-language sql
-security definer
-set search_path = public
-as $$
-  select * from public.claim_next_worker_job();
-$$;
-
-create or replace function public.admin_requeue_job(
-  p_job_id uuid,
-  p_reason text default null
-)
-returns setof public.analysis_jobs
-language sql
-security definer
-set search_path = public
-as $$
-  select * from public.requeue_worker_job(p_job_id, p_reason, false);
-$$;
-
 revoke all on function public.worker_lease_duration() from public;
 revoke all on function public.worker_max_attempt_count() from public;
 revoke all on function public.claim_worker_job(uuid, text) from public;
@@ -440,8 +420,6 @@ revoke all on function public.fail_worker_job(uuid, uuid, text, text, text, text
 revoke all on function public.fail_expired_worker_job(uuid, uuid, text, text, text, text, text) from public;
 revoke all on function public.requeue_worker_job(uuid, text, boolean) from public;
 revoke all on function public.restore_failed_worker_entitlement(uuid, uuid, text, text, text, text) from public;
-revoke all on function public.claim_next_job() from public;
-revoke all on function public.admin_requeue_job(uuid, text) from public;
 
 grant execute on function public.worker_lease_duration() to service_role;
 grant execute on function public.worker_max_attempt_count() to service_role;
@@ -453,5 +431,3 @@ grant execute on function public.fail_worker_job(uuid, uuid, text, text, text, t
 grant execute on function public.fail_expired_worker_job(uuid, uuid, text, text, text, text, text) to service_role;
 grant execute on function public.requeue_worker_job(uuid, text, boolean) to service_role;
 grant execute on function public.restore_failed_worker_entitlement(uuid, uuid, text, text, text, text) to service_role;
-grant execute on function public.claim_next_job() to service_role;
-grant execute on function public.admin_requeue_job(uuid, text) to service_role;
