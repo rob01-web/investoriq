@@ -22,6 +22,7 @@ import {
 } from '../_lib/support-doc-semantic-evidence.js';
 import {
   buildCacheDiagnostics,
+  buildSourceContentSha256,
   loadCachedRecoveryPayload,
 } from '../_lib/recovery-content-hash-cache.js';
 
@@ -3549,6 +3550,7 @@ export default async function handler(req, res) {
 
           const arrayBuffer = await fileData.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
+          const sourceContentSha256 = buildSourceContentSha256(buffer);
           const isCsv = isCsvMime(file.mime_type) || isCsvName(file.original_filename);
           const workbook = isCsv
             ? XLSX.read(buffer.toString('utf-8'), { type: 'string' })
@@ -4424,6 +4426,7 @@ export default async function handler(req, res) {
 
           const arrayBuffer = await fileData.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
+          const sourceContentSha256 = buildSourceContentSha256(buffer);
           const isCsv = isCsvMime(file.mime_type) || isCsvName(file.original_filename);
           const workbook = isCsv
             ? XLSX.read(buffer.toString('utf-8'), { type: 'string' })
