@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_REPLACE
+@/tmp/investoriq-wire/api/admin-run-worker.js
