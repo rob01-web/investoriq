@@ -1347,19 +1347,28 @@ export default async function handler(req, res) {
           return res.status(400).json({ ok: false, error: 'Requeue is only available for failed, dead-lettered, or explicitly expired active jobs.' });
         }
 
-        const { data: requeueRows, error: requeueErr } = await supabaseAdmin.rpc('requeue_worker_job', {
-          p_job_id: controlJob.id,
-          p_claimed_by: 'admin-run-worker',
-          p_allow_expired_lease_recovery: eligibleExpiredActive,
-        });
+        let requeueRows;
+        let requeueErr;
+        if (eligibleTerminal) {
+          ({ data: requeueRows, error: requeueErr } = await supabaseAdmin.rpc('governed_requeue_worker_job', {
+            p_job_id: controlJob.id,
+            p_claimed_by: 'admin-run-worker',
+          }));
+        } else {
+          ({ data: requeueRows, error: requeueErr } = await supabaseAdmin.rpc('requeue_worker_job', {
+            p_job_id: controlJob.id,
+            p_claimed_by: 'admin-run-worker',
+            p_allow_expired_lease_recovery: eligibleExpiredActive,
+          }));
+        }
 
         const requeuedJob = Array.isArray(requeueRows) ? requeueRows[0] : requeueRows;
-        if (requeueErr || !requeuedJob?.id) {
+        if (requeueErr || !(requeuedJob?.id || requeuedJob?.job_id)) {
           return res.status(500).json({ ok: false, error: `Failed to requeue job: ${requeueErr?.message || 'requeue rejected'}` });
         }
 
         await writeWorkerAttemptEvent({
-          job: requeuedJob,
+          job: requeuedJob.id ? requeuedJob : { id: controlJob.id, user_id: controlJob.user_id },
           eventType: eligibleExpiredActive ? 'worker_reclaimed' : 'worker_admin_requeued',
           attemptId: controlJob.worker_attempt_id || null,
           fromStatus: currentStatus,
@@ -1369,6 +1378,8 @@ export default async function handler(req, res) {
             previous_attempt_count: controlJob.worker_attempt_count || 0,
             dead_lettered_at: controlJob.dead_lettered_at || null,
             lease_expired: leaseExpired,
+            purchase_already_linked: Boolean(requeuedJob.purchase_already_linked),
+            purchase_rebound: Boolean(requeuedJob.purchase_rebound),
           },
         });
 
@@ -1388,6 +1399,9 @@ export default async function handler(req, res) {
           job_id: controlJob.id,
           job_status: 'queued',
           worker_attempt_count: requeuedJob.worker_attempt_count || controlJob.worker_attempt_count || 0,
+          purchase_already_linked: Boolean(requeuedJob.purchase_already_linked),
+          purchase_rebound: Boolean(requeuedJob.purchase_rebound),
+          credit_balance_changed: false,
           message: 'Job requeued for worker processing.',
         });
       }
