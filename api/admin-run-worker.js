@@ -1,1 +1,1 @@
-@/tmp/investoriq-wire/api/admin-run-worker.js
+RESTORE_FROM_ARTIFACTS_admin-run-worker.patched.js
