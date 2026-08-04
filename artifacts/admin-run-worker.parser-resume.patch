@@ -1,0 +1,92 @@
+--- a/api/admin-run-worker.js
++++ b/api/admin-run-worker.js
+@@ -1962,10 +1962,25 @@
+             String(file.doc_type || '').toLowerCase() === 't12' &&
+             String(file.parse_status || '').toLowerCase() === 'parsed'
+           );
++          // Governed-retry resume: only when worker_admin_requeued exists for this job.
++          // Allows core T12/rent_roll files with parse_status=failed to be redispatched.
++          // First-run and non-governed paths remain unchanged (failed stays non-reparable).
++          const governedRetryCheck = await hasWorkerEvent(job.id, 'worker_admin_requeued');
++          if (governedRetryCheck?.error) {
++            throw new Error(
++              `Failed to check worker_admin_requeued event: ${governedRetryCheck.error.message}`
++            );
++          }
++          const isGovernedRetry = Boolean(governedRetryCheck.exists);
++          const isCoreReparableStatus = (parseStatus) => {
++            const ps = String(parseStatus || '').toLowerCase();
++            if (ps === 'pending' || ps === 'extracted') return true;
++            if (isGovernedRetry && ps === 'failed') return true;
++            return false;
++          };
+           const hasPendingStructuredPrecheck = (jobFiles || []).some((file) => {
+             const dt = String(file.doc_type || '').toLowerCase();
+-            const ps = String(file.parse_status || '').toLowerCase();
+-            return (dt === 'rent_roll' || dt === 't12') && (ps === 'pending' || ps === 'extracted');
++            return (dt === 'rent_roll' || dt === 't12') && isCoreReparableStatus(file.parse_status);
+           });
+           const extractionAlreadySatisfied =
+             hasRentRollParsedPrecheck && hasT12ParsedPrecheck && !hasPendingStructuredPrecheck;
+@@ -2239,31 +2254,33 @@
+
+               const anyPending = relevantFiles.some((file) => {
+                 const dt = String(file.doc_type || '').toLowerCase();
+-                const parseStatus = String(file.parse_status || '').toLowerCase();
+-                return (
+-                  parseStatus === 'pending' ||
+-                  ((dt === 't12' || dt === 'rent_roll') && parseStatus === 'extracted')
+-                );
++                if (dt !== 't12' && dt !== 'rent_roll') {
++                  return String(file.parse_status || '').toLowerCase() === 'pending';
++                }
++                return isCoreReparableStatus(file.parse_status);
+               });
+
+               if (anyPending) {
+                 const hasPendingRentRoll = relevantFiles.some((file) => {
+                   const dt = String(file.doc_type || '').toLowerCase();
+-                  const parseStatus = String(file.parse_status || '').toLowerCase();
+-                  return dt === 'rent_roll' && (parseStatus === 'pending' || parseStatus === 'extracted');
++                  return dt === 'rent_roll' && isCoreReparableStatus(file.parse_status);
+                 });
+                 const hasPendingT12 = relevantFiles.some((file) => {
+                   const dt = String(file.doc_type || '').toLowerCase();
+-                  const parseStatus = String(file.parse_status || '').toLowerCase();
+-                  return dt === 't12' && (parseStatus === 'pending' || parseStatus === 'extracted');
++                  return dt === 't12' && isCoreReparableStatus(file.parse_status);
+                 });
+
+                 if (hasPendingRentRoll) {
+                   for (const pendingFile of relevantFiles.filter((item) => {
+                     const dt = String(item.doc_type || '').toLowerCase();
+-                    const parseStatus = String(item.parse_status || '').toLowerCase();
+-                    return dt === 'rent_roll' && (parseStatus === 'pending' || parseStatus === 'extracted');
++                    return dt === 'rent_roll' && isCoreReparableStatus(item.parse_status);
+                   })) {
++                    if (String(pendingFile.parse_status || '').toLowerCase() === 'failed') {
++                      await supabaseAdmin
++                        .from('analysis_job_files')
++                        .update({ parse_status: 'pending', parse_error: null })
++                        .eq('id', pendingFile.id);
++                    }
+                     const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                       method: 'POST',
+                       headers: parserHeaders,
+@@ -2306,9 +2323,14 @@
+                 if (hasPendingT12) {
+                   for (const pendingFile of relevantFiles.filter((item) => {
+                     const dt = String(item.doc_type || '').toLowerCase();
+-                    const parseStatus = String(item.parse_status || '').toLowerCase();
+-                    return dt === 't12' && (parseStatus === 'pending' || parseStatus === 'extracted');
++                    return dt === 't12' && isCoreReparableStatus(item.parse_status);
+                   })) {
++                    if (String(pendingFile.parse_status || '').toLowerCase() === 'failed') {
++                      await supabaseAdmin
++                        .from('analysis_job_files')
++                        .update({ parse_status: 'pending', parse_error: null })
++                        .eq('id', pendingFile.id);
++                    }
+                     const t12Res = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                       method: 'POST',
+                       headers: parserHeaders,
