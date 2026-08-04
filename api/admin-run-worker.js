@@ -1260,6 +1260,7 @@ export default async function handler(req, res) {
       'retry_worker_job',
       'mark_still_reviewing',
       'process_exact_queued_job',
+      'fail_exact_expired_worker_job',
     ]);
     let exactJobMode = false;
 
@@ -1582,6 +1583,231 @@ export default async function handler(req, res) {
         // Continue into the normal stage loops without queue scanning.
         // Stage queries already filter by worker_claimed_by = workerInvocationId.
         exactJobMode = true;
+      } else if (controlledAction === 'fail_exact_expired_worker_job') {
+        // Isolated exact-job expired-lease recovery. Never enters the ordinary claim/stage loop.
+        const currentStatus = String(controlJob.status || '');
+        const eligibleActiveStatuses = [
+          'extracting',
+          'underwriting',
+          'scoring',
+          'rendering',
+          'pdf_generating',
+          'publishing',
+        ];
+        const leaseExpiresAt = controlJob.worker_lease_expires_at
+          ? new Date(controlJob.worker_lease_expires_at)
+          : null;
+        const leaseExpired = leaseExpiresAt ? leaseExpiresAt <= new Date(nowIso) : false;
+        const attemptId = controlJob.worker_attempt_id || null;
+        const claimedBy = controlJob.worker_claimed_by || null;
+        const attemptCount = Number(controlJob.worker_attempt_count || 0);
+
+        if (!eligibleActiveStatuses.includes(currentStatus)) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Exact expired recovery requires an eligible active worker status with an expired lease.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(400).json({
+            ok: false,
+            error: 'Exact expired recovery is only available for eligible active expired worker jobs.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
+        if (!leaseExpiresAt || !leaseExpired) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: leaseExpiresAt
+              ? 'Exact expired recovery rejected because the worker lease is still active.'
+              : 'Exact expired recovery rejected because worker_lease_expires_at is null.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(409).json({
+            ok: false,
+            error: leaseExpiresAt
+              ? 'Exact expired recovery rejected: worker lease is still active.'
+              : 'Exact expired recovery rejected: worker lease expiry is null.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
+        if (!attemptId || !claimedBy || !Number.isFinite(attemptCount)) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Exact expired recovery requires worker_attempt_id, worker_claimed_by, and worker_attempt_count.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(409).json({
+            ok: false,
+            error: 'Exact expired recovery rejected: missing attempt fencing fields.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
+        await writeWorkerAttemptEvent({
+          job: controlJob,
+          eventType: 'worker_lease_expired',
+          attemptId,
+          fromStatus: currentStatus,
+          toStatus: currentStatus,
+          meta: {
+            worker_lease_expires_at: controlJob.worker_lease_expires_at || null,
+            threshold_minutes: 30,
+            exact_expired_recovery: true,
+            admin_action: 'fail_exact_expired_worker_job',
+          },
+        });
+
+        const { data: timeoutRows, error: timeoutErr } = await supabaseAdmin.rpc('fail_expired_worker_job', {
+          p_job_id: controlJob.id,
+          p_worker_attempt_id: attemptId,
+          p_expected_current_status: currentStatus,
+          p_error_code: 'TIMEOUT',
+          p_error_message:
+            'Processing timed out. Please log in to your InvestorIQ dashboard to review the job status.',
+          p_failure_reason: 'worker_timeout',
+          p_claimed_by: claimedBy,
+        });
+
+        if (timeoutErr) {
+          return res.status(500).json({
+            ok: false,
+            error: `Failed to apply exact expired recovery: ${timeoutErr.message}`,
+            job_id: controlJob.id,
+          });
+        }
+
+        const timeoutRow = Array.isArray(timeoutRows) ? timeoutRows[0] : timeoutRows;
+        if (!timeoutRow?.id) {
+          await writeStaleWorkerAttemptEvent(controlJob, attemptId, currentStatus, {
+            reason: 'exact_expired_recovery_rejected',
+            worker_lease_expires_at: controlJob.worker_lease_expires_at || null,
+          });
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Exact expired recovery fencing rejected the fail_expired_worker_job call.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(409).json({
+            ok: false,
+            error: 'Exact expired recovery rejected: attempt fencing no longer matches.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
+        const terminalStatus = String(timeoutRow.status || '') === 'dead_letter' ? 'dead_letter' : 'failed';
+        const timeoutTransitionErr = await writeStatusTransitionArtifact(
+          controlJob.id,
+          currentStatus,
+          terminalStatus,
+          {
+            user_id: controlJob.user_id,
+            event: 'exact_expired_recovery',
+            threshold_minutes: 30,
+            admin_action: 'fail_exact_expired_worker_job',
+          }
+        );
+        if (timeoutTransitionErr) {
+          return res.status(500).json({
+            ok: false,
+            error: `Failed to write status transition artifact: ${timeoutTransitionErr.message}`,
+            job_id: controlJob.id,
+          });
+        }
+
+        await writeWorkerAttemptEvent({
+          job: timeoutRow,
+          eventType: terminalStatus === 'dead_letter' ? 'worker_dead_lettered' : 'worker_attempt_failed',
+          attemptId,
+          fromStatus: currentStatus,
+          toStatus: terminalStatus,
+          meta: {
+            error_code: 'TIMEOUT',
+            worker_lease_expires_at: controlJob.worker_lease_expires_at || null,
+            threshold_minutes: 30,
+            exact_expired_recovery: true,
+            admin_action: 'fail_exact_expired_worker_job',
+          },
+        });
+
+        let entitlementRestored = false;
+        let entitlementSkipped = false;
+        try {
+          const restoreResult = await restoreEntitlementForFailedJob(
+            timeoutRow,
+            'worker_timeout',
+            'TIMEOUT',
+            timeoutRow.worker_attempt_id || attemptId
+          );
+          if (restoreResult?.skipped === true) {
+            entitlementSkipped = true;
+            entitlementRestored = false;
+          } else if (restoreResult?.restored === true) {
+            entitlementRestored = true;
+          }
+        } catch (restoreErr) {
+          console.error(
+            `[worker] Exact expired recovery entitlement restore failed for job ${controlJob.id}:`,
+            restoreErr?.message || restoreErr
+          );
+        }
+
+        const auditErr = await writeAdminControlAudit(controlJob, controlledAction, 'allowed', {
+          previous_status: controlJob.status,
+          previous_error_code: controlJob.error_code || null,
+          to_status: terminalStatus,
+          note: `Exact expired active job recovered to ${terminalStatus}.`,
+        });
+        if (auditErr) {
+          return res.status(500).json({ ok: false, error: `Failed to write audit event: ${auditErr.message}` });
+        }
+
+        // Also record a detailed worker_event for the admin control with fencing fields.
+        await writeWorkerEventArtifact(controlJob.id, controlJob.user_id, 'admin_control_fail_exact_expired_worker_job', {
+          event: 'admin_control_fail_exact_expired_worker_job',
+          action: 'fail_exact_expired_worker_job',
+          result: 'allowed',
+          previous_status: currentStatus,
+          final_status: terminalStatus,
+          worker_attempt_id: attemptId,
+          worker_claimed_by: claimedBy,
+          worker_attempt_count: attemptCount,
+          worker_lease_expires_at: controlJob.worker_lease_expires_at || null,
+          entitlement_restored: entitlementRestored,
+          entitlement_already_restored: entitlementSkipped,
+          timestamp: nowIso,
+        });
+
+        return res.status(200).json({
+          ok: true,
+          action: controlledAction,
+          job_id: controlJob.id,
+          previous_status: currentStatus,
+          final_status: terminalStatus,
+          worker_attempt_count: attemptCount,
+          worker_attempt_id: attemptId,
+          entitlement_restored: entitlementRestored,
+          entitlement_already_restored: entitlementSkipped,
+          credit_balance_changed: false,
+          message: `Exact expired worker job recovered to ${terminalStatus}.`,
+        });
       } else {
         return res.status(400).json({ ok: false, error: 'Unsupported controlled action' });
       }
