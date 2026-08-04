@@ -1,6 +1,8 @@
+diff --git a/api/admin-run-worker.js b/api/admin-run-worker.js
+index 920b7b2..4cb8222 100644
 --- a/api/admin-run-worker.js
 +++ b/api/admin-run-worker.js
-@@ -1962,10 +1962,25 @@
+@@ -1962,10 +1962,25 @@ export default async function handler(req, res) {
              String(file.doc_type || '').toLowerCase() === 't12' &&
              String(file.parse_status || '').toLowerCase() === 'parsed'
            );
@@ -28,7 +30,7 @@
            });
            const extractionAlreadySatisfied =
              hasRentRollParsedPrecheck && hasT12ParsedPrecheck && !hasPendingStructuredPrecheck;
-@@ -2239,31 +2254,33 @@
+@@ -2239,31 +2254,33 @@ export default async function handler(req, res) {
 
                const anyPending = relevantFiles.some((file) => {
                  const dt = String(file.doc_type || '').toLowerCase();
@@ -73,7 +75,7 @@
                      const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
                        method: 'POST',
                        headers: parserHeaders,
-@@ -2306,9 +2323,14 @@
+@@ -2306,9 +2323,14 @@ export default async function handler(req, res) {
                  if (hasPendingT12) {
                    for (const pendingFile of relevantFiles.filter((item) => {
                      const dt = String(item.doc_type || '').toLowerCase();
