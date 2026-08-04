@@ -1259,7 +1259,9 @@ export default async function handler(req, res) {
       'requeue_failed_job',
       'retry_worker_job',
       'mark_still_reviewing',
+      'process_exact_queued_job',
     ]);
+    let exactJobMode = false;
 
     const writeAdminControlAudit = async (job, actionName, result, meta = {}) => {
       const auditPayload = {
@@ -1491,16 +1493,110 @@ export default async function handler(req, res) {
         });
       }
 
-      return res.status(400).json({ ok: false, error: 'Unsupported controlled action' });
+      if (controlledAction === 'process_exact_queued_job') {
+        const currentStatus = String(controlJob.status || '');
+        if (currentStatus !== 'queued') {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Exact-job process requires a currently queued job.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(409).json({
+            ok: false,
+            error: 'Exact-job process is only available for queued jobs.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
+        const leaseExpiresAt = controlJob.worker_lease_expires_at
+          ? new Date(controlJob.worker_lease_expires_at)
+          : null;
+        const hasActiveLease = leaseExpiresAt ? leaseExpiresAt > new Date(nowIso) : false;
+        if (hasActiveLease) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Exact-job process rejected because the job holds an active worker lease.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(409).json({
+            ok: false,
+            error: 'Exact-job process rejected: active worker lease.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
+        const { data: claimRows, error: claimErr } = await supabaseAdmin.rpc('claim_worker_job', {
+          p_job_id: controlJob.id,
+          p_claimed_by: workerInvocationId,
+        });
+        const claimedJob = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+        if (claimErr || !claimedJob?.id) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: claimErr?.message || 'Exact claim returned no row.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(409).json({
+            ok: false,
+            error: 'Exact claim failed or job was not claimable.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
+        await writeWorkerAttemptEvent({
+          job: claimedJob,
+          eventType: 'worker_claimed',
+          attemptId: claimedJob.worker_attempt_id || null,
+          fromStatus: 'queued',
+          toStatus: 'extracting',
+          meta: {
+            worker_lease_expires_at: claimedJob.worker_lease_expires_at || null,
+            worker_claimed_by: claimedJob.worker_claimed_by || null,
+            invocation_id: workerInvocationId,
+            exact_job_mode: true,
+          },
+        });
+
+        const auditErr = await writeAdminControlAudit(controlJob, controlledAction, 'allowed', {
+          previous_status: controlJob.status,
+          previous_error_code: controlJob.error_code || null,
+          to_status: 'extracting',
+          note: 'Exact queued job claimed for isolated worker processing.',
+        });
+        if (auditErr) {
+          return res.status(500).json({ ok: false, error: `Failed to write audit event: ${auditErr.message}` });
+        }
+
+        // Continue into the normal stage loops without queue scanning.
+        // Stage queries already filter by worker_claimed_by = workerInvocationId.
+        exactJobMode = true;
+      } else {
+        return res.status(400).json({ ok: false, error: 'Unsupported controlled action' });
+      }
     }
 
     // Timeout guard: mark long-running jobs as failed
-    const { data: expiredRecoveryJobs, error: inProgressError } = await supabase
-      .from('analysis_jobs')
-      .select('id, user_id, status, started_at, created_at, error_code, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
-      .in('status', inProgressStatuses)
-      .not('worker_lease_expires_at', 'is', null)
-      .lte('worker_lease_expires_at', nowIso);
+    // Skipped in exact-job mode so this request cannot mutate unrelated jobs.
+    const { data: expiredRecoveryJobs, error: inProgressError } = exactJobMode
+      ? { data: [], error: null }
+      : await supabase
+          .from('analysis_jobs')
+          .select('id, user_id, status, started_at, created_at, error_code, worker_attempt_id, worker_lease_expires_at, worker_claimed_by')
+          .in('status', inProgressStatuses)
+          .not('worker_lease_expires_at', 'is', null)
+          .lte('worker_lease_expires_at', nowIso);
 
     if (inProgressError) {
       return res.status(500).json({
@@ -1631,12 +1727,15 @@ export default async function handler(req, res) {
       let passTransitions = 0;
 
       // Pull a small batch of queued jobs
-      const { data: queuedJobs, error: queuedErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .select('id, user_id, status, started_at, created_at, report_type')
-        .eq('status', 'queued')
-        .order('created_at', { ascending: true })
-        .limit(jobLimit);
+      // Exact-job mode never scans the queue or claims any other job.
+      const { data: queuedJobs, error: queuedErr } = exactJobMode
+        ? { data: [], error: null }
+        : await supabaseAdmin
+            .from('analysis_jobs')
+            .select('id, user_id, status, started_at, created_at, report_type')
+            .eq('status', 'queued')
+            .order('created_at', { ascending: true })
+            .limit(jobLimit);
 
       if (queuedErr) {
         return res.status(500).json({ error: 'Failed to fetch queued jobs', details: queuedErr.message });
