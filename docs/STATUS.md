@@ -3,94 +3,102 @@
 Current date: August 4, 2026
 
 Current authority:
-- Treat `!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-07-31.md` as the practical daily handoff (with Aug 2 parser rescue and Aug 3–4 governed-requeue closeout below).
+- Treat `!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-08-04.md` as the practical daily handoff.
 - Product and launch decisions remain governed by `docs/INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md`.
 - Premium assignment remains `false`.
-- RETEST 39 has executed once after H6 production migration; it is **not authorized for requeue**.
+- RETEST 39 has executed twice (initial failure + one governed requeue attempt); it is **not authorized for a third requeue** in this closeout.
 - RETEST 40 must **not** be created.
 - No broad tests, no source-code edits outside explicitly authorized packets.
 
 ## Current repository and deployment state
 
 - Branch: `main`
-- HEAD / origin/main: `b86872f` — `fix(worker): wire governed requeue endpoint`
-- Working tree: clean after docs closeout
-- Vercel Production: Ready for the governed-requeue wiring commit
-- Production aliases: `investoriq.tech`, `www.investoriq.tech`
+- HEAD / origin/main: `1bceb47` — `fix(worker): deploy governed-retry parser resume`
+- Working tree: clean before docs closeout
+- Vercel Production: Ready / Latest / Current for `1bceb47`
+- Production domain: `investoriq.tech`
 - Parser fix `a06b897` remains an ancestor of current main
-- `api/parse/parse-doc.js` intact; never modify via GitHub Contents API writes
 - Permanent boundary: never use GitHub Contents API replacement writes on `api/admin-run-worker.js` or `api/parse/parse-doc.js`. Edit large source files locally with surgical patches and push through normal Git.
 
-## Aug 2, 2026 — Parser rescue and RETEST 39 record
+## Completed sequence (Aug 2–4, 2026)
 
-- Parser fix commit: `a06b897` — `fix(parser): hash spreadsheet T12 and rent-roll sources`
-- RETEST 39 job `084a982e-ff6e-49b0-a7f7-473ed314aada` failed with `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS` because spreadsheet T12 / Rent Roll paths referenced undefined `sourceContentSha256`
-- Root cause was not a customer bad-document issue
-- Credit restored; purchase left unbound (`consumed_at = null`, `job_id = null`)
-- **RETEST 39 is not requeued**
-- **RETEST 40 must not be created**
-- Parser-fix production deployment verified Ready via Vercel commit metadata
+1. **Parser rescue** — `a06b897` fixed undefined `sourceContentSha256` in spreadsheet T12 and rent-roll parser paths; deployed.
+2. **Governed requeue** — production RPC installed and verified:
+   - `public.governed_requeue_worker_job(p_job_id uuid, p_claimed_by text)`
+   - service-role-only, `SECURITY DEFINER`, owner `postgres`, safe `search_path=public`, exactly one overload
+   - production verification complete
+3. **Exact-job worker isolation** — `05ccee4` action `process_exact_queued_job`; exact-job / H6 / governed-requeue smokes PASS; deployed.
+4. **RETEST 39 governed retry attempt 2**
+   - job ID: `084a982e-ff6e-49b0-a7f7-473ed314aada`
+   - purchase rebound: `db421bc7-c850-4429-ab13-e1e53b6161a1`
+   - credit balance did not change
+   - a plain automated worker claimed the job before owner exact-mode invocation
+   - worker attempt count: `2`
+   - attempt ID: `814344fd-9980-4fe0-9184-6342419b6acf`
+   - final status: `failed`
+   - error: `MISSING_STRUCTURED_FINANCIAL_ARTIFACTS`
+   - RETEST 39 was not requeued again; RETEST 40 was not created
+5. **Parser-resume diagnosis**
+   - T12 `analysis_job_files.parse_status` remained `failed`
+   - extraction re-entry previously reparsed only `pending` or `extracted`
+   - attempt 2 skipped parsing and reused stale parser state
+   - valid rent-roll and support artifacts remained present
+   - source files remain reusable via existing `job_id`, `file_id`, `doc_type`, and `object_path` (no re-upload required)
+6. **Legacy worker mapping**
+   - workflow: `.github/workflows/worker-kick.yml` (`InvestorIQ Worker Kick`)
+   - prior automatic schedule: `*/5 * * * *`
+   - manual fallback: `workflow_dispatch`
+   - calls both `https://investoriq.tech/api/admin/run-eligible-jobs-once` and `https://investoriq.tech/api/admin-run-worker`
+   - `vercel.json` has no cron
+   - legacy GitHub schedule was the most likely source of attempt 2 claim
+7. **Legacy schedule isolation**
+   - automatic schedule commented out / paused
+   - `workflow_dispatch` and both curl fallback steps remain
+   - no permanent workflow retirement yet; retire only after successful Vercel-controlled proof
+8. **Governed-retry parser resume** — `1bceb47` changed only `api/admin-run-worker.js`; deployed Ready / Latest / Current
+   - detects governed retry via `hasWorkerEvent(job.id, 'worker_admin_requeued')`
+   - governed retry allows core T12/rent-roll with `pending`, `extracted`, or `failed`
+   - non-governed behavior unchanged; valid parsed core and support artifacts preserved
+   - failed core status resets to `pending` before parser redispatch
+   - terminal fail-closed retained; no automatic retry loop
+9. **Final targeted validation**
+   - `node tests/qa/governed-retry-parser-resume-smoke.js` → PASS
+   - `node tests/qa/exact-job-worker-claim-smoke.js` → PASS
+   - `node tests/qa/h6-worker-claim-lease-fencing-smoke.js` → PASS
+   - `node tests/qa/governed-requeue-worker-job-smoke.js` → PASS
+   - `git diff --check` → PASS
+10. **Transport incident cleanup**
+    - malformed patch, truncated Base64, checksum, failed chunk, and corrupted bundle artifacts removed
+    - final worker repair applied via validated surgical patch and normal Git push
+    - permanent Contents API boundary on large worker/parser sources remains
 
-## Aug 3–4, 2026 — Governed requeue wiring closeout
+## Current HOLD / next packet
 
-Problem:
-- Admin Dashboard Operational Recovery Retry already called `POST /api/admin-run-worker` with `{"action":"requeue_failed_job","job_id":"<exact job id>"}`
-- Linked failed jobs (purchase still consumed) could requeue
-- Credit-restored failed jobs requeued but later failed claim with `PURCHASE_NOT_CONSUMED`
+- Parser-resume repair is deployed at `1bceb47`
+- Legacy automatic GitHub schedule is paused; `workflow_dispatch` remains
+- RETEST 39 has not been requeued a third time
+- No worker has been invoked after deployment
+- RETEST 40 remains forbidden
+- Premium remains false
 
-Repair on main:
-- Migration: `supabase/migrations/20260803000100_governed_requeue_worker_job.sql`
-- Smoke: `tests/qa/governed-requeue-worker-job-smoke.js`
-- API wiring in `api/admin-run-worker.js` (commit `b86872f`)
-- RPC: `public.governed_requeue_worker_job(p_job_id uuid, p_claimed_by text)`
-- Terminal failed/dead-letter path calls `governed_requeue_worker_job`
-- Expired active lease recovery still calls `requeue_worker_job`
-- No automatic worker invocation after requeue
-- Exact-job worker isolation is **not** implemented
+**Exact next packet: production verification only before any RETEST 39 mutation.**
 
-Governed RPC behavior (source contract; production schema not yet applied):
-- One atomic PL/pgSQL transaction; locks exact job and purchase
-- Allows failed/dead-letter only; blocks published and ineligible states
-- Reuses valid linked consumed purchase, else exact restored purchase from sole distinct `analysis_job_events.meta->>'purchase_id'` where `event_type = 'entitlement_restored'` for that job
-- Rejects missing/ambiguous lineage; verifies user and product type
-- Atomically rebinds original restored purchase and requeues the same job
-- No credit decrement; no new job, report, purchase, or restoration event
+It must prove:
+1. origin/main and Vercel Production both point to `1bceb47`
+2. deployed worker source contains the governed-retry parser-resume gate
+3. GitHub automatic schedule remains paused
+4. `workflow_dispatch` remains available
+5. no other automatic Vercel cron exists
+6. no worker, RPC, requeue, purchase, credit, job, report, or artifact mutation occurs during verification
 
-Emergency worker restorations (do not repeat):
-- GitHub Contents API attempts truncated `api/admin-run-worker.js` into stubs
-- Restore commits: `041af76`, `8d326fc`
-- Final safe wiring applied via local surgical patch → `b86872f`
+Only after that verification PASS may the owner separately decide whether to authorize exactly one further governed RETEST 39 requeue and immediate exact-job invocation.
 
-Validation:
-- `node tests/qa/governed-requeue-worker-job-smoke.js` → PASS
-- `node tests/qa/h6-worker-claim-lease-fencing-smoke.js` → PASS
-- `git diff --check` → PASS
-- H8 smoke not completed (known missing local axios)
+## Permanent prohibitions
 
-## Remaining production gates
-
-Completed:
-- Parser repair committed and deployed
-- Full worker endpoint restored
-- Governed requeue migration and smoke committed
-- API wiring committed and deployed
-- Targeted tests passed
-
-Not completed:
-- Migration `20260803000100_governed_requeue_worker_job.sql` **not applied** to production Supabase
-- Production RPC signature/security/grants **not verified**
-- Exact-job worker isolation **not implemented**
-- RETEST 39 **not requeued or executed**
-- RETEST 40 **not created**
-
-## Exact next packet
-
-Production-gate only the governed retry migration:
-1. Verify clean main at `b86872f`
-2. Inspect only `supabase/migrations/20260803000100_governed_requeue_worker_job.sql`
-3. Apply only that migration through the authorized Supabase production mechanism
-4. Verify RPC signature, security definer, safe search_path, service_role-only grants
-5. Do not invoke the RPC, requeue RETEST 39, invoke the worker, or create RETEST 40
-6. Then map the smallest exact-job worker-isolation packet
-
-Do not treat this status note as authorization to requeue RETEST 39, create RETEST 40, apply the migration without a dedicated packet, or edit large source files via GitHub Contents API.
+- No RETEST 39 requeue in this docs packet
+- No worker invocation
+- No RPC invocation
+- No RETEST 40
+- No Premium activation
+- No GitHub Contents API full-file write to protected large source files
+- No broad audits
