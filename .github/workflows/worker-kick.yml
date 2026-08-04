@@ -1,9 +1,11 @@
 name: InvestorIQ Worker Kick
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes
-  workflow_dispatch: {}   # lets you run it manually too
+  # Automatic schedule temporarily paused for controlled Vercel exact-job proof.
+  # Restore the schedule block below after Vercel worker success is proven.
+  # schedule:
+  #   - cron: "*/5 * * * *"   # every 5 minutes
+  workflow_dispatch: {}   # manual emergency fallback retained
 
 concurrency:
   group: worker-kick
