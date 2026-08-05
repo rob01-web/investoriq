@@ -17,14 +17,14 @@ Operating rules:
 - No unnecessary duplication between Screening and Underwriting.
 - Premium remains exactly false until separately authorized.
 
-Current state (August 4, 2026):
+Current state (August 5, 2026):
 - H0 through H10 complete (including H6 correction `9950ab0`).
-- Parser rescue `a06b897` is an ancestor of current main.
-- Governed requeue production RPC installed and verified.
-- Exact-job worker isolation deployed (`05ccee4`, `process_exact_queued_job`).
-- Governed-retry parser resume deployed (`1bceb47`).
-- Legacy GitHub automatic schedule paused; `workflow_dispatch` retained.
-- RETEST 39 has two attempts (initial + one governed requeue); not authorized for a third requeue in this closeout.
+- Implementation HEAD before this docs closeout: `6c5c4e8` (dead_letter status constraint).
+- Ancestors: `087f97d` (fail_exact_expired_worker_job), `1bceb47` (governed-retry parser resume), `a06b897` (parser rescue).
+- RETEST 39 terminal `dead_letter` (attempt 3, TIMEOUT during rendering); commercial integrity PASS.
+- Governed parser-resume proof: PASS. End-to-end publication: HOLD.
+- Production worker: Supabase pg_cron job 1 (`investoriq-admin-run-worker`, `*/3 * * * *`) active again.
+- Legacy GitHub automatic schedule remains paused; `workflow_dispatch` retained.
 - RETEST 40 must not be created.
 - Premium remains false.
 
@@ -36,18 +36,21 @@ Current state (August 4, 2026):
 | Governed requeue RPC | production verified | Complete |
 | Exact-job isolation | `05ccee4` | Deployed |
 | RETEST 39 attempt 2 diagnosis | MISSING_STRUCTURED_FINANCIAL_ARTIFACTS / failed T12 not reparsed | Complete |
-| Two-worker mapping | GH schedule most likely claim source | Complete |
-| Legacy schedule pause | `worker-kick.yml` schedule commented; dispatch kept | Complete |
-| Governed-retry parser resume | `1bceb47` | Deployed Ready / Latest / Current |
-| Targeted smokes | parser-resume, exact-job, H6, governed-requeue, `git diff --check` | PASS |
+| Legacy GH schedule pause | `worker-kick.yml` schedule commented; dispatch kept | Complete |
+| Governed-retry parser resume | `1bceb47` | Deployed; attempt 3 advanced to rendering (PASS) |
+| Exact expired recovery action | `087f97d` | Deployed; invoked once → dead_letter |
+| Dead-letter status constraint | `6c5c4e8` + production apply | Complete |
+| RETEST 39 terminal recovery | exact recovery; entitlement_restored ×1; no 4th attempt | Complete |
+| Production scheduler mapping | Supabase pg_cron job 1 `*/3` via pg_net | Mapped; active |
 
 ## Remaining sequence
 
-1. **Next packet:** production verification only for `1bceb47` (origin/main + Vercel Production align; parser-resume gate present; GH schedule paused; `workflow_dispatch` present; no Vercel cron; zero production mutations).
-2. Only after verification PASS, owner may separately authorize exactly one further governed RETEST 39 requeue + immediate exact-job invocation.
-3. Retire legacy GitHub worker only after successful Vercel-controlled proof.
-4. Continue launch hygiene under explicit packets only.
-5. Premium remains off.
+1. **Next packet:** read-only rendering-timeout investigation for RETEST 39 attempt 3 (where rendering stopped; partial artifacts; Vercel timeout / PDF latency / OOM / abort / exception; smallest safe source repair; zero production mutation).
+2. Do not authorize another RETEST 39 requeue.
+3. Do not authorize RETEST 40.
+4. Do not permanently retire GitHub fallback yet.
+5. Continue launch hygiene under explicit packets only.
+6. Premium remains off.
 
 ## Horizon checklist
 
@@ -63,6 +66,9 @@ Current state (August 4, 2026):
 | H8 | Terminal outcome, manifest, restoration | Explicit terminals; no double-grant | Complete |
 | H9 | Corrected and replacement revisions | Lineage-preserving | Complete |
 | H10 | Publication, artifacts, Report History | Delivery state matches artifacts | Complete |
-| Post-H10 | Governed admin retry | Production RPC verified; parser-resume deployed | Complete (source + production RPC + parser-resume) |
-| Post-H10 | Exact-job isolation | `process_exact_queued_job` deployed | Complete |
-| Post-H10 | Two-worker isolation | GH automatic schedule paused; Vercel proof pending | Partial — schedule paused; proof next |
+| Post-H10 | Governed admin retry | Production RPC verified; parser-resume deployed | Complete |
+| Post-H10 | Exact-job isolation | `process_exact_queued_job` + `fail_exact_expired_worker_job` deployed | Complete |
+| Post-H10 | Dead-letter status constraint | Production CHECK includes `dead_letter` | Complete |
+| Post-H10 | Two-worker isolation | GH schedule paused; Supabase pg_cron mapped and controlled | Complete (mapping + pause/restore proven) |
+| Post-H10 | RETEST 39 commercial closeout | dead_letter; exactly-once entitlement; no 4th attempt | Complete |
+| Post-H10 | End-to-end publication proof | Live published underwriting PDF under controlled recovery | HOLD — rendering timeout |
