@@ -1283,9 +1283,61 @@ function renderAppraisalContextSection(customerSurfaceModel = null) {
       : "",
   ].filter(Boolean);
   if (!rows.length) return "";
+  const wholePropertyValue = customerSurfaceModel?.valueSemantics?.wholePropertyValue || {};
+  const appraisalValue = toFiniteNumber(facts.appraisal_value);
+  const appraisalStabilizedNoi = toFiniteNumber(facts.stabilized_noi);
+  const appraisalStabilizedCapRate = toFiniteNumber(facts.stabilized_cap_rate);
+  const investorIqNoi = toFiniteNumber(wholePropertyValue.noi);
+  const investorIqGoingInCapRate = toFiniteNumber(wholePropertyValue.goingInCapRate);
+  const purchasePrice = toFiniteNumber(wholePropertyValue.purchasePrice);
+  const investorIqImpliedValue = toFiniteNumber(wholePropertyValue.impliedValueAtGoingInCapRate);
+  const units = toFiniteNumber(customerSurfaceModel?.sections?.unitMix?.facts?.total_units);
+  const perUnitReady = Number.isFinite(units) && units > 0;
+  const comparisonReady =
+    Number.isFinite(appraisalValue) &&
+    Number.isFinite(appraisalStabilizedNoi) &&
+    Number.isFinite(appraisalStabilizedCapRate) &&
+    appraisalStabilizedCapRate > 0 &&
+    Number.isFinite(investorIqNoi) &&
+    Number.isFinite(investorIqGoingInCapRate) &&
+    investorIqGoingInCapRate > 0 &&
+    Number.isFinite(purchasePrice) &&
+    Number.isFinite(investorIqImpliedValue);
+  const comparisonRows = comparisonReady
+    ? [
+        `<tr><td>InvestorIQ Deterministic T12-Based Indication</td><td></td></tr>`,
+        `<tr><td>T12 NOI basis</td><td>${formatMoney(investorIqNoi)}</td></tr>`,
+        `<tr><td>Accepted going-in cap rate</td><td>${formatPercentDisplay(investorIqGoingInCapRate)}</td></tr>`,
+        `<tr><td>Implied whole-property value</td><td>${formatMoney(investorIqImpliedValue)}</td></tr>`,
+        perUnitReady ? `<tr><td>Implied value per unit</td><td>${formatMoney(Math.round(investorIqImpliedValue) / units)}</td></tr>` : "",
+        `<tr><td>Purchase-Assumption Context</td><td></td></tr>`,
+        `<tr><td>Purchase price</td><td>${formatMoney(purchasePrice)}</td></tr>`,
+        perUnitReady ? `<tr><td>Purchase price per unit</td><td>${formatMoney(purchasePrice / units)}</td></tr>` : "",
+        `<tr><td>Uploaded Appraisal Context</td><td></td></tr>`,
+        `<tr><td>Appraised value</td><td>${formatMoney(appraisalValue)}</td></tr>`,
+        `<tr><td>Appraisal stabilized NOI</td><td>${formatMoney(appraisalStabilizedNoi)}</td></tr>`,
+        `<tr><td>Appraisal stabilized cap rate</td><td>${formatPercentDisplay(appraisalStabilizedCapRate)}</td></tr>`,
+        perUnitReady ? `<tr><td>Appraisal value per unit</td><td>${formatMoney(appraisalValue / units)}</td></tr>` : "",
+      ].filter(Boolean).join("")
+    : "";
+  const deltaRows = comparisonReady
+    ? [
+        `<tr><td>InvestorIQ implied value less purchase price</td><td>${formatMoney(Math.round(investorIqImpliedValue - purchasePrice))}</td></tr>`,
+        `<tr><td>Appraised value less purchase price</td><td>${formatMoney(Math.round(appraisalValue - purchasePrice))}</td></tr>`,
+        `<tr><td>Appraised value less InvestorIQ implied value</td><td>${formatMoney(Math.round(appraisalValue - investorIqImpliedValue))}</td></tr>`,
+      ].join("")
+    : "";
+  const valuationAppraisalComparison = comparisonReady
+    ? `<div class="subsection-block" data-iq-subsection="valuation-appraisal-comparison">
+        <p class="subsection-title">Valuation / Appraisal Comparison</p>
+        <table class="detail-table"><tbody>${comparisonRows}</tbody></table>
+        <div class="subsection-block"><p class="subsection-title">Comparison Differences</p><table class="detail-table"><tbody>${deltaRows}</tbody></table></div>
+        <p class="footer-note">The InvestorIQ indication is calculated from accepted T12 NOI and accepted going-in cap rate. Purchase price is transaction context. Appraisal facts are uploaded third-party context. No authority replaces another.</p>
+      </div>`
+    : "";
   return renderSection(
     section.visibleLabel || "Appraisal / Valuation Context",
-    `<table class="detail-table numeric-context-table"><tbody>${rows.join("")}</tbody></table><p class="footer-note">Appraisal facts are shown as document context only and do not override T12 NOI, purchase assumptions, or the report's deterministic valuation analysis.</p>`,
+    `<table class="detail-table numeric-context-table"><tbody>${rows.join("")}</tbody></table>${valuationAppraisalComparison}<p class="footer-note">Appraisal facts are shown as document context only and do not override T12 NOI, purchase assumptions, or the report's deterministic valuation analysis.</p>`,
     { pageBreakBefore: false }
   );
 }

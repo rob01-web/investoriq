@@ -54,7 +54,16 @@ function buildValidatedCoreTestPayload(testPayloads = {}, { includeT12Artifact =
       parse_status: "parsed",
       parse_error: null,
     },
-    ...existingDocumentSources.filter((source) => !["t12-file", "rent-roll-file"].includes(source?.id || source?.file_id)),
+    ...(testPayloads?.appraisalPayload ? [{
+      file_id: "appraisal-file",
+      original_filename: "Handler_Fixture_Appraisal.pdf",
+      doc_type: "appraisal",
+      mime_type: "application/pdf",
+      parse_status: "parsed",
+      parse_error: null,
+      semantic_doc_role: "appraisal",
+    }] : []),
+    ...existingDocumentSources.filter((source) => !["t12-file", "rent-roll-file", ...(testPayloads?.appraisalPayload ? ["appraisal-file"] : [])].includes(source?.id || source?.file_id)),
   ];
   const coverageArtifacts = [...existingCoverageArtifacts];
   if (includeT12Artifact) {
@@ -127,9 +136,29 @@ function buildValidatedCoreTestPayload(testPayloads = {}, { includeT12Artifact =
       });
     }
   }
+  const appraisalPayload = testPayloads?.appraisalPayload;
+  const appraisalFile = sourceByRole("appraisal");
+  if (appraisalFile && appraisalPayload && typeof appraisalPayload === "object") {
+    supportArtifact(appraisalFile, "appraisal_parsed", {
+      validated: true,
+      appraised_value: appraisalPayload.appraised_value,
+      appraisal_value: appraisalPayload.appraised_value,
+      stabilized_noi: appraisalPayload.stabilized_noi,
+      stabilized_cap_rate: appraisalPayload.stabilized_cap_rate,
+    });
+  }
   const supportSourceText = (source) => {
     if (source?.semantic_doc_role === "property_tax" && testPayloads?.propertyTaxPayload) {
       return `Property tax bill annual property tax $${Number(testPayloads.propertyTaxPayload.annual_tax).toLocaleString("en-US")}`;
+    }
+    if (source?.semantic_doc_role === "appraisal" && appraisalPayload) {
+      return [
+        "Appraisal Summary / Valuation Context",
+        Number.isFinite(Number(appraisalPayload.appraised_value)) ? `Appraised Value $${Number(appraisalPayload.appraised_value).toLocaleString("en-US")}` : "",
+        Number.isFinite(Number(appraisalPayload.stabilized_noi)) ? `Stabilized NOI $${Number(appraisalPayload.stabilized_noi).toLocaleString("en-US")}` : "",
+        Number.isFinite(Number(appraisalPayload.stabilized_cap_rate)) ? `Stabilized Cap Rate ${(Number(appraisalPayload.stabilized_cap_rate) * 100).toFixed(2)}%` : "",
+        "Valuation only; does not represent purchase assumptions.",
+      ].filter(Boolean).join("\n");
     }
     if (source?.semantic_doc_role === "purchase_assumptions" && loanTerms) {
       return loanTerms.source_text || [
@@ -172,6 +201,7 @@ function buildValidatedCoreTestPayload(testPayloads = {}, { includeT12Artifact =
 
 async function renderUnderwritingHtml(testPayloads, options = {}) {
   const financialsOverride = options?.financials || {};
+  const validatedTestPayload = buildValidatedCoreTestPayload(testPayloads);
   const req = {
     headers: {
       "x-admin-run-key": process.env.ADMIN_RUN_KEY,
@@ -191,7 +221,7 @@ async function renderUnderwritingHtml(testPayloads, options = {}) {
         ...financialsOverride,
       },
       __test_return_final_html: true,
-      __test_payloads: buildValidatedCoreTestPayload(testPayloads),
+      __test_payloads: validatedTestPayload,
     },
   };
   const res = buildMockRes();
@@ -217,10 +247,16 @@ const fullPathHtml = await renderUnderwritingHtml({
     purchase_price: 2100000,
     loan_amount: 840000,
     ltv: 0.75,
+    going_in_cap_rate: 7,
     interest_rate: 0.061,
     amortization_years: 30,
     source_text: "Loan Amount (at $2,100,000 purchase price) $840,000. 1% lender fee. legal/appraisal costs noted.",
     closing_cost_notes: "legal/appraisal costs noted",
+  },
+  appraisalPayload: {
+    appraised_value: 1900000,
+    stabilized_noi: 650000,
+    stabilized_cap_rate: 0.065,
   },
   propertyTaxPayload: {
     annual_tax: 42750,
@@ -277,6 +313,56 @@ assert.match(fullPathHtml, /Revenue \/ Expense \/ NOI Bridge/i);
 assert.match(fullPathHtml, /Effective Gross Income<\/td><td style="font-weight:600;">\$1,100,000<\/td>/i);
 assert.match(fullPathHtml, /Less: Total Operating Expenses<\/td><td style="font-weight:600;">\$420,000<\/td>/i);
 assert.match(fullPathHtml, /Equals: Net Operating Income<\/td><td style="font-weight:600;">\$680,000<\/td>/i);
+
+const comparisonPathHtml = await renderUnderwritingHtml({
+  t12Payload: {
+    effective_gross_income: 1100000,
+    total_operating_expenses: 420000,
+    net_operating_income: 680000,
+  },
+  loanTermSheetTermsPayload: {
+    debt_basis: "acquisition_financing_assumption",
+    purchase_price: 2100000,
+    loan_amount: 840000,
+    ltv: 0.75,
+    going_in_cap_rate: 7,
+    interest_rate: 0.061,
+    amortization_years: 30,
+    lender_fee_percent: 0.01,
+    source_text: "Purchase assumptions / proposed acquisition financing\nPurchase Price $2,100,000\nNOI Basis $680,000\nGoing-In Cap Reference 7.00%\nProposed Acquisition Loan $840,000\nLTV 75.0%\nInterest Rate 6.10%\nAmortization 30 years\nLender Fee 1.00%",
+  },
+  appraisalPayload: {
+    appraised_value: 1900000,
+    stabilized_noi: 650000,
+    stabilized_cap_rate: 0.065,
+  },
+  documentSources: [
+    {
+      file_id: "purchase-assumptions-file",
+      original_filename: "purchase_assumptions_source.txt",
+      doc_type: "loan_term_sheet",
+      parse_status: "parsed",
+      semantic_doc_role: "purchase_assumptions",
+    },
+  ],
+});
+assert.match(comparisonPathHtml, /InvestorIQ Underwriting Report/i);
+assert.match(comparisonPathHtml, /Revenue \/ Expense \/ NOI Bridge/i);
+const handlerComparisonSectionMatch = comparisonPathHtml.match(/<div class="subsection-block" data-iq-subsection="valuation-appraisal-comparison">[\s\S]*?Appraised value less InvestorIQ implied value<\/td><td>\(\$7,814,286\)<\/td>/i);
+assert.ok(handlerComparisonSectionMatch, "Missing handler-path Valuation / Appraisal Comparison subsection");
+assert.match(handlerComparisonSectionMatch[0], /InvestorIQ Deterministic T12-Based Indication/i);
+assert.match(handlerComparisonSectionMatch[0], /Purchase-Assumption Context/i);
+assert.match(handlerComparisonSectionMatch[0], /Uploaded Appraisal Context/i);
+assert.match(handlerComparisonSectionMatch[0], /T12 NOI basis<\/td><td>\$680,000<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /Accepted going-in cap rate<\/td><td>7\.0%<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /Implied whole-property value<\/td><td>\$9,714,286<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /Purchase price<\/td><td>\$2,100,000<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /Appraised value<\/td><td>\$1,900,000<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /Appraisal stabilized NOI<\/td><td>\$650,000<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /Appraisal stabilized cap rate<\/td><td>6\.5%<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /InvestorIQ implied value less purchase price<\/td><td>\$7,614,286<\/td>/i);
+assert.match(handlerComparisonSectionMatch[0], /Appraised value less purchase price<\/td><td>\(\$200,000\)<\/td>/i);
+assert.doesNotMatch(handlerComparisonSectionMatch[0], /correct|approved|recommended|final|\bBUY\b|\bSELL\b|\bHOLD\b|overvalued|undervalued|attractive|aggressive|conservative/i);
 
 // Invariant 1: refi/debt not-assessed gate through full assembled HTML.
 assert.match(

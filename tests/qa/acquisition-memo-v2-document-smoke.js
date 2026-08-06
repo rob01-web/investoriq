@@ -24,7 +24,7 @@ function buildStonebridgeSourcePackage() {
     { fileId: "assumptions-file", semantic_doc_role: "purchase_assumptions", debt_basis: "proposed_acquisition", payload: { text: "Purchase Assumptions / Proposed Acquisition Financing\nPurchase Price $13,500,000\nNOI Basis $945,000\nGoing-In Cap Reference 7.00%\nProposed Loan Amount $9,450,000\nLTV 70%\nInterest Rate 5.95%\nAmortization 30 years\nLender Fee 0.85%\nThis is not existing/current debt." } },
     { fileId: "current-debt-file", semantic_doc_role: "current_debt", debt_basis: "current_debt", payload: { text: "Existing Current Debt Statement\nThis is an existing/current debt context document.\nCurrent Outstanding Balance $6,800,000\nInterest Rate 4.85%\nAmortization Remaining 24 years\nMonthly Payment $39,250\nMaturity Date 2029-11-01\nKeep this document separate from Stonebridge_Assumptions.pdf proposed acquisition financing." } },
     { fileId: "reno-file", semantic_doc_role: "renovation_plan", payload: { text: "Structured Renovation / CapEx Plan\nTotal Renovation Budget $1,280,000\n1BR interiors: 20 units x $18,500/unit; expected rent lift $225/month; Months 1-18\n2BR interiors: 18 units x $24,000/unit; expected rent lift $325/month; Months 1-24\nCommon Area Refresh $210,000\nExterior / Security $115,000\nContingency $153,000" } },
-    { fileId: "appraisal-file", semantic_doc_role: "appraisal", payload: { text: "Appraisal Summary / Valuation Context\nValuation only; does not represent purchase assumptions." } },
+    { fileId: "appraisal-file", semantic_doc_role: "appraisal", payload: { text: "Appraisal Summary / Valuation Context\nAppraisal Value $12,000,000\nStabilized Cap Rate 6.25%\nStabilized NOI $622,000\nValuation only; does not represent purchase assumptions." } },
     { fileId: "survey-file", semantic_doc_role: "market_survey", payload: { text: "Market Rent Survey Context\nCorroborates market rent; does not override rent roll." } },
     { fileId: "phase-file", semantic_doc_role: "phase_i_esa", payload: { text: "Phase I ESA / Environmental Due Diligence Context\nEnvironmental review only." } },
   ];
@@ -92,7 +92,12 @@ function buildRetest6SourcePackage() {
       original_filename: "Stonebridge_Appraisal_Summary.pdf",
       semantic_doc_role: "appraisal",
       payload: {
-        document_text_extracted: "Appraisal Summary / Valuation Context\nValuation only; does not represent purchase assumptions.",
+        document_text_extracted: "Appraisal Summary / Valuation Context\nAppraisal Value $12,000,000\nStabilized Cap Rate 6.25%\nStabilized NOI $622,000\nValuation only; does not represent purchase assumptions.",
+        appraisal_parsed: {
+          appraisal_value: 12000000,
+          stabilized_cap_rate: 0.0625,
+          stabilized_noi: 622000,
+        },
       },
     },
     {
@@ -213,7 +218,12 @@ function buildStructuredStonebridgeSourcePackage() {
       original_filename: "Stonebridge_Appraisal_Summary.pdf",
       semantic_doc_role: "appraisal",
       payload: {
-        document_text_extracted: "Appraisal Summary / Valuation Context\nValuation only; does not represent purchase assumptions.",
+        document_text_extracted: "Appraisal Summary / Valuation Context\nAppraisal Value $12,000,000\nStabilized Cap Rate 6.25%\nStabilized NOI $622,000\nValuation only; does not represent purchase assumptions.",
+        appraisal_parsed: {
+          appraisal_value: 12000000,
+          stabilized_cap_rate: 0.0625,
+          stabilized_noi: 622000,
+        },
       },
     },
     {
@@ -234,7 +244,19 @@ function buildStructuredStonebridgeSourcePackage() {
     },
   ];
 
-  return buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts);
+  const structuredPackage = buildCanonicalSourcePackage(uploadedFiles, parsedArtifacts);
+  const appraisalArtifact = parsedArtifacts.find((artifact) => artifact.fileId === "appraisal-file")?.payload?.appraisal_parsed || {};
+  const appraisalDocument = structuredPackage.supportDocs.get("appraisal-file");
+  structuredPackage.supportDocs.set("appraisal-file", {
+    ...appraisalDocument,
+    extractedFacts: {
+      ...appraisalDocument?.extractedFacts,
+      appraisal_value: appraisalArtifact.appraisal_value,
+      stabilized_cap_rate: appraisalArtifact.stabilized_cap_rate,
+      stabilized_noi: appraisalArtifact.stabilized_noi,
+    },
+  });
+  return structuredPackage;
 }
 
 const sourcePackage = buildStonebridgeSourcePackage();
@@ -571,7 +593,24 @@ const governedOperatingSection = {
   },
   postRenderAssertions: [],
 };
-const governedBossContract = { sections: { operatingStatementTTMSummary: governedOperatingSection } };
+const governedAppraisalSection = {
+  status: "required",
+  sourceBindings: ["appraisal_context"],
+  requiredFacts: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
+  factAvailability: {
+    required: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
+    available: ["appraisal_value", "stabilized_cap_rate", "stabilized_noi"],
+    missing: [],
+    sourceBacked: true,
+  },
+  postRenderAssertions: [],
+};
+const governedBossContract = {
+  sections: {
+    operatingStatementTTMSummary: governedOperatingSection,
+    appraisalContext: governedAppraisalSection,
+  },
+};
 const governedCustomerSurfaceModel = buildAcquisitionMemoV2CustomerSurfaceModel({
   canonicalSourcePackage: structuredSourcePackage,
   acquisitionMemoProjection: structuredProjection,
@@ -598,6 +637,25 @@ assert.match(governedFinalHtml, /Equals: Net Operating Income<\/td><td style="fo
 const governedBridgeSectionMatch = governedFinalHtml.match(/<div class="subsection-block" data-iq-subsection="revenue-expense-noi-bridge">[\s\S]*?<\/div>/i);
 assert.ok(governedBridgeSectionMatch, "Missing Revenue / Expense / NOI Bridge subsection");
 assert.doesNotMatch(governedBridgeSectionMatch[0], /pro forma|projection|adjustment|financing assumption|market assumption|\bBUY\b|\bSELL\b|\bHOLD\b/i);
+const governedComparisonSectionMatch = governedFinalHtml.match(/<div class="subsection-block" data-iq-subsection="valuation-appraisal-comparison">[\s\S]*?Appraised value less InvestorIQ implied value<\/td><td>\(\$1,500,000\)<\/td>/i);
+assert.ok(governedComparisonSectionMatch, "Missing Valuation / Appraisal Comparison subsection");
+assert.match(governedComparisonSectionMatch[0], /InvestorIQ Deterministic T12-Based Indication/i);
+assert.match(governedComparisonSectionMatch[0], /Purchase-Assumption Context/i);
+assert.match(governedComparisonSectionMatch[0], /Uploaded Appraisal Context/i);
+assert.match(governedComparisonSectionMatch[0], /T12 NOI basis<\/td><td>\$945,000<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Accepted going-in cap rate<\/td><td>7\.0%<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Implied whole-property value<\/td><td>\$13,500,000<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Purchase price<\/td><td>\$13,500,000<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Appraised value<\/td><td>\$12,000,000<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Appraisal stabilized NOI<\/td><td>\$622,000<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Appraisal stabilized cap rate<\/td><td>6\.3%<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Implied value per unit<\/td><td>\$210,938<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Purchase price per unit<\/td><td>\$210,938<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Appraisal value per unit<\/td><td>\$187,500<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /InvestorIQ implied value less purchase price<\/td><td>\$0<\/td>/i);
+assert.match(governedComparisonSectionMatch[0], /Appraised value less purchase price<\/td><td>\(\$1,500,000\)<\/td>/i);
+assert.doesNotMatch(governedComparisonSectionMatch[0], /correct|approved|recommended|final|\bBUY\b|\bSELL\b|\bHOLD\b|overvalued|undervalued|attractive|aggressive|conservative/i);
+assert.doesNotMatch(governedComparisonSectionMatch[0], /Appraised value<\/td><td>\$13,500,000<\/td>/i);
 const missingNoiSourcePackage = {
   ...structuredSourcePackage,
   coreT12: {
@@ -626,6 +684,65 @@ const missingNoiFinalHtml = renderCompleteAcquisitionMemoV2Html({
 });
 assert.match(missingNoiFinalHtml, /Operating Statement \/ TTM Summary/i);
 assert.doesNotMatch(missingNoiFinalHtml, /Revenue \/ Expense \/ NOI Bridge/i);
+const partialAppraisalSourcePackage = {
+  ...structuredSourcePackage,
+  supportDocs: new Map(structuredSourcePackage.supportDocs),
+};
+const partialAppraisal = partialAppraisalSourcePackage.supportDocs.get("appraisal-file");
+partialAppraisalSourcePackage.supportDocs.set("appraisal-file", {
+  ...partialAppraisal,
+  extractedFacts: {
+    ...partialAppraisal.extractedFacts,
+    stabilized_noi: null,
+  },
+});
+const partialAppraisalProjection = buildAcquisitionMemoProjection(partialAppraisalSourcePackage);
+const partialAppraisalCustomerSurfaceModel = buildAcquisitionMemoV2CustomerSurfaceModel({
+  canonicalSourcePackage: partialAppraisalSourcePackage,
+  acquisitionMemoProjection: partialAppraisalProjection,
+  bossContract: governedBossContract,
+  coreMetrics: governedCoreMetrics,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+const partialAppraisalFinalHtml = renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: partialAppraisalProjection,
+  renderedAcquisitionMemo: renderAcquisitionMemo(partialAppraisalProjection),
+  sourcePackage: partialAppraisalSourcePackage,
+  coreMetrics: governedCoreMetrics,
+  bossContract: governedBossContract,
+  customerSurfaceModel: partialAppraisalCustomerSurfaceModel,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+assert.match(partialAppraisalFinalHtml, /Appraisal \/ Valuation Context/i);
+assert.match(partialAppraisalFinalHtml, /Appraised Value/i);
+assert.doesNotMatch(partialAppraisalFinalHtml, /Valuation \/ Appraisal Comparison/i);
+assert.match(partialAppraisalFinalHtml, /Cap-Rate Value Indication/i);
+const unsupportedAppraisalCustomerSurfaceModel = {
+  ...governedCustomerSurfaceModel,
+  sections: {
+    ...governedCustomerSurfaceModel.sections,
+    appraisalContext: {
+      ...governedCustomerSurfaceModel.sections.appraisalContext,
+      factAvailability: {
+        ...governedCustomerSurfaceModel.sections.appraisalContext.factAvailability,
+        sourceBacked: false,
+      },
+    },
+  },
+};
+const unsupportedAppraisalFinalHtml = renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: structuredProjection,
+  renderedAcquisitionMemo: structuredRenderedAcquisitionMemo,
+  sourcePackage: structuredSourcePackage,
+  coreMetrics: governedCoreMetrics,
+  bossContract: governedBossContract,
+  customerSurfaceModel: unsupportedAppraisalCustomerSurfaceModel,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+assert.doesNotMatch(unsupportedAppraisalFinalHtml, /Valuation \/ Appraisal Comparison/i);
 const structuredFinalHtml = renderCompleteAcquisitionMemoV2Html({
   acquisitionMemoProjection: structuredProjection,
   renderedAcquisitionMemo: structuredRenderedAcquisitionMemo,
