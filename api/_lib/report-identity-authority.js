@@ -31,7 +31,7 @@ export const SCREENING_REPORT_IDENTITY = freezeIdentity({
 
 export const UNDERWRITING_REPORT_IDENTITY = freezeIdentity({
   identityKey: "underwriting",
-  reportFamily: "acquisition_memo",
+  reportFamily: "underwriting",
   reportMode: "v1_core",
   reportType: "underwriting",
   reportTier: 2,
@@ -47,10 +47,14 @@ export const UNDERWRITING_REPORT_IDENTITY = freezeIdentity({
     "tier_2",
     "tier2",
   ],
-  // The legacy alias remains valid only for pre-final compatibility surfaces.
-  acceptedVisibleTitles: ["Underwriting Report", "Acquisition Memo", "Acquisition Memorandum"],
+  acceptedVisibleTitles: ["Underwriting Report", "Full Underwriting Report"],
   requiredPdfTextAnchors: ["Underwriting Report"],
-  prohibitedVisibleTitles: ["Preliminary Investment Screening Memorandum", "Screening Signal"],
+  prohibitedVisibleTitles: [
+    "Preliminary Investment Screening Memorandum",
+    "Screening Signal",
+    "Acquisition Memo",
+    "Acquisition Memorandum",
+  ],
 });
 
 export const REPORT_IDENTITY_AUTHORITY = Object.freeze({
