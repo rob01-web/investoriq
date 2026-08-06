@@ -1,6 +1,6 @@
 # InvestorIQ Status
 
-Current date: August 5, 2026
+Current date: August 6, 2026
 
 Current authority:
 - Treat `!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-08-04.md` as the practical daily handoff.
@@ -45,6 +45,89 @@ Before any future InvestorIQ diagnosis or Codex repair prompt, answer:
 10. Why is whole-report terminal failure permitted or forbidden under Product Doctrine?
 
 No implementation packet should proceed without this classification.
+
+## Gate 1 closeout and Gate 2 handoff
+
+Product Doctrine and H0 authority remain controlling over STATUS, ROADMAP, this handoff, implementation assumptions, test expectations, prior chat conclusions, and convenience fixes.
+
+Gate 1 - Doctrine-compliant collapse-path and lifecycle investigation: **PASS / complete**.
+
+Gate 1 used RETEST 39 only as forensic evidence. No source, test, production, worker, scheduler, RPC, RETEST, Premium, pricing, credit, purchase, report, or artifact mutation occurred during Gate 1. No report-specific patching is permitted.
+
+Gate 1 proved:
+1. Existing institutional PDF recovery is presentation-only and CSS-only.
+2. Recovery adjusts margins, typography, table layout, spacing, wrapping, and page-break behavior.
+3. Recovery does not semantically compact, summarize, collapse, omit, or relocate report content.
+4. Recovery recertifies against the original approved HTML.
+5. PDF Boss top-level dispositions are: publish; publish_with_quality_incident; block.
+6. No executable compact/collapse-and-publish disposition currently exists.
+7. The repair-plan layer may describe collapse actions, but no runtime path executes them.
+8. Approved financial-row certification currently treats all extracted financial table label/value pairs as required unless an approved disposition contract says otherwise.
+9. Dense Debt Capacity and Coverage surfaces may include formula, numerator, denominator, and verbose source provenance in customer-facing cells.
+10. Long source lineage can contribute to overflow and certification-parity failures.
+11. A partial pre-render required/collapsed surface model already exists.
+12. The earliest safe universal section-disposition point is before HTML composition, within the governed report/customer-surface model.
+13. The missing architecture is a universal pre-render contract supporting: include; include_qualified; compact; collapse; omit.
+14. PDF Boss must distinguish intentional approved collapse from accidental loss of mandatory facts.
+15. The worker has no runtime route from unrecovered PDF Boss block to semantic recomposition and safe republication.
+16. Worker lifecycle completion occurs only if the failure path finishes; otherwise the job can remain stranded in rendering.
+17. "Terminalize all PDF Boss blocks" remains forbidden as the default fix.
+18. Whole-report terminal failure remains forbidden unless catastrophic core invalidity, irreconcilable core authority, or inability to produce any safe degraded artifact is proven.
+
+Gate 2 - System-wide doctrine-aware section disposition and collapse: **authorized / implementation in progress**.
+
+Gate 2 is the system-wide implementation of:
+1. Universal pre-render section-disposition contract.
+2. Compact Full Underwriting financial surfaces.
+3. Separation of customer-facing source labels from raw machine lineage.
+4. Intentional compact/collapse certification receipts.
+5. One bounded semantic recomposition pass after CSS recovery fails.
+6. Quality Manifest disclosure of compact/collapse/omit outcomes.
+7. Worker lifecycle completion so jobs cannot remain stranded in rendering.
+8. Screening compatibility with the shared contract.
+9. Focused deterministic tests only.
+10. No RETEST-specific logic or values.
+
+No production deployment, live certification, worker invocation, scheduler change, RPC invocation, Premium activation, purchase mutation, credit mutation, report mutation, artifact mutation, RETEST 39 requeue, or RETEST 40 occurred in this documentation closeout.
+
+Gate status:
+- Gate 1: PASS / complete.
+- Gate 2: authorized / implementation in progress.
+- Gate 3: not started; begins only after Gate 2 review and acceptance.
+- Gate 4: not started; requires separately authorized canaries.
+
+Hard boundaries remain:
+- No RETEST 39 requeue.
+- No RETEST 40.
+- No report-specific patching.
+- No Premium activation.
+- No production mutation.
+- No scheduler change.
+- No worker invocation.
+- No RPC invocation.
+- Do not retire the GitHub fallback.
+- No GitHub Contents API full-file replacement writes on `api/admin-run-worker.js` or `api/parse/parse-doc.js`.
+- No broad audits.
+- No broad test suites.
+- Screening and Full Underwriting launch together, or neither launches.
+- Launch target remains Monday, August 10, 2026, but doctrine and quality may not be sacrificed for the date.
+
+Next decision point: **Review the Gate 2 implementation receipt.**
+
+The review must determine:
+1. Whether the implementation is truly system-wide.
+2. Whether all five dispositions are implemented.
+3. Whether core-required minimum facts are protected.
+4. Whether Debt Capacity compact mode preserves lender-useful facts.
+5. Whether raw UUIDs and verbose lineage leave primary customer-facing cells.
+6. Whether PDF Boss distinguishes intentional collapse from accidental fact loss.
+7. Whether semantic collapse is bounded.
+8. Whether successful compact/collapse certification reaches publication.
+9. Whether unrecoverable failure exits rendering safely.
+10. Whether Screening remains compatible.
+11. Whether focused tests passed.
+12. Whether any schema change was introduced.
+13. Whether the implementation is ready for Gate 3 or requires a smallest corrective packet.
 
 ## Current repository and deployment state
 
@@ -247,29 +330,19 @@ The repair must apply deterministically to **all future Screening and Full Under
 ### Launch priority
 
 - Target: Monday, August 10, 2026 — launch quality and doctrine may **not** be sacrificed merely to meet the date.
-- Critical sequence: Gate 1 map → Gate 2 systemic implementation → Gate 3 elite Full Underwriting certification → Gate 4 controlled launch certification.
+- Critical sequence: Gate 1 PASS → Gate 2 systemic implementation and receipt review → Gate 3 elite Full Underwriting certification → Gate 4 controlled launch certification.
 - No unrelated feature work may interrupt this sequence without owner authorization.
 - Premium remains **false**.
 - Screening and Full Underwriting launch **together, or neither launches**.
 
-### Gate 1 — Doctrine-compliant collapse-path and lifecycle investigation
+### Gate 1 - Doctrine-compliant collapse-path and lifecycle investigation
 
-**Investigation only.** No source edits, production mutation, worker invocation, scheduler change, RPC call, RETEST, deployment, broad audit, or broad test suite.
+**PASS / complete.** Gate 1 proved the architecture findings recorded above. RETEST 39 remains forensic evidence only. No source, test, production, worker, scheduler, RPC, RETEST, Premium, pricing, credit, purchase, report, or artifact mutation occurred during Gate 1.
 
-Prove:
-1. Which module builds the dense debt-capacity, coverage, calculation-detail, source-ID, and lineage surfaces.
-2. What the existing bounded PDF recovery actually changes.
-3. Whether recovery only adjusts composition/style or can semantically compact, collapse, omit, or replace sections.
-4. Where PDF Boss returns its final artifact disposition.
-5. Which worker branch consumes that disposition.
-6. Why no governed collapse-and-publish path executed.
-7. Why the job remained stranded in `rendering`.
-8. The smallest safe system-wide implementation boundary.
+### Gate 2 - System-wide doctrine-aware section disposition and collapse
 
-### Gate 2 — System-wide doctrine-aware section disposition and collapse
-
-After Gate 1 classification is accepted, implement a **universal pre-render section-disposition contract**.
-Each governed report surface must deterministically resolve to an outcome such as: include; include qualified; compact; collapse; omit.
+**Authorized / implementation in progress.** Implement a **universal pre-render section-disposition contract**.
+Each governed report surface must deterministically resolve to one of: include; include_qualified; compact; collapse; omit.
 
 The contract must establish:
 1. Whether the surface is core-required, analytical, supplementary, optional, certification-only, or presentation-only.
@@ -334,11 +407,12 @@ Do **not** use RETEST 39 as the canary.
 Do **not** create RETEST 40.
 A future canary requires separate owner authorization.
 
-## Current HOLD / next packet
+## Current Gate 2 handoff / next packet
 
-**Exact next packet: Gate 1 — Doctrine-compliant collapse-path and lifecycle investigation (system-wide; RETEST 39 is forensic evidence only).**
+**Exact next packet: Review the Gate 2 implementation receipt.**
 
-Gate 1 is investigation only. No source implementation until Gate 1 classification is accepted.
+The review must determine whether the implementation is truly system-wide; whether all five dispositions are implemented; whether core-required minimum facts are protected; whether Debt Capacity compact mode preserves lender-useful facts; whether raw UUIDs and verbose lineage leave primary customer-facing cells; whether PDF Boss distinguishes intentional collapse from accidental fact loss; whether semantic collapse is bounded; whether successful compact/collapse certification reaches publication; whether unrecoverable failure exits rendering safely; whether Screening remains compatible; whether focused tests passed; whether any schema change was introduced; and whether the implementation is ready for Gate 3 or requires a smallest corrective packet.
+
 Do **not** frame any packet as repairing RETEST 39 or one failed PDF.
 Do **not** authorize another RETEST 39 requeue.
 Do **not** authorize RETEST 40.
