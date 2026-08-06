@@ -1487,6 +1487,32 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
     ...(Array.isArray(t12Facts?.expense_lines) ? t12Facts.expense_lines : []),
   ].map(normalizeStructuredT12LineItem).filter(Boolean);
   const t12LineItems = structuredT12LineItems.length ? structuredT12LineItems : parseT12LineItemsFromText(t12Snippet);
+  const governedOperatingFacts = customerSurfaceModel?.sections?.operatingStatementTTMSummary?.facts || {};
+  const governedOperatingFactAvailability = customerSurfaceModel?.sections?.operatingStatementTTMSummary?.factAvailability || null;
+  const bridgeRequiredFacts = ["effective_gross_income", "total_operating_expenses", "net_operating_income"];
+  const bridgeSectionEligible = Boolean(
+    sectionContract &&
+    sectionContract.status !== "collapsed" &&
+    sectionContract.factAvailability?.sourceBacked === true &&
+    !sectionHasMissingRequiredFacts(sectionContract) &&
+    bridgeRequiredFacts.every((factName) => governedOperatingFactAvailability?.available?.includes(factName))
+  );
+  const bridgeEgi = toFiniteNumber(governedOperatingFacts.effective_gross_income);
+  const bridgeOperatingExpenses = toFiniteNumber(governedOperatingFacts.total_operating_expenses);
+  const bridgeNoi = toFiniteNumber(governedOperatingFacts.net_operating_income);
+  const revenueExpenseNoiBridge = bridgeSectionEligible &&
+    Number.isFinite(bridgeEgi) &&
+    Number.isFinite(bridgeOperatingExpenses) &&
+    Number.isFinite(bridgeNoi)
+    ? `<div class="subsection-block" data-iq-subsection="revenue-expense-noi-bridge">
+        <p class="subsection-title">Revenue / Expense / NOI Bridge</p>
+        <table class="detail-table"><tbody>
+          <tr><td>Effective Gross Income</td><td style="font-weight:600;">${formatMoney(bridgeEgi)}</td></tr>
+          <tr><td>Less: Total Operating Expenses</td><td style="font-weight:600;">${formatMoney(bridgeOperatingExpenses)}</td></tr>
+          <tr><td>Equals: Net Operating Income</td><td style="font-weight:600;">${formatMoney(bridgeNoi)}</td></tr>
+        </tbody></table>
+      </div>`
+    : "";
   if (Number.isFinite(Number(coreMetrics?.annualInPlaceRent))) rows.push(`<tr><td>Annual In-Place Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualInPlaceRent)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.annualMarketRent))) rows.push(`<tr><td>Annual Market Rent</td><td style="font-weight:600;">${formatMoney(coreMetrics.annualMarketRent)}</td></tr>`);
   if (Number.isFinite(Number(coreMetrics?.egi))) rows.push(`<tr><td>Effective Gross Income</td><td style="font-weight:600;">${formatMoney(coreMetrics.egi)}</td></tr>`);
@@ -1507,6 +1533,7 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
       ${rows.join("")}
     </tbody></table>
     ${t12LineItems.length ? `<div class="subsection-block"><p class="subsection-title">T12 Income & Expense Line Items</p><table class="detail-table"><tbody>${t12LineItems.map((item) => `<tr><td>${escapeHtml(item.label)}</td><td style="font-weight:600;">${formatMoney(item.amount)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${revenueExpenseNoiBridge}
     ${t12Snippet ? `<div class="subsection-block"><p class="subsection-title">TTM Source Excerpt</p><p class="body-copy">${escapeHtml(t12Snippet.slice(0, 420))}</p></div>` : ""}
     ${occupancyNote ? `<p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${escapeHtml(occupancyNote)}</p>` : ""}
   </div>`;

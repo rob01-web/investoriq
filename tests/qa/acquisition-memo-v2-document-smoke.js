@@ -2,6 +2,7 @@ import assert from "assert";
 
 import { buildCanonicalSourcePackage } from "../../api/_lib/canonical-source-package.js";
 import { buildAcquisitionMemoProjection } from "../../api/_lib/acquisition-memo-projection.js";
+import { buildAcquisitionMemoV2CustomerSurfaceModel } from "../../api/_lib/acquisition-memo-v2-customer-surface-model.js";
 import { renderAcquisitionMemo } from "../../api/_lib/acquisition-memo-renderer.js";
 import { renderCompleteAcquisitionMemoV2Html } from "../../api/_lib/acquisition-memo-v2-document.js";
 
@@ -272,7 +273,7 @@ assert.match(finalHtml, /class="cover-brand-sub"/i);
 assert.match(finalHtml, /INVESTORIQ/i);
 assert.match(finalHtml, /Institutional Real Estate Analysis/i);
 assert.match(finalHtml, /CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC\./i);
-assert.match(finalHtml, /Acquisition Memo/i);
+assert.match(finalHtml, /InvestorIQ Underwriting Report/i);
 assert.equal(/UNDERWRITING\s*\|\s*V1_CORE/i.test(finalHtml), false);
 assert.equal(/V2 Canonical Package/i.test(finalHtml), false);
 assert.equal(/Source Authority/i.test(finalHtml), false);
@@ -319,6 +320,7 @@ assert.equal(/V2 projection/i.test(finalHtml), false);
 assert.match(finalHtml, /Cap-Rate Value Indication/i);
 assert.equal(/\$135,000\b/i.test(finalHtml), false);
 assert.match(finalHtml, /8 uploaded files/i);
+assert.doesNotMatch(finalHtml, /Revenue \/ Expense \/ NOI Bridge/i);
 
 const forbiddenPatterns = [
   /\bDSCR\b/i,
@@ -397,7 +399,7 @@ assert.match(retest6FinalHtml, /class="cover-brand-sub"/i);
 assert.match(retest6FinalHtml, /INVESTORIQ/i);
 assert.match(retest6FinalHtml, /Institutional Real Estate Analysis/i);
 assert.match(retest6FinalHtml, /CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC\./i);
-assert.match(retest6FinalHtml, /Acquisition Memo/i);
+assert.match(retest6FinalHtml, /InvestorIQ Underwriting Report/i);
 assert.equal(/UNDERWRITING\s*\|\s*V1_CORE/i.test(retest6FinalHtml), false);
 assert.equal(/V2 Canonical Package/i.test(retest6FinalHtml), false);
 assert.equal(/Source Authority/i.test(retest6FinalHtml), false);
@@ -408,7 +410,7 @@ assert.equal(/V2 projection determines readiness/i.test(retest6FinalHtml), false
 assert.equal(/Document-driven Acquisition Memo V2/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Committee Overview/i);
 assert.equal(/64-Unit Multifamily/i.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /ACQUISITION MEMO/i);
+assert.match(retest6FinalHtml, /UNDERWRITING REPORT/i);
 assert.match(retest6FinalHtml, /Key Metrics Snapshot/i);
 assert.match(retest6FinalHtml, /Underwriting Observations/i);
 assert.equal(/Primary Constraint \/ Review Disclosure/i.test(retest6FinalHtml), false);
@@ -461,7 +463,6 @@ assert.match(retest6FinalHtml, /overflow-wrap:anywhere;/i);
 assert.match(retest6FinalHtml, /word-break:break-word;/i);
 assert.equal(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /InvestorIQ does not assume or gap-fill missing data/i);
-assert.match(retest6FinalHtml, /Document-Backed Acquisition Memo Outputs/i);
 assert.match(retest6FinalHtml, /Methodology Notes/i);
 assert.match(retest6FinalHtml, /Data Limitations &amp; Missing Inputs/i);
 const sourceRegisterSectionMatch = retest6FinalHtml.match(/Source Register &amp; Document Treatment[\s\S]{0,8000}?<\/section>/i);
@@ -545,23 +546,92 @@ assert.equal(/Cap-Rate Value Indication[\s\S]{0,700}>-<\/td>/i.test(retest6Final
 const structuredSourcePackage = buildStructuredStonebridgeSourcePackage();
 const structuredProjection = buildAcquisitionMemoProjection(structuredSourcePackage);
 const structuredRenderedAcquisitionMemo = renderAcquisitionMemo(structuredProjection);
+const governedCoreMetrics = {
+  units: 64,
+  occupancy: 0.9375,
+  annualInPlaceRent: 1432800,
+  annualMarketRent: 1718400,
+  egi: 1500000,
+  opEx: 555000,
+  noi: 945000,
+  expenseRatio: 0.37,
+  noiMargin: 0.63,
+  breakEvenOccupancy: 555000 / 1612800,
+  purchasePrice: 13500000,
+  goingInCapRate: 0.07,
+};
+const governedOperatingSection = {
+  status: "required_if_source_present",
+  sourceBindings: ["core_t12"],
+  factAvailability: {
+    required: ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
+    available: ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
+    missing: [],
+    sourceBacked: true,
+  },
+  postRenderAssertions: [],
+};
+const governedBossContract = { sections: { operatingStatementTTMSummary: governedOperatingSection } };
+const governedCustomerSurfaceModel = buildAcquisitionMemoV2CustomerSurfaceModel({
+  canonicalSourcePackage: structuredSourcePackage,
+  acquisitionMemoProjection: structuredProjection,
+  bossContract: governedBossContract,
+  coreMetrics: governedCoreMetrics,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+const governedFinalHtml = renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: structuredProjection,
+  renderedAcquisitionMemo: structuredRenderedAcquisitionMemo,
+  sourcePackage: structuredSourcePackage,
+  coreMetrics: governedCoreMetrics,
+  bossContract: governedBossContract,
+  customerSurfaceModel: governedCustomerSurfaceModel,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+assert.match(governedFinalHtml, /Operating Statement \/ TTM Summary/i);
+assert.match(governedFinalHtml, /Revenue \/ Expense \/ NOI Bridge/i);
+assert.match(governedFinalHtml, /Effective Gross Income<\/td><td style="font-weight:600;">\$1,500,000<\/td>/i);
+assert.match(governedFinalHtml, /Less: Total Operating Expenses<\/td><td style="font-weight:600;">\$555,000<\/td>/i);
+assert.match(governedFinalHtml, /Equals: Net Operating Income<\/td><td style="font-weight:600;">\$945,000<\/td>/i);
+const governedBridgeSectionMatch = governedFinalHtml.match(/<div class="subsection-block" data-iq-subsection="revenue-expense-noi-bridge">[\s\S]*?<\/div>/i);
+assert.ok(governedBridgeSectionMatch, "Missing Revenue / Expense / NOI Bridge subsection");
+assert.doesNotMatch(governedBridgeSectionMatch[0], /pro forma|projection|adjustment|financing assumption|market assumption|\bBUY\b|\bSELL\b|\bHOLD\b/i);
+const missingNoiSourcePackage = {
+  ...structuredSourcePackage,
+  coreT12: {
+    ...structuredSourcePackage.coreT12,
+    extractedFacts: { ...structuredSourcePackage.coreT12.extractedFacts, net_operating_income: null },
+  },
+};
+const missingNoiProjection = buildAcquisitionMemoProjection(missingNoiSourcePackage);
+const missingNoiCustomerSurfaceModel = buildAcquisitionMemoV2CustomerSurfaceModel({
+  canonicalSourcePackage: missingNoiSourcePackage,
+  acquisitionMemoProjection: missingNoiProjection,
+  bossContract: governedBossContract,
+  coreMetrics: governedCoreMetrics,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+const missingNoiFinalHtml = renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: missingNoiProjection,
+  renderedAcquisitionMemo: renderAcquisitionMemo(missingNoiProjection),
+  sourcePackage: missingNoiSourcePackage,
+  coreMetrics: governedCoreMetrics,
+  bossContract: governedBossContract,
+  customerSurfaceModel: missingNoiCustomerSurfaceModel,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+assert.match(missingNoiFinalHtml, /Operating Statement \/ TTM Summary/i);
+assert.doesNotMatch(missingNoiFinalHtml, /Revenue \/ Expense \/ NOI Bridge/i);
 const structuredFinalHtml = renderCompleteAcquisitionMemoV2Html({
   acquisitionMemoProjection: structuredProjection,
   renderedAcquisitionMemo: structuredRenderedAcquisitionMemo,
   sourcePackage: structuredSourcePackage,
   coreMetrics: {
-    units: 64,
-    occupancy: 0.9375,
-    annualInPlaceRent: 1432800,
-    annualMarketRent: 1718400,
-    egi: 1500000,
-    opEx: 555000,
-    noi: 945000,
-    expenseRatio: 0.37,
-    noiMargin: 0.63,
-    breakEvenOccupancy: 555000 / 1612800,
-    purchasePrice: 13500000,
-    goingInCapRate: 0.07,
+    ...governedCoreMetrics,
   },
   reportMeta: {
     reportType: "underwriting",
