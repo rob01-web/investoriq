@@ -11,6 +11,7 @@ import {
   SCREENING_REPORT_IDENTITY,
   UNDERWRITING_REPORT_IDENTITY,
 } from "./report-identity-authority.js";
+import { filterMissingFinancialRowsForIntentionalDisposition } from "./section-disposition-runtime.js";
 
 const FINAL_PDF_PUBLICATION_QUALITY_BOSS_VERSION = "gate10v_final_pdf_publication_quality_boss_v6";
 const PAGE_CERTIFICATION_SCOPE = "institutional_page_by_page_certification";
@@ -305,20 +306,28 @@ export async function analyzeFinalPdfBytes(pdfBytes, { pdfParser = pdfParse } = 
 
 function extractApprovedFinancialRows(html = "") {
   const rows = [];
-  const rowPattern = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+  const rowPattern = /<tr\b([^>]*)>([\s\S]*?)<\/tr>/gi;
   let rowMatch;
   while ((rowMatch = rowPattern.exec(String(html || ""))) !== null) {
+    const rowAttrs = rowMatch[1] || "";
+    const rowTag = `<tr ${rowAttrs}>`;
     const cells = [];
     const cellPattern = /<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
     let cellMatch;
-    while ((cellMatch = cellPattern.exec(rowMatch[1])) !== null) cells.push(stripHtml(cellMatch[1]));
+    while ((cellMatch = cellPattern.exec(rowMatch[2])) !== null) cells.push(stripHtml(cellMatch[1]));
     if (cells.length < 2) continue;
     const label = cells[0];
     if (!label) continue;
     for (const value of cells.slice(1)) {
       if (!value || /not available|not provided|not applicable|collapsed|omitted/i.test(value)) continue;
       if (!/(?:[$€£]\s*\(?[\d,.]+|\b\d+(?:\.\d+)?\s*%|\b\d+(?:\.\d+)?\s*x\b|\b\d{4}-\d{2}-\d{2}\b|\b\d+(?:\.\d+)?\s*years?\b)/i.test(value)) continue;
-      rows.push({ label, value });
+      rows.push({
+        label,
+        value,
+        tableDisposition: attributeValue(rowTag, "data-iq-disposition") || null,
+        tableSectionKey: attributeValue(rowTag, "data-iq-section") || null,
+        sectionKey: attributeValue(rowTag, "data-iq-section") || null,
+      });
     }
   }
   return rows.filter((row, index, all) => {
@@ -453,6 +462,8 @@ export function buildApprovedPdfSurfaceManifest({
   sourceReconciliation = null,
   deterministicContractQaSeal = null,
   financialIntelligence = null,
+  sectionDispositionReceipts = null,
+  semanticRecompositionReceipt = null,
 } = {}) {
   const identityReceipt = isCanonicalReportIdentityReceipt(reportIdentity)
     ? reportIdentity
@@ -501,6 +512,10 @@ export function buildApprovedPdfSurfaceManifest({
         isCanonicalInstitutionalFinancialIntelligence(financialIntelligence),
       requiredHeadings: financialIntelligenceHeadings,
     },
+    sectionDispositionReceipts: sectionDispositionReceipts && typeof sectionDispositionReceipts === "object"
+      ? sectionDispositionReceipts
+      : {},
+    semanticRecompositionReceipt: semanticRecompositionReceipt || null,
   };
 }
 
@@ -777,11 +792,15 @@ function inspectLayout(analysis = {}, manifest = {}) {
 function inspectApprovedSurface(analysis = {}, manifest = {}) {
   const issues = [];
   const pdfText = normalizeComparisonText(analysis?.text || "");
-  const missingFinancialRows = (Array.isArray(manifest?.financialRows) ? manifest.financialRows : []).filter((row) => {
+  const rawMissingFinancialRows = (Array.isArray(manifest?.financialRows) ? manifest.financialRows : []).filter((row) => {
     const label = normalizeComparisonText(row.label);
     const value = normalizeComparisonText(row.value);
     return !label || !value || !pdfText.includes(label) || !pdfText.includes(value);
   });
+  const missingFinancialRows = filterMissingFinancialRowsForIntentionalDisposition(
+    rawMissingFinancialRows,
+    manifest?.sectionDispositionReceipts || {}
+  );
   if (missingFinancialRows.length > 0) {
     issues.push(buildIssue(
       "PDF_REQUIRED_FINANCIAL_FACTS_MISSING",
@@ -1121,6 +1140,8 @@ export async function inspectFinalPdfPublicationQuality({
   deterministicContractQaSeal = null,
   sourceReconciliation = null,
   financialIntelligence = null,
+  sectionDispositionReceipts = null,
+  semanticRecompositionReceipt = null,
   reportIdentity = null,
   requiredTextAnchors = [],
   artifactMode = "production_pdf",
@@ -1165,6 +1186,8 @@ export async function inspectFinalPdfPublicationQuality({
     sourceReconciliation,
     deterministicContractQaSeal,
     financialIntelligence,
+    sectionDispositionReceipts,
+    semanticRecompositionReceipt,
   });
   if (manifest.rejectedCallerTextAnchors.length > 0) {
     issues.push(buildIssue(
@@ -1286,6 +1309,8 @@ export async function inspectFinalPdfPublicationQuality({
       displayed_number_count: manifest.displayedNumbers.length,
       report_identity: manifest.reportIdentity,
       rejected_caller_identity_anchors: manifest.rejectedCallerTextAnchors,
+      section_disposition_receipt_count: Object.keys(manifest.sectionDispositionReceipts || {}).length,
+      semantic_recomposition_attempted: manifest.semanticRecompositionReceipt?.semanticAttemptUsed === true,
     },
     institutional_certification: {
       required: !internalStub,

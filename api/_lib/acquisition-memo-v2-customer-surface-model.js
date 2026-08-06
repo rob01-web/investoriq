@@ -1,6 +1,7 @@
 import { formatInterestRatePercent } from "./report-formatting-helpers.js";
 import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
 import { UNDERWRITING_REPORT_IDENTITY } from "./report-identity-authority.js";
+import { applyDispositionsToCustomerSurfaceSections } from "./section-disposition-runtime.js";
 
 const MODEL_VERSION = "acq_memo_v2_customer_surface_model_v1";
 
@@ -53,6 +54,14 @@ function normalizeMoney(value) {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function governedMetricDisplayReady(value) {
+  if (value === null || value === undefined || value === "") return false;
+  if (Number.isFinite(Number(value))) return true;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return false;
 }
 
 function normalizeCapRatio(value) {
@@ -1571,7 +1580,6 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     Number.isFinite(units) && units > 0
     ? (opEx + proposedAnnualDebtService) / units / 12
     : null;
-
   const sectionMap = buildSectionMap(bossContract);
   const sections = {};
   for (const [key, section] of Object.entries(sectionMap)) {
@@ -1596,6 +1604,30 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       };
     }
   }
+  const existingDebtCapacityFacts = sections.debtCapacityAndCoverage?.facts || {};
+  const proposedDscr = normalizeMoney(
+    sections.debtServiceCoverage?.facts?.proposedFinancing?.dscr ??
+      canonicalFinancialIntelligence?.customerSections?.debtServiceCoverage?.facts?.proposedFinancing?.dscr
+  );
+  const proposedLtv = normalizeCapRatio(
+    sections.proposedFinancingContext?.facts?.ltv ??
+      sections.acquisitionRequestContext?.facts?.ltv ??
+      supportSourcesByRole.purchase_assumptions?.extractedFacts?.ltv
+  );
+  const governedDebtCapacityResult =
+    existingDebtCapacityFacts?.debtCapacityResult?.result ??
+    existingDebtCapacityFacts?.debtCapacityResult ??
+    null;
+  const governedBindingConstraint =
+    existingDebtCapacityFacts?.bindingConstraint?.result ??
+    existingDebtCapacityFacts?.bindingConstraint ??
+    null;
+  const breakEvenMetricCount = [
+    currentDebtInclusiveOperatingBreakEvenOccupancy,
+    proposedDebtInclusiveOperatingBreakEvenOccupancy,
+    currentDebtInclusiveBreakEvenMonthlyRentPerUnit,
+    proposedDebtInclusiveBreakEvenMonthlyRentPerUnit,
+  ].filter(Number.isFinite).length;
   const debtCapacityTruth = {
     proposedDebtYield: {
       label: "Proposed Acquisition Debt Yield",
@@ -1626,6 +1658,81 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       inputProvenance: [purchaseAssumptionsSourceKey].filter(Boolean),
       numeratorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
       denominatorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
+    },
+    dscr: {
+      label: "Proposed Acquisition DSCR",
+      formula: "accepted_noi_divided_by_accepted_proposed_annual_debt_service",
+      numeratorFact: "net_operating_income",
+      denominatorFact: "proposed_annual_debt_service",
+      numerator: noi,
+      denominator: proposedAnnualDebtService,
+      result: proposedDscr,
+      displayReady: Number.isFinite(proposedDscr),
+      units: "multiple",
+      sourceFamily: "T12 / proposed financing",
+      inputProvenance: [coreSources.coreT12?.sourceIdentityKey, purchaseAssumptionsSourceKey].filter(Boolean),
+      numeratorProvenance: coreSources.coreT12?.sourceIdentityKey ? [coreSources.coreT12.sourceIdentityKey] : [],
+      denominatorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
+    },
+    ltv: {
+      label: "Proposed Acquisition LTV",
+      formula: "accepted_proposed_loan_amount_divided_by_accepted_purchase_price",
+      numeratorFact: "proposed_loan_amount",
+      denominatorFact: "purchase_price",
+      numerator: proposedLoanAmount,
+      denominator: purchasePrice,
+      result: proposedLtv,
+      displayReady: Number.isFinite(proposedLtv),
+      units: "ratio",
+      sourceFamily: "purchase assumptions",
+      inputProvenance: [purchaseAssumptionsSourceKey].filter(Boolean),
+      numeratorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
+      denominatorProvenance: purchaseAssumptionsSourceKey ? [purchaseAssumptionsSourceKey] : [],
+    },
+    debtCapacityResult: {
+      label: "Debt Capacity Result",
+      formula: "governed_debt_capacity_result_from_financial_intelligence",
+      numeratorFact: null,
+      denominatorFact: null,
+      numerator: null,
+      denominator: null,
+      result: governedDebtCapacityResult,
+      displayReady: governedMetricDisplayReady(governedDebtCapacityResult),
+      units: "text",
+      sourceFamily: "financial intelligence",
+      inputProvenance: [],
+      numeratorProvenance: [],
+      denominatorProvenance: [],
+    },
+    bindingConstraint: {
+      label: "Binding Constraint",
+      formula: "governed_binding_constraint_from_financial_intelligence",
+      numeratorFact: null,
+      denominatorFact: null,
+      numerator: null,
+      denominator: null,
+      result: governedBindingConstraint,
+      displayReady: governedMetricDisplayReady(governedBindingConstraint),
+      units: "text",
+      sourceFamily: "financial intelligence",
+      inputProvenance: [],
+      numeratorProvenance: [],
+      denominatorProvenance: [],
+    },
+    breakEvenMetrics: {
+      label: "Debt-Inclusive Break-Even Metrics",
+      formula: "governed_break_even_metric_group",
+      numeratorFact: null,
+      denominatorFact: null,
+      numerator: null,
+      denominator: null,
+      result: breakEvenMetricCount > 0 ? `${breakEvenMetricCount} governed break-even metrics available` : null,
+      displayReady: breakEvenMetricCount > 0,
+      units: "text",
+      sourceFamily: "T12 / Rent Roll / debt context",
+      inputProvenance: [coreSources.coreT12?.sourceIdentityKey, coreSources.coreRentRoll?.sourceIdentityKey, currentDebtSourceKey, purchaseAssumptionsSourceKey].filter(Boolean),
+      numeratorProvenance: [],
+      denominatorProvenance: [],
     },
     currentDebtInclusiveBreakEvenOccupancy: {
       label: "Current Debt-Inclusive Operating Break-Even Ratio",
@@ -1689,7 +1796,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     },
   };
   const debtCapacityAvailableFacts = Object.entries(debtCapacityTruth)
-    .filter(([, receipt]) => receipt?.displayReady === true && Number.isFinite(Number(receipt?.result)))
+    .filter(([, receipt]) => receipt?.displayReady === true && governedMetricDisplayReady(receipt?.result))
     .map(([keyName]) => keyName);
   sections.debtCapacityAndCoverage = {
     key: "debtCapacityAndCoverage",
@@ -1747,6 +1854,8 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       String(sourceReconciliationState?.source_reconciliation_disclosure || "").trim().length > 0
     ),
   };
+  const dispositionRuntime = applyDispositionsToCustomerSurfaceSections(sections);
+  const governedSections = dispositionRuntime.sections;
 
   return {
     modelVersion: MODEL_VERSION,
@@ -1774,26 +1883,31 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       sourceReconciliation,
     },
     supportSourcesByRole,
-    sections,
-    sectionStatuses: Object.fromEntries(Object.entries(sections).map(([key, value]) => [key, value.status])),
+    sections: governedSections,
+    sectionStatuses: Object.fromEntries(Object.entries(governedSections).map(([key, value]) => [key, value.status])),
+    sectionDispositionContractVersion: dispositionRuntime.contractVersion,
+    sectionDispositionReceipts: dispositionRuntime.dispositionReceipts,
+    qualityManifest: {
+      sectionDispositionEntries: dispositionRuntime.qualityManifestEntries,
+    },
     sourceBackedFacts: {
-      acquisitionRequestContext: sections.acquisitionRequestContext?.facts || {},
-      currentDebtContext: sections.currentDebtContext?.facts || {},
-      proposedFinancingContext: sections.proposedFinancingContext?.facts || {},
-      appraisalContext: sections.appraisalContext?.facts || {},
-      renovationContext: sections.renovationContext?.facts || {},
-      marketSurveyContext: sections.marketSurveyContext?.facts || {},
-      environmentalContext: sections.environmentalContext?.facts || {},
-      unitMix: sections.unitMix?.facts || {},
-      capRateValueIndication: sections.capRateValueIndication?.facts || {},
-      operatingStatementTTMSummary: sections.operatingStatementTTMSummary?.facts || {},
-      dataCoverageSourceLimitations: sections.dataCoverageSourceLimitations?.facts || {},
-      documentTreatment: sections.documentTreatment?.facts || {},
-      debtServiceCoverage: sections.debtServiceCoverage?.facts || {},
-      debtTermAnalysis: sections.debtTermAnalysis?.facts || {},
-      coreReconciliation: sections.coreReconciliation?.facts || {},
-      capitalPlanAnalysis: sections.capitalPlanAnalysis?.facts || {},
-      debtCapacityAndCoverage: sections.debtCapacityAndCoverage?.facts || {},
+      acquisitionRequestContext: governedSections.acquisitionRequestContext?.facts || {},
+      currentDebtContext: governedSections.currentDebtContext?.facts || {},
+      proposedFinancingContext: governedSections.proposedFinancingContext?.facts || {},
+      appraisalContext: governedSections.appraisalContext?.facts || {},
+      renovationContext: governedSections.renovationContext?.facts || {},
+      marketSurveyContext: governedSections.marketSurveyContext?.facts || {},
+      environmentalContext: governedSections.environmentalContext?.facts || {},
+      unitMix: governedSections.unitMix?.facts || {},
+      capRateValueIndication: governedSections.capRateValueIndication?.facts || {},
+      operatingStatementTTMSummary: governedSections.operatingStatementTTMSummary?.facts || {},
+      dataCoverageSourceLimitations: governedSections.dataCoverageSourceLimitations?.facts || {},
+      documentTreatment: governedSections.documentTreatment?.facts || {},
+      debtServiceCoverage: governedSections.debtServiceCoverage?.facts || {},
+      debtTermAnalysis: governedSections.debtTermAnalysis?.facts || {},
+      coreReconciliation: governedSections.coreReconciliation?.facts || {},
+      capitalPlanAnalysis: governedSections.capitalPlanAnalysis?.facts || {},
+      debtCapacityAndCoverage: governedSections.debtCapacityAndCoverage?.facts || {},
     },
     financialIntelligence: clone(canonicalFinancialIntelligence),
     valueSemantics,
