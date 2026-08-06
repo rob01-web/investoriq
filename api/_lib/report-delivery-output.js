@@ -13,6 +13,10 @@ import {
   buildInstitutionalPdfRecoveryHtml,
   isInstitutionalPdfRecoveryEligible,
 } from "./institutional-pdf-recovery.js";
+import {
+  isCollapseEligibleBossIssue,
+  runSemanticRecompositionOnce,
+} from "./section-disposition-runtime.js";
 
 export function sanitizeTypography(html) {
   return sanitizeFinalCustomerHtml(html);
@@ -467,14 +471,28 @@ export async function ensureReportDownloadArtifact({
     reportMode: reportIdentity?.reportMode || null,
     reportType: reportIdentity?.reportType || reportType || null,
   });
-  const certifyPdf = async (pdfBytes) => runFinalPdfPublicationQualityBoss({
+  const baseSectionDispositionReceipts =
+    deterministicContractQaSeal?.sectionDispositionReceipts ||
+    deterministicContractQaSeal?.section_disposition_receipts ||
+    deterministicContractQaSeal?.qualityManifest?.sectionDispositionReceipts ||
+    {};
+  const certifyPdf = async (
     pdfBytes,
-    approvedHtml: finalHtml,
+    {
+      approvedHtmlForCertification = finalHtml,
+      sectionDispositionReceipts = baseSectionDispositionReceipts,
+      semanticRecompositionReceipt = null,
+    } = {}
+  ) => runFinalPdfPublicationQualityBoss({
+    pdfBytes,
+    approvedHtml: approvedHtmlForCertification,
     deterministicContractQaSeal,
     sourceReconciliation,
     reportIdentity: canonicalReportIdentity,
     artifactMode,
     publicationTarget: resolvedPublicationTarget,
+    sectionDispositionReceipts,
+    semanticRecompositionReceipt,
   });
   const cleanupCreatedReportRecord = async (logContext) => {
     if (!createdReportRecord || !reportId) return;
@@ -530,7 +548,9 @@ export async function ensureReportDownloadArtifact({
   let publicationQualityBoss;
   let institutionalPdfRecovery = null;
   let recoveryAttempted = false;
-  const recoverPdfOnce = async (initialCertification) => {
+  let semanticRecompositionAttempted = false;
+  let semanticRecomposition = null;
+  const recoverPdfOnce = async (initialCertification, { cleanupOnFailure = true } = {}) => {
     recoveryAttempted = true;
     const recovery = buildInstitutionalPdfRecoveryHtml({
       approvedHtml: finalHtml,
@@ -584,9 +604,79 @@ export async function ensureReportDownloadArtifact({
           customerDeliveryPreserved: false,
         },
       };
-      await cleanupCreatedReportRecord("PDF publication quality recovery failure");
+      if (cleanupOnFailure) {
+        await cleanupCreatedReportRecord("PDF publication quality recovery failure");
+      }
       throw recoveryError;
     }
+  };
+  const semanticRecomposePdfOnce = async (initialCertification, priorRecovery = null) => {
+    semanticRecompositionAttempted = true;
+    const semantic = runSemanticRecompositionOnce(finalHtml);
+    semanticRecomposition = {
+      ...semantic.receipt,
+      initialCertificationStatus: initialCertification?.status || null,
+      priorCssRecovery: priorRecovery || null,
+    };
+    const semanticBuffer = await renderPdfBuffer({
+      finalHtml: semantic.html,
+      reportType,
+      allowProductionPdf,
+      docraptorMode,
+      reportDownloadArtifactMode,
+      job,
+      reportSeed,
+      propertyName,
+      storagePath: normalizedStoragePath,
+    });
+    try {
+      const semanticCertification = await certifyPdf(semanticBuffer, {
+        approvedHtmlForCertification: semantic.html,
+        semanticRecompositionReceipt: semantic.receipt,
+      });
+      return {
+        pdfBuffer: semanticBuffer,
+        publicationQualityBoss: semanticCertification,
+        semanticRecomposition: {
+          ...semanticRecomposition,
+          finalCertificationStatus: semanticCertification?.status || null,
+          recovered: semanticCertification?.ok === true,
+          customerDeliveryPreserved: isFinalPdfCustomerDeliveryAllowed(semanticCertification),
+        },
+      };
+    } catch (semanticError) {
+      const semanticCertification = semanticError?.context?.final_pdf_publication_quality_boss || null;
+      if (isFinalPdfCustomerDeliveryAllowed(semanticCertification)) {
+        return {
+          pdfBuffer: semanticBuffer,
+          publicationQualityBoss: semanticCertification,
+          semanticRecomposition: {
+            ...semanticRecomposition,
+            finalCertificationStatus: semanticCertification?.status || null,
+            recovered: false,
+            customerDeliveryPreserved: true,
+          },
+        };
+      }
+      semanticError.context = {
+        ...(semanticError.context || {}),
+        semantic_recomposition: {
+          ...semanticRecomposition,
+          finalCertificationStatus: semanticCertification?.status || null,
+          recovered: false,
+          customerDeliveryPreserved: false,
+        },
+      };
+      await cleanupCreatedReportRecord("PDF semantic recomposition failure");
+      throw semanticError;
+    }
+  };
+  const canAttemptSemanticRecomposition = (certification = null) => {
+    const codes = [
+      ...(Array.isArray(certification?.blocking_issue_codes) ? certification.blocking_issue_codes : []),
+      ...(Array.isArray(certification?.issues) ? certification.issues.map((issue) => issue?.code) : []),
+    ].map((code) => String(code || "").trim()).filter(Boolean);
+    return codes.length > 0 && codes.every((code) => isCollapseEligibleBossIssue(code));
   };
   try {
     publicationQualityBoss = await certifyPdf(pdfBuffer);
@@ -596,20 +686,56 @@ export async function ensureReportDownloadArtifact({
       await cleanupCreatedReportRecord("PDF publication quality failure");
       throw error;
     }
-    const recovered = await recoverPdfOnce(initialCertification);
-    pdfBuffer = recovered.pdfBuffer;
-    publicationQualityBoss = recovered.publicationQualityBoss;
-    institutionalPdfRecovery = recovered.institutionalPdfRecovery;
+    try {
+      const recovered = await recoverPdfOnce(initialCertification, { cleanupOnFailure: false });
+      pdfBuffer = recovered.pdfBuffer;
+      publicationQualityBoss = recovered.publicationQualityBoss;
+      institutionalPdfRecovery = recovered.institutionalPdfRecovery;
+    } catch (cssRecoveryError) {
+      const cssRecoveryReceipt = cssRecoveryError?.context?.institutional_pdf_recovery || null;
+      const cssRecoveryCertification =
+        cssRecoveryError?.context?.final_pdf_publication_quality_boss || initialCertification;
+      if (!canAttemptSemanticRecomposition(cssRecoveryCertification)) {
+        await cleanupCreatedReportRecord("PDF publication quality recovery failure");
+        throw cssRecoveryError;
+      }
+      const semanticRecovered = await semanticRecomposePdfOnce(
+        cssRecoveryCertification,
+        cssRecoveryReceipt
+      );
+      pdfBuffer = semanticRecovered.pdfBuffer;
+      publicationQualityBoss = semanticRecovered.publicationQualityBoss;
+      semanticRecomposition = semanticRecovered.semanticRecomposition;
+      institutionalPdfRecovery = cssRecoveryReceipt;
+    }
   }
   if (
     !recoveryAttempted &&
     publicationQualityBoss?.ok === false &&
     isInstitutionalPdfRecoveryEligible(publicationQualityBoss)
   ) {
-    const recovered = await recoverPdfOnce(publicationQualityBoss);
-    pdfBuffer = recovered.pdfBuffer;
-    publicationQualityBoss = recovered.publicationQualityBoss;
-    institutionalPdfRecovery = recovered.institutionalPdfRecovery;
+    try {
+      const recovered = await recoverPdfOnce(publicationQualityBoss, { cleanupOnFailure: false });
+      pdfBuffer = recovered.pdfBuffer;
+      publicationQualityBoss = recovered.publicationQualityBoss;
+      institutionalPdfRecovery = recovered.institutionalPdfRecovery;
+    } catch (cssRecoveryError) {
+      const cssRecoveryReceipt = cssRecoveryError?.context?.institutional_pdf_recovery || null;
+      const cssRecoveryCertification =
+        cssRecoveryError?.context?.final_pdf_publication_quality_boss || publicationQualityBoss;
+      if (!canAttemptSemanticRecomposition(cssRecoveryCertification)) {
+        await cleanupCreatedReportRecord("PDF publication quality recovery failure");
+        throw cssRecoveryError;
+      }
+      const semanticRecovered = await semanticRecomposePdfOnce(
+        cssRecoveryCertification,
+        cssRecoveryReceipt
+      );
+      pdfBuffer = semanticRecovered.pdfBuffer;
+      publicationQualityBoss = semanticRecovered.publicationQualityBoss;
+      semanticRecomposition = semanticRecovered.semanticRecomposition;
+      institutionalPdfRecovery = cssRecoveryReceipt;
+    }
   }
   if (!isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss)) {
     await cleanupCreatedReportRecord("PDF publication safety failure");
@@ -676,6 +802,7 @@ export async function ensureReportDownloadArtifact({
     createdDownloadArtifact: true,
     publicationQualityBoss,
     institutionalPdfRecovery,
+    semanticRecomposition: semanticRecompositionAttempted ? semanticRecomposition : null,
   };
 }
 

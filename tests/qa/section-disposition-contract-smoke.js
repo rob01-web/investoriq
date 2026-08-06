@@ -22,6 +22,8 @@ import {
   isIntentionalCompactDetailLoss,
   filterMissingFinancialRowsForIntentionalDisposition,
 } from "../../api/_lib/section-disposition-runtime.js";
+import { buildApprovedPdfSurfaceManifest } from "../../api/_lib/final-pdf-publication-quality-boss.js";
+import { ensureReportDownloadArtifact } from "../../api/_lib/report-delivery-output.js";
 
 const results = [];
 function prove(name, fn) {
@@ -33,6 +35,157 @@ function prove(name, fn) {
     results.push({ name, ok: false, error: String(err?.message || err) });
     console.error(`FAIL  ${name}: ${err?.message || err}`);
   }
+}
+
+async function proveBehavior(name, fn) {
+  try {
+    await fn();
+    results.push({ name, ok: true });
+    console.log(`PASS  ${name}`);
+  } catch (err) {
+    results.push({ name, ok: false, error: String(err?.message || err) });
+    console.error(`FAIL  ${name}: ${err?.message || err}`);
+  }
+}
+
+function buildBlockedPdfError(code, message = "blocked") {
+  const certification = {
+    ok: false,
+    status: "internal_pdf_publication_quality_failure",
+    customer_document_failure: false,
+    customer_delivery_allowed: false,
+    publication_disposition: "block",
+    blocking_issue_codes: [code],
+    issues: [{ code, blocks_customer_delivery: true }],
+  };
+  const err = new Error(message);
+  err.code = "PDF_ARTIFACT_FAILED";
+  err.context = {
+    failure_class: "internal_system_failure",
+    customer_document_failure: false,
+    final_pdf_publication_quality_boss: certification,
+  };
+  return err;
+}
+
+function buildAllowedPdfBossResult(label = "certified") {
+  return {
+    ok: true,
+    status: "certified",
+    strict_institutional_certified: true,
+    customer_document_failure: false,
+    customer_delivery_allowed: true,
+    publication_disposition: "publish",
+    external_publication_allowed: true,
+    blocking_issue_codes: [],
+    issues: [],
+    label,
+  };
+}
+
+function buildDeliveryFakes({ pdfBossPlan = [] } = {}) {
+  const calls = {
+    render: [],
+    pdfBoss: [],
+    storageDownload: 0,
+    upload: 0,
+    cleanupDelete: 0,
+    cleanupEq: 0,
+    reportTableAccess: 0,
+    nonReportTableAccess: 0,
+    entitlement: 0,
+    credit: 0,
+    purchase: 0,
+  };
+  let uploaded = false;
+  const storageBucket = {
+    async download(path) {
+      calls.storageDownload += 1;
+      if (!uploaded) return { error: new Error("not found"), data: null };
+      return { error: null, data: Buffer.from(`verified:${path}`) };
+    },
+    async upload(path, buffer) {
+      calls.upload += 1;
+      uploaded = true;
+      return { error: null, data: { path, size: buffer?.length || 0 } };
+    },
+  };
+  const supabaseAdmin = {
+    storage: {
+      from(bucketName) {
+        assert.equal(bucketName, "generated_reports");
+        return storageBucket;
+      },
+    },
+    from(tableName) {
+      if (tableName === "reports") calls.reportTableAccess += 1;
+      else {
+        calls.nonReportTableAccess += 1;
+        if (/entitlement/i.test(tableName)) calls.entitlement += 1;
+        if (/credit/i.test(tableName)) calls.credit += 1;
+        if (/purchase/i.test(tableName)) calls.purchase += 1;
+      }
+      return {
+        delete() {
+          calls.cleanupDelete += 1;
+          return {
+            eq(column, value) {
+              calls.cleanupEq += 1;
+              assert.equal(column, "id");
+              assert.equal(value, "report-1");
+              return Promise.resolve({ error: null, data: null });
+            },
+          };
+        },
+      };
+    },
+  };
+  const renderPdfBuffer = async ({ finalHtml }) => {
+    calls.render.push(String(finalHtml || ""));
+    return Buffer.from(`%PDF-1.4\n${calls.render.length}\n`);
+  };
+  const runFinalPdfPublicationQualityBoss = async (args = {}) => {
+    calls.pdfBoss.push(args);
+    const next = pdfBossPlan.shift();
+    if (next instanceof Error) throw next;
+    return next || buildAllowedPdfBossResult();
+  };
+  return { calls, supabaseAdmin, renderPdfBuffer, runFinalPdfPublicationQualityBoss };
+}
+
+async function runEnsureReportDownloadArtifactScenario(pdfBossPlan) {
+  const fakes = buildDeliveryFakes({ pdfBossPlan });
+  const result = await ensureReportDownloadArtifact({
+    supabaseAdmin: fakes.supabaseAdmin,
+    job: { id: "job-1", user_id: "user-1", report_type: "underwriting" },
+    reportId: "report-1",
+    storagePath: "user-1/job-1.pdf",
+    finalHtml: `<html><head></head><body><table class="source-table"><thead><tr><th>Metric</th><th>Result</th><th>Formula</th><th>Sources</th></tr></thead><tbody><tr><td>Debt Yield</td><td>8.2%</td><td>NOI/Loan</td><td>source-uuid</td></tr></tbody></table></body></html>`,
+    reportType: "underwriting",
+    reportSeed: "job-1",
+    propertyName: "Behavioral Test",
+    reportDownloadArtifactMode: "stub_pdf",
+    createdReportRecord: true,
+    deliveryGateStatus: "deliverable",
+    holdDelivery: false,
+    deterministicContractQaSeal: {
+      ok: true,
+      sectionDispositionReceipts: {
+        debtCapacityAndCoverage: applySectionDisposition({
+          sectionKey: "debtCapacityAndCoverage",
+          classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
+          requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
+          compactRendererEligible: true,
+          minimumSurvivingFactKeys: ["proposedDebtYield"],
+        }),
+      },
+    },
+    reportIdentity: { reportType: "underwriting" },
+    publicationTarget: "external_customer",
+    renderPdfBuffer: fakes.renderPdfBuffer,
+    runFinalPdfPublicationQualityBoss: fakes.runFinalPdfPublicationQualityBoss,
+  });
+  return { result, calls: fakes.calls };
 }
 
 prove("five dispositions exist", () => {
@@ -150,20 +303,55 @@ prove("PDF Boss ignores intentional compact detail only", () => {
       minimumSurvivingFactKeys: ["proposedDebtYield", "proposedMortgageConstant"],
     }),
   };
-  assert.equal(isIntentionalCompactDetailLoss({ label: "Formula", value: "NOI/Loan" }, receipts), true);
+  assert.equal(
+    isIntentionalCompactDetailLoss(
+      {
+        label: "Formula",
+        value: "NOI/Loan",
+        sectionKey: "debtCapacityAndCoverage",
+        tableDisposition: "compact",
+      },
+      receipts
+    ),
+    true
+  );
+  assert.equal(isIntentionalCompactDetailLoss({ label: "Formula", value: "NOI/Loan" }, receipts), false);
   assert.equal(
     isIntentionalCompactDetailLoss({ label: "Proposed Debt Yield", value: "8.2%" }, receipts),
     false
   );
   const filtered = filterMissingFinancialRowsForIntentionalDisposition(
     [
-      { label: "Formula", value: "NOI/Loan" },
+      {
+        label: "Formula",
+        value: "NOI/Loan",
+        sectionKey: "debtCapacityAndCoverage",
+        tableDisposition: "compact",
+      },
       { label: "Proposed Debt Yield", value: "8.2%" },
     ],
     receipts
   );
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0].label, "Proposed Debt Yield");
+});
+
+prove("PDF Boss manifest carries compact row disposition context", () => {
+  const manifest = buildApprovedPdfSurfaceManifest({
+    approvedHtml: `<table class="source-table" data-iq-section="debtCapacityAndCoverage" data-iq-disposition="compact"><thead><tr><th>Metric</th><th>Result</th></tr></thead><tbody><tr data-iq-section="debtCapacityAndCoverage" data-iq-disposition="compact"><td>Proposed Debt Yield</td><td>8.2%</td></tr></tbody></table>`,
+    sectionDispositionReceipts: {
+      debtCapacityAndCoverage: applySectionDisposition({
+        sectionKey: "debtCapacityAndCoverage",
+        classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
+        requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
+        compactRendererEligible: true,
+        minimumSurvivingFactKeys: ["proposedDebtYield"],
+      }),
+    },
+  });
+  assert.equal(manifest.financialRows[0].sectionKey, "debtCapacityAndCoverage");
+  assert.equal(manifest.financialRows[0].tableDisposition, "compact");
+  assert.ok(manifest.sectionDispositionReceipts.debtCapacityAndCoverage);
 });
 
 prove("isCollapseEligibleBossIssue layout codes", () => {
@@ -271,6 +459,104 @@ prove("no RETEST-specific logic", () => {
 
 prove("no schema change", () => {
   assert.equal(SECTION_DISPOSITION_CONTRACT_VERSION, "section-disposition-contract-v1");
+});
+
+await proveBehavior("ensureReportDownloadArtifact semantically recertifies collapse-eligible CSS failure and publishes", async () => {
+  const { result, calls } = await runEnsureReportDownloadArtifactScenario([
+    buildBlockedPdfError("PDF_PAGE_OVERFLOW", "initial block"),
+    buildBlockedPdfError("PDF_PAGE_OVERFLOW", "css recovery block"),
+    buildAllowedPdfBossResult("semantic success"),
+  ]);
+  assert.equal(calls.pdfBoss.length, 3);
+  assert.equal(calls.render.length, 3);
+  assert.equal(calls.upload, 1);
+  assert.equal(calls.storageDownload, 2);
+  assert.equal(calls.cleanupDelete, 0);
+  assert.equal(calls.cleanupEq, 0);
+  assert.equal(result.verifiedDownloadArtifact, true);
+  assert.equal(result.createdDownloadArtifact, true);
+  assert.equal(result.publicationQualityBoss.label, "semantic success");
+  assert.equal(result.semanticRecomposition?.semanticAttemptMax, 1);
+  assert.equal(result.semanticRecomposition?.semanticAttemptUsed, true);
+  assert.equal(result.institutionalPdfRecovery?.attemptCount, 1);
+  assert.equal(calls.pdfBoss[0].semanticRecompositionReceipt, null);
+  assert.equal(calls.pdfBoss[1].semanticRecompositionReceipt, null);
+  assert.equal(calls.pdfBoss[2].semanticRecompositionReceipt?.semanticAttemptMax, 1);
+  assert.ok(calls.pdfBoss[2].approvedHtml.includes("data-iq-disposition=\"compact\""));
+  assert.equal(calls.nonReportTableAccess, 0);
+  assert.equal(calls.entitlement + calls.credit + calls.purchase, 0);
+});
+
+await proveBehavior("ensureReportDownloadArtifact never semantically compacts non-collapse-eligible recovery failure", async () => {
+  const fakes = buildDeliveryFakes({
+    pdfBossPlan: [
+      buildBlockedPdfError("PDF_RUNNING_HEADER_MISSING", "initial css block"),
+      buildBlockedPdfError("PDF_RUNNING_HEADER_MISSING", "css recovery still blocked"),
+    ],
+  });
+  await assert.rejects(
+    () => ensureReportDownloadArtifact({
+      supabaseAdmin: fakes.supabaseAdmin,
+      job: { id: "job-1", user_id: "user-1", report_type: "underwriting" },
+      reportId: "report-1",
+      storagePath: "user-1/job-1.pdf",
+      finalHtml: "<html><head></head><body><p>Approved surface</p></body></html>",
+      reportType: "underwriting",
+      reportSeed: "job-1",
+      reportDownloadArtifactMode: "stub_pdf",
+      createdReportRecord: true,
+      deliveryGateStatus: "deliverable",
+      deterministicContractQaSeal: { ok: true },
+      reportIdentity: { reportType: "underwriting" },
+      renderPdfBuffer: fakes.renderPdfBuffer,
+      runFinalPdfPublicationQualityBoss: fakes.runFinalPdfPublicationQualityBoss,
+    }),
+    (err) => err?.code === "PDF_ARTIFACT_FAILED"
+  );
+  assert.equal(fakes.calls.pdfBoss.length, 2);
+  assert.equal(fakes.calls.render.length, 2);
+  assert.equal(fakes.calls.upload, 0);
+  assert.equal(fakes.calls.cleanupDelete, 1);
+  assert.equal(fakes.calls.cleanupEq, 1);
+  assert.equal(fakes.calls.nonReportTableAccess, 0);
+  assert.equal(fakes.calls.entitlement + fakes.calls.credit + fakes.calls.purchase, 0);
+});
+
+await proveBehavior("ensureReportDownloadArtifact failed semantic recertification exits without upload and cleans once", async () => {
+  const fakes = buildDeliveryFakes({
+    pdfBossPlan: [
+      buildBlockedPdfError("PDF_REQUIRED_FINANCIAL_FACTS_MISSING", "initial block"),
+      buildBlockedPdfError("PDF_REQUIRED_FINANCIAL_FACTS_MISSING", "css recovery block"),
+      buildBlockedPdfError("PDF_REQUIRED_FINANCIAL_FACTS_MISSING", "semantic block"),
+    ],
+  });
+  await assert.rejects(
+    () => ensureReportDownloadArtifact({
+      supabaseAdmin: fakes.supabaseAdmin,
+      job: { id: "job-1", user_id: "user-1", report_type: "underwriting" },
+      reportId: "report-1",
+      storagePath: "user-1/job-1.pdf",
+      finalHtml: `<html><head></head><body><table class="source-table"><thead><tr><th>Metric</th><th>Result</th><th>Formula</th></tr></thead><tbody><tr><td>Debt Yield</td><td>8.2%</td><td>NOI/Loan</td></tr></tbody></table></body></html>`,
+      reportType: "underwriting",
+      reportSeed: "job-1",
+      reportDownloadArtifactMode: "stub_pdf",
+      createdReportRecord: true,
+      deliveryGateStatus: "deliverable",
+      deterministicContractQaSeal: { ok: true },
+      reportIdentity: { reportType: "underwriting" },
+      renderPdfBuffer: fakes.renderPdfBuffer,
+      runFinalPdfPublicationQualityBoss: fakes.runFinalPdfPublicationQualityBoss,
+    }),
+    (err) => err?.code === "PDF_ARTIFACT_FAILED"
+  );
+  assert.equal(fakes.calls.pdfBoss.length, 3);
+  assert.equal(fakes.calls.render.length, 3);
+  assert.equal(fakes.calls.pdfBoss.filter((call) => call.semanticRecompositionReceipt?.semanticAttemptUsed === true).length, 1);
+  assert.equal(fakes.calls.upload, 0);
+  assert.equal(fakes.calls.cleanupDelete, 1);
+  assert.equal(fakes.calls.cleanupEq, 1);
+  assert.equal(fakes.calls.nonReportTableAccess, 0);
+  assert.equal(fakes.calls.entitlement + fakes.calls.credit + fakes.calls.purchase, 0);
 });
 
 const failed = results.filter((r) => !r.ok);

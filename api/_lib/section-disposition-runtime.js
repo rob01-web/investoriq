@@ -51,27 +51,22 @@ export function resolveGovernedSurfaceDisposition({
     requested = SECTION_DISPOSITIONS.OMIT;
   } else if (!hasAny && classification === SECTION_CLASSIFICATIONS.SUPPLEMENTARY) {
     requested = SECTION_DISPOSITIONS.COLLAPSE;
+  } else if ((preferCompact || compactRendererEligible) && hasAny) {
+    requested = SECTION_DISPOSITIONS.COMPACT;
   } else if (missing.length > 0 && hasAny) {
     requested = SECTION_DISPOSITIONS.INCLUDE_QUALIFIED;
-  } else if (preferCompact || compactRendererEligible) {
-    requested = SECTION_DISPOSITIONS.COMPACT;
   }
 
   const minimumSurvivingFactKeys =
     sectionKey === "debtCapacityAndCoverage"
-      ? DEBT_CAPACITY_MINIMUM_FACT_KEYS.filter((k) => available.has(k) || required.includes(k))
+      ? DEBT_CAPACITY_MINIMUM_FACT_KEYS.filter((k) => available.has(k))
       : required.filter((k) => available.has(k));
 
   return applySectionDisposition({
     sectionKey,
     classification,
     requestedDisposition: requested,
-    minimumSurvivingFactKeys:
-      minimumSurvivingFactKeys.length > 0
-        ? minimumSurvivingFactKeys
-        : sectionKey === "debtCapacityAndCoverage"
-          ? [...DEBT_CAPACITY_MINIMUM_FACT_KEYS]
-          : required,
+    minimumSurvivingFactKeys,
     missingFactOrLimitationReason:
       missing.length > 0 ? `unsupported_or_missing: ${missing.join(", ")}` : null,
     compactRendererEligible:
@@ -171,11 +166,39 @@ export function runSemanticRecompositionOnce(approvedHtml = "") {
 
 export function isIntentionalCompactDetailLoss(missingRow = {}, dispositionReceipts = {}) {
   const label = String(missingRow?.label || "").toLowerCase();
+  const rowDisposition = String(
+    missingRow?.tableDisposition ||
+      missingRow?.sectionDisposition ||
+      missingRow?.disposition ||
+      ""
+  ).toLowerCase();
+  const rowSectionKey = String(missingRow?.sectionKey || missingRow?.tableSectionKey || "").trim();
+  const hasIntentionalTableDisposition = [
+    SECTION_DISPOSITIONS.COMPACT,
+    SECTION_DISPOSITIONS.COLLAPSE,
+    SECTION_DISPOSITIONS.OMIT,
+  ].includes(rowDisposition);
+  const receipt = rowSectionKey ? dispositionReceipts?.[rowSectionKey] : null;
+  const hasIntentionalReceipt = Object.values(dispositionReceipts || {}).some((candidate) =>
+    [
+      SECTION_DISPOSITIONS.COMPACT,
+      SECTION_DISPOSITIONS.COLLAPSE,
+      SECTION_DISPOSITIONS.OMIT,
+    ].includes(candidate?.disposition)
+  );
+  const hasRowIntent =
+    hasIntentionalTableDisposition ||
+    [
+      SECTION_DISPOSITIONS.COMPACT,
+      SECTION_DISPOSITIONS.COLLAPSE,
+      SECTION_DISPOSITIONS.OMIT,
+    ].includes(receipt?.disposition);
+  if (!hasRowIntent && !hasIntentionalReceipt) return false;
   if (
     /formula|numerator|denominator|provenance|parser|source\s*id|uuid|receipt/i.test(label) ||
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(String(missingRow?.value || ""))
   ) {
-    return true;
+    return hasRowIntent;
   }
   const debt = dispositionReceipts?.debtCapacityAndCoverage;
   if (debt?.disposition === SECTION_DISPOSITIONS.COMPACT) {

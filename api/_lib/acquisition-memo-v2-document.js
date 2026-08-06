@@ -1165,40 +1165,49 @@ function renderDebtCapacityAndCoverageSection(customerSurfaceModel = null) {
   const section = getCustomerSurfaceSection(customerSurfaceModel, "debtCapacityAndCoverage");
   if (!section || section?.status === "collapsed" || section?.factAvailability?.sectionDisplayReady !== true) return "";
   const facts = section?.facts || {};
+  const formatDebtCapacityResult = (receipt = {}, units = "") => {
+    const result = receipt?.result;
+    if (result === null || result === undefined || result === "") return "";
+    if (units === "multiple" && Number.isFinite(toFiniteNumber(result))) {
+      return `${toFiniteNumber(result).toFixed(2)}x`;
+    }
+    if (units === "ratio" && Number.isFinite(toFiniteNumber(result))) {
+      return formatPercentDisplay(result);
+    }
+    if (units === "currency_per_unit_per_month" && Number.isFinite(toFiniteNumber(result))) {
+      return formatMoney(result);
+    }
+    if (Number.isFinite(toFiniteNumber(result))) {
+      return String(toFiniteNumber(result));
+    }
+    if (typeof result === "string") return result.trim();
+    return "";
+  };
   const metricRows = [
-    ["proposedDebtYield", "Proposed Acquisition Debt Yield", facts.proposedDebtYield, "ratio", "T12 NOI / proposed loan amount"],
-    ["proposedMortgageConstant", "Proposed Acquisition Mortgage Constant", facts.proposedMortgageConstant, "ratio", "Annual debt service / proposed loan amount"],
-    ["currentDebtInclusiveBreakEvenOccupancy", "Current Debt-Inclusive Operating Break-Even Ratio", facts.currentDebtInclusiveBreakEvenOccupancy, "ratio", "T12 operating expenses + current annual debt service / T12 gross potential rent"],
-    ["proposedDebtInclusiveBreakEvenOccupancy", "Proposed Acquisition Debt-Inclusive Operating Break-Even Ratio", facts.proposedDebtInclusiveBreakEvenOccupancy, "ratio", "T12 operating expenses + proposed annual debt service / T12 gross potential rent"],
-    ["currentDebtInclusiveBreakEvenMonthlyRentPerUnit", "Current Debt-Inclusive Break-Even Monthly Rent per Unit", facts.currentDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month", "T12 operating expenses + current annual debt service / total units / 12"],
-    ["proposedDebtInclusiveBreakEvenMonthlyRentPerUnit", "Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit", facts.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month", "T12 operating expenses + proposed annual debt service / total units / 12"],
-  ].map(([key, label, receipt, units, formula]) => {
-    const result = toFiniteNumber(receipt?.result);
-    const numerator = toFiniteNumber(receipt?.numerator);
-    const denominator = toFiniteNumber(receipt?.denominator);
-    const resultDisplay = Number.isFinite(result)
-      ? units === "ratio"
-        ? formatPercentDisplay(result)
-        : formatMoney(result)
-      : "Not available";
-    const numeratorDisplay = Number.isFinite(numerator)
-      ? formatMoney(numerator)
-      : "Not available";
-    const denominatorDisplay = Number.isFinite(denominator)
-      ? units === "currency_per_unit_per_month" && key.includes("MonthlyRentPerUnit")
-        ? `${Math.round(denominator).toLocaleString("en-US")} unit-months`
-        : formatMoney(denominator)
-      : "Not available";
-    const provenance = [...new Set([
-      ...(Array.isArray(receipt?.inputProvenance) ? receipt.inputProvenance : []),
-      ...(Array.isArray(receipt?.numeratorProvenance) ? receipt.numeratorProvenance : []),
-      ...(Array.isArray(receipt?.denominatorProvenance) ? receipt.denominatorProvenance : []),
-    ])].join(", ");
-    return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(resultDisplay)}</td><td>${escapeHtml(formula)}</td><td>${escapeHtml(`Numerator: ${numeratorDisplay}; Denominator: ${denominatorDisplay}; Sources: ${provenance || "Not available"}`)}</td></tr>`;
-  }).join("");
+    ["proposedMortgageConstant", "Proposed Acquisition Mortgage Constant", facts.proposedMortgageConstant, "ratio"],
+    ["proposedDebtYield", "Proposed Acquisition Debt Yield", facts.proposedDebtYield, "ratio"],
+    ["dscr", "Proposed Acquisition DSCR", facts.dscr, "multiple"],
+    ["ltv", "Proposed Acquisition LTV", facts.ltv, "ratio"],
+    ["debtCapacityResult", "Debt Capacity Result", facts.debtCapacityResult, "text"],
+    ["bindingConstraint", "Binding Constraint", facts.bindingConstraint, "text"],
+    ["breakEvenMetrics", "Debt-Inclusive Break-Even Metrics", facts.breakEvenMetrics, "text"],
+    ["currentDebtInclusiveBreakEvenOccupancy", "Current Debt-Inclusive Operating Break-Even Ratio", facts.currentDebtInclusiveBreakEvenOccupancy, "ratio"],
+    ["proposedDebtInclusiveBreakEvenOccupancy", "Proposed Acquisition Debt-Inclusive Operating Break-Even Ratio", facts.proposedDebtInclusiveBreakEvenOccupancy, "ratio"],
+    ["currentDebtInclusiveBreakEvenMonthlyRentPerUnit", "Current Debt-Inclusive Break-Even Monthly Rent per Unit", facts.currentDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month"],
+    ["proposedDebtInclusiveBreakEvenMonthlyRentPerUnit", "Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit", facts.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month"],
+  ].map(([key, label, receipt, units]) => {
+    if (receipt?.displayReady !== true) return "";
+    const resultDisplay = formatDebtCapacityResult(receipt, units);
+    if (!resultDisplay) return "";
+    return `<tr data-iq-section="debtCapacityAndCoverage" data-iq-disposition="${escapeHtml(section?.disposition || "include")}" data-iq-fact-key="${escapeHtml(key)}"><td>${escapeHtml(label)}</td><td>${escapeHtml(resultDisplay)}</td></tr>`;
+  }).filter(Boolean).join("");
+  if (!metricRows) return "";
+  const missing = Array.isArray(section?.missingFacts) && section.missingFacts.length
+    ? `<p class="footer-note">Unsupported Debt Capacity metrics were qualified or omitted: ${escapeHtml(section.missingFacts.join(", "))}.</p>`
+    : "";
   return renderSection(
     section.visibleLabel || "Debt Capacity and Coverage",
-    `<table class="source-table"><thead><tr><th>Metric</th><th>Result</th><th>Formula</th><th>Numerator / Denominator / Sources</th></tr></thead><tbody>${metricRows}</tbody></table><p class="footer-note">Deterministic lender metrics are shown only from canonical T12, Rent Roll, current debt, and purchase assumptions. Unsupported inputs remain Not available.</p>`,
+    `<table class="source-table" data-iq-section="debtCapacityAndCoverage" data-iq-disposition="${escapeHtml(section?.disposition || "include")}"><thead><tr><th>Metric</th><th>Result</th></tr></thead><tbody>${metricRows}</tbody></table><p class="footer-note">Deterministic lender metrics are shown only from canonical T12, Rent Roll, current debt, and purchase assumptions. Formula detail and source lineage are recorded outside primary customer-facing cells.</p>${missing}`,
     { pageBreakBefore: true }
   );
 }
