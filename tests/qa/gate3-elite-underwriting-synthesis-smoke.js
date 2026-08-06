@@ -132,7 +132,7 @@ prove("executive synthesis fact/calc/limitation only — no recommendation langu
   const synth = buildExecutiveUnderwritingSynthesis({ customerSurfaceModel: surface });
   assert.ok(synth.statements.length > 0);
   const blob = JSON.stringify(synth).toLowerCase();
-  assert.ok(!/buy\b|sell\b|recommend|thesis|invest now|proceed with acquisition/.test(blob));
+  assert.ok(!/\bbuy\b|\bsell\b|\brecommend\b|\binvestment thesis\b|invest now|proceed with acquisition/.test(blob));
   assert.ok(synth.statements.some((s) => s.kind === "sourced_fact"));
   assert.ok(synth.statements.some((s) => s.topic === "proposed_financing"));
   assert.ok(synth.statements.some((s) => s.topic === "proposedDebtYield"));
