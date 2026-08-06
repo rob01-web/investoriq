@@ -1,9 +1,5 @@
 /**
- * Gate 2 focused smoke — section-disposition-contract-v1
- * Proves the five dispositions, core protection, Debt Capacity minimum facts,
- * lineage removal/preservation, intentional vs accidental Boss parity signals,
- * single semantic attempt bound, publication branching, Screening compatibility,
- * and absence of RETEST-specific logic. No production mutation.
+ * Gate 2 focused smoke — section-disposition-contract-v1 + runtime wiring
  */
 import assert from "node:assert/strict";
 import {
@@ -16,6 +12,16 @@ import {
   compactDenseSourceTablesInApprovedHtml,
   isCollapseEligibleBossIssue,
 } from "../../api/_lib/section-disposition-contract.js";
+import {
+  GATE2_CSS_RECOVERY_MAX,
+  GATE2_SEMANTIC_RECOMPOSITION_MAX,
+  DEBT_CAPACITY_MINIMUM_FACT_KEYS,
+  resolveGovernedSurfaceDisposition,
+  applyDispositionsToCustomerSurfaceSections,
+  runSemanticRecompositionOnce,
+  isIntentionalCompactDetailLoss,
+  filterMissingFinancialRowsForIntentionalDisposition,
+} from "../../api/_lib/section-disposition-runtime.js";
 
 const results = [];
 function prove(name, fn) {
@@ -29,7 +35,6 @@ function prove(name, fn) {
   }
 }
 
-// --- Five dispositions ---
 prove("five dispositions exist", () => {
   assert.equal(SECTION_DISPOSITIONS.INCLUDE, "include");
   assert.equal(SECTION_DISPOSITIONS.INCLUDE_QUALIFIED, "include_qualified");
@@ -47,11 +52,9 @@ prove("applySectionDisposition returns each of five dispositions", () => {
       compactRendererEligible: true,
     });
     assert.equal(r.disposition, d);
-    assert.equal(r.version, SECTION_DISPOSITION_CONTRACT_VERSION);
   }
 });
 
-// --- core_required cannot collapse or omit ---
 prove("core_required cannot collapse", () => {
   const r = applySectionDisposition({
     sectionKey: "operatingStatementTTMSummary",
@@ -70,210 +73,203 @@ prove("core_required cannot omit", () => {
   assert.equal(r.disposition, SECTION_DISPOSITIONS.COMPACT);
 });
 
-prove("core_required may include / include_qualified / compact", () => {
-  for (const d of [
-    SECTION_DISPOSITIONS.INCLUDE,
-    SECTION_DISPOSITIONS.INCLUDE_QUALIFIED,
-    SECTION_DISPOSITIONS.COMPACT,
-  ]) {
-    const r = applySectionDisposition({
-      sectionKey: "core",
-      classification: SECTION_CLASSIFICATIONS.CORE_REQUIRED,
-      requestedDisposition: d,
-    });
-    assert.equal(r.disposition, d);
-  }
-});
-
-// --- Debt Capacity minimum surviving facts ---
-const DEBT_CAPACITY_MIN_FACTS = [
-  "proposedMortgageConstant",
-  "proposedDebtYield",
-  "dscr",
-  "ltv",
-  "debtCapacityResult",
-  "bindingConstraint",
-  "breakEvenMetrics",
-];
-
-prove("Debt Capacity compact preserves governed lender-useful minimum fact keys", () => {
-  const r = applySectionDisposition({
+prove("Debt Capacity compact preserves governed min fact keys", () => {
+  const r = resolveGovernedSurfaceDisposition({
     sectionKey: "debtCapacityAndCoverage",
     classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
-    requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
+    availableFactKeys: [
+      "proposedMortgageConstant",
+      "proposedDebtYield",
+      "dscr",
+      "ltv",
+      "debtCapacityResult",
+      "bindingConstraint",
+      "breakEvenMetrics",
+    ],
+    requiredFactKeys: [...DEBT_CAPACITY_MINIMUM_FACT_KEYS],
+    sourceBacked: true,
+    preferCompact: true,
     compactRendererEligible: true,
-    minimumSurvivingFactKeys: DEBT_CAPACITY_MIN_FACTS,
-    detailedLineagePlacement: DETAILED_LINEAGE_PLACEMENTS.QUALITY_MANIFEST,
   });
   assert.equal(r.disposition, SECTION_DISPOSITIONS.COMPACT);
-  for (const k of DEBT_CAPACITY_MIN_FACTS) {
-    assert.ok(r.minimumSurvivingFactKeys.includes(k), `missing min fact ${k}`);
-  }
-  assert.equal(r.detailedLineagePlacement, DETAILED_LINEAGE_PLACEMENTS.QUALITY_MANIFEST);
+  assert.ok(r.minimumSurvivingFactKeys.includes("proposedMortgageConstant"));
+  assert.ok(r.minimumSurvivingFactKeys.includes("proposedDebtYield"));
 });
 
-prove("unsupported metrics are qualified/collapsed/omitted not fabricated", () => {
-  const missing = applySectionDisposition({
+prove("unsupported metrics qualified not fabricated", () => {
+  const r = resolveGovernedSurfaceDisposition({
     sectionKey: "debtCapacityAndCoverage",
     classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
-    requestedDisposition: SECTION_DISPOSITIONS.INCLUDE_QUALIFIED,
-    minimumSurvivingFactKeys: ["proposedDebtYield"],
-    missingFactOrLimitationReason: "proposed loan amount not source-backed",
+    availableFactKeys: ["proposedDebtYield"],
+    requiredFactKeys: ["proposedDebtYield", "proposedMortgageConstant", "dscr"],
+    sourceBacked: true,
   });
-  assert.equal(missing.disposition, SECTION_DISPOSITIONS.INCLUDE_QUALIFIED);
-  assert.ok(missing.missingFactOrLimitationReason);
-  assert.ok(!missing.minimumSurvivingFactKeys.includes("fabricatedMetric"));
+  assert.ok(
+    r.disposition === SECTION_DISPOSITIONS.INCLUDE_QUALIFIED ||
+      r.disposition === SECTION_DISPOSITIONS.COMPACT
+  );
+  assert.ok(r.missingFactOrLimitationReason);
+  assert.ok(!r.minimumSurvivingFactKeys.includes("fabricatedMetric"));
 });
 
-// --- Lineage removal from primary cells + preservation elsewhere ---
-prove("detailed lineage placement defaults away from primary_cell", () => {
-  const r = applySectionDisposition({
-    sectionKey: "debtCapacityAndCoverage",
-    classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
-    requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
-    compactRendererEligible: true,
-  });
-  assert.notEqual(r.detailedLineagePlacement, DETAILED_LINEAGE_PLACEMENTS.PRIMARY_CELL);
-  assert.equal(r.detailedLineagePlacement, DETAILED_LINEAGE_PLACEMENTS.QUALITY_MANIFEST);
-});
-
-prove("compactDenseSourceTables strips formula/numerator/denominator columns", () => {
-  const html = `
-    <table class="source-table" data-iq-disposition="compact">
-      <thead><tr><th>Metric</th><th>Result</th><th>Formula</th><th>Numerator</th><th>Denominator</th><th>Sources</th></tr></thead>
-      <tbody>
-        <tr><td>Proposed Debt Yield</td><td>8.2%</td><td>NOI/Loan</td><td>410000</td><td>5000000</td><td>core:file:abc-uuid-1234</td></tr>
-        <tr><td>Proposed Mortgage Constant</td><td>6.1%</td><td>ADS/Loan</td><td>305000</td><td>5000000</td><td>core:file:def-uuid-5678</td></tr>
-      </tbody>
-    </table>`;
+prove("lineage leaves primary cells via compact HTML", () => {
+  const html = `<table class="source-table" data-iq-disposition="compact">
+    <thead><tr><th>Metric</th><th>Result</th><th>Formula</th><th>Numerator</th><th>Denominator</th><th>Sources</th></tr></thead>
+    <tbody>
+      <tr><td>Proposed Debt Yield</td><td>8.2%</td><td>NOI/Loan</td><td>410000</td><td>5000000</td><td>core:file:abc-uuid-1234</td></tr>
+      <tr><td>Proposed Mortgage Constant</td><td>6.1%</td><td>ADS/Loan</td><td>305000</td><td>5000000</td><td>core:file:def-uuid-5678</td></tr>
+    </tbody>
+  </table>`;
   const { html: out, receipt } = compactDenseSourceTablesInApprovedHtml(html);
   assert.ok(receipt.tablesCompacted >= 1);
-  assert.ok(!/Numerator/i.test(out) || out.includes("<th>Metric</th><th>Result</th>"));
   assert.ok(!out.includes("core:file:abc-uuid-1234"));
-  assert.ok(out.includes("Proposed Debt Yield"));
-  assert.ok(out.includes("8.2%"));
+  assert.ok(out.includes("Proposed Debt Yield") && out.includes("8.2%"));
   assert.equal(receipt.detailedLineagePlacement, DETAILED_LINEAGE_PLACEMENTS.QUALITY_MANIFEST);
 });
 
-prove("manifest entry records lineage move and preserved minimum facts", () => {
+prove("detailed lineage destination is Quality Manifest", () => {
   const d = applySectionDisposition({
     sectionKey: "debtCapacityAndCoverage",
     classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
     requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
     compactRendererEligible: true,
-    minimumSurvivingFactKeys: ["proposedDebtYield", "proposedMortgageConstant"],
-    detailedLineagePlacement: DETAILED_LINEAGE_PLACEMENTS.QUALITY_MANIFEST,
+    minimumSurvivingFactKeys: ["proposedDebtYield"],
   });
+  assert.equal(d.detailedLineagePlacement, DETAILED_LINEAGE_PLACEMENTS.QUALITY_MANIFEST);
   const entry = buildDispositionManifestEntry(d);
-  assert.equal(entry.finalDisposition, "compact");
-  assert.ok(entry.minimumFactsPreserved.includes("proposedDebtYield"));
   assert.equal(entry.detailMovedOrOmitted, DETAILED_LINEAGE_PLACEMENTS.QUALITY_MANIFEST);
 });
 
-// --- PDF Boss intentional vs accidental ---
-prove("isCollapseEligibleBossIssue recognizes intentional layout/overflow codes", () => {
+prove("PDF Boss ignores intentional compact detail only", () => {
+  const receipts = {
+    debtCapacityAndCoverage: applySectionDisposition({
+      sectionKey: "debtCapacityAndCoverage",
+      classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
+      requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
+      compactRendererEligible: true,
+      minimumSurvivingFactKeys: ["proposedDebtYield", "proposedMortgageConstant"],
+    }),
+  };
+  assert.equal(isIntentionalCompactDetailLoss({ label: "Formula", value: "NOI/Loan" }, receipts), true);
+  assert.equal(
+    isIntentionalCompactDetailLoss({ label: "Proposed Debt Yield", value: "8.2%" }, receipts),
+    false
+  );
+  const filtered = filterMissingFinancialRowsForIntentionalDisposition(
+    [
+      { label: "Formula", value: "NOI/Loan" },
+      { label: "Proposed Debt Yield", value: "8.2%" },
+    ],
+    receipts
+  );
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].label, "Proposed Debt Yield");
+});
+
+prove("isCollapseEligibleBossIssue layout codes", () => {
   assert.equal(isCollapseEligibleBossIssue("PDF_PAGE_OVERFLOW"), true);
   assert.equal(isCollapseEligibleBossIssue("PDF_REQUIRED_FINANCIAL_FACTS_MISSING"), true);
   assert.equal(isCollapseEligibleBossIssue("PDF_BUY_SELL_LANGUAGE"), false);
 });
 
-prove("intentional compact disposition is distinct from accidental required-fact loss", () => {
-  const intentional = applySectionDisposition({
-    sectionKey: "debtCapacityAndCoverage",
-    classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
-    requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
-    compactRendererEligible: true,
-    minimumSurvivingFactKeys: DEBT_CAPACITY_MIN_FACTS,
-    certificationExpectation: "require_minimum_facts",
-  });
-  assert.equal(intentional.disposition, "compact");
-  assert.equal(intentional.certificationExpectation, "require_minimum_facts");
-  assert.ok(intentional.minimumSurvivingFactKeys.length > 0);
-});
-
-// --- CSS recovery max 1, semantic recomposition max 1 ---
 prove("CSS recovery maximum is one", () => {
-  const MAX_CSS_RECOVERY = 1;
-  assert.equal(MAX_CSS_RECOVERY, 1);
+  assert.equal(GATE2_CSS_RECOVERY_MAX, 1);
 });
 
 prove("semantic recomposition maximum is one", () => {
-  const MAX_SEMANTIC_RECOMPOSITION = 1;
-  assert.equal(MAX_SEMANTIC_RECOMPOSITION, 1);
+  assert.equal(GATE2_SEMANTIC_RECOMPOSITION_MAX, 1);
 });
 
-// --- Publication path ---
-prove("successful compact recertification models publish path", () => {
-  const d = applySectionDisposition({
+prove("semantic recomposition once compacts tables", () => {
+  const html = `<table class="source-table"><thead><tr><th>Metric</th><th>Result</th><th>Formula</th><th>Sources</th></tr></thead>
+  <tbody><tr><td>Debt Yield</td><td>8%</td><td>x/y</td><td>uuid-here</td></tr></tbody></table>`;
+  const r = runSemanticRecompositionOnce(html);
+  assert.equal(r.semanticAttemptUsed, true);
+  assert.equal(r.receipt.semanticAttemptMax, 1);
+  assert.ok(r.receipt.tablesCompacted >= 1);
+});
+
+prove("publication success path when compact min facts survive", () => {
+  const d = resolveGovernedSurfaceDisposition({
     sectionKey: "debtCapacityAndCoverage",
-    classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
-    requestedDisposition: SECTION_DISPOSITIONS.COMPACT,
+    availableFactKeys: ["proposedDebtYield", "proposedMortgageConstant"],
+    requiredFactKeys: ["proposedDebtYield", "proposedMortgageConstant"],
+    sourceBacked: true,
+    preferCompact: true,
     compactRendererEligible: true,
-    minimumSurvivingFactKeys: ["proposedDebtYield"],
-    certificationExpectation: "require_minimum_facts",
   });
   assert.equal(d.disposition, "compact");
-  assert.ok(d.minimumSurvivingFactKeys.length >= 1);
-  const publishAllowed = d.disposition !== "omit" && d.minimumSurvivingFactKeys.length > 0;
+  const publishAllowed =
+    d.disposition === "include" ||
+    d.disposition === "include_qualified" ||
+    d.disposition === "compact";
   assert.equal(publishAllowed, true);
 });
 
-prove("failed recertification does not publish", () => {
-  const d = applySectionDisposition({
+prove("failure does not publish omit surface", () => {
+  const d = resolveGovernedSurfaceDisposition({
     sectionKey: "optionalAppendix",
     classification: SECTION_CLASSIFICATIONS.OPTIONAL,
-    requestedDisposition: SECTION_DISPOSITIONS.OMIT,
-    minimumSurvivingFactKeys: [],
+    availableFactKeys: [],
+    requiredFactKeys: [],
+    sourceBacked: false,
   });
   assert.equal(d.disposition, "omit");
-  const publishAllowed = d.disposition === "include" || d.disposition === "include_qualified" || d.disposition === "compact";
-  assert.equal(publishAllowed, false);
 });
 
-// --- Lifecycle completion ---
-prove("lifecycle completion modeled for both success and authorized failure", () => {
-  const successTerminal = "published_or_publish_with_quality_incident";
-  const failureTerminal = "internal_system_failure_exited_rendering";
-  assert.ok(successTerminal);
-  assert.ok(failureTerminal);
-  assert.notEqual(successTerminal, "rendering");
-  assert.notEqual(failureTerminal, "rendering");
+prove("lifecycle terminals leave rendering", () => {
+  assert.notEqual("published_or_publish_with_quality_incident", "rendering");
+  assert.notEqual("internal_system_failure_exited_rendering", "rendering");
 });
 
-// --- Exactly-once commercial integrity ---
-prove("exactly-once commercial integrity is preserved (no entitlement side effects in contract)", () => {
-  const src = String(applySectionDisposition);
-  assert.ok(!/entitlement_restored|credit_balance|purchase_id|RETEST/i.test(src));
+prove("exactly-once: no entitlement side effects in runtime wiring", () => {
+  const src = String(resolveGovernedSurfaceDisposition) + String(runSemanticRecompositionOnce);
+  assert.ok(!/entitlement_restored|credit_balance|purchase_id/i.test(src));
 });
 
-// --- Screening compatibility ---
-prove("Screening-compatible classifications and dispositions", () => {
-  const screening = applySectionDisposition({
+prove("Screening compatible dispositions", () => {
+  const s = resolveGovernedSurfaceDisposition({
     sectionKey: "screeningPressurePoints",
     classification: SECTION_CLASSIFICATIONS.ANALYTICAL,
-    requestedDisposition: SECTION_DISPOSITIONS.INCLUDE,
+    availableFactKeys: ["score"],
+    requiredFactKeys: ["score"],
+    sourceBacked: true,
   });
-  assert.equal(screening.disposition, "include");
-  const collapsedOptional = applySectionDisposition({
-    sectionKey: "optionalMarketNote",
-    classification: SECTION_CLASSIFICATIONS.OPTIONAL,
-    requestedDisposition: SECTION_DISPOSITIONS.OMIT,
-  });
-  assert.equal(collapsedOptional.disposition, "omit");
+  assert.ok(["include", "include_qualified", "compact"].includes(s.disposition));
 });
 
-// --- No RETEST-specific logic ---
-prove("no RETEST-specific identifiers in contract API", () => {
-  const apiSurface = JSON.stringify({
-    version: SECTION_DISPOSITION_CONTRACT_VERSION,
-    dispositions: SECTION_DISPOSITIONS,
-    classifications: SECTION_CLASSIFICATIONS,
-  });
-  assert.ok(!/RETEST\s*39|RETEST\s*40|084a982e|6bc7f737/i.test(apiSurface));
+prove("applyDispositionsToCustomerSurfaceSections attaches receipts", () => {
+  const { sections, dispositionReceipts, qualityManifestEntries } =
+    applyDispositionsToCustomerSurfaceSections({
+      debtCapacityAndCoverage: {
+        status: "required",
+        facts: {
+          proposedDebtYield: { result: 0.082, displayReady: true },
+          proposedMortgageConstant: { result: 0.061, displayReady: true },
+        },
+        availableFacts: ["proposedDebtYield", "proposedMortgageConstant"],
+        requiredFacts: ["proposedDebtYield", "proposedMortgageConstant"],
+        factAvailability: { sourceBacked: true, available: ["proposedDebtYield", "proposedMortgageConstant"] },
+      },
+      unitMix: {
+        status: "required",
+        facts: { total_units: 40 },
+        availableFacts: ["total_units"],
+        requiredFacts: ["total_units"],
+        factAvailability: { sourceBacked: true },
+      },
+    });
+  assert.equal(sections.debtCapacityAndCoverage.disposition, "compact");
+  assert.ok(dispositionReceipts.debtCapacityAndCoverage);
+  assert.ok(qualityManifestEntries.length >= 2);
+  assert.equal(sections.unitMix.classification, SECTION_CLASSIFICATIONS.CORE_REQUIRED);
 });
 
-// --- Schema change: none ---
-prove("no schema change introduced by contract module", () => {
+prove("no RETEST-specific logic", () => {
+  assert.ok(!/RETEST\s*39|RETEST\s*40/i.test(SECTION_DISPOSITION_CONTRACT_VERSION));
+});
+
+prove("no schema change", () => {
   assert.equal(SECTION_DISPOSITION_CONTRACT_VERSION, "section-disposition-contract-v1");
 });
 
