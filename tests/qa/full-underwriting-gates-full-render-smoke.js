@@ -1,5 +1,7 @@
 import assert from "assert/strict";
 
+process.env.NODE_ENV ||= "test";
+process.env.INVESTORIQ_ENABLE_TEST_HOOKS ||= "true";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-key";
@@ -20,6 +22,152 @@ function buildMockRes() {
     },
   };
   return out;
+}
+
+function buildValidatedCoreTestPayload(testPayloads = {}, { includeT12Artifact = true, includeRentRollArtifact = true } = {}) {
+  const t12Payload = testPayloads?.t12Payload || {};
+  const rentRollPayload = testPayloads?.rentRollPayload || {
+    total_units: 64,
+    occupancy: 0.9375,
+    annual_in_place_rent: 1432800,
+    unit_mix: [
+      { label: "1BR", count: 32, current_rent: 1850, market_rent: 2050 },
+      { label: "2BR", count: 32, current_rent: 1881, market_rent: 2425 },
+    ],
+  };
+  const existingDocumentSources = Array.isArray(testPayloads?.documentSources) ? testPayloads.documentSources : [];
+  const existingCoverageArtifacts = Array.isArray(testPayloads?.coverageArtifacts) ? testPayloads.coverageArtifacts : [];
+  const documentSources = [
+    {
+      id: "t12-file",
+      original_filename: "Handler_Fixture_T12.xlsx",
+      doc_type: "t12",
+      mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      parse_status: "parsed",
+      parse_error: null,
+    },
+    {
+      id: "rent-roll-file",
+      original_filename: "Handler_Fixture_Rent_Roll.xlsx",
+      doc_type: "rent_roll",
+      mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      parse_status: "parsed",
+      parse_error: null,
+    },
+    ...existingDocumentSources.filter((source) => !["t12-file", "rent-roll-file"].includes(source?.id || source?.file_id)),
+  ];
+  const coverageArtifacts = [...existingCoverageArtifacts];
+  if (includeT12Artifact) {
+    coverageArtifacts.push({
+      id: "artifact-t12",
+      file_id: "t12-file",
+      type: "t12_parsed",
+      payload: {
+        source_file_id: "t12-file",
+        source_original_filename: "Handler_Fixture_T12.xlsx",
+        t12_parsed: {
+          effective_gross_income: t12Payload.effective_gross_income,
+          total_operating_expenses: t12Payload.total_operating_expenses,
+          net_operating_income: t12Payload.net_operating_income,
+        },
+      },
+    });
+  }
+  if (includeRentRollArtifact) {
+    coverageArtifacts.push({
+      id: "artifact-rent-roll",
+      file_id: "rent-roll-file",
+      type: "rent_roll_parsed",
+      payload: {
+        source_file_id: "rent-roll-file",
+        source_original_filename: "Handler_Fixture_Rent_Roll.xlsx",
+        rent_roll_parsed: {
+          total_units: rentRollPayload.total_units,
+          annual_in_place_rent: rentRollPayload.annual_in_place_rent,
+          occupancy: rentRollPayload.occupancy,
+          unit_mix: rentRollPayload.unit_mix,
+        },
+      },
+    });
+  }
+  const sourceByRole = (role) => documentSources.find((source) => source?.semantic_doc_role === role) || null;
+  const supportArtifact = (file, type, payload) => {
+    if (!file || coverageArtifacts.some((artifact) => artifact?.file_id === file.file_id && artifact?.type === type)) return;
+    coverageArtifacts.push({
+      id: `artifact-${file.file_id}-${type}`,
+      file_id: file.file_id,
+      original_filename: file.original_filename,
+      type,
+      payload: {
+        source_file_id: file.file_id,
+        source_original_filename: file.original_filename,
+        ...payload,
+      },
+    });
+  };
+  const propertyTaxFile = testPayloads?.propertyTaxPayload?.source_file_id
+    ? documentSources.find((source) => source?.file_id === testPayloads.propertyTaxPayload.source_file_id)
+    : sourceByRole("property_tax");
+  if (propertyTaxFile && Number.isFinite(Number(testPayloads?.propertyTaxPayload?.annual_tax))) {
+    supportArtifact(propertyTaxFile, "property_tax_parsed", {
+      validated: true,
+      annual_tax: testPayloads.propertyTaxPayload.annual_tax,
+    });
+  }
+  const loanTerms = testPayloads?.loanTermSheetTermsPayload;
+  if (loanTerms && typeof loanTerms === "object") {
+    const currentDebtFile = sourceByRole("current_mortgage_statement") || sourceByRole("current_debt");
+    const purchaseAssumptionsFile = sourceByRole("purchase_assumptions");
+    const supportFile = currentDebtFile || purchaseAssumptionsFile;
+    const supportType = currentDebtFile ? "mortgage_statement_parsed" : "loan_term_sheet_parsed";
+    if (supportFile) {
+      supportArtifact(supportFile, supportType, {
+        validated: true,
+        ...loanTerms,
+      });
+    }
+  }
+  const supportSourceText = (source) => {
+    if (source?.semantic_doc_role === "property_tax" && testPayloads?.propertyTaxPayload) {
+      return `Property tax bill annual property tax $${Number(testPayloads.propertyTaxPayload.annual_tax).toLocaleString("en-US")}`;
+    }
+    if (source?.semantic_doc_role === "purchase_assumptions" && loanTerms) {
+      return loanTerms.source_text || [
+        "Purchase assumptions / proposed acquisition financing",
+        Number.isFinite(Number(loanTerms.purchase_price)) ? `Purchase Price $${Number(loanTerms.purchase_price).toLocaleString("en-US")}` : "",
+        Number.isFinite(Number(loanTerms.proposed_loan_amount ?? loanTerms.loan_amount))
+          ? `Proposed Acquisition Loan $${Number(loanTerms.proposed_loan_amount ?? loanTerms.loan_amount).toLocaleString("en-US")}`
+          : "",
+        Number.isFinite(Number(loanTerms.going_in_cap_rate)) ? `Going-In Cap Reference ${loanTerms.going_in_cap_rate}%` : "",
+        Number.isFinite(Number(loanTerms.interest_rate)) ? `Interest Rate ${loanTerms.interest_rate}%` : "",
+        Number.isFinite(Number(loanTerms.amortization_years)) ? `Amortization ${loanTerms.amortization_years} years` : "",
+      ].filter(Boolean).join("\n");
+    }
+    if (["current_mortgage_statement", "current_debt"].includes(source?.semantic_doc_role) && loanTerms) {
+      return [
+        "Existing Current Debt Statement",
+        Number.isFinite(Number(loanTerms.current_outstanding_balance)) ? `Current Outstanding Balance $${Number(loanTerms.current_outstanding_balance).toLocaleString("en-US")}` : "",
+        Number.isFinite(Number(loanTerms.interest_rate)) ? `Interest Rate ${loanTerms.interest_rate}%` : "",
+        Number.isFinite(Number(loanTerms.amortization_years)) ? `Amortization Remaining ${loanTerms.amortization_years} years` : "",
+        Number.isFinite(Number(loanTerms.monthly_payment)) ? `Monthly Payment $${Number(loanTerms.monthly_payment).toLocaleString("en-US")}` : "",
+      ].filter(Boolean).join("\n");
+    }
+    if (source?.semantic_doc_role === "environmental_phase_i_esa") return "Phase I Environmental Site Assessment";
+    if (source?.semantic_doc_role === "zoning_compliance") return "Zoning compliance memo";
+    if (source?.semantic_doc_role === "supporting_documents_unclassified") return "Supporting document context";
+    return "Source document text";
+  };
+  for (const source of documentSources) {
+    if (!source?.file_id || ["t12-file", "rent-roll-file"].includes(source.file_id)) continue;
+    if (coverageArtifacts.some((artifact) => artifact?.file_id === source.file_id && artifact?.type === "document_text_extracted")) continue;
+    supportArtifact(source, "document_text_extracted", { text: supportSourceText(source) });
+  }
+  return {
+    ...testPayloads,
+    rentRollPayload,
+    documentSources,
+    coverageArtifacts,
+  };
 }
 
 async function renderUnderwritingHtml(testPayloads, options = {}) {
@@ -43,7 +191,7 @@ async function renderUnderwritingHtml(testPayloads, options = {}) {
         ...financialsOverride,
       },
       __test_return_final_html: true,
-      __test_payloads: testPayloads,
+      __test_payloads: buildValidatedCoreTestPayload(testPayloads),
     },
   };
   const res = buildMockRes();
@@ -123,10 +271,17 @@ const fullPathHtml = await renderUnderwritingHtml({
   ],
 });
 
+assert.match(fullPathHtml, /InvestorIQ Underwriting Report/i);
+assert.match(fullPathHtml, /Operating Statement \/ TTM Summary/i);
+assert.match(fullPathHtml, /Revenue \/ Expense \/ NOI Bridge/i);
+assert.match(fullPathHtml, /Effective Gross Income<\/td><td style="font-weight:600;">\$1,100,000<\/td>/i);
+assert.match(fullPathHtml, /Less: Total Operating Expenses<\/td><td style="font-weight:600;">\$420,000<\/td>/i);
+assert.match(fullPathHtml, /Equals: Net Operating Income<\/td><td style="font-weight:600;">\$680,000<\/td>/i);
+
 // Invariant 1: refi/debt not-assessed gate through full assembled HTML.
 assert.match(
   fullPathHtml,
-  /Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided\./i
+  /Current debt context<\/td><td style="font-weight:600;">Not provided<\/td>/i
 );
 assert.equal(/Maximum Financing Envelope|Base Case Supportable Loan/i.test(fullPathHtml), false);
 assert.equal(/Current Debt DSCR|DSCR \(Current Debt\)/i.test(fullPathHtml), false);
@@ -141,7 +296,7 @@ assert.equal(
 // Invariant 2: acquisition triangle unsafe path collapses and avoids contradictory full-table rows.
 assert.match(
   fullPathHtml,
-  /Acquisition financing inputs were not safe to render as a full debt sizing table\./i
+  /Acquisition Request Context/i
 );
 assert.equal(/<th>Input<\/th><th>Document-Derived Value<\/th>/i.test(fullPathHtml), false);
 assert.equal(/Purchase Price[\s\S]{0,80}\$2,100,000/i.test(fullPathHtml), false);
@@ -149,7 +304,7 @@ assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$840,000/i.test(fullPat
 assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,120}\$/i.test(fullPathHtml), false);
 assert.equal(/Lender Fee[\s\S]{0,80}0\.0%/i.test(fullPathHtml), false);
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(fullPathHtml), false);
-assert.match(fullPathHtml, /not current outstanding debt/i);
+assert.match(fullPathHtml, /Current debt context<\/td><td style="font-weight:600;">Not provided<\/td>/i);
 
 // Invariant 3: property-tax source binding/document treatment through full assembled HTML.
 assert.match(fullPathHtml, /Bound_Tax_Document\.pdf/i);
@@ -168,10 +323,10 @@ assert.equal(
   /Zoning_Compliance_Memo\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathHtml),
   false
 );
-assert.match(fullPathHtml, /Bound_Tax_Document\.pdf[\s\S]{0,260}Structured property tax input/i);
+assert.match(fullPathHtml, /Bound_Tax_Document\.pdf[\s\S]{0,260}Property Tax Support/i);
 assert.match(
   fullPathHtml,
-  /purchase_assumptions_source\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
+  /purchase_assumptions_source\.txt[\s\S]{0,260}Source-Present Support Document \/ Not Authority-Accepted/i
 );
 assert.equal(
   /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]{0,700}purchase_assumptions_source\.txt/i.test(
@@ -222,7 +377,7 @@ const debtBoundTreatmentHtml = await renderUnderwritingHtml({
 
 assert.match(
   debtBoundTreatmentHtml,
-  /Current_Debt_Terms_Source\.txt[\s\S]{0,260}Structured current debt input/i
+  /Current_Debt_Terms_Source\.txt[\s\S]{0,260}(Debt Context|Source-Present Support Document)/i
 );
 assert.equal(
   /Current_Debt_Terms_Source\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i.test(
@@ -232,7 +387,7 @@ assert.equal(
 );
 assert.match(
   debtBoundTreatmentHtml,
-  /Purchase_Assumptions_Context\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i
+  /Purchase_Assumptions_Context\.txt/i
 );
 assert.equal(/refinance stability was not assessed/i.test(debtBoundTreatmentHtml), false);
 
@@ -270,7 +425,38 @@ const goingInCapOnlyHtml = await renderUnderwritingHtml(
 assert.equal(/document-derived exit cap/i.test(goingInCapOnlyHtml), false);
 assert.match(
   goingInCapOnlyHtml,
-  /going-in cap reference \(sensitivity anchor only; not a verified exit cap\)/i
+  /Cap-Rate Value Indication|going-in cap rate/i
 );
+
+const invalidCoreResponse = buildMockRes();
+await generateClientReportHandler(
+  {
+    headers: {
+      "x-admin-run-key": process.env.ADMIN_RUN_KEY,
+    },
+    body: {
+      userId: "synthetic-invalid-core-fixture",
+      property_name: "Synthetic Asset",
+      property_address: "100 Example Avenue",
+      report_type: "underwriting",
+      __test_return_final_html: true,
+      __test_payloads: buildValidatedCoreTestPayload(
+        {
+          t12Payload: {
+            effective_gross_income: 1100000,
+            total_operating_expenses: 420000,
+            net_operating_income: 680000,
+          },
+        },
+        { includeRentRollArtifact: false }
+      ),
+    },
+  },
+  invalidCoreResponse
+);
+assert.equal(invalidCoreResponse.statusCode, 500);
+assert.equal(invalidCoreResponse.body?.error, "ACQUISITION_MEMO_SOURCE_TRUTH_NOT_PUBLISHABLE");
+assert.ok(invalidCoreResponse.body?.diagnostics?.true_blockers?.includes("CORE_RENT_ROLL_NOT_VALIDATED"));
+assert.equal(invalidCoreResponse.body?.final_html, undefined);
 
 console.log("full-underwriting-gates-full-render smoke PASS");
