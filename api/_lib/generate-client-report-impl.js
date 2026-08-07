@@ -97,6 +97,7 @@ import {
   buildDeliveryResponseCompatibilityAliases,
   buildReportStoragePath,
   assertValidReportPublicationInsert,
+  runBoundedPdfCertificationRecovery,
   sanitizeTypography,
 } from "./report-delivery-output.js";
 import {
@@ -104,7 +105,7 @@ import {
   normalizeReportRevisionKind,
 } from "../../src/lib/reportRevisionAuthority.js";
 import {
-  inspectFinalPdfPublicationQuality,
+  assertFinalPdfPublicationQuality,
   isFinalPdfCustomerDeliveryAllowed,
 } from "./final-pdf-publication-quality-boss.js";
 import {
@@ -112,10 +113,6 @@ import {
   SCREENING_REPORT_IDENTITY,
   UNDERWRITING_REPORT_IDENTITY,
 } from "./report-identity-authority.js";
-import {
-  buildInstitutionalPdfRecoveryHtml,
-  isInstitutionalPdfRecoveryEligible,
-} from "./institutional-pdf-recovery.js";
 import {
   resolveReportTypeAndTier,
   constantTimeEqual,
@@ -2255,6 +2252,174 @@ function buildT12ExpenseRows(t12Payload, formatValue) {
   }
   if (rows.length < 3) return "";
   return rows.join("");
+}
+
+function buildCanonicalCoreSafePdfHtml({
+  reportIdentity = null,
+  propertyName = "",
+  t12Payload = null,
+  computedRentRoll = null,
+  rentRollPayload = null,
+  sourceReconciliationState = null,
+} = {}) {
+  const formatMoney = (value) => escapeHtml(formatCurrency(value));
+  const t12SummaryHtml = buildT12SummaryHtml(t12Payload, formatMoney);
+  const t12IncomeRows = buildT12IncomeRows(t12Payload, formatMoney);
+  const t12ExpenseRows = buildT12ExpenseRows(t12Payload, formatMoney);
+  const rentRollTotals =
+    sourceReconciliationState?.rent_roll_annual_totals ||
+    resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
+  const totalUnits = coerceNumber(
+    computedRentRoll?.total_units ??
+      rentRollPayload?.total_units ??
+      rentRollPayload?.totals?.total_units
+  );
+  const occupiedUnits = coerceNumber(
+    computedRentRoll?.occupied_units ??
+      rentRollPayload?.occupied_units ??
+      rentRollPayload?.totals?.occupied_units
+  );
+  const occupancy = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
+  const annualInPlaceRent = coerceNumber(
+    computedRentRoll?.annual_in_place_rent ??
+      computedRentRoll?.annual_in_place_rent_total ??
+      computedRentRoll?.annual_current_rent ??
+      computedRentRoll?.in_place_rent_annual ??
+      rentRollTotals?.in_place?.value ??
+      rentRollPayload?.total_in_place_annual
+  );
+  const rentRollRows = [
+    ["Total Units", Number.isFinite(totalUnits) ? String(totalUnits) : DATA_NOT_AVAILABLE],
+    ["Occupied Units", Number.isFinite(occupiedUnits) ? String(occupiedUnits) : DATA_NOT_AVAILABLE],
+    ["Occupancy", Number.isFinite(occupancy) ? formatPercent(occupancy) : DATA_NOT_AVAILABLE],
+    ["Annual In-Place Rent", Number.isFinite(annualInPlaceRent) ? formatMoney(annualInPlaceRent) : DATA_NOT_AVAILABLE],
+  ];
+  const rentRollExists = Boolean(computedRentRoll || rentRollPayload || rentRollTotals);
+  const rentRollHtml = rentRollExists
+    ? `<table class="core-safe-table" data-iq-core-surface="rent-roll"><thead><tr><th>Rent Roll Core Fact</th><th>Value</th></tr></thead><tbody>${rentRollRows
+        .map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${value}</td></tr>`)
+        .join("")}</tbody></table>`
+    : "";
+  const t12IncomeHtml = t12IncomeRows
+    ? `<table class="core-safe-table" data-iq-core-surface="t12-income"><thead><tr><th>T12 Income Fact</th><th>Value</th></tr></thead><tbody>${t12IncomeRows}</tbody></table>`
+    : "";
+  const t12ExpenseHtml = t12ExpenseRows
+    ? `<table class="core-safe-table" data-iq-core-surface="t12-expense"><thead><tr><th>T12 Expense Fact</th><th>Value</th></tr></thead><tbody>${t12ExpenseRows}</tbody></table>`
+    : "";
+  const reconciliationRenderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
+  const reconciliationDisclosure = reconciliationRenderState?.renderable
+    ? `Source reconciliation disclosure: Rent Roll/T12 variance is ${escapeHtml(String(reconciliationRenderState.variance_display || "not available"))}. No unsupported adjustment is made.`
+    : "Source reconciliation disclosure: T12 and Rent Roll values are shown from canonical source truth. No unsupported adjustment is made.";
+  const reportTitle = String(reportIdentity?.canonicalTitle || reportIdentity?.canonical_title || "InvestorIQ Report").trim();
+  const propertyTitle = String(propertyName || "").trim();
+  const hasCoreSurface = Boolean(t12SummaryHtml || t12IncomeHtml || t12ExpenseHtml || rentRollHtml);
+  if (!hasCoreSurface) return "";
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(reportTitle)}</title><style>
+    @page { margin: 0.55in; }
+    body { font-family: Arial, sans-serif; color: #1f2937; font-size: 10px; line-height: 1.35; }
+    h1 { font-size: 17px; margin: 0 0 4px; color: #1f3a5f; }
+    h2 { font-size: 12px; margin: 14px 0 5px; color: #1f3a5f; }
+    p { margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 5px 0 9px; }
+    th, td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; }
+    th { background: #e2e8f0; font-weight: 700; }
+    td:last-child, th:last-child { text-align: right; }
+    .disclosure { border-top: 1px solid #cbd5e1; margin-top: 12px; padding-top: 7px; color: #475569; }
+  </style></head><body>
+    <h1>${escapeHtml(reportTitle)}</h1>
+    ${propertyTitle ? `<p><strong>Property:</strong> ${escapeHtml(propertyTitle)}</p>` : ""}
+    <p><strong>Core-safe presentation:</strong> canonical T12/Rent Roll facts only; optional and analytical surfaces omitted.</p>
+    ${t12SummaryHtml ? `<h2>T12 Operating Facts</h2>${t12SummaryHtml}` : ""}
+    ${t12IncomeHtml ? `<h2>T12 Income Detail</h2>${t12IncomeHtml}` : ""}
+    ${t12ExpenseHtml ? `<h2>T12 Expense Detail</h2>${t12ExpenseHtml}` : ""}
+    ${rentRollHtml ? `<h2>Rent Roll Core Facts</h2>${rentRollHtml}` : ""}
+    <p class="disclosure">${reconciliationDisclosure}</p>
+    <p class="disclosure">Source treatment: all displayed values are source-backed canonical values. No values are inferred or fabricated.</p>
+  </body></html>`;
+}
+
+function buildDeterministicMinimumCorePdfHtml({
+  reportIdentity = null,
+  propertyName = "",
+  t12Payload = null,
+  computedRentRoll = null,
+  rentRollPayload = null,
+} = {}) {
+  const formatMoney = (value) => escapeHtml(formatCurrency(value));
+  const rows = [];
+  const addRow = (surface, label, value, formatter = String) => {
+    if (value === null || value === undefined || value === "") return;
+    const numericValue = coerceNumber(value);
+    if (typeof value === "number" && !Number.isFinite(numericValue)) return;
+    rows.push({
+      surface,
+      label,
+      value: formatter(typeof value === "number" ? numericValue : value),
+    });
+  };
+
+  addRow("T12", "Gross Potential Rent", t12Payload?.gross_potential_rent ?? t12Payload?.gross_scheduled_rent, formatMoney);
+  addRow("T12", "Effective Gross Income", t12Payload?.effective_gross_income, formatMoney);
+  addRow("T12", "Total Operating Expenses", t12Payload?.total_operating_expenses, formatMoney);
+  addRow("T12", "Net Operating Income", t12Payload?.net_operating_income, formatMoney);
+
+  const rentRollTotals = resolveCanonicalRentRollAnnualTotals({ computedRentRoll, rentRollPayload });
+  addRow(
+    "Rent Roll",
+    "Total Units",
+    computedRentRoll?.total_units ?? rentRollPayload?.total_units ?? rentRollPayload?.totals?.total_units,
+    (value) => escapeHtml(String(value))
+  );
+  addRow(
+    "Rent Roll",
+    "Occupied Units",
+    computedRentRoll?.occupied_units ?? rentRollPayload?.occupied_units ?? rentRollPayload?.totals?.occupied_units,
+    (value) => escapeHtml(String(value))
+  );
+  addRow(
+    "Rent Roll",
+    "Occupancy",
+    resolveOccupancyNoteValue(computedRentRoll, rentRollPayload),
+    (value) => escapeHtml(formatPercent(value))
+  );
+  addRow(
+    "Rent Roll",
+    "Annual In-Place Rent",
+    computedRentRoll?.annual_in_place_rent ??
+      computedRentRoll?.annual_in_place_rent_total ??
+      computedRentRoll?.annual_current_rent ??
+      computedRentRoll?.in_place_rent_annual ??
+      rentRollTotals?.in_place?.value ??
+      rentRollPayload?.total_in_place_annual,
+    formatMoney
+  );
+
+  if (rows.length === 0) return "";
+  const reportTitle = String(reportIdentity?.canonicalTitle || reportIdentity?.canonical_title || "InvestorIQ Report").trim();
+  const propertyTitle = String(propertyName || "").trim();
+  const tableRows = rows.map((row) =>
+    `<tr><td>${escapeHtml(row.surface)}</td><td>${escapeHtml(row.label)}</td><td>${row.value}</td></tr>`
+  ).join("");
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(reportTitle)}</title><style>
+    @page { margin: 0.55in; }
+    body { font-family: Arial, sans-serif; color: #1f2937; font-size: 10px; line-height: 1.35; }
+    h1 { font-size: 17px; margin: 0 0 4px; color: #1f3a5f; }
+    p { margin: 5px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 5px 6px; text-align: left; }
+    th { background: #e2e8f0; font-weight: 700; }
+    td:last-child, th:last-child { text-align: right; }
+    .disclosure { border-top: 1px solid #cbd5e1; margin-top: 12px; padding-top: 7px; color: #475569; }
+  </style></head><body>
+    <h1>${escapeHtml(reportTitle)}</h1>
+    ${propertyTitle ? `<p><strong>Property:</strong> ${escapeHtml(propertyTitle)}</p>` : ""}
+    <p><strong>Minimum core presentation:</strong> validated T12 and Rent Roll facts only.</p>
+    <table><thead><tr><th>Source Surface</th><th>Core Fact</th><th>Value</th></tr></thead><tbody>${tableRows}</tbody></table>
+    <p class="disclosure">Required reconciliation disclosure: T12 and Rent Roll evidence are shown from canonical source truth without unsupported adjustment.</p>
+    <p class="disclosure">Source limitation disclosure: optional, analytical, and presentation-heavy surfaces are omitted from this minimum artifact.</p>
+  </body></html>`;
 }
 // ---------- Dynamic Table Builders ----------
 function buildUnitMixTable(rows = []) {
@@ -8854,11 +9019,11 @@ try {
       test_harness: true,
     });
   }
-  pdfResponse = await axios.post(
+  const renderDocRaptorPdf = async (documentContent) => axios.post(
     "https://docraptor.com/docs",
     {
       test: docraptorMode !== "production",
-      document_content: docHtml,
+      document_content: documentContent,
       name: "InvestorIQ-ClientReport.pdf",
       document_type: "pdf",
     },
@@ -8875,10 +9040,17 @@ try {
   const finalPdfArtifactMode = docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf";
   const finalPdfPublicationTarget = String(process.env.REPORT_PUBLICATION_TARGET || "").trim() ||
     (finalPdfArtifactMode === "production_pdf" ? "external_customer" : "internal_test");
-  const finalPdfDeterministicContractQaSeal =
+  const baseFinalPdfDeterministicContractQaSeal =
     acquisitionMemoV2Finalization?.deterministicContractQaSeal ||
     reportContractQaResult?.deterministic_contract_qa_seal ||
     null;
+  const finalPdfSectionDispositionReceipts =
+    acquisitionMemoV2Finalization?.customerSurfaceModel?.sectionDispositionReceipts || {};
+  const canonicalFinalPdfCorePublishable = Boolean(
+    isCanonicalSourceTruthPackage(sourceTruthPackageResult) &&
+    deliveryGateDecisionResult?.delivery_gate_status === "deliverable" &&
+    deliveryDecisionStateResult?.core_valid_required_coverage === true
+  );
   const finalPdfSourceReconciliation =
     acquisitionMemoV2Finalization?.customerSurfaceModel?.sourceTruth?.sourceReconciliation ||
     { state: sourceReconciliationState || null };
@@ -8887,61 +9059,93 @@ try {
     reportType,
     reportTier,
   });
-  finalPdfPublicationQualityBossResult = await inspectFinalPdfPublicationQuality({
-    pdfBytes: pdfResponse.data,
-    approvedHtml: docHtml,
-    deterministicContractQaSeal: finalPdfDeterministicContractQaSeal,
-    sourceReconciliation: finalPdfSourceReconciliation,
-    financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
-    reportIdentity: finalPdfReportIdentity,
-    artifactMode: finalPdfArtifactMode,
-    publicationTarget: finalPdfPublicationTarget,
-  });
-  if (!finalPdfPublicationQualityBossResult.ok && isInstitutionalPdfRecoveryEligible(finalPdfPublicationQualityBossResult)) {
-    const recovery = buildInstitutionalPdfRecoveryHtml({
-      approvedHtml: docHtml,
-      certification: finalPdfPublicationQualityBossResult,
-    });
-    const initialCertificationStatus = finalPdfPublicationQualityBossResult.status || null;
-    pdfResponse = await axios.post(
-      "https://docraptor.com/docs",
-      {
-        test: docraptorMode !== "production",
-        document_content: recovery.html,
-        name: "InvestorIQ-ClientReport.pdf",
-        document_type: "pdf",
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${Buffer.from(
-            process.env.DOCRAPTOR_API_KEY + ":"
-          ).toString("base64")}`,
-        },
-        responseType: "arraybuffer",
+  let finalPdfCoreSafeHtml = "";
+  let finalPdfEmergencyCoreHtml = "";
+  let finalPdfCoreSafeHtmlBuildError = null;
+  if (canonicalFinalPdfCorePublishable) {
+    try {
+      finalPdfCoreSafeHtml = buildCanonicalCoreSafePdfHtml({
+        reportIdentity: finalPdfReportIdentity,
+        propertyName: propertyNameDisplay || propertyName || jobPropertyName || "",
+        t12Payload,
+        computedRentRoll,
+        rentRollPayload,
+        sourceReconciliationState,
+      });
+    } catch (error) {
+      finalPdfCoreSafeHtmlBuildError = error;
+      console.error("Failed to construct canonical core-safe PDF fallback:", error);
+    }
+    try {
+      finalPdfEmergencyCoreHtml = buildDeterministicMinimumCorePdfHtml({
+        reportIdentity: finalPdfReportIdentity,
+        propertyName: propertyNameDisplay || propertyName || jobPropertyName || "",
+        t12Payload,
+        computedRentRoll,
+        rentRollPayload,
+      });
+    } catch (error) {
+      finalPdfCoreSafeHtmlBuildError = finalPdfCoreSafeHtmlBuildError || error;
+      console.error("Failed to construct deterministic minimum core PDF fallback:", error);
+    }
+  }
+  const finalPdfCorePublishable = canonicalFinalPdfCorePublishable;
+  let initialArtifactIsEmergency = false;
+  let initialRenderError = null;
+  try {
+    pdfResponse = await renderDocRaptorPdf(docHtml);
+  } catch (error) {
+    if (finalPdfCorePublishable !== true) throw error;
+    const emergencyHtml = String(finalPdfEmergencyCoreHtml || "").trim();
+    if (!emergencyHtml) throw error;
+    try {
+      pdfResponse = await renderDocRaptorPdf(emergencyHtml);
+    } catch (emergencyError) {
+      emergencyError.context = {
+        ...(emergencyError.context || {}),
+        initial_render_error: error?.message || String(error),
+        emergency_core_render_error: emergencyError?.message || String(emergencyError),
+      };
+      throw emergencyError;
+    }
+    initialArtifactIsEmergency = true;
+    initialRenderError = error;
+  }
+  const finalPdfDeterministicContractQaSeal = baseFinalPdfDeterministicContractQaSeal
+    ? {
+        ...baseFinalPdfDeterministicContractQaSeal,
+        sectionDispositionReceipts: finalPdfSectionDispositionReceipts,
+        corePublishable: finalPdfCorePublishable,
       }
-    );
-    const recoveredCertification = await inspectFinalPdfPublicationQuality({
-      pdfBytes: pdfResponse.data,
-      approvedHtml: docHtml,
+    : null;
+  const boundedRecovery = await runBoundedPdfCertificationRecovery({
+    initialPdfBuffer: pdfResponse.data,
+    finalHtml: docHtml,
+    coreSafeHtml: finalPdfCoreSafeHtml,
+    emergencyCoreHtml: finalPdfEmergencyCoreHtml,
+    coreSafeHtmlBuildError: finalPdfCoreSafeHtmlBuildError,
+    initialArtifactIsEmergency,
+    initialArtifactHtml: initialArtifactIsEmergency ? finalPdfEmergencyCoreHtml : "",
+    initialRenderError,
+    renderPdfBuffer: async ({ finalHtml }) => (await renderDocRaptorPdf(finalHtml)).data,
+    certifyPdf: (pdfBytes, options = {}) => assertFinalPdfPublicationQuality({
+      pdfBytes,
+      approvedHtml: options.approvedHtmlForCertification || docHtml,
       deterministicContractQaSeal: finalPdfDeterministicContractQaSeal,
       sourceReconciliation: finalPdfSourceReconciliation,
       financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
       reportIdentity: finalPdfReportIdentity,
       artifactMode: finalPdfArtifactMode,
       publicationTarget: finalPdfPublicationTarget,
-    });
-    finalPdfPublicationQualityBossResult = {
-      ...recoveredCertification,
-      institutional_pdf_recovery: {
-        ...recovery.receipt,
-        initialCertificationStatus,
-        finalCertificationStatus: recoveredCertification.status || null,
-        recovered: recoveredCertification.ok === true,
-        customerDeliveryPreserved: isFinalPdfCustomerDeliveryAllowed(recoveredCertification),
-      },
-    };
-  }
+      sectionDispositionReceipts: options.sectionDispositionReceipts || finalPdfSectionDispositionReceipts,
+      semanticRecompositionReceipt: options.semanticRecompositionReceipt || null,
+    }),
+    sectionDispositionReceipts: finalPdfSectionDispositionReceipts,
+    corePublishable: finalPdfCorePublishable,
+  });
+  pdfResponse = { ...pdfResponse, data: boundedRecovery.pdfBuffer };
+  finalPdfPublicationQualityBossResult = boundedRecovery.publicationQualityBoss;
+  if (boundedRecovery.terminalError) throw boundedRecovery.terminalError;
   if (jobId) {
     const pdfBossTimestamp = new Date().toISOString().replace(/:/g, "-");
     const { error: pdfBossArtifactError } = await supabase.from("analysis_artifacts").insert([{
@@ -8954,7 +9158,7 @@ try {
     }]);
     if (pdfBossArtifactError) console.error("Failed to write final_pdf_publication_quality_boss artifact:", pdfBossArtifactError);
   }
-  if (!isFinalPdfCustomerDeliveryAllowed(finalPdfPublicationQualityBossResult)) {
+  if (!finalPdfCorePublishable && !isFinalPdfCustomerDeliveryAllowed(finalPdfPublicationQualityBossResult)) {
     const pdfBossError = new Error("Final PDF failed Publication Quality Boss certification");
     pdfBossError.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
     pdfBossError.context = {
@@ -8968,7 +9172,9 @@ try {
   console.error("DOCRAPTOR ERROR STATUS:", err.response?.status);
   console.error("DOCRAPTOR ERROR BODY:");
   console.error(err.response?.data?.toString());
-  err.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
+  if (err?.context?.core_display_fallback_required !== true) {
+    err.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
+  }
   throw err;
 }
     const premiumUnderwritingQualityObservation =
@@ -9289,6 +9495,8 @@ try {
       url: signedData.signedUrl,
       pdf_artifact_mode: docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf",
       final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
+      deterministic_contract_qa_seal: finalPdfDeterministicContractQaSeal,
+      section_disposition_receipts: finalPdfSectionDispositionReceipts,
       report_quality_manifest_candidate: reportQualityManifestCandidate,
       premium_underwriting_job_start_surface_receipt:
         premiumJobStartSurfaceReceipt,

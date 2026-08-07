@@ -9,11 +9,32 @@ import { isCanonicalReportIdentityReceipt } from "../../api/_lib/report-identity
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const acquisitionDocumentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
 const reportTemplateSource = fs.readFileSync("api/report-template-runtime.html", "utf8");
-const docRaptorCallIndex = generatorSource.indexOf('pdfResponse = await axios.post(');
-const directPdfBossIndex = generatorSource.indexOf('finalPdfPublicationQualityBossResult = await inspectFinalPdfPublicationQuality({');
+const docRaptorCallIndex = generatorSource.indexOf('const renderDocRaptorPdf = async (documentContent) => axios.post(');
+const canonicalCoreStateIndex = generatorSource.indexOf('const canonicalFinalPdfCorePublishable = Boolean(');
+const emergencyCoreBuilderIndex = generatorSource.indexOf('finalPdfEmergencyCoreHtml = buildDeterministicMinimumCorePdfHtml({');
+const initialRichRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(docHtml);');
+const initialEmergencyRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(emergencyHtml);');
+const boundedPdfRecoveryIndex = generatorSource.indexOf('const boundedRecovery = await runBoundedPdfCertificationRecovery({');
 const directStorageUploadIndex = generatorSource.indexOf('.upload(validatedStoragePath, pdfResponse.data, {');
-assert.ok(docRaptorCallIndex >= 0 && directPdfBossIndex > docRaptorCallIndex);
-assert.ok(directStorageUploadIndex > directPdfBossIndex);
+assert.ok(docRaptorCallIndex >= 0 && boundedPdfRecoveryIndex > docRaptorCallIndex);
+assert.ok(canonicalCoreStateIndex > docRaptorCallIndex);
+assert.ok(emergencyCoreBuilderIndex > canonicalCoreStateIndex);
+assert.ok(initialRichRenderIndex > emergencyCoreBuilderIndex);
+assert.ok(initialEmergencyRenderIndex > initialRichRenderIndex);
+assert.ok(boundedPdfRecoveryIndex > initialEmergencyRenderIndex);
+const generatorInitialRenderControl = generatorSource.slice(initialRichRenderIndex, boundedPdfRecoveryIndex);
+assert.equal(
+  (generatorInitialRenderControl.match(/pdfResponse = await renderDocRaptorPdf\(emergencyHtml\);/g) || []).length,
+  1
+);
+assert.match(generatorInitialRenderControl, /if \(finalPdfCorePublishable !== true\) throw error;/);
+assert.match(generatorInitialRenderControl, /if \(!emergencyHtml\) throw error;/);
+assert.match(generatorInitialRenderControl, /catch \(emergencyError\)[\s\S]*throw emergencyError;/);
+assert.match(generatorSource, /initialArtifactIsEmergency/);
+assert.match(generatorSource, /initialRenderError/);
+assert.match(generatorSource, /initialPdfBuffer: pdfResponse\.data/);
+assert.match(generatorSource, /pdfResponse = \{ \.\.\.pdfResponse, data: boundedRecovery\.pdfBuffer \}/);
+assert.ok(directStorageUploadIndex > boundedPdfRecoveryIndex);
 for (const source of [acquisitionDocumentSource, reportTemplateSource]) {
   assert.match(source, /@bottom-right\s*\{[\s\S]*?counter\(page\)[\s\S]*?counter\(pages\)/i);
   assert.match(source, /tr\s*\{[\s\S]*?page-break-inside:\s*avoid/i);
@@ -171,6 +192,22 @@ assert.equal(valid.institutional_certification.page_receipt_count, 3);
 assert.equal(valid.institutional_certification.every_page_receipt_present, true);
 assert.equal(valid.institutional_certification.every_table_certified, true);
 assert.equal(valid.institutional_certification.every_number_certified, true);
+
+const receiptCarrying = await inspect(validAnalysis(), {
+  sectionDispositionReceipts: {
+    debtCapacityAndCoverage: {
+      classification: "analytical",
+      disposition: "compact",
+    },
+  },
+  semanticRecompositionReceipt: {
+    semanticAttemptUsed: true,
+    semanticAttemptMax: 1,
+  },
+});
+assert.equal(receiptCarrying.approved_surface.section_disposition_receipt_count, 1);
+assert.equal(receiptCarrying.approved_surface.semantic_recomposition_attempted, true);
+
 for (const receipt of valid.institutional_certification.page_receipts) {
   for (const field of ["pageNumber", "sectionIds", "headings", "tables", "charts", "displayedNumbers", "geometry", "defects", "status"]) {
     assert.ok(Object.hasOwn(receipt, field), `${field} page receipt`);
