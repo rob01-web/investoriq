@@ -503,3 +503,105 @@ Repository evidence proves the GitHub automatic schedule is commented out and ma
 Preserve `INVESTORIQ_SOL_ELITE_REPORT_RED_TEAM_GOLD_2026-08-07.md`. Execute only after real production Screening and Full Underwriting PDFs exist. The audit compares them against elite institutional underwriting, lender, IC, valuation, and professionally typeset financial materials; inspects language, typography, layout, tables, charts, source presentation, repetition, AI tone, differentiation, commercial credibility, DocRaptor, Textract, HTML/CSS paged media, PDF Boss, extraction, and evidence preservation; provides precise improvements; and says **LEAVE IT ALONE** where justified. Do not execute it during Packet 4A.
 
 No application, test, configuration, migration, worker, parser, schema, manifest, lane, identity, Premium, scheduler, Supabase, Stripe, purchase, credit, report, artifact, deployment, or production state was changed.
+
+## Gate 4A Production-Parity Closeout — PASS / CLOSED
+
+This closeout supersedes earlier Packet 4A pending-evidence roadmap language above without rewriting history. It records owner-authenticated evidence only. Gate 4 remains controlled and **NOT AUTHORIZED**.
+
+### Completed parity proof
+
+Production is `Ready / Latest` and `Current` on branch `main`, sourced from `779c6b4 — docs: close Gate 3 certification`, with primary domain `investoriq.tech`. Certified implementation `32e566136bd77afd6e2b41a2c516e1adc8a61fa9` remains an ancestor and no application/configuration commit intervened.
+
+Verified Production PDF configuration:
+
+```text
+PUBLIC_SITE_URL=https://investoriq.tech
+DOCRAPTOR_MODE=production
+ALLOW_PRODUCTION_PDF=true
+REPORT_DOWNLOAD_ARTIFACT_MODE=production_pdf
+```
+
+`REPORT_PUBLICATION_TARGET` remains absent and non-blocking because certified production resolution defaults to `external_customer`.
+
+### Premium safe state — PASS / CLOSED
+
+The stale Premium activation timestamp was removed while the capability remained false. Final verified state:
+
+```text
+PREMIUM_ACQUISITION_UNDERWRITING_V1=false
+PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT=ABSENT
+```
+
+This issue is closed and is not deferred configuration debt.
+
+### Lifecycle, status, RPC, and storage proof — PASS
+
+Production `analysis_jobs` metadata proved the required UUID, status, error, report, purchase, worker-attempt, lease, claim, and dead-letter fields with the owner-provided types and nullability. The status check accepts exactly:
+
+`needs_documents`, `queued`, `extracting`, `underwriting`, `scoring`, `rendering`, `pdf_generating`, `publishing`, `published`, `failed`, `dead_letter`.
+
+Additional constraints proved `dead_lettered_at IS NULL OR status = 'dead_letter'`, `worker_attempt_count >= 0`, and report types `screening`, `underwriting`, `ic`.
+
+Production public SECURITY DEFINER lifecycle functions proved present:
+
+- `claim_next_worker_job(text)`
+- `claim_worker_job(uuid, text)`
+- `renew_worker_lease(uuid, uuid, text)`
+- `transition_worker_job(uuid, uuid, text, text, text)`
+- `fail_worker_job(uuid, uuid, text, text, text, text, text)`
+- `fail_expired_worker_job(uuid, uuid, text, text, text, text, text)`
+- `restore_failed_worker_entitlement(uuid, uuid, text, text, text, text)`
+- `governed_requeue_worker_job(uuid, text)`
+
+`process_exact_queued_job` and `fail_exact_expired_worker_job` are worker actions, not missing RPCs.
+
+Private buckets `staged_uploads`, `generated_reports`, and `report-issues` exist with compatible own-folder/tenant-folder policy families. No storage incompatibility was found.
+
+### Single-worker proof — PASS
+
+Exactly one active InvestorIQ pg_cron worker was proven: jobid `1`, jobname `investoriq-admin-run-worker`, schedule `*/3 * * * *`, active `true`, mechanism `net.http_post`, method `POST`, target `https://investoriq.tech/api/admin-run-worker`.
+
+The GitHub automatic schedule remains commented out and manual `workflow_dispatch` remains available. Worker-race verdict: **PASS — no active legacy automatic GitHub race identified**. Do not retire or dispatch the fallback here.
+
+### Open launch-boundary items
+
+The cron credential observed during owner SQL collection is not reproduced. A separately authorized launch-hardening packet must rotate Vercel `CRON_SECRET` and the Supabase pg_cron request header atomically and verify the match. This rotation is deferred and was not performed here.
+
+Bundle mappings remain absent: `STRIPE_PRICE_BUNDLE` and `VITE_STRIPE_PRICE_ID_BUNDLE`. The visible `$699` Launch Bundle remains `PRICING UNAVAILABLE`; this does not block standalone canaries but blocks joint commercial launch.
+
+Standalone `SUPABASE_ANON_KEY` remains absent while `VITE_SUPABASE_ANON_KEY` is present; this remains later revision-workflow debt and is non-blocking for first canaries.
+
+### Gate 4A verdict and next decision point
+
+**Gate 4A Production Parity — PASS / CLOSED.** Production infrastructure is sufficiently proven for a separately authorized first controlled Full Underwriting canary.
+
+Prepare and execute exactly one controlled live Full Underwriting launch-certification canary under a separate authorization. Do not authorize Screening, bundle sales, joint commercial launch, or broader Gate 4 execution in this closeout.
+
+Preserve `INVESTORIQ_SOL_ELITE_REPORT_RED_TEAM_GOLD_2026-08-07.md`. After the real production Full Underwriting PDF exists, provide it to GPT-5.6 Sol with the PDF and useful source documents. Do not execute the audit in this packet.
+
+## Gate 4B Full Underwriting Constitutional PDF Boss Repair - PASS / CLOSED
+
+This section moves Gate 4B into completed work and supersedes earlier Gate 4 launch-boundary language without rewriting roadmap history.
+
+### Completed Gate 4B work
+
+- Gates 1, 2, 3, 4A, and 4B are **PASS / CLOSED**.
+- Durable commit: `54a085198152fc4887b89c27d6618a3c742536fd`.
+- Commit message: `fix: preserve publishable core through PDF recovery`.
+- Push: **PASS** to `origin/main`; `HEAD == origin/main`.
+- Runtime files: `api/_lib/report-delivery-output.js`, `api/_lib/generate-client-report-impl.js`.
+- Adversarial test files: `tests/qa/section-disposition-contract-smoke.js`, `tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js`.
+
+Gate 4B proved that healthy existing PDFs remain authoritative without replacement upload; CSS, semantic, core-safe, and emergency replacement buffers overwrite damaged stored artifacts with `upsert: true`; mandatory core display survives through canonical core-safe or deterministic emergency minimum-core rendering; sufficient-core presentation failure publishes with a quality incident; insufficient-core failure remains fail-closed; total renderer outage produces no fabricated PDF; original render diagnostics remain observable; initial emergency artifacts do not rerun rich CSS/semantic recovery; and the final bounded recovery buffer owns production generator output.
+
+### Doctrine and launch constraints
+
+InvestorIQ uses Core-Gated Publish-or-Collapse. If canonical T12 and/or Rent Roll source truth is sufficient to produce a truthful defensible report, the report **MUST publish**. PDF Boss, layout, certification, optional analysis, charts, tables, appendices, punctuation, presentation, and other non-core defects must be handled by qualification, bounded repair, compaction, collapse, omission, emergency minimum-core presentation, or publication with a quality incident. Whole-report failure is reserved for genuinely insufficient core evidence or genuine infrastructure failure where no truthful PDF bytes can physically be produced. PDF Boss must never independently terminal-fail sufficient core.
+
+Screening has **NOT** been run as part of this certification sequence. No post-Gate-4B production canary or report generation has occurred. Premium remains **OFF**. Bundle pricing remains separately open and untouched. RETEST 39 remains terminal `dead_letter` and must not be requeued. RETEST 40 must not be created. No historical failed report may be patched; systemic fixes only.
+
+The Vercel worker and legacy GitHub worker/fallback both remain part of the operating context. The legacy GitHub worker is not retired and must remain retained until the Vercel worker is proven operational under the agreed certification path. Do not dispatch it here.
+
+### Next bounded launch-certification phase
+
+No Gate 4C is created by this closeout. The next step is to determine and, only under separate authorization, execute exactly one controlled live Full Underwriting launch-certification canary using the existing Gate 4A boundary language. This documentation task authorizes no production canary, Screening run, Full Underwriting generation, worker action, or new report. Bundle pricing remains a separate later joint-commercial-launch item and is not moved into the Gate sequence.
