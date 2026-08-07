@@ -388,6 +388,68 @@ A future canary requires separate owner authorization.
 | Post-H10 | Gate 3 elite Full Underwriting | Institutional lender/IC-useful FU certified | ACTIVE — NOI bridge and handler proof merged; valuation/appraisal comparison pending |
 | Post-H10 | Gate 4 controlled launch certification | FU + Screening canaries; human PDF review; pricing/copy closeout; joint launch | Not started; requires separately authorized canaries |
 
-## Current Gate 3 Next Packet — August 6, 2026
+## Current Gate 3 Next Packet - August 6, 2026
 
 Review the pending Codex receipt for the **Valuation / Appraisal Comparison** slice. Do not authorize deployment, production mutation, Gate 4, another Gate 3 slice, RETEST 39, RETEST 40, Premium, or any internal identity/manifest/lane change until this slice is reviewed, durably persisted, and cleanly merged.
+
+## Gate 3 Closed - Gate 4 Authorization Pending
+
+This closeout supersedes the prior Gate 3 active/pending roadmap language above without rewriting the historical record.
+
+- Gate 3 status: **PASS / CLOSED**.
+- Certified implementation SHA: `32e566136bd77afd6e2b41a2c516e1adc8a61fa9`.
+- Focused certification tests: `acquisition-memo-v2-document smoke PASS`; `full-underwriting-gates-full-render smoke PASS`.
+- Valid core: HTTP 200 with `final_html`.
+- Invalid core: HTTP 500 with `ACQUISITION_MEMO_SOURCE_TRUTH_NOT_PUBLISHABLE`; no `final_html`.
+
+### Final Gate 3 institutional matrix
+
+1. Property / Transaction Overview - **PASS**.
+2. Source / Evidence Summary - **PASS**.
+3. T12 / Rent Roll Reconciliation - **PASS**.
+4. Unit Mix / Rent Economics - **PASS**.
+5. Revenue / Expense / NOI Analysis - **PASS**.
+6. Property Tax Analysis - **PASS**.
+7. Current Debt where sourced - **PASS**.
+8. Proposed Acquisition Financing where sourced - **PASS**.
+9. Debt Service / Coverage / Capacity where source-ready - **PASS**.
+10. Valuation / Appraisal Reconciliation - **PASS**.
+11. Renovation / Capital Plan where source-backed - **PASS**.
+12. Environmental / Diligence where source-backed - **PASS**.
+13. Data Coverage / Limitations / Methodology - **PASS**.
+14. Quality / Publication Semantics - **PASS**.
+
+### Completed Gate 3 slices
+
+- Revenue / Expense / NOI Bridge
+- Validated-core Full Underwriting handler fixture
+- Valuation / Appraisal Comparison
+- Property Tax Analysis
+
+### Candidate decisions
+
+**Sources and Uses - intentionally omitted under doctrine.** The repository does not prove a complete governed, source-backed set of all required operands, including equity requirement, complete lender-fee dollars, closing costs, reserves, renovation/CapEx uses, and other balancing uses. InvestorIQ must not invent or derive unsupported operands merely to produce a balanced table. This is not a Gate 3 deficiency.
+
+**Risk Register / Unresolved Questions - intentionally not added.** Existing customer-safe surfaces already provide Primary Constraint / Review Disclosure, Preliminary Financing Readiness, Data Coverage & Source Limitations, Source Register, and Methodology / assumptions boundaries. A separate register would duplicate existing content or risk subjective language and internal machine-state exposure. This is not a Gate 3 deficiency.
+
+### Doctrine closeout
+
+- Valid T12 authority: certified.
+- Valid Rent Roll authority: certified.
+- Valid-core publication: certified.
+- Invalid-core fail-closed behavior: certified.
+- Optional/support-section collapse behavior: certified.
+- Whole-report failure remains forbidden for optional analytical defects.
+- Whole-report failure remains reserved for invalid or unsafe core publication.
+- No additional Gate 3 implementation slice is justified.
+
+Gate 1: **PASS / CLOSED**.
+Gate 2: **PASS / CLOSED**.
+Gate 3: **PASS / CLOSED**.
+Gate 4: **NOT AUTHORIZED**.
+
+No deployment or production mutation occurred. Premium remains false, RETEST 39 remains terminal `dead_letter`, RETEST 40 must not be created, Screening and Full Underwriting launch together or neither launches, and the GitHub fallback remains active.
+
+### Next phase
+
+Prepare a separately authorized Gate 4 launch-certification packet. Do not execute Gate 4, deploy, create production canaries, create new reports, or alter pricing/configuration.
