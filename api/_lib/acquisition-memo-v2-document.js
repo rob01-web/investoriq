@@ -629,6 +629,61 @@ function normalizeStructuredT12LineItem(row) {
   return { label, amount };
 }
 
+const PROPERTY_TAX_LINE_LABELS = new Set([
+  "property taxes",
+  "property tax",
+  "real estate taxes",
+  "real estate tax",
+]);
+
+function normalizePropertyTaxLineLabel(value) {
+  return String(value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function hasAcceptedPropertyTaxEvidence(value) {
+  if (value === null || value === undefined || value === "") return false;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return String(value).trim().length > 0;
+}
+
+function resolvePropertyTaxAnalysisFacts(customerSurfaceModel = null) {
+  const operatingSection = customerSurfaceModel?.sections?.operatingStatementTTMSummary;
+  if (!operatingSection || operatingSection.status === "collapsed" || operatingSection.factAvailability?.sourceBacked !== true) return null;
+
+  const expenseLines = operatingSection.facts?.expense_lines;
+  if (!Array.isArray(expenseLines)) return null;
+  const qualifyingLines = expenseLines.filter((line) => PROPERTY_TAX_LINE_LABELS.has(normalizePropertyTaxLineLabel(line?.label)));
+  if (qualifyingLines.length !== 1) return null;
+  const reportedT12Expense = toFiniteNumber(qualifyingLines[0]?.amount);
+  if (!Number.isFinite(reportedT12Expense)) return null;
+
+  const propertyTaxSupport = customerSurfaceModel?.supportSourcesByRole?.property_tax_support;
+  if (!propertyTaxSupport || propertyTaxSupport.authorityBasis !== "canonical_source_truth_package") return null;
+  const uploadedAnnualTax = toFiniteNumber(propertyTaxSupport.extractedFacts?.annual_tax);
+  if (!Number.isFinite(uploadedAnnualTax) || uploadedAnnualTax <= 0) return null;
+  if (!hasAcceptedPropertyTaxEvidence(propertyTaxSupport.sourceEvidence?.annual_tax)) return null;
+
+  const variance = uploadedAnnualTax - reportedT12Expense;
+  return {
+    reportedT12Expense,
+    uploadedAnnualTax,
+    variance: Object.is(variance, -0) ? 0 : variance,
+  };
+}
+
+function renderPropertyTaxAnalysisSection(customerSurfaceModel = null) {
+  const facts = resolvePropertyTaxAnalysisFacts(customerSurfaceModel);
+  if (!facts) return "";
+  return `<div class="subsection-block" data-iq-subsection="property-tax-analysis">
+    <p class="subsection-title">Property Tax Analysis</p>
+    <table class="detail-table"><tbody>
+      <tr><td>Reported T12 Property-Tax Expense</td><td style="font-weight:600;">${formatMoney(facts.reportedT12Expense)}</td></tr>
+      <tr><td>Uploaded Property-Tax Support</td><td style="font-weight:600;">${formatMoney(facts.uploadedAnnualTax)}</td></tr>
+      <tr><td>Variance: Uploaded Support less Reported T12</td><td style="font-weight:600;">${formatMoney(facts.variance)}</td></tr>
+    </tbody></table>
+  </div>`;
+}
+
 function renderSourceDocRows(sourcePackage = null) {
   const rows = [];
   const t12 = sourcePackage?.coreT12 || null;
@@ -1586,6 +1641,7 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
     </tbody></table>
     ${t12LineItems.length ? `<div class="subsection-block"><p class="subsection-title">T12 Income & Expense Line Items</p><table class="detail-table"><tbody>${t12LineItems.map((item) => `<tr><td>${escapeHtml(item.label)}</td><td style="font-weight:600;">${formatMoney(item.amount)}</td></tr>`).join("")}</tbody></table></div>` : ""}
     ${revenueExpenseNoiBridge}
+    ${renderPropertyTaxAnalysisSection(customerSurfaceModel)}
     ${t12Snippet ? `<div class="subsection-block"><p class="subsection-title">TTM Source Excerpt</p><p class="body-copy">${escapeHtml(t12Snippet.slice(0, 420))}</p></div>` : ""}
     ${occupancyNote ? `<p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">${escapeHtml(occupancyNote)}</p>` : ""}
   </div>`;

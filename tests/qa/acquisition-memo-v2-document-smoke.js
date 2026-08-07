@@ -656,6 +656,74 @@ assert.match(governedComparisonSectionMatch[0], /InvestorIQ implied value less p
 assert.match(governedComparisonSectionMatch[0], /Appraised value less purchase price<\/td><td>\(\$1,500,000\)<\/td>/i);
 assert.doesNotMatch(governedComparisonSectionMatch[0], /correct|approved|recommended|final|\bBUY\b|\bSELL\b|\bHOLD\b|overvalued|undervalued|attractive|aggressive|conservative/i);
 assert.doesNotMatch(governedComparisonSectionMatch[0], /Appraised value<\/td><td>\$13,500,000<\/td>/i);
+
+const propertyTaxSupport = {
+  canonicalRole: "property_tax_support",
+  authorityBasis: "canonical_source_truth_package",
+  extractedFacts: { annual_tax: 214500 },
+  sourceEvidence: { annual_tax: { excerpt: "Property tax bill annual property tax $214,500" } },
+};
+const withPropertyTaxSupport = (model, support = undefined, operatingSectionPatch = {}) => ({
+  ...model,
+  supportSourcesByRole: {
+    ...(model.supportSourcesByRole || {}),
+    ...(support === undefined ? {} : { property_tax_support: support }),
+  },
+  sections: {
+    ...model.sections,
+    operatingStatementTTMSummary: {
+      ...model.sections.operatingStatementTTMSummary,
+      ...operatingSectionPatch,
+    },
+  },
+});
+const renderGovernedModel = (model) => renderCompleteAcquisitionMemoV2Html({
+  acquisitionMemoProjection: structuredProjection,
+  renderedAcquisitionMemo: structuredRenderedAcquisitionMemo,
+  sourcePackage: structuredSourcePackage,
+  coreMetrics: governedCoreMetrics,
+  bossContract: governedBossContract,
+  customerSurfaceModel: model,
+  reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+  propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
+});
+const propertyTaxPresentHtml = renderGovernedModel(withPropertyTaxSupport(governedCustomerSurfaceModel, propertyTaxSupport));
+const propertyTaxAnalysisMatch = propertyTaxPresentHtml.match(/<div class="subsection-block" data-iq-subsection="property-tax-analysis">[\s\S]*?<\/div>/i);
+assert.ok(propertyTaxAnalysisMatch, "Missing Property Tax Analysis subsection");
+assert.match(propertyTaxAnalysisMatch[0], /Property Tax Analysis/i);
+assert.match(propertyTaxAnalysisMatch[0], /Reported T12 Property-Tax Expense<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
+assert.match(propertyTaxAnalysisMatch[0], /Uploaded Property-Tax Support<\/td><td style="font-weight:600;">\$214,500<\/td>/i);
+assert.match(propertyTaxAnalysisMatch[0], /Variance: Uploaded Support less Reported T12<\/td><td style="font-weight:600;">\$29,500<\/td>/i);
+assert.equal((propertyTaxAnalysisMatch[0].match(/<tr>/g) || []).length, 3);
+assert.doesNotMatch(propertyTaxAnalysisMatch[0], /forecast|reassess|mill[- ]rate|normalized|stabilized|escrow|legal|tax advice|high|low|favorable|unfavorable|aggressive|conservative|excessive|understated|overstated|recommend|approve|clearance|conclusion|\bBUY\b|\bSELL\b|\bHOLD\b/i);
+assert.match(propertyTaxPresentHtml, /Operating Statement \/ TTM Summary/i);
+assert.match(propertyTaxPresentHtml, /Revenue \/ Expense \/ NOI Bridge/i);
+assert.match(propertyTaxPresentHtml, /Cap-Rate Value Indication/i);
+assert.match(propertyTaxPresentHtml, /Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
+assert.equal(governedCustomerSurfaceModel.supportSourcesByRole?.property_tax_support, undefined);
+
+const governedT12Facts = governedCustomerSurfaceModel.sections.operatingStatementTTMSummary.facts;
+const propertyTaxOmissionCases = [
+  ["property-tax support absent", undefined, {}, true],
+  ["annual_tax null", { ...propertyTaxSupport, extractedFacts: { annual_tax: null } }, {}, true],
+  ["annual_tax non-finite", { ...propertyTaxSupport, extractedFacts: { annual_tax: "not-a-number" } }, {}, true],
+  ["annual_tax zero", { ...propertyTaxSupport, extractedFacts: { annual_tax: 0 } }, {}, true],
+  ["annual_tax negative", { ...propertyTaxSupport, extractedFacts: { annual_tax: -1 } }, {}, true],
+  ["source evidence absent", { ...propertyTaxSupport, sourceEvidence: {} }, {}, true],
+  ["authority marker not canonical", { ...propertyTaxSupport, authorityBasis: "property_tax_evidence" }, {}, true],
+  ["no qualifying T12 property-tax line", propertyTaxSupport, { facts: { ...governedT12Facts, expense_lines: [{ label: "Insurance", amount: 72000 }] } }, true],
+  ["multiple qualifying T12 property-tax lines", propertyTaxSupport, { facts: { ...governedT12Facts, expense_lines: [{ label: "Property Taxes", amount: 185000 }, { label: "Real Estate Tax", amount: 186000 }] } }, true],
+  ["operating section collapsed", propertyTaxSupport, { status: "collapsed" }, false],
+  ["operating section not source-backed", propertyTaxSupport, { factAvailability: { ...governedOperatingSection.factAvailability, sourceBacked: false } }, false],
+];
+for (const [label, support, operatingSectionPatch, expectBridge] of propertyTaxOmissionCases) {
+  const omissionHtml = renderGovernedModel(withPropertyTaxSupport(governedCustomerSurfaceModel, support, operatingSectionPatch));
+  assert.match(omissionHtml, /<!DOCTYPE html>/i, `Full HTML did not render for ${label}`);
+  assert.doesNotMatch(omissionHtml, /data-iq-subsection="property-tax-analysis"/i, `Unexpected Property Tax Analysis for ${label}`);
+  assert.match(omissionHtml, /Operating Statement \/ TTM Summary/i, `Missing parent section for ${label}`);
+  if (expectBridge) assert.match(omissionHtml, /Revenue \/ Expense \/ NOI Bridge/i, `Missing NOI bridge for ${label}`);
+  assert.match(omissionHtml, /Cap-Rate Value Indication/i, `Missing cap-rate section for ${label}`);
+}
 const missingNoiSourcePackage = {
   ...structuredSourcePackage,
   coreT12: {

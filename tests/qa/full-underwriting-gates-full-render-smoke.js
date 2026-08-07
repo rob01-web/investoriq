@@ -78,6 +78,7 @@ function buildValidatedCoreTestPayload(testPayloads = {}, { includeT12Artifact =
           effective_gross_income: t12Payload.effective_gross_income,
           total_operating_expenses: t12Payload.total_operating_expenses,
           net_operating_income: t12Payload.net_operating_income,
+          expense_lines: t12Payload.expense_lines,
         },
       },
     });
@@ -236,6 +237,7 @@ const fullPathHtml = await renderUnderwritingHtml({
     effective_gross_income: 1100000,
     total_operating_expenses: 420000,
     net_operating_income: 680000,
+    expense_lines: [{ label: "Property Taxes", amount: 185000 }],
   },
   mortgagePayload: {
     interest_rate: 0.064,
@@ -310,6 +312,10 @@ const fullPathHtml = await renderUnderwritingHtml({
 assert.match(fullPathHtml, /InvestorIQ Underwriting Report/i);
 assert.match(fullPathHtml, /Operating Statement \/ TTM Summary/i);
 assert.match(fullPathHtml, /Revenue \/ Expense \/ NOI Bridge/i);
+assert.match(fullPathHtml, /Property Tax Analysis/i);
+assert.match(fullPathHtml, /Reported T12 Property-Tax Expense<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
+assert.match(fullPathHtml, /Uploaded Property-Tax Support<\/td><td style="font-weight:600;">\$42,750<\/td>/i);
+assert.match(fullPathHtml, /Variance: Uploaded Support less Reported T12<\/td><td style="font-weight:600;">\(\$142,250\)<\/td>/i);
 assert.match(fullPathHtml, /Effective Gross Income<\/td><td style="font-weight:600;">\$1,100,000<\/td>/i);
 assert.match(fullPathHtml, /Less: Total Operating Expenses<\/td><td style="font-weight:600;">\$420,000<\/td>/i);
 assert.match(fullPathHtml, /Equals: Net Operating Income<\/td><td style="font-weight:600;">\$680,000<\/td>/i);
