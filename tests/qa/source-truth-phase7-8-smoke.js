@@ -63,7 +63,9 @@ for (const [field, value] of [
     customerBlockers: [],
     [field]: value,
   });
-  assert.equal(blocked.report_publishable, false, `${field} must fail closed`);
+  assert.equal(blocked.report_publishable, true, `${field} must preserve publish-required authority`);
+  assert.equal(blocked.report_authority_status, "publish_required");
+  assert.equal(blocked.representation_required, true);
 }
 const customerBlocked = buildConstitutionalDeliveryGateDecision({
   sourceTruthPackage,

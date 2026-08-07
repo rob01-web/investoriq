@@ -2339,6 +2339,24 @@ function buildCanonicalCoreSafePdfHtml({
   </body></html>`;
 }
 
+function resolveCanonicalCoreFallbackInputs({
+  sourceTruthPackage = null,
+  t12Payload = null,
+  computedRentRoll = null,
+  rentRollPayload = null,
+  sourceReconciliationState = null,
+} = {}) {
+  const sourceT12 = sourceTruthPackage?.core?.t12?.accepted_facts || null;
+  const sourceRentRoll = sourceTruthPackage?.core?.rent_roll?.accepted_facts || null;
+  return {
+    t12Payload: t12Payload && typeof t12Payload === "object" ? t12Payload : sourceT12,
+    computedRentRoll: computedRentRoll && typeof computedRentRoll === "object" ? computedRentRoll : sourceRentRoll,
+    rentRollPayload: rentRollPayload && typeof rentRollPayload === "object" ? rentRollPayload : sourceRentRoll,
+    sourceReconciliationState:
+      sourceReconciliationState || sourceTruthPackage?.source_reconciliation_state || null,
+  };
+}
+
 function buildDeterministicMinimumCorePdfHtml({
   reportIdentity = null,
   propertyName = "",
@@ -9063,14 +9081,18 @@ try {
   let finalPdfEmergencyCoreHtml = "";
   let finalPdfCoreSafeHtmlBuildError = null;
   if (canonicalFinalPdfCorePublishable) {
+    const canonicalCoreFallbackInputs = resolveCanonicalCoreFallbackInputs({
+      sourceTruthPackage: sourceTruthPackageResult,
+      t12Payload,
+      computedRentRoll,
+      rentRollPayload,
+      sourceReconciliationState,
+    });
     try {
       finalPdfCoreSafeHtml = buildCanonicalCoreSafePdfHtml({
         reportIdentity: finalPdfReportIdentity,
         propertyName: propertyNameDisplay || propertyName || jobPropertyName || "",
-        t12Payload,
-        computedRentRoll,
-        rentRollPayload,
-        sourceReconciliationState,
+        ...canonicalCoreFallbackInputs,
       });
     } catch (error) {
       finalPdfCoreSafeHtmlBuildError = error;
@@ -9080,9 +9102,7 @@ try {
       finalPdfEmergencyCoreHtml = buildDeterministicMinimumCorePdfHtml({
         reportIdentity: finalPdfReportIdentity,
         propertyName: propertyNameDisplay || propertyName || jobPropertyName || "",
-        t12Payload,
-        computedRentRoll,
-        rentRollPayload,
+        ...canonicalCoreFallbackInputs,
       });
     } catch (error) {
       finalPdfCoreSafeHtmlBuildError = finalPdfCoreSafeHtmlBuildError || error;
@@ -9128,6 +9148,22 @@ try {
     initialArtifactHtml: initialArtifactIsEmergency ? finalPdfEmergencyCoreHtml : "",
     initialRenderError,
     renderPdfBuffer: async ({ finalHtml }) => (await renderDocRaptorPdf(finalHtml)).data,
+    buildEmergencyCoreHtml: async () => {
+      if (String(finalPdfEmergencyCoreHtml || "").trim()) return finalPdfEmergencyCoreHtml;
+      if (!canonicalFinalPdfCorePublishable) return "";
+      const canonicalCoreFallbackInputs = resolveCanonicalCoreFallbackInputs({
+        sourceTruthPackage: sourceTruthPackageResult,
+        t12Payload,
+        computedRentRoll,
+        rentRollPayload,
+        sourceReconciliationState,
+      });
+      return buildDeterministicMinimumCorePdfHtml({
+        reportIdentity: finalPdfReportIdentity,
+        propertyName: propertyNameDisplay || propertyName || jobPropertyName || "",
+        ...canonicalCoreFallbackInputs,
+      });
+    },
     certifyPdf: (pdfBytes, options = {}) => assertFinalPdfPublicationQuality({
       pdfBytes,
       approvedHtml: options.approvedHtmlForCertification || docHtml,
@@ -9495,6 +9531,9 @@ try {
       url: signedData.signedUrl,
       pdf_artifact_mode: docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf",
       final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
+      core_publishable: finalPdfCorePublishable,
+      core_safe_html: finalPdfCoreSafeHtml,
+      emergency_core_html: finalPdfEmergencyCoreHtml,
       deterministic_contract_qa_seal: finalPdfDeterministicContractQaSeal,
       section_disposition_receipts: finalPdfSectionDispositionReceipts,
       report_quality_manifest_candidate: reportQualityManifestCandidate,

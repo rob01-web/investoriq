@@ -3321,6 +3321,9 @@ export default async function handler(req, res) {
                       deliveryGateStatus: resolvedDeliveryDecision.deliveryGateStatus,
                       holdDelivery: resolvedDeliveryDecision.holdDelivery,
                       deterministicContractQaSeal: reportData?.deterministic_contract_qa_seal || null,
+                      corePublishable: reportData?.core_publishable === true,
+                      coreSafeHtml: reportData?.core_safe_html || "",
+                      emergencyCoreHtml: reportData?.emergency_core_html || "",
                       sourceReconciliation: reportData?.source_reconciliation || null,
                       reportIdentity: {
                         reportMode: reportData?.report_mode || null,

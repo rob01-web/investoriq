@@ -218,6 +218,7 @@ export async function runBoundedPdfCertificationRecovery({
   coreSafeHtml = "",
   emergencyCoreHtml = "",
   coreSafeHtmlBuildError = null,
+  buildEmergencyCoreHtml = null,
   initialArtifactIsEmergency = false,
   initialArtifactHtml = "",
   initialRenderError = null,
@@ -304,6 +305,18 @@ export async function runBoundedPdfCertificationRecovery({
     return diagnostic;
   };
 
+  const resolveEmergencyCoreHtml = async () => {
+    const providedHtml = String(emergencyCoreHtml || "").trim();
+    if (providedHtml) return { html: providedHtml, error: null };
+    if (typeof buildEmergencyCoreHtml !== "function") return { html: "", error: null };
+    try {
+      const builtHtml = await buildEmergencyCoreHtml();
+      return { html: String(builtHtml || "").trim(), error: null };
+    } catch (error) {
+      return { html: "", error };
+    }
+  };
+
   const renderEmergencyCoreFallback = async ({
     priorCertification = null,
     cause = null,
@@ -325,9 +338,14 @@ export async function runBoundedPdfCertificationRecovery({
       });
     }
 
-    const emergencyHtml = String(emergencyCoreHtml || "").trim();
+    const emergencyHtmlResult = await resolveEmergencyCoreHtml();
+    const emergencyHtml = emergencyHtmlResult.html;
     if (!emergencyHtml) {
-      const diagnostic = buildRecoveryDiagnostic(priorCertification, cause || coreSafeHtmlBuildError, reason);
+      const diagnostic = buildRecoveryDiagnostic(
+        priorCertification,
+        cause || emergencyHtmlResult.error || coreSafeHtmlBuildError,
+        reason
+      );
       return withRecoveryState({
         pdfBuffer,
         publicationQualityBoss: priorCertification,
@@ -1092,6 +1110,7 @@ export async function ensureReportDownloadArtifact({
   corePublishable = false,
   coreSafeHtml = "",
   emergencyCoreHtml = "",
+  buildEmergencyCoreHtml = null,
   sourceReconciliation = null,
   reportIdentity = null,
   publicationTarget = process.env.REPORT_PUBLICATION_TARGET || "",
@@ -1254,12 +1273,20 @@ export async function ensureReportDownloadArtifact({
   let initialPdfBuffer;
   let initialArtifactIsEmergency = false;
   let initialRenderError = null;
+  let resolvedInitialEmergencyCoreHtml = "";
+  const resolveInitialEmergencyCoreHtml = async () => {
+    const providedHtml = String(emergencyCoreHtml || "").trim();
+    if (providedHtml) return providedHtml;
+    if (typeof buildEmergencyCoreHtml !== "function") return "";
+    return String((await buildEmergencyCoreHtml()) || "").trim();
+  };
   try {
     initialPdfBuffer = await renderPdfBuffer({ ...initialRenderContext, finalHtml });
   } catch (error) {
     if (resolvedCorePublishable !== true) throw error;
-    const emergencyHtml = String(emergencyCoreHtml || "").trim();
+    const emergencyHtml = await resolveInitialEmergencyCoreHtml();
     if (!emergencyHtml) throw error;
+    resolvedInitialEmergencyCoreHtml = emergencyHtml;
     try {
       initialPdfBuffer = await renderPdfBuffer({ ...initialRenderContext, finalHtml: emergencyHtml });
     } catch (emergencyError) {
@@ -1278,8 +1305,9 @@ export async function ensureReportDownloadArtifact({
     finalHtml,
     coreSafeHtml,
     emergencyCoreHtml,
+    buildEmergencyCoreHtml,
     initialArtifactIsEmergency,
-    initialArtifactHtml: initialArtifactIsEmergency ? emergencyCoreHtml : "",
+    initialArtifactHtml: initialArtifactIsEmergency ? resolvedInitialEmergencyCoreHtml : "",
     initialRenderError,
     renderPdfBuffer,
     renderContext: initialRenderContext,

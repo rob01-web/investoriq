@@ -19,10 +19,24 @@ export function buildConstitutionalDeliveryGateDecision({
     renderer_completed: rendererCompleted === true,
     no_true_customer_blocker: blockers.length === 0,
   };
+  const reportAuthorityEstablished = Boolean(
+    constitutionalChecks.source_truth_package_valid &&
+    constitutionalChecks.core_publishable &&
+    constitutionalChecks.no_true_customer_blocker
+  );
+  const representationChecks = {
+    pipeline_compliance_passed: constitutionalChecks.pipeline_compliance_passed,
+    html_safety_validation_passed: constitutionalChecks.html_safety_validation_passed,
+    renderer_completed: constitutionalChecks.renderer_completed,
+  };
+  const representationReady = Object.values(representationChecks).every((passed) => passed === true);
   const failedChecks = Object.entries(constitutionalChecks)
     .filter(([, passed]) => passed !== true)
     .map(([name]) => name);
-  const deliverable = failedChecks.length === 0;
+  // Canonical source truth owns report authority. Rendering/compliance checks
+  // select the representation that may publish; they do not revoke the
+  // publish-required state while truthful core bytes can still be produced.
+  const deliverable = reportAuthorityEstablished;
 
   return {
     ...(complianceDecision && typeof complianceDecision === "object" ? complianceDecision : {}),
@@ -46,5 +60,10 @@ export function buildConstitutionalDeliveryGateDecision({
       : null,
     readiness_source: "constitutional_delivery_gate",
     readiness_fallback_used: false,
+    report_authority_status: reportAuthorityEstablished ? "publish_required" : "fail_closed",
+    representation_required: reportAuthorityEstablished && !representationReady,
+    representation_ready: representationReady,
+    representation_checks: representationChecks,
+    representation_blockers: failedChecks.filter((check) => check !== "source_truth_package_valid" && check !== "core_publishable" && check !== "no_true_customer_blocker"),
   };
 }

@@ -98,6 +98,11 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
   const unsafeFinalHtml = hasUnsafeFinalHtmlSignal(final);
   const provenanceRegression = hasProvenanceRegressionSignal(final);
   const internalRenderContractFailure = hasInternalRenderContractFailureSignal(final);
+  const canonicalCoreAuthority = Boolean(
+    coreGate?.sourceTruthPackageValid === true &&
+    coreGate?.publishAllowed === true &&
+    asArray(coreGate?.fatalReasons).length === 0
+  );
   const advisoryOnly =
     !coreFatal &&
     !unsafeFinalHtml &&
@@ -107,13 +112,26 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
       return severity === "advisory" || severity === "warning";
     });
 
-  const publishable = Boolean(
+  const representationFailure = Boolean(
+    !complianceOk ||
+    unsafeFinalHtml ||
+    provenanceRegression ||
+    internalRenderContractFailure ||
+    repairableOptional
+  );
+  const publishable = canonicalCoreAuthority || Boolean(
     isPlainObject(coreGate) &&
     coreGate.publishAllowed === true &&
     complianceOk &&
     modelOk &&
     !coreFatal &&
     !unsafeFinalHtml
+  ) || Boolean(
+    isPlainObject(coreGate) &&
+    coreGate.publishAllowed === true &&
+    !coreFatal &&
+    !unsafeFinalHtml &&
+    repairableOptional
   );
   const fatalCategory = publishable
     ? null
@@ -130,8 +148,8 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
           : "final_compliance_unresolved";
 
   const blockingReasons = [];
-  if (coreFatal) blockingReasons.push("true_core_fatal");
-  if (unsafeFinalHtml) blockingReasons.push("true_unrepaired_unsafe_final_html");
+  if (!canonicalCoreAuthority && coreFatal) blockingReasons.push("true_core_fatal");
+  if (!canonicalCoreAuthority && unsafeFinalHtml) blockingReasons.push("true_unrepaired_unsafe_final_html");
   if (!publishable && internalRenderContractFailure) blockingReasons.push("internal_render_contract_failure");
   if (!publishable && provenanceRegression) blockingReasons.push("unresolved_provenance_regression");
   if (!publishable && repairableOptional) blockingReasons.push("repairable_optional_support_unresolved_after_repair");
@@ -149,13 +167,20 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
     fatalCategory,
     blockingReasons,
     classifications: {
-      trueCoreFatal: coreFatal,
-      trueUnrepairedUnsafeFinalHtml: unsafeFinalHtml,
+      trueCoreFatal: coreFatal && !canonicalCoreAuthority,
+      trueUnrepairedUnsafeFinalHtml: unsafeFinalHtml && !canonicalCoreAuthority,
       runtimeStoragePdfFatal: false,
       internalRenderContractFailure,
       repairableOptionalSupport: repairableOptional,
       advisoryWarningOnly: advisoryOnly,
+      canonicalCoreAuthority,
+      representationFailureAfterCore: canonicalCoreAuthority && representationFailure,
     },
+    report_authority_status: canonicalCoreAuthority ? "publish_required" : "fail_closed",
+    representation_required: canonicalCoreAuthority && representationFailure,
+    representation_disposition: canonicalCoreAuthority && representationFailure
+      ? "bounded_recovery_or_minimum_core_required"
+      : (publishable ? "approved_rich_output" : "terminal_source_or_contract_failure"),
     finalBossCompliance: {
       ok: Boolean(final?.compliance?.ok),
       bossOk,
