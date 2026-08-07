@@ -573,6 +573,58 @@ No deployment or production mutation occurred. Premium remains false, RETEST 39 
 
 Prepare a separately authorized Gate 4 launch-certification packet. Do not execute Gate 4, deploy, create production canaries, create new reports, or alter pricing/configuration.
 
+## Gate 4A Production Parity — ACTIVE
+
+This current checkpoint supersedes earlier Gate 3 “next packet” and launch-preparation language above without rewriting history. Packet 4A is read-only production-parity and launch-certification preparation. Gate 4 remains **NOT AUTHORIZED**.
+
+### Vercel production parity — PASS
+
+- Vercel CLI `48.10.3`; project `investoriq`.
+- Production deployment: `https://investoriq-gra6pwyr1-rob-mccallums-projects.vercel.app`.
+- Deployment ID: `dpl_6Um9BXvEKLer9AqYdeoZgxaW8U5S`.
+- Target/status: `production` / `Ready`.
+- Created: `Fri Aug 07 2026 10:37:37 GMT-0400`.
+- Production aliases include `investoriq.tech`, `www.investoriq.tech`, `investoriq.vercel.app`, and the documented Vercel aliases.
+- Dashboard showed Ready/Latest, Production/Current, branch `main`, source `779c6b4 — docs: close Gate 3 certification`, and primary domain `investoriq.tech`.
+- Certified implementation `32e566136bd77afd6e2b41a2c516e1adc8a61fa9` is an ancestor of deployed `779c6b49711278f9e6b763202213245e82d75cde`.
+- Only intervening commit: documentation-only `779c6b4`; only the three active authority Markdown files changed.
+- No unauthorized post-certification application changes were found.
+
+### Production environment presence — PARTIAL REVIEW
+
+Authenticated Production environment listing proved major PDF, Premium, AI, Stripe, CRON, admin, public-site, Supabase, webhook, AWS, and DocRaptor names without exposing secret values. Not shown were `SUPABASE_ANON_KEY`, `STRIPE_PRICE_BUNDLE`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_STRIPE_PRICE_ID_BUNDLE`, and `REPORT_PUBLICATION_TARGET`.
+
+Worker/parser paths generally use `SUPABASE_ANON_KEY || VITE_SUPABASE_ANON_KEY`, and the VITE value is present. `api/jobs/request-revision.js` directly requires `SUPABASE_ANON_KEY`; that remains a later revision-workflow review item, not a proven first Full Underwriting canary blocker.
+
+The certified publication resolver defaults `production_pdf` to `external_customer` when `REPORT_PUBLICATION_TARGET` is absent. Its absence is therefore not independently blocking, subject to exact DocRaptor/PDF mode proof.
+
+### Bundle configuration defect — PROVEN
+
+The live Pricing page shows Launch Bundle `$699`, but the CTA visibly shows `PRICING UNAVAILABLE`. Frontend `pricingConfig.js` requires absent `VITE_STRIPE_PRICE_ID_BUNDLE`; server `api/create-checkout-session.js` requires absent `STRIPE_PRICE_BUNDLE`.
+
+This is not a Packet 4A parity blocker and does not block standalone Full Underwriting or Screening canaries. It is a later joint commercial-launch blocker until both mappings are corrected and verified. The current customer-facing effect is that the visible `$699` bundle cannot be purchased. Do not repair pricing or copy here.
+
+### Premium — exact value proof pending
+
+Both Premium variable names exist in Production, but exact values remain unproven. Intended safe state remains:
+
+```text
+PREMIUM_ACQUISITION_UNDERWRITING_V1=false
+PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT=
+```
+
+Do not claim exact false/blank proof or change either value.
+
+### Remaining Packet 4A evidence
+
+Owner read-only proof remains pending for exact non-secret values for `PUBLIC_SITE_URL`, `DOCRAPTOR_MODE`, `ALLOW_PRODUCTION_PDF`, `REPORT_DOWNLOAD_ARTIFACT_MODE`, and Premium; Supabase schema; the `dead_letter` constraint; lifecycle RPC metadata; storage buckets/policies; exactly one active `investoriq-admin-run-worker` pg_cron authority at `*/3 * * * *` targeting `https://investoriq.tech/api/admin-run-worker`; and no active legacy automatic worker race. Repository evidence already proves the GitHub automatic schedule is commented out and manual `workflow_dispatch` fallback remains retained.
+
+### Elite report red-team plan — preserved
+
+Preserve `INVESTORIQ_SOL_ELITE_REPORT_RED_TEAM_GOLD_2026-08-07.md`. Run it only after real production Screening and Full Underwriting PDFs exist. It compares the PDFs against elite institutional underwriting, lender, IC, valuation, and professionally typeset financial materials, covering language, typography, layout, tables, charts, source presentation, repetition, AI tone, differentiation, commercial credibility, DocRaptor, Textract, HTML/CSS paged media, PDF Boss, extraction, and evidence preservation. It must identify precise improvements and explicitly say **LEAVE IT ALONE** where warranted. Do not execute it during Packet 4A.
+
+No application, test, configuration, migration, worker, parser, schema, manifest, lane, identity, Premium, scheduler, Supabase, Stripe, purchase, credit, report, artifact, deployment, or production state was changed.
+
 ## Permanent prohibitions
 
 - No RETEST 39 requeue

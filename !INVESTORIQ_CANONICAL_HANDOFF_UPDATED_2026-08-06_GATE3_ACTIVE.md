@@ -580,3 +580,60 @@ Prepare a separately authorized Gate 4 launch-certification packet. Do not execu
 ## Current Gate 3 Next Packet — August 6, 2026
 
 Review the pending Codex receipt for the **Valuation / Appraisal Comparison** slice. Do not authorize deployment, production mutation, Gate 4, another Gate 3 slice, RETEST 39, RETEST 40, Premium, or any internal identity/manifest/lane change until this slice is reviewed, durably persisted, and cleanly merged.
+
+## Gate 4A Production Parity Checkpoint — Active
+
+This current checkpoint supersedes earlier Gate 3 “next packet” and launch-preparation language above without rewriting history. Packet 4A is read-only production-parity preparation. Gate 4 remains **NOT AUTHORIZED**.
+
+### Vercel production deployment parity — PASS
+
+- Vercel CLI: `48.10.3`.
+- Project: `investoriq`.
+- Deployment: `https://investoriq-gra6pwyr1-rob-mccallums-projects.vercel.app`.
+- Deployment ID: `dpl_6Um9BXvEKLer9AqYdeoZgxaW8U5S`.
+- Target/status: `production` / `Ready`.
+- Created: `Fri Aug 07 2026 10:37:37 GMT-0400`.
+- Production aliases include `https://investoriq.tech`, `https://www.investoriq.tech`, `https://investoriq.vercel.app`, and the documented Vercel project aliases.
+- Dashboard independently showed Ready/Latest, Production/Current, branch `main`, source commit `779c6b4 — docs: close Gate 3 certification`, and primary domain `investoriq.tech`.
+- Certified implementation `32e566136bd77afd6e2b41a2c516e1adc8a61fa9` is an ancestor of deployed `779c6b49711278f9e6b763202213245e82d75cde`.
+- Only intervening commit: documentation-only `779c6b4`; only the three active authority Markdown files changed.
+- Unauthorized post-certification application changes: none found.
+
+### Production environment presence — PARTIAL REVIEW
+
+Authenticated Production environment listing proved major PDF, Premium, AI, frontend/server Stripe, CRON, admin, public-site, Supabase, webhook, AWS, and DocRaptor variable names without exposing secret values.
+
+Names not shown in Production were `SUPABASE_ANON_KEY`, `STRIPE_PRICE_BUNDLE`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_STRIPE_PRICE_ID_BUNDLE`, and `REPORT_PUBLICATION_TARGET`.
+
+`SUPABASE_ANON_KEY` is generally covered for worker/parser paths by `SUPABASE_ANON_KEY || VITE_SUPABASE_ANON_KEY`; `VITE_SUPABASE_ANON_KEY` is present. `api/jobs/request-revision.js` directly requires the standalone name, so that remains a later revision-workflow review item, not a proven first-canary blocker.
+
+`REPORT_PUBLICATION_TARGET` is optional under the certified resolver: `production_pdf` defaults to `external_customer`, while non-production PDF defaults to `internal_test`. Its absence does not independently block publication when certified production DocRaptor mode is active. Exact non-secret PDF mode values remain pending.
+
+### Bundle configuration defect — PROVEN
+
+The live Pricing page displays Launch Bundle `$699`, but the CTA visibly shows `PRICING UNAVAILABLE`. `pricingConfig.js` requires absent `VITE_STRIPE_PRICE_ID_BUNDLE`; `api/create-checkout-session.js` requires absent `STRIPE_PRICE_BUNDLE` for `bundle`.
+
+This is not a Packet 4A parity blocker and does not block standalone Full Underwriting or Screening canaries. It is a later joint commercial-launch blocker until both mappings are separately corrected and verified. The current customer-facing effect is that the visible `$699` bundle cannot be purchased. Do not fix pricing or copy in this documentation packet.
+
+### Premium status — exact value proof pending
+
+Both Premium variable names exist in Production, but exact values have not yet been owner-proven. Required safe state remains:
+
+```text
+PREMIUM_ACQUISITION_UNDERWRITING_V1=false
+PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT=
+```
+
+Do not claim exact Premium value proof or toggle either variable.
+
+### Remaining Packet 4A evidence
+
+Pending read-only owner proof covers exact non-secret values for `PUBLIC_SITE_URL`, `DOCRAPTOR_MODE`, `ALLOW_PRODUCTION_PDF`, `REPORT_DOWNLOAD_ARTIFACT_MODE`, and Premium; Supabase lifecycle schema; the `dead_letter` constraint; required RPC metadata; storage buckets/policies; exactly one active `investoriq-admin-run-worker` authority at `*/3 * * * *` targeting `https://investoriq.tech/api/admin-run-worker`; and absence of an active legacy automatic worker race.
+
+Repository evidence already proves the GitHub automatic schedule is commented out and `workflow_dispatch` remains retained as fallback. Do not dispatch the fallback during canary execution without separate authorization.
+
+### Elite report red-team plan — preserved
+
+Preserve `INVESTORIQ_SOL_ELITE_REPORT_RED_TEAM_GOLD_2026-08-07.md`. After real production Screening and Full Underwriting PDFs exist, GPT-5.6 Sol will compare them against elite institutional underwriting, lender, IC, valuation, and professionally typeset financial materials. The audit covers wording, punctuation, terminology, typography, spacing, alignment, page composition, margins, tables, charts, hierarchy, source presentation, repetition, AI-sounding copy, product differentiation, commercial credibility, DocRaptor, Textract, HTML/CSS paged media, PDF Boss, extraction structure, and evidence preservation. It must explain precise improvements and say **LEAVE IT ALONE** where warranted. Do not execute it during Packet 4A.
+
+No application, test, configuration, migration, worker, parser, schema, manifest, lane, identity, Premium, scheduler, Supabase, Stripe, purchase, credit, report, artifact, deployment, or production state was changed by this checkpoint.
