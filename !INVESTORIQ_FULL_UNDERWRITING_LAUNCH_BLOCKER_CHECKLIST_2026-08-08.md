@@ -5,6 +5,29 @@
 
 This file is intended to be updated continuously. Check items off only when the stated exit proof is actually satisfied.
 
+## 2026-08-08 Fresh Handoff Checkpoint
+
+- Current local HEAD: `f844b9a480a67e01e1e08ba1ca2dd12783cfae97`
+- origin/main remains: `94fba3037a2fef76e97e24e15893008e05f8607d`
+- Five local commits are ahead of origin and unpushed/un-deployed: `db6f78b`, `b4cc594`, `eaabf09`, `b674a0e`, `f844b9a`
+- P0-A publication authority/customer visibility repair exists locally as `eaabf09`
+- P0-A helper/mocked tests passed, but real local-Supabase proof remains blocked
+- Docker works, but `npx supabase start` is blocked because local migrations assume baseline tables exist before they are created
+- Missing/assumed baseline tables include `analysis_jobs`, `analysis_job_files`, and likely `reports`
+- DocRaptor endpoint/diagnostics repair exists locally as `db6f78b`; provider acceptance remains unproven
+- DocRaptor production-mode governance repair exists locally as `b674a0e`
+- Owner authorization flag is `DOCRAPTOR_PRODUCTION_OWNER_AUTHORIZED=true`
+- Production DocRaptor mode must not activate from `DOCRAPTOR_MODE=production`, `ALLOW_PRODUCTION_PDF=true`, or `REPORT_DOWNLOAD_ARTIFACT_MODE=production_pdf` alone
+- DocRaptor diagnostic safety/raw provider logging cleanup exists locally as `f844b9a`
+- `f844b9a` bounded network/no-response diagnostics and aggregate provider diagnostics
+- Remaining diagnostics risk: explicit DocRaptor/internal HTTP timeout/deadline handling still open
+- Production DocRaptor quota remains exhausted: Production Docs 5/5 used; Test Docs 0/unlimited; billing period Aug 01, 2026 - Aug 31, 2026
+- DocRaptor production mode remains not owner-authorized
+- Provider acceptance remains unproven
+- No production canary is authorized
+- RETEST 43 does not exist and is not authorized
+- Next intended code packet: explicit timeout/deadline handling for DocRaptor/provider/internal HTTP paths
+
 ---
 
 # 0. Current Authority / Hard Stop
@@ -114,6 +137,7 @@ This strongly explains why:
 - [x] `document_type` behavior preserved
 - [x] test-mode behavior preserved in code path
 - [x] binary response handling preserved
+- [x] Local commit created: `f844b9a` - `fix: bound DocRaptor diagnostics`
 - [ ] Commit reviewed
 - [ ] Commit pushed
 - [ ] Commit deployed
@@ -147,6 +171,10 @@ This strongly explains why:
 - [x] Network/no-response failures remain weakly diagnosed.
 - [ ] Raw Axios/provider response data can still reach logs.
 - [ ] Both provider calls lack explicit timeout/deadline controls.
+
+### Fresh handoff note
+
+- Next intended code packet: explicit timeout/deadline handling for DocRaptor/provider/internal HTTP paths.
 
 ### Exit proof
 
