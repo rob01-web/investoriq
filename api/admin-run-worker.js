@@ -493,6 +493,7 @@ export default async function handler(req, res) {
       terminalMessage = null,
       creditState = null,
       remedyState = null,
+      providerDiagnostics = null,
     }) => {
       try {
         let deliveryDecision = extractCanonicalDeliveryDecision(reportData?.deliveryDecisionState || reportData);
@@ -555,6 +556,7 @@ export default async function handler(req, res) {
             retrySafe: terminalClassification.retry_safe,
             message: terminalMessage,
           },
+          providerDiagnostics,
           creditState: creditState || { state: 'restoration_status_unknown' },
           remedyState: remedyState || { state: 'review_required' },
           finalizedAt: nowIso,
@@ -3216,17 +3218,25 @@ export default async function handler(req, res) {
 
               if (!reportRes.ok) {
                 const rawText = await reportRes.text();
+                let failureBody = null;
                 try {
-                  const failureBody = JSON.parse(rawText);
+                  failureBody = JSON.parse(rawText);
                   generatorErrorCode = String(failureBody?.error_code || generatorErrorCode);
                 } catch {
                   generatorErrorCode = 'REPORT_RENDER_FAILED';
                 }
+                const providerDiagnostics = failureBody?.diagnostics?.provider_diagnostics || null;
+                const providerDiagnosticsByAttempt =
+                  failureBody?.diagnostics?.provider_diagnostics_by_attempt || null;
                 generatorFailurePayload = {
                   status: reportRes.status,
                   response_text_preview: rawText.slice(0, 500),
                   has_admin_key: Boolean(headers['x-admin-run-key']),
                   target_url: fetchUrl,
+                  ...(providerDiagnostics ? { provider_diagnostics: providerDiagnostics } : {}),
+                  ...(providerDiagnosticsByAttempt
+                    ? { provider_diagnostics_by_attempt: providerDiagnosticsByAttempt }
+                    : {}),
                 };
                 if (
                   reportRes.status === 409 &&
@@ -3343,6 +3353,9 @@ export default async function handler(req, res) {
                       storage_path: resolvedStoragePath,
                       final_pdf_publication_quality_boss:
                         artifactErr?.context?.final_pdf_publication_quality_boss || null,
+                      provider_diagnostics: artifactErr?.context?.provider_diagnostics || null,
+                      provider_diagnostics_by_attempt:
+                        artifactErr?.context?.provider_diagnostics_by_attempt || null,
                     };
                   }
                   if (!generatorError) {
@@ -3422,6 +3435,12 @@ export default async function handler(req, res) {
               terminalMessage: generatorError,
               creditState: terminalFailureResult?.creditRestoration || null,
               remedyState: { state: 'internal_review_required' },
+              providerDiagnostics: generatorFailurePayload
+                ? {
+                    current: generatorFailurePayload.provider_diagnostics || null,
+                    byAttempt: generatorFailurePayload.provider_diagnostics_by_attempt || null,
+                  }
+                : null,
             });
 
             transitions.push({

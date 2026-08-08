@@ -9,11 +9,11 @@ import { isCanonicalReportIdentityReceipt } from "../../api/_lib/report-identity
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const acquisitionDocumentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
 const reportTemplateSource = fs.readFileSync("api/report-template-runtime.html", "utf8");
-const docRaptorCallIndex = generatorSource.indexOf('const renderDocRaptorPdf = async (documentContent) => axios.post(');
+const docRaptorCallIndex = generatorSource.indexOf('const renderDocRaptorPdf = async (documentContent, attempt = "initial") => {');
 const canonicalCoreStateIndex = generatorSource.indexOf('const canonicalFinalPdfCorePublishable = Boolean(');
 const emergencyCoreBuilderIndex = generatorSource.indexOf('finalPdfEmergencyCoreHtml = buildDeterministicMinimumCorePdfHtml({');
-const initialRichRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(docHtml);');
-const initialEmergencyRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(emergencyHtml);');
+const initialRichRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(docHtml, "initial");');
+const initialEmergencyRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(emergencyHtml, "emergency_core");');
 const boundedPdfRecoveryIndex = generatorSource.indexOf('const boundedRecovery = await runBoundedPdfCertificationRecovery({');
 const directStorageUploadIndex = generatorSource.indexOf('.upload(validatedStoragePath, pdfResponse.data, {');
 assert.ok(docRaptorCallIndex >= 0 && boundedPdfRecoveryIndex > docRaptorCallIndex);
@@ -24,7 +24,7 @@ assert.ok(initialEmergencyRenderIndex > initialRichRenderIndex);
 assert.ok(boundedPdfRecoveryIndex > initialEmergencyRenderIndex);
 const generatorInitialRenderControl = generatorSource.slice(initialRichRenderIndex, boundedPdfRecoveryIndex);
 assert.equal(
-  (generatorInitialRenderControl.match(/pdfResponse = await renderDocRaptorPdf\(emergencyHtml\);/g) || []).length,
+  (generatorInitialRenderControl.match(/pdfResponse = await renderDocRaptorPdf\(emergencyHtml, "emergency_core"\);/g) || []).length,
   1
 );
 assert.match(generatorInitialRenderControl, /if \(finalPdfCorePublishable !== true\) throw error;/);

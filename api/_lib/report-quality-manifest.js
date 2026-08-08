@@ -883,6 +883,7 @@ export function finalizeBlockedReportQualityManifest({
   storagePath = null,
   deliveryDecision = null,
   terminalOutcome,
+  providerDiagnostics = null,
   creditState = null,
   remedyState = null,
   finalizedAt = new Date().toISOString(),
@@ -911,6 +912,7 @@ export function finalizeBlockedReportQualityManifest({
       ...clone(candidate.receipts),
       deliveryGate: deliveryDecision ? clone(asObject(deliveryDecision)) : null,
       finalPdfPublicationQualityBoss: null,
+      providerDiagnostics: clone(asObject(providerDiagnostics)),
     },
     publication: {
       state: "blocked",

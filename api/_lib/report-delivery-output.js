@@ -17,6 +17,10 @@ import {
   isCollapseEligibleBossIssue,
   runSemanticRecompositionOnce,
 } from "./section-disposition-runtime.js";
+import {
+  attachDocRaptorProviderDiagnostic,
+  mergeDocRaptorProviderDiagnostics,
+} from "./docraptor-provider-diagnostics.js";
 
 export function sanitizeTypography(html) {
   return sanitizeFinalCustomerHtml(html);
@@ -44,6 +48,12 @@ function buildCoreSafeFallbackRequiredError(certification = null, cause = null) 
     core_display_fallback_available: false,
     final_pdf_publication_quality_boss: certification || null,
     cause: cause?.message || cause || "missing_core_safe_html",
+    ...(cause?.context?.provider_diagnostics
+      ? { provider_diagnostics: cause.context.provider_diagnostics }
+      : {}),
+    ...(cause?.context?.provider_diagnostics_by_attempt
+      ? { provider_diagnostics_by_attempt: cause.context.provider_diagnostics_by_attempt }
+      : {}),
   };
   return error;
 }
@@ -270,7 +280,11 @@ export async function runBoundedPdfCertificationRecovery({
     }
   };
 
-  const render = (html) => renderPdfBuffer({ ...renderContext, finalHtml: html });
+  const render = (html, renderAttempt) => renderPdfBuffer({
+    ...renderContext,
+    finalHtml: html,
+    renderAttempt,
+  });
   const finalizeFailure = ({ certification, error }) => {
     const finalized = finalizePdfBossFailure({
       certification,
@@ -359,7 +373,7 @@ export async function runBoundedPdfCertificationRecovery({
 
     let emergencyPdfBuffer;
     try {
-      emergencyPdfBuffer = await render(emergencyHtml);
+      emergencyPdfBuffer = await render(emergencyHtml, "emergency_core");
     } catch (error) {
       const diagnostic = buildRecoveryDiagnostic(priorCertification, error, reason);
       return withRecoveryState({
@@ -419,7 +433,7 @@ export async function runBoundedPdfCertificationRecovery({
     }
     let coreSafePdfBuffer;
     try {
-      coreSafePdfBuffer = await render(fallbackHtml);
+      coreSafePdfBuffer = await render(fallbackHtml, "core_safe");
     } catch (error) {
       return {
         result: certification,
@@ -525,7 +539,7 @@ export async function runBoundedPdfCertificationRecovery({
   let cssRecovery;
   let cssPdfBuffer;
   try {
-    cssPdfBuffer = await render(recovery.html);
+    cssPdfBuffer = await render(recovery.html, "css_recovery");
   } catch (error) {
     if (corePublishable === true) {
       return renderEmergencyCoreFallback({
@@ -626,7 +640,7 @@ export async function runBoundedPdfCertificationRecovery({
   let semanticPdfBuffer;
   let semanticCertification;
   try {
-    semanticPdfBuffer = await render(semantic.html);
+    semanticPdfBuffer = await render(semantic.html, "semantic_recovery");
   } catch (error) {
     if (corePublishable === true) {
       return renderEmergencyCoreFallback({
@@ -1051,6 +1065,7 @@ export async function renderReportPdfBuffer({
   reportSeed = null,
   propertyName = "",
   storagePath = "",
+  renderAttempt = "initial",
 } = {}) {
   const artifactMode = resolveReportDownloadArtifactMode({
     reportDownloadArtifactMode,
@@ -1068,24 +1083,29 @@ export async function renderReportPdfBuffer({
   }
 
   const apiKey = String(process.env.DOCRAPTOR_API_KEY || "").trim();
-  const pdfResponse = await axios.post(
-    "https://docraptor.com/docs",
-    {
-      test: artifactMode !== "production_pdf",
-      document_content: String(finalHtml || ""),
-      name: "InvestorIQ-ClientReport.pdf",
-      document_type: "pdf",
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}`,
+  try {
+    const pdfResponse = await axios.post(
+      "https://docraptor.com/docs",
+      {
+        test: artifactMode !== "production_pdf",
+        document_content: String(finalHtml || ""),
+        name: "InvestorIQ-ClientReport.pdf",
+        document_type: "pdf",
       },
-      responseType: "arraybuffer",
-    }
-  );
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}`,
+        },
+        responseType: "arraybuffer",
+      }
+    );
 
-  return Buffer.isBuffer(pdfResponse.data) ? pdfResponse.data : Buffer.from(pdfResponse.data);
+    return Buffer.isBuffer(pdfResponse.data) ? pdfResponse.data : Buffer.from(pdfResponse.data);
+  } catch (error) {
+    attachDocRaptorProviderDiagnostic(error, { attempt: renderAttempt });
+    throw error;
+  }
 }
 
 export async function ensureReportDownloadArtifact({
@@ -1281,19 +1301,31 @@ export async function ensureReportDownloadArtifact({
     return String((await buildEmergencyCoreHtml()) || "").trim();
   };
   try {
-    initialPdfBuffer = await renderPdfBuffer({ ...initialRenderContext, finalHtml });
+    initialPdfBuffer = await renderPdfBuffer({
+      ...initialRenderContext,
+      finalHtml,
+      renderAttempt: "initial",
+    });
   } catch (error) {
     if (resolvedCorePublishable !== true) throw error;
     const emergencyHtml = await resolveInitialEmergencyCoreHtml();
     if (!emergencyHtml) throw error;
     resolvedInitialEmergencyCoreHtml = emergencyHtml;
     try {
-      initialPdfBuffer = await renderPdfBuffer({ ...initialRenderContext, finalHtml: emergencyHtml });
+      initialPdfBuffer = await renderPdfBuffer({
+        ...initialRenderContext,
+        finalHtml: emergencyHtml,
+        renderAttempt: "emergency_core",
+      });
     } catch (emergencyError) {
       emergencyError.context = {
         ...(emergencyError.context || {}),
         initial_render_error: error?.message || String(error),
         emergency_core_render_error: emergencyError?.message || String(emergencyError),
+        provider_diagnostics_by_attempt: mergeDocRaptorProviderDiagnostics(
+          error?.context?.provider_diagnostics,
+          emergencyError?.context?.provider_diagnostics,
+        ),
       };
       throw emergencyError;
     }

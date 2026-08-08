@@ -101,6 +101,10 @@ import {
   sanitizeTypography,
 } from "./report-delivery-output.js";
 import {
+  attachDocRaptorProviderDiagnostic,
+  mergeDocRaptorProviderDiagnostics,
+} from "./docraptor-provider-diagnostics.js";
+import {
   buildReportRevisionRequestKey,
   normalizeReportRevisionKind,
 } from "../../src/lib/reportRevisionAuthority.js";
@@ -9037,24 +9041,31 @@ try {
       test_harness: true,
     });
   }
-  const renderDocRaptorPdf = async (documentContent) => axios.post(
-    "https://docraptor.com/docs",
-    {
-      test: docraptorMode !== "production",
-      document_content: documentContent,
-      name: "InvestorIQ-ClientReport.pdf",
-      document_type: "pdf",
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(
-          process.env.DOCRAPTOR_API_KEY + ":"
-        ).toString("base64")}`,
-      },
-      responseType: "arraybuffer",
+  const renderDocRaptorPdf = async (documentContent, attempt = "initial") => {
+    try {
+      return await axios.post(
+        "https://docraptor.com/docs",
+        {
+          test: docraptorMode !== "production",
+          document_content: documentContent,
+          name: "InvestorIQ-ClientReport.pdf",
+          document_type: "pdf",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${Buffer.from(
+              process.env.DOCRAPTOR_API_KEY + ":"
+            ).toString("base64")}`,
+          },
+          responseType: "arraybuffer",
+        }
+      );
+    } catch (error) {
+      attachDocRaptorProviderDiagnostic(error, { attempt });
+      throw error;
     }
-  );
+  };
   const finalPdfArtifactMode = docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf";
   const finalPdfPublicationTarget = String(process.env.REPORT_PUBLICATION_TARGET || "").trim() ||
     (finalPdfArtifactMode === "production_pdf" ? "external_customer" : "internal_test");
@@ -9113,18 +9124,22 @@ try {
   let initialArtifactIsEmergency = false;
   let initialRenderError = null;
   try {
-    pdfResponse = await renderDocRaptorPdf(docHtml);
+    pdfResponse = await renderDocRaptorPdf(docHtml, "initial");
   } catch (error) {
     if (finalPdfCorePublishable !== true) throw error;
     const emergencyHtml = String(finalPdfEmergencyCoreHtml || "").trim();
     if (!emergencyHtml) throw error;
     try {
-      pdfResponse = await renderDocRaptorPdf(emergencyHtml);
+      pdfResponse = await renderDocRaptorPdf(emergencyHtml, "emergency_core");
     } catch (emergencyError) {
       emergencyError.context = {
         ...(emergencyError.context || {}),
         initial_render_error: error?.message || String(error),
         emergency_core_render_error: emergencyError?.message || String(emergencyError),
+        provider_diagnostics_by_attempt: mergeDocRaptorProviderDiagnostics(
+          error?.context?.provider_diagnostics,
+          emergencyError?.context?.provider_diagnostics,
+        ),
       };
       throw emergencyError;
     }
@@ -9147,7 +9162,8 @@ try {
     initialArtifactIsEmergency,
     initialArtifactHtml: initialArtifactIsEmergency ? finalPdfEmergencyCoreHtml : "",
     initialRenderError,
-    renderPdfBuffer: async ({ finalHtml }) => (await renderDocRaptorPdf(finalHtml)).data,
+    renderPdfBuffer: async ({ finalHtml, renderAttempt = "initial" }) =>
+      (await renderDocRaptorPdf(finalHtml, renderAttempt)).data,
     buildEmergencyCoreHtml: async () => {
       if (String(finalPdfEmergencyCoreHtml || "").trim()) return finalPdfEmergencyCoreHtml;
       if (!canonicalFinalPdfCorePublishable) return "";
