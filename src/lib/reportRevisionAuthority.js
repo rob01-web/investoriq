@@ -58,6 +58,10 @@ export function isCurrentPublishedReportRevision(row = {}) {
   return String(row?.status ?? "") === "published" && row?.is_current_revision === true;
 }
 
+export function isCustomerVisiblePublishedReportRevision(row = {}) {
+  return isCurrentPublishedReportRevision(row);
+}
+
 function compareRevisionRows(left, right) {
   const leftCurrent = isCurrentPublishedReportRevision(left) ? 1 : 0;
   const rightCurrent = isCurrentPublishedReportRevision(right) ? 1 : 0;
@@ -85,6 +89,10 @@ export function sortReportRevisions(rows = []) {
 export function selectCurrentPublishedReportRevision(rows = []) {
   const revisions = sortReportRevisions(rows);
   return revisions.find(isCurrentPublishedReportRevision) || revisions.find((row) => String(row?.status ?? "") === "published") || null;
+}
+
+export function selectCustomerVisiblePublishedReportRevisions(rows = []) {
+  return sortReportRevisions(rows).filter(isCustomerVisiblePublishedReportRevision);
 }
 
 export function getReportRevisionDisplayState(row = {}, currentRevision = null) {

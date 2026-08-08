@@ -7,6 +7,7 @@ import { supabase } from "@/lib/customSupabaseClient";
 import BackButton from "@/components/BackButton";
 import {
   sortReportRevisions,
+  selectCustomerVisiblePublishedReportRevisions,
 } from "@/lib/reportRevisionAuthority";
 import { resolveReportSurfaceState } from "@/lib/reportSurfaceState";
 
@@ -151,6 +152,11 @@ export default function ReportHistory() {
     fetchReports();
   }, [user]);
 
+  const visibleReports = React.useMemo(
+    () => selectCustomerVisiblePublishedReportRevisions(reports),
+    [reports]
+  );
+
   return (
     <>
       <style>{FONTS}</style>
@@ -225,8 +231,8 @@ export default function ReportHistory() {
               </span>
             </div>
 
-          ) : reports.length === 0 ? (
-            /* Empty state */
+            ) : visibleReports.length === 0 ? (
+              /* Empty state */
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -309,8 +315,8 @@ export default function ReportHistory() {
                     </tr>
                   </thead>
                   <tbody>
-                    {reports.map((r, i) => {
-                      const surfaceState = resolveReportSurfaceState({ report: r, reports });
+                    {visibleReports.map((r, i) => {
+                      const surfaceState = resolveReportSurfaceState({ report: r, reports: visibleReports });
                       const revisionState = surfaceState.revisionState;
                       const isCurrentRevision = revisionState.isCurrent;
                       return (
@@ -346,7 +352,7 @@ export default function ReportHistory() {
                           </div>
                         </td>
                         <td style={{ padding:'11px 12px', textAlign:'right' }}>
-                          {r.storage_path ? (
+                          {surfaceState.isDownloadable ? (
                             <DownloadBtn
                               onClick={async () => {
                                 const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(r.storage_path, 300);

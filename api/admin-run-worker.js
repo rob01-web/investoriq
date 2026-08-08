@@ -484,6 +484,30 @@ export default async function handler(req, res) {
       return transitionedRow;
     };
 
+    const persistAnalysisJobReportLink = async (job, reportId) => {
+      const trimmedReportId = String(reportId || '').trim();
+      if (!job?.id || !trimmedReportId) {
+        throw new Error('Missing report linkage prerequisites');
+      }
+
+      const { data: linkedRows, error: linkErr } = await supabaseAdmin
+        .from('analysis_jobs')
+        .update({ report_id: trimmedReportId })
+        .eq('id', job.id)
+        .eq('worker_attempt_id', job.worker_attempt_id || null)
+        .select('id, report_id, status')
+        .maybeSingle();
+
+      if (linkErr) {
+        throw new Error(`Failed to persist analysis job report linkage: ${linkErr.message}`);
+      }
+      if (!linkedRows?.id || String(linkedRows.report_id || '').trim() !== trimmedReportId) {
+        throw new Error('Failed to persist analysis job report linkage');
+      }
+
+      return linkedRows;
+    };
+
     const finalizeAndPersistBlockedManifest = async ({
       job,
       reportData = null,
@@ -3368,10 +3392,21 @@ export default async function handler(req, res) {
                     const publicationQualityBoss = artifactResolution?.publicationQualityBoss || null;
                     let revisionPromotionResolution = null;
                     try {
+                      const persistedReportLink = await persistAnalysisJobReportLink(job, reportId);
+                      if (!persistedReportLink?.id) {
+                        throw new Error('Failed to persist canonical report linkage');
+                      }
                       revisionPromotionResolution = await promoteReportRevisionToCurrent({
                         supabaseAdmin,
                         reportId,
                       });
+                      if (!revisionPromotionResolution?.promoted) {
+                        throw new Error(
+                          revisionPromotionResolution?.stale === true
+                            ? `Report revision promotion resolved stale for ${reportId}`
+                            : `Report revision promotion did not establish current authority for ${reportId}`
+                        );
+                      }
                     } catch (promotionErr) {
                       generatorErrorCode = 'REPORT_PUBLICATION_FAILED';
                       generatorError = promotionErr?.message || 'Report generation failed (report promotion failed)';
@@ -3383,12 +3418,6 @@ export default async function handler(req, res) {
                         report_id: reportId,
                         storage_path: storagePath,
                       };
-                    }
-                    if (!generatorError && revisionPromotionResolution?.stale === true) {
-                      console.warn(
-                        `[worker] Skipping current-revision promotion for stale report ${reportId}:`,
-                        revisionPromotionResolution,
-                      );
                     }
                     if (
                       resolvedDeliveryDecision.deliveryGateStatus === 'deliverable' &&

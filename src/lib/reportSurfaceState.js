@@ -2,6 +2,7 @@ import { resolveDashboardCustomerStatus } from "./dashboardCustomerCopy.js";
 import { buildCustomerFailureMessage } from "./jobFailureMessaging.js";
 import {
   getReportRevisionDisplayState,
+  isCurrentPublishedReportRevision,
   selectCurrentPublishedReportRevision,
 } from "./reportRevisionAuthority.js";
 
@@ -227,6 +228,6 @@ export function resolveReportSurfaceState({
     adminReasonCode: normalizedDeliveryDecision?.customer_status_reason_code || job?.error_code || job?.failure_reason || null,
     isCurrentRevision: revisionState.isCurrent,
     isHistoricalRevision: revisionState.isHistoricalPublished,
-    isDownloadable: Boolean(report?.storage_path) && (revisionState.isCurrent || revisionState.isHistoricalPublished || stateKey === "published_historical_revision" || stateKey === "superseded_revision"),
+    isDownloadable: Boolean(report?.storage_path) && isCurrentPublishedReportRevision(report),
   };
 }

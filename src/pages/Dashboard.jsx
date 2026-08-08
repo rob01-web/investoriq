@@ -10,6 +10,7 @@ import { buildCustomerFailureMessage, buildEntitlementRestoredMap } from '@/lib/
 import { formatReportUploadGateErrorMessage, resolveCoreUploadDocType, resolveReportUploadGate } from '@/lib/reportUploadGate';
 import {
   sortReportRevisions,
+  selectCustomerVisiblePublishedReportRevisions,
 } from '@/lib/reportRevisionAuthority';
 import { resolveReportSurfaceState } from '@/lib/reportSurfaceState';
 import {
@@ -449,9 +450,13 @@ const DASHBOARD_DIAG_MINIMAL = false;
   }, [profile?.id]);
 
   const orderedReports = useMemo(() => sortReportRevisions(reports), [reports]);
+  const visibleReports = useMemo(
+    () => selectCustomerVisiblePublishedReportRevisions(orderedReports),
+    [orderedReports]
+  );
   const reportHistoryCards = useMemo(() => (
-    orderedReports.map((report) => {
-      const surfaceState = resolveReportSurfaceState({ report, reports: orderedReports });
+    visibleReports.map((report) => {
+      const surfaceState = resolveReportSurfaceState({ report, reports: visibleReports });
       const revisionState = surfaceState.revisionState;
       const isCurrentRevision = revisionState.isCurrent;
       return (
@@ -477,7 +482,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
           <StatusBadge status={report.status || (isCurrentRevision ? 'published' : 'historical')} />
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-          {report.storage_path && (
+          {surfaceState.isDownloadable && (
             <button
               type="button"
               onClick={async () => {
@@ -516,9 +521,9 @@ const DASHBOARD_DIAG_MINIMAL = false;
       </div>
       );
     })
-  ), [orderedReports, fetchReports, toast]);
+  ), [visibleReports, fetchReports, toast]);
 
-  const readyReports = orderedReports.filter((r) => r.storage_path);
+  const readyReports = visibleReports;
 
   const fetchJobEvents = async (jobIds) => {
     if (!jobIds || jobIds.length === 0) { setJobEvents({}); return; }
@@ -1260,13 +1265,13 @@ useEffect(() => {
                 </div>
               </div>
 
-              {reports.length === 0 ? (
+              {visibleReports.length === 0 ? (
                 <div style={{ padding:'24px 0', textAlign:'center' }}>
                   <span style={{ ...bodySmall, fontSize:13, color:T.ink4 }}>No reports generated yet. Complete steps 1-3 above to generate your first report.</span>
                 </div>
               ) : (
                 <div style={{ padding:'24px 0' }}>
-                  {reports.map((r) => (
+                  {visibleReports.map((r) => (
                     <div key={r.id} style={{ ...bodySmall, fontSize:13, color:T.ink3, padding:'6px 0' }}>
                       {r.property_name || 'Unnamed Property'} - {r.created_at}
                     </div>

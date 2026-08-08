@@ -65,6 +65,7 @@ const currentSurface = resolveReportSurfaceState({
 assert.equal(currentSurface.stateKey, "published_current_revision");
 assert.equal(currentSurface.isCurrentRevision, true);
 assert.equal(currentSurface.isHistoricalRevision, false);
+assert.equal(currentSurface.isDownloadable, true);
 assert.equal(currentSurface.customerDownloadLabel, "Download current");
 assert.match(currentSurface.customerMessage, /report complete/i);
 assert.match(currentSurface.adminDetail, /current downloadable revision/i);
@@ -77,6 +78,7 @@ const historicalSurface = resolveReportSurfaceState({
 assert.equal(historicalSurface.stateKey, "published_historical_revision");
 assert.equal(historicalSurface.isCurrentRevision, false);
 assert.equal(historicalSurface.isHistoricalRevision, true);
+assert.equal(historicalSurface.isDownloadable, false);
 assert.equal(historicalSurface.customerDownloadLabel, "Review historical");
 assert.equal(historicalSurface.adminStatusLabel, "Historical published revision");
 
@@ -87,6 +89,7 @@ const correctedFailedSurface = resolveReportSurfaceState({
 });
 assert.equal(correctedFailedSurface.stateKey, "corrected_replacement_revision_failed");
 assert.equal(correctedFailedSurface.customerStatusLabel, "failed");
+assert.equal(correctedFailedSurface.isDownloadable, false);
 assert.match(correctedFailedSurface.customerMessage, /corrected report revision did not complete/i);
 assert.match(correctedFailedSurface.adminDetail, /revision failed/i);
 
@@ -102,7 +105,8 @@ const restoredFailedSurface = resolveReportSurfaceState({
   creditRestored: true,
 });
 assert.equal(restoredFailedSurface.stateKey, "failed_with_entitlement_restored");
-assert.match(restoredFailedSurface.customerMessage, /credit has been returned|returned to your account/i);
+assert.equal(restoredFailedSurface.isDownloadable, false);
+assert.match(restoredFailedSurface.customerMessage, /credit has been restored/i);
 assert.match(restoredFailedSurface.adminDetail, /restoration evidence/i);
 
 const needsDocsDecision = resolveDashboardCustomerStatus(
