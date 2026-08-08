@@ -67,6 +67,132 @@ echoedHtmlError.response = { status: 422, data: "<div>echoed customer report HTM
 const echoedHtmlDiagnostic = buildDocRaptorProviderDiagnostic(echoedHtmlError, { attempt: "css_recovery" });
 assert.equal(echoedHtmlDiagnostic.response_data, "[REDACTED_REQUEST_ECHO]");
 
+const xmlError = new Error("Request failed with status code 422");
+xmlError.response = {
+  status: 422,
+  data: Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
+    <errors>
+      <error>
+        <type>validation_error</type>
+        <code>invalid_document_option</code>
+        <message>Production rendering is not available for this request.</message>
+        <validation>
+          <field>test</field>
+          <name>test</name>
+        </validation>
+        <request-id>dr-request-xml</request-id>
+        <correlation-id>dr-correlation-xml</correlation-id>
+        <document_content><![CDATA[<html><body>${richHtml}</body></html>]]></document_content>
+        <authorization>${authHeader}</authorization>
+        <api_key>${apiKey}</api_key>
+        <arbitrary>must not survive</arbitrary>
+      </error>
+    </errors>`),
+  headers: { "content-type": "application/xml; charset=utf-8" },
+};
+const xmlDiagnostic = buildDocRaptorProviderDiagnostic(xmlError, { attempt: "initial" });
+assert.equal(xmlDiagnostic.code, "invalid_document_option");
+assert.equal(xmlDiagnostic.message, "Production rendering is not available for this request.");
+assert.equal(xmlDiagnostic.type, "validation_error");
+assert.equal(xmlDiagnostic.field, "test");
+assert.equal(xmlDiagnostic.name, "test");
+assert.equal(xmlDiagnostic.request_id, "dr-request-xml");
+assert.equal(xmlDiagnostic.correlation_id, "dr-correlation-xml");
+assert.equal(xmlDiagnostic.content_type, "application/xml; charset=utf-8");
+assert.equal(xmlDiagnostic.response_data.arbitrary, undefined);
+assert.equal(xmlDiagnostic.response_data.document_content, undefined);
+assert.equal(JSON.stringify(xmlDiagnostic).includes(apiKey), false);
+assert.equal(JSON.stringify(xmlDiagnostic).includes(authHeader), false);
+assert.equal(JSON.stringify(xmlDiagnostic).includes(richHtml), false);
+assert.equal(JSON.stringify(xmlDiagnostic).includes("<html>"), false);
+
+const simpleXmlError = new Error("Request failed with status code 422");
+simpleXmlError.response = {
+  status: 422,
+  data: "<?xml version=\"1.0\"?><errors><error>Document generation failed.</error></errors>",
+  headers: {},
+};
+const simpleXmlDiagnostic = buildDocRaptorProviderDiagnostic(simpleXmlError);
+assert.equal(simpleXmlDiagnostic.message, "Document generation failed.");
+assert.deepEqual(simpleXmlDiagnostic.response_data, { error: "Document generation failed." });
+
+const xmlOnlyEchoError = new Error("Request failed with status code 422");
+xmlOnlyEchoError.response = {
+  status: 422,
+  data: "<request><document_content>&lt;html&gt;customer report&lt;/html&gt;</document_content></request>",
+  headers: {},
+};
+assert.equal(
+  buildDocRaptorProviderDiagnostic(xmlOnlyEchoError).response_data,
+  "[REDACTED_REQUEST_ECHO]",
+);
+
+const xmlHtmlMessageError = new Error("Request failed with status code 422");
+xmlHtmlMessageError.response = {
+  status: 422,
+  data: "<errors><message><![CDATA[<html><body>echoed report</body></html>]]></message></errors>",
+  headers: {},
+};
+assert.equal(
+  buildDocRaptorProviderDiagnostic(xmlHtmlMessageError).response_data,
+  "[REDACTED_REQUEST_ECHO]",
+);
+
+const xmlSecretError = new Error("Request failed with status code 422");
+xmlSecretError.response = {
+  status: 422,
+  data: `<errors><message>Validation failed; api_key=${apiKey}</message></errors>`,
+  headers: {},
+};
+const xmlSecretDiagnostic = buildDocRaptorProviderDiagnostic(xmlSecretError);
+assert.equal(JSON.stringify(xmlSecretDiagnostic).includes(apiKey), false);
+assert.match(xmlSecretDiagnostic.message, /api_key=\[REDACTED\]/);
+
+const malformedXmlError = new Error("Request failed with status code 422");
+malformedXmlError.response = {
+  status: 422,
+  data: "<errors><error>Unsafe partial error</errors>",
+  headers: {},
+};
+assert.equal(
+  buildDocRaptorProviderDiagnostic(malformedXmlError).response_data,
+  "[REDACTED_REQUEST_ECHO]",
+);
+
+const oversizedXmlError = new Error("Request failed with status code 422");
+oversizedXmlError.response = {
+  status: 422,
+  data: `<errors><message>${"x".repeat(5000)}</message></errors>`,
+  headers: {
+    "x-docraptor-request-id": `dr-${"r".repeat(500)}`,
+    "content-type": "application/xml; charset=utf-8",
+  },
+};
+const oversizedXmlDiagnostic = buildDocRaptorProviderDiagnostic(oversizedXmlError);
+assert.ok(
+  JSON.stringify(oversizedXmlDiagnostic).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH,
+);
+assert.equal(oversizedXmlDiagnostic.request_id.endsWith("..."), true);
+
+const allFieldsOversizedXmlError = new Error("Request failed with status code 422");
+allFieldsOversizedXmlError.response = {
+  status: 422,
+  data: `<errors>
+    <code>${"c".repeat(500)}</code>
+    <type>${"t".repeat(500)}</type>
+    <message>${"m".repeat(500)}</message>
+    <field>${"f".repeat(500)}</field>
+    <name>${"n".repeat(500)}</name>
+    <request-id>${"r".repeat(500)}</request-id>
+    <correlation-id>${"i".repeat(500)}</correlation-id>
+  </errors>`,
+  headers: { "content-type": `application/xml; ${"x".repeat(500)}` },
+};
+assert.ok(
+  JSON.stringify(buildDocRaptorProviderDiagnostic(allFieldsOversizedXmlError)).length <=
+    DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH,
+);
+
 const longError = new Error("Request failed with status code 422");
 longError.response = { status: 422, data: "x".repeat(1400), headers: {} };
 const longDiagnostic = buildDocRaptorProviderDiagnostic(longError, { attempt: "core_safe" });
@@ -115,6 +241,10 @@ const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js
 const deliverySource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 assert.match(generatorSource, /attachDocRaptorProviderDiagnostic/);
+assert.equal((generatorSource.match(/https:\/\/api\.docraptor\.com\/docs/g) || []).length, 1);
+assert.equal((deliverySource.match(/https:\/\/api\.docraptor\.com\/docs/g) || []).length, 1);
+assert.doesNotMatch(generatorSource, /["']https:\/\/docraptor\.com\/docs["']/);
+assert.doesNotMatch(deliverySource, /["']https:\/\/docraptor\.com\/docs["']/);
 assert.match(generatorSource, /pdfResponse = await renderDocRaptorPdf\(emergencyHtml, "emergency_core"\);/);
 assert.match(generatorSource, /if \(finalPdfCorePublishable !== true\) throw error;/);
 assert.match(deliverySource, /render\(fallbackHtml, "core_safe"\)/);

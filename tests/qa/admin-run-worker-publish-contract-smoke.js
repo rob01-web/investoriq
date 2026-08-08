@@ -320,7 +320,7 @@ try {
   let docraptorTestCalls = 0;
   axios.post = async (url, body, options) => {
     docraptorTestCalls += 1;
-    assert.match(url, /docraptor\.com\/docs/);
+    assert.equal(url, "https://api.docraptor.com/docs");
     assert.equal(body.test, true);
     assert.equal(body.document_type, "pdf");
     assert.match(body.document_content, /docraptor test render/i);
@@ -442,7 +442,7 @@ try {
   assert.equal(Buffer.isBuffer(productionBuffer), true);
   assert.match(productionBuffer.toString("utf8"), /^%PDF-1\.4/);
   assert.equal(productionPostCalls.length, 1);
-  assert.match(productionPostCalls[0].url, /docraptor\.com\/docs/);
+  assert.equal(productionPostCalls[0].url, "https://api.docraptor.com/docs");
   assert.equal(productionPostCalls[0].body.test, false);
   assert.equal(productionPostCalls[0].body.document_type, "pdf");
   assert.match(productionPostCalls[0].body.document_content, /prod screening html/);

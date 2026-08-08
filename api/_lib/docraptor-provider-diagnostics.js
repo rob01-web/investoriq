@@ -16,15 +16,40 @@ const SAFE_BODY_FIELDS = [
   "error",
   "detail",
   "title",
+  "field",
+  "name",
+  "request_id",
+  "correlation_id",
+  "validation",
 ];
 
 const REQUEST_ECHO_PATTERN = /(?:document_content|<!doctype|<\s*\/?\s*[a-z][^>]*>)/i;
 const SECRET_PATTERN = /(authorization|api[_ -]?key|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|password|secret)\s*[:=]\s*["']?[^,"'\s}]+/gi;
+const SAFE_XML_FIELD_NAMES = new Map([
+  ["code", "code"],
+  ["error-code", "error_code"],
+  ["error_code", "error_code"],
+  ["type", "type"],
+  ["message", "message"],
+  ["error", "error"],
+  ["detail", "detail"],
+  ["title", "title"],
+  ["field", "field"],
+  ["name", "name"],
+  ["request-id", "request_id"],
+  ["request_id", "request_id"],
+  ["requestid", "request_id"],
+  ["correlation-id", "correlation_id"],
+  ["correlation_id", "correlation_id"],
+  ["correlationid", "correlation_id"],
+]);
+const MAX_XML_INPUT_LENGTH = 64 * 1024;
 
-function truncate(value) {
+function truncate(value, maxLength = DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH) {
   const text = String(value || "");
-  if (text.length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH) return text;
-  return `${text.slice(0, DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH - 3)}...`;
+  if (text.length <= maxLength) return text;
+  if (maxLength <= 3) return text.slice(0, Math.max(0, maxLength));
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 function sanitizeText(value) {
@@ -57,6 +82,120 @@ function safeBodyObject(value, depth = 0) {
   return Object.keys(output).length > 0 ? output : null;
 }
 
+function decodeXmlScalar(value) {
+  return String(value || "")
+    .replace(/&#x([0-9a-f]+);/gi, (match, encoded) => {
+      const codePoint = Number.parseInt(encoded, 16);
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+        ? String.fromCodePoint(codePoint)
+        : match;
+    })
+    .replace(/&#([0-9]+);/g, (match, encoded) => {
+      const codePoint = Number.parseInt(encoded, 10);
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+        ? String.fromCodePoint(codePoint)
+        : match;
+    })
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&amp;/gi, "&");
+}
+
+function safeXmlFieldName(name) {
+  const localName = String(name || "").split(":").pop().toLowerCase();
+  return SAFE_XML_FIELD_NAMES.get(localName) || null;
+}
+
+function parseSafeXmlMetadata(value) {
+  const text = String(value || "").trim();
+  if (!text || text.length > MAX_XML_INPUT_LENGTH || !text.startsWith("<")) return null;
+  if (/<!\s*(?:doctype|entity)\b/i.test(text)) return null;
+
+  const output = {};
+  const stack = [];
+  let rootCount = 0;
+  let cursor = 0;
+
+  const appendText = (rawText) => {
+    if (!rawText) return true;
+    if (stack.length === 0) return !rawText.trim();
+    const node = stack[stack.length - 1];
+    node.text = truncate(`${node.text}${rawText}`, 4096);
+    return true;
+  };
+
+  while (cursor < text.length) {
+    const openingIndex = text.indexOf("<", cursor);
+    if (openingIndex < 0) {
+      if (!appendText(text.slice(cursor))) return null;
+      cursor = text.length;
+      break;
+    }
+    if (!appendText(text.slice(cursor, openingIndex))) return null;
+
+    if (text.startsWith("<!--", openingIndex)) {
+      const closingIndex = text.indexOf("-->", openingIndex + 4);
+      if (closingIndex < 0) return null;
+      cursor = closingIndex + 3;
+      continue;
+    }
+    if (text.startsWith("<![CDATA[", openingIndex)) {
+      const closingIndex = text.indexOf("]]>", openingIndex + 9);
+      if (closingIndex < 0 || stack.length === 0) return null;
+      if (!appendText(text.slice(openingIndex + 9, closingIndex))) return null;
+      cursor = closingIndex + 3;
+      continue;
+    }
+    if (text.startsWith("<?", openingIndex)) {
+      const closingIndex = text.indexOf("?>", openingIndex + 2);
+      if (closingIndex < 0 || stack.length > 0 || rootCount > 0) return null;
+      cursor = closingIndex + 2;
+      continue;
+    }
+
+    const closingIndex = text.indexOf(">", openingIndex + 1);
+    if (closingIndex < 0) return null;
+    const tag = text.slice(openingIndex + 1, closingIndex).trim();
+    if (!tag || tag.startsWith("!")) return null;
+
+    if (tag.startsWith("/")) {
+      const match = tag.match(/^\/\s*([A-Za-z_][\w:.-]*)\s*$/);
+      if (!match || stack.length === 0) return null;
+      const node = stack.pop();
+      if (node.name !== match[1].toLowerCase()) return null;
+      if (node.childCount === 0) {
+        const field = safeXmlFieldName(node.name);
+        const sanitized = field ? sanitizeText(decodeXmlScalar(node.text)) : null;
+        if (sanitized && sanitized !== "[REDACTED_REQUEST_ECHO]" && !(field in output)) {
+          output[field] = sanitized;
+        }
+      }
+      cursor = closingIndex + 1;
+      continue;
+    }
+
+    const selfClosing = tag.endsWith("/");
+    const openingTag = selfClosing ? tag.slice(0, -1).trim() : tag;
+    const match = openingTag.match(/^([A-Za-z_][\w:.-]*)(?:\s+[\s\S]*)?$/);
+    if (!match) return null;
+    if (stack.length === 0) {
+      rootCount += 1;
+      if (rootCount > 1) return null;
+    } else {
+      stack[stack.length - 1].childCount += 1;
+    }
+    if (!selfClosing) {
+      stack.push({ name: match[1].toLowerCase(), text: "", childCount: 0 });
+    }
+    cursor = closingIndex + 1;
+  }
+
+  if (stack.length > 0 || rootCount !== 1) return null;
+  return Object.keys(output).length > 0 ? output : null;
+}
+
 function parseResponseDataObject(value) {
   if (value && typeof value === "object" && !Buffer.isBuffer(value)) return value;
   const text = Buffer.isBuffer(value) ? value.toString("utf8") : String(value || "");
@@ -64,7 +203,7 @@ function parseResponseDataObject(value) {
     const parsed = JSON.parse(text);
     return parsed && typeof parsed === "object" ? parsed : null;
   } catch {
-    return null;
+    return parseSafeXmlMetadata(text);
   }
 }
 
@@ -91,9 +230,70 @@ export function sanitizeDocRaptorResponseData(value) {
         : { message: truncate(JSON.stringify(safe)) };
     }
   } catch {
+    const safeXml = parseSafeXmlMetadata(text);
+    if (safeXml) return safeXml;
     // Preserve bounded non-HTML provider text below.
   }
   return sanitizeText(text) || "[REDACTED_PROVIDER_BODY]";
+}
+
+function boundProviderDiagnostic(diagnostic) {
+  if (JSON.stringify(diagnostic).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH) {
+    return diagnostic;
+  }
+
+  const bounded = { ...diagnostic };
+  const responseData = bounded.response_data;
+  delete bounded.response_data;
+  if (responseData !== undefined && responseData !== null) {
+    const source = typeof responseData === "string" ? responseData : JSON.stringify(responseData);
+    let low = 0;
+    let high = source.length;
+    let best = null;
+    while (low <= high) {
+      const midpoint = Math.floor((low + high) / 2);
+      const candidateValue = truncate(source, midpoint);
+      const candidate = { ...bounded, response_data: candidateValue };
+      if (JSON.stringify(candidate).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH) {
+        best = candidateValue;
+        low = midpoint + 1;
+      } else {
+        high = midpoint - 1;
+      }
+    }
+    if (best) bounded.response_data = best;
+  }
+  for (const field of [
+    "content_type",
+    "name",
+    "field",
+    "type",
+    "correlation_id",
+    "message",
+    "request_id",
+    "code",
+  ]) {
+    if (JSON.stringify(bounded).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH) break;
+    if (!(field in bounded)) continue;
+    const source = typeof bounded[field] === "string" ? bounded[field] : JSON.stringify(bounded[field]);
+    delete bounded[field];
+    let low = 0;
+    let high = source.length;
+    let best = null;
+    while (low <= high) {
+      const midpoint = Math.floor((low + high) / 2);
+      const candidateValue = truncate(source, midpoint);
+      const candidate = { ...bounded, [field]: candidateValue };
+      if (JSON.stringify(candidate).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH) {
+        best = candidateValue;
+        low = midpoint + 1;
+      } else {
+        high = midpoint - 1;
+      }
+    }
+    if (best) bounded[field] = best;
+  }
+  return bounded;
 }
 
 function readHeader(headers, names) {
@@ -122,21 +322,49 @@ export function buildDocRaptorProviderDiagnostic(error, { attempt = "initial" } 
     ? responseDataObject.code || responseDataObject.error_code || responseDataObject.error?.code
     : null;
   const responseMessage = responseDataObject
-    ? responseDataObject.message || responseDataObject.error?.message || responseDataObject.detail || responseDataObject.title
+    ? responseDataObject.message ||
+      (typeof responseDataObject.error === "string"
+        ? responseDataObject.error
+        : responseDataObject.error?.message) ||
+      responseDataObject.detail ||
+      responseDataObject.title
+    : null;
+  const responseType = responseDataObject
+    ? responseDataObject.type || responseDataObject.error?.type
+    : null;
+  const responseField = responseDataObject
+    ? responseDataObject.field || responseDataObject.validation?.field || responseDataObject.error?.field
+    : null;
+  const responseName = responseDataObject
+    ? responseDataObject.name || responseDataObject.validation?.name || responseDataObject.error?.name
+    : null;
+  const responseRequestId = responseDataObject
+    ? responseDataObject.request_id || responseDataObject.error?.request_id
+    : null;
+  const responseCorrelationId = responseDataObject
+    ? responseDataObject.correlation_id || responseDataObject.error?.correlation_id
     : null;
   const code = sanitizeText(responseCode);
   const message = sanitizeText(responseMessage);
+  const type = sanitizeText(responseType);
+  const field = sanitizeText(responseField);
+  const name = sanitizeText(responseName);
   const requestId = readHeader(response.headers, [
     "x-docraptor-request-id",
     "x-request-id",
     "request-id",
-  ]);
+  ]) || sanitizeText(responseRequestId);
+  const correlationId = sanitizeText(responseCorrelationId);
   const contentType = readHeader(response.headers, ["content-type"]);
-  if (code) diagnostic.code = code;
-  if (message) diagnostic.message = message;
-  if (requestId) diagnostic.request_id = truncate(requestId);
-  if (contentType) diagnostic.content_type = truncate(contentType);
-  return diagnostic;
+  if (code) diagnostic.code = truncate(code, 128);
+  if (message) diagnostic.message = truncate(message, 400);
+  if (type) diagnostic.type = truncate(type, 128);
+  if (field) diagnostic.field = truncate(field, 128);
+  if (name) diagnostic.name = truncate(name, 128);
+  if (requestId) diagnostic.request_id = truncate(requestId, 128);
+  if (correlationId) diagnostic.correlation_id = truncate(correlationId, 128);
+  if (contentType) diagnostic.content_type = truncate(contentType, 128);
+  return boundProviderDiagnostic(diagnostic);
 }
 
 export function attachDocRaptorProviderDiagnostic(error, options = {}) {

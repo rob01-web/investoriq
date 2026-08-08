@@ -9044,7 +9044,7 @@ try {
   const renderDocRaptorPdf = async (documentContent, attempt = "initial") => {
     try {
       return await axios.post(
-        "https://docraptor.com/docs",
+        "https://api.docraptor.com/docs",
         {
           test: docraptorMode !== "production",
           document_content: documentContent,

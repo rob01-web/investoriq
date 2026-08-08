@@ -1085,7 +1085,7 @@ export async function renderReportPdfBuffer({
   const apiKey = String(process.env.DOCRAPTOR_API_KEY || "").trim();
   try {
     const pdfResponse = await axios.post(
-      "https://docraptor.com/docs",
+      "https://api.docraptor.com/docs",
       {
         test: artifactMode !== "production_pdf",
         document_content: String(finalHtml || ""),
