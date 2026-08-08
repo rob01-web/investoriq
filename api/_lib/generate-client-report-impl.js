@@ -100,6 +100,7 @@ import {
   runBoundedPdfCertificationRecovery,
   sanitizeTypography,
 } from "./report-delivery-output.js";
+import { resolveDocRaptorModeGovernanceReceipt } from "./docraptor-mode-governance.js";
 import {
   attachDocRaptorProviderDiagnostic,
   mergeDocRaptorProviderDiagnostics,
@@ -7411,9 +7412,10 @@ const hasFinalRecommendation =
   htmlString.includes("11.0") && htmlString.includes("Final Recommendations");
 const hasSectionTwelve =
   htmlString.includes("12.0") && htmlString.includes("Methodology & Data Transparency");
-const docraptorMode =
-  process.env.DOCRAPTOR_MODE === "production" ? "production" : "test";
-const allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true";
+const docraptorGovernanceReceipt = resolveDocRaptorModeGovernanceReceipt();
+const docraptorMode = docraptorGovernanceReceipt.resolved_docraptor_mode;
+const allowProductionPdf = docraptorGovernanceReceipt.allow_production_pdf;
+const reportDownloadArtifactMode = docraptorGovernanceReceipt.resolved_report_download_artifact_mode;
 const integrityTimestamp = new Date().toISOString().replace(/:/g, "-");
 try {
   const { error: integrityErr } = await supabase.from("analysis_artifacts").insert([
@@ -7807,15 +7809,12 @@ try {
     });
   }
 
-  if (docraptorMode !== "production" || !allowProductionPdf) {
+  if (docraptorGovernanceReceipt.resolved_docraptor_mode !== "production") {
     qaFlags.push({
       code: "DOCRAPTOR_NOT_PRODUCTION_MODE",
       severity: "medium",
       message: "DocRaptor is not configured for production PDF output.",
-      evidence: {
-        docraptor_mode: docraptorMode,
-        allow_production_pdf: allowProductionPdf,
-      },
+      evidence: docraptorGovernanceReceipt,
       admin_check: "Do not use this PDF as a public sample until production PDF mode is enabled and verified.",
     });
   }
@@ -9066,7 +9065,7 @@ try {
       throw error;
     }
   };
-  const finalPdfArtifactMode = docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf";
+  const finalPdfArtifactMode = reportDownloadArtifactMode;
   const finalPdfPublicationTarget = String(process.env.REPORT_PUBLICATION_TARGET || "").trim() ||
     (finalPdfArtifactMode === "production_pdf" ? "external_customer" : "internal_test");
   const baseFinalPdfDeterministicContractQaSeal =
@@ -9545,7 +9544,7 @@ try {
       storagePath: validatedStoragePath,
       report_type: reportType,
       url: signedData.signedUrl,
-      pdf_artifact_mode: docraptorMode === "production" ? "production_pdf" : "docraptor_test_pdf",
+      pdf_artifact_mode: finalPdfArtifactMode,
       final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
       core_publishable: finalPdfCorePublishable,
       core_safe_html: finalPdfCoreSafeHtml,

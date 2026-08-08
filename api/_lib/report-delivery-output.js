@@ -21,6 +21,7 @@ import {
   attachDocRaptorProviderDiagnostic,
   mergeDocRaptorProviderDiagnostics,
 } from "./docraptor-provider-diagnostics.js";
+import { resolveDocRaptorModeGovernanceReceipt } from "./docraptor-mode-governance.js";
 
 export function sanitizeTypography(html) {
   return sanitizeFinalCustomerHtml(html);
@@ -1021,39 +1022,15 @@ export function resolveReportDownloadArtifactMode({
   allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
   docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
   hasDocRaptorApiKey = Boolean(String(process.env.DOCRAPTOR_API_KEY || "").trim()),
+  productionOwnerAuthorized = process.env.DOCRAPTOR_PRODUCTION_OWNER_AUTHORIZED === "true",
 } = {}) {
-  const normalizedMode = normalizeReportDownloadArtifactMode(reportDownloadArtifactMode);
-  if (normalizedMode === "stub_pdf") return "stub_pdf";
-  if (normalizedMode === "docraptor_test_pdf") {
-    if (!hasDocRaptorApiKey) {
-      const err = new Error("DOCRAPTOR_API_KEY_REQUIRED");
-      err.code = "DOCRAPTOR_API_KEY_REQUIRED";
-      err.context = {
-        report_download_artifact_mode: normalizedMode,
-        has_docraptor_api_key: Boolean(hasDocRaptorApiKey),
-      };
-      throw err;
-    }
-    return "docraptor_test_pdf";
-  }
-  if (normalizedMode === "production_pdf") {
-    if (docraptorMode !== "production" || !allowProductionPdf || !hasDocRaptorApiKey) {
-      const err = new Error("DOCRAPTOR_NOT_PRODUCTION_MODE");
-      err.code = "DOCRAPTOR_NOT_PRODUCTION_MODE";
-      err.context = {
-        report_download_artifact_mode: normalizedMode,
-        docraptor_mode: docraptorMode,
-        allow_production_pdf: Boolean(allowProductionPdf),
-        has_docraptor_api_key: Boolean(hasDocRaptorApiKey),
-      };
-      throw err;
-    }
-    return "production_pdf";
-  }
-  if (docraptorMode === "production" && allowProductionPdf && hasDocRaptorApiKey) {
-    return "production_pdf";
-  }
-  return "stub_pdf";
+  return resolveDocRaptorModeGovernanceReceipt({
+    reportDownloadArtifactMode,
+    allowProductionPdf,
+    docraptorMode,
+    hasDocRaptorApiKey,
+    productionOwnerAuthorized,
+  }).resolved_report_download_artifact_mode;
 }
 
 export async function renderReportPdfBuffer({
@@ -1062,16 +1039,20 @@ export async function renderReportPdfBuffer({
   allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
   docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
   reportDownloadArtifactMode = process.env.REPORT_DOWNLOAD_ARTIFACT_MODE || "",
+  productionOwnerAuthorized = process.env.DOCRAPTOR_PRODUCTION_OWNER_AUTHORIZED === "true",
   reportSeed = null,
   propertyName = "",
   storagePath = "",
   renderAttempt = "initial",
 } = {}) {
-  const artifactMode = resolveReportDownloadArtifactMode({
+  const docraptorGovernanceReceipt = resolveDocRaptorModeGovernanceReceipt({
     reportDownloadArtifactMode,
     allowProductionPdf,
     docraptorMode,
+    productionOwnerAuthorized,
   });
+  const artifactMode = docraptorGovernanceReceipt.resolved_report_download_artifact_mode;
+  const governedDocraptorMode = docraptorGovernanceReceipt.resolved_docraptor_mode;
   if (artifactMode === "stub_pdf") {
     return buildPrelaunchTestPdfBuffer({
       finalHtml,
@@ -1087,7 +1068,7 @@ export async function renderReportPdfBuffer({
     const pdfResponse = await axios.post(
       "https://api.docraptor.com/docs",
       {
-        test: artifactMode !== "production_pdf",
+        test: governedDocraptorMode !== "production",
         document_content: String(finalHtml || ""),
         name: "InvestorIQ-ClientReport.pdf",
         document_type: "pdf",
@@ -1120,6 +1101,7 @@ export async function ensureReportDownloadArtifact({
   allowProductionPdf = process.env.ALLOW_PRODUCTION_PDF === "true",
   docraptorMode = process.env.DOCRAPTOR_MODE === "production" ? "production" : "test",
   reportDownloadArtifactMode = process.env.REPORT_DOWNLOAD_ARTIFACT_MODE || "",
+  productionOwnerAuthorized = process.env.DOCRAPTOR_PRODUCTION_OWNER_AUTHORIZED === "true",
   renderPdfBuffer = renderReportPdfBuffer,
   createdReportRecord = false,
   bucketName = "generated_reports",
@@ -1170,11 +1152,14 @@ export async function ensureReportDownloadArtifact({
     throw err;
   }
 
-  const artifactMode = resolveReportDownloadArtifactMode({
+  const docraptorGovernanceReceipt = resolveDocRaptorModeGovernanceReceipt({
     reportDownloadArtifactMode,
     allowProductionPdf,
     docraptorMode,
+    productionOwnerAuthorized,
   });
+  const artifactMode = docraptorGovernanceReceipt.resolved_report_download_artifact_mode;
+  const governedDocraptorMode = docraptorGovernanceReceipt.resolved_docraptor_mode;
   const resolvedPublicationTarget = String(publicationTarget || "").trim() ||
     (artifactMode === "production_pdf" ? "external_customer" : "internal_test");
   const canonicalReportIdentity = buildCanonicalReportIdentityReceipt({
@@ -1228,8 +1213,9 @@ export async function ensureReportDownloadArtifact({
       renderContext: {
         reportType,
         allowProductionPdf,
-        docraptorMode,
-        reportDownloadArtifactMode,
+        docraptorMode: governedDocraptorMode,
+        reportDownloadArtifactMode: artifactMode,
+        docraptorGovernanceReceipt,
         job,
         reportSeed,
         propertyName,
@@ -1283,8 +1269,9 @@ export async function ensureReportDownloadArtifact({
   const initialRenderContext = {
     reportType,
     allowProductionPdf,
-    docraptorMode,
-    reportDownloadArtifactMode,
+    docraptorMode: governedDocraptorMode,
+    reportDownloadArtifactMode: artifactMode,
+    docraptorGovernanceReceipt,
     job,
     reportSeed,
     propertyName,

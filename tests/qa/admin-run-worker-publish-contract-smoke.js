@@ -10,6 +10,7 @@ import {
   promoteReportRevisionToCurrent,
   resolveOrCreateReportPublicationRecord,
 } from "../../api/_lib/report-delivery-output.js";
+import { resolveDocRaptorModeGovernanceReceipt } from "../../api/_lib/docraptor-mode-governance.js";
 import {
   getReportRevisionDisplayState,
   selectCurrentPublishedReportRevision,
@@ -256,6 +257,7 @@ const envSnapshot = {
   ALLOW_PRODUCTION_PDF: process.env.ALLOW_PRODUCTION_PDF,
   DOCRAPTOR_MODE: process.env.DOCRAPTOR_MODE,
   DOCRAPTOR_API_KEY: process.env.DOCRAPTOR_API_KEY,
+  DOCRAPTOR_PRODUCTION_OWNER_AUTHORIZED: process.env.DOCRAPTOR_PRODUCTION_OWNER_AUTHORIZED,
 };
 
 const restoreEnv = () => {
@@ -271,65 +273,147 @@ const restoreEnv = () => {
 const originalAxiosPost = axios.post;
 
 try {
-  process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "production_pdf";
-  process.env.ALLOW_PRODUCTION_PDF = "false";
-  process.env.DOCRAPTOR_MODE = "test";
-  process.env.DOCRAPTOR_API_KEY = "";
+  const clearDocRaptorEnv = () => {
+    for (const key of Object.keys(envSnapshot)) {
+      delete process.env[key];
+    }
+  };
+  const setDocRaptorEnv = (values = {}) => {
+    clearDocRaptorEnv();
+    for (const [key, value] of Object.entries(values)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  };
+  const makePdfResponse = (label) => ({ data: Buffer.from(`%PDF-1.4 ${label}\n%%EOF\n`, "utf8") });
 
-  let guardDocraptorCalls = 0;
+  clearDocRaptorEnv();
+  let noEnvCalls = 0;
   axios.post = async () => {
-    guardDocraptorCalls += 1;
-    throw new Error("DocRaptor should not be called when production mode is disabled");
+    noEnvCalls += 1;
+    throw new Error("DocRaptor should not be called in default mode");
   };
+  const defaultReceipt = resolveDocRaptorModeGovernanceReceipt();
+  assert.equal(defaultReceipt.production_requested, false);
+  assert.equal(defaultReceipt.production_requested_but_not_authorized, false);
+  assert.equal(defaultReceipt.resolved_docraptor_mode, "test");
+  assert.equal(defaultReceipt.resolved_report_download_artifact_mode, "stub_pdf");
+  const defaultBuffer = await renderReportPdfBuffer({
+    finalHtml: "<html><body>default screening html</body></html>",
+    reportType: "screening",
+  });
+  assert.equal(noEnvCalls, 0);
+  assert.match(defaultBuffer.toString("utf8"), /InvestorIQ prelaunch test artifact/i);
 
-  await assert.rejects(
-    () =>
-      renderReportPdfBuffer({
-        finalHtml: "<html><body>guard screening html</body></html>",
-        reportType: "screening",
-        reportDownloadArtifactMode: "production_pdf",
-        allowProductionPdf: false,
-        docraptorMode: "test",
-      }),
-    (err) => err?.code === "DOCRAPTOR_NOT_PRODUCTION_MODE"
-  );
-  assert.equal(guardDocraptorCalls, 0);
+  setDocRaptorEnv({
+    REPORT_DOWNLOAD_ARTIFACT_MODE: "",
+    ALLOW_PRODUCTION_PDF: "true",
+    DOCRAPTOR_MODE: "production",
+    DOCRAPTOR_API_KEY: "unit-test-key",
+  });
+  const productionRequestedReceipt = resolveDocRaptorModeGovernanceReceipt();
+  assert.equal(productionRequestedReceipt.production_requested, true);
+  assert.equal(productionRequestedReceipt.production_requested_but_not_authorized, true);
+  assert.equal(productionRequestedReceipt.resolved_docraptor_mode, "test");
+  assert.equal(productionRequestedReceipt.resolved_report_download_artifact_mode, "docraptor_test_pdf");
 
-  process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "docraptor_test_pdf";
-  process.env.ALLOW_PRODUCTION_PDF = "false";
-  process.env.DOCRAPTOR_MODE = "test";
-  process.env.DOCRAPTOR_API_KEY = "";
-
-  await assert.rejects(
-    () =>
-      renderReportPdfBuffer({
-        finalHtml: "<html><body>docraptor test missing key</body></html>",
-        reportType: "screening",
-        reportDownloadArtifactMode: "docraptor_test_pdf",
-        allowProductionPdf: false,
-        docraptorMode: "test",
-      }),
-    (err) => err?.code === "DOCRAPTOR_API_KEY_REQUIRED"
-  );
-
-  process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "docraptor_test_pdf";
-  process.env.ALLOW_PRODUCTION_PDF = "false";
-  process.env.DOCRAPTOR_MODE = "test";
-  process.env.DOCRAPTOR_API_KEY = "unit-test-key";
-
-  let docraptorTestCalls = 0;
+  const unauthorizedCalls = [];
   axios.post = async (url, body, options) => {
-    docraptorTestCalls += 1;
-    assert.equal(url, "https://api.docraptor.com/docs");
-    assert.equal(body.test, true);
-    assert.equal(body.document_type, "pdf");
-    assert.match(body.document_content, /docraptor test render/i);
-    assert.match(String(options.headers.Authorization || ""), /^Basic\s+/);
-    return { data: Buffer.from("%PDF-1.4 docraptor test pdf\n%%EOF\n", "utf8") };
+    unauthorizedCalls.push({ url, body, options });
+    return makePdfResponse("unauthorized test pdf");
   };
+  const unauthorizedBuffer = await renderReportPdfBuffer({
+    finalHtml: "<html><body>unauthorized production request</body></html>",
+    reportType: "screening",
+    reportDownloadArtifactMode: "",
+    allowProductionPdf: true,
+    docraptorMode: "production",
+  });
+  assert.equal(Buffer.isBuffer(unauthorizedBuffer), true);
+  assert.equal(unauthorizedCalls.length, 1);
+  assert.equal(unauthorizedCalls[0].body.test, true);
+  assert.match(unauthorizedCalls[0].body.document_content, /unauthorized production request/i);
 
-  const docraptorTestBuffer = await renderReportPdfBuffer({
-    finalHtml: "<html><body>docraptor test render</body></html>",
+  setDocRaptorEnv({
+    REPORT_DOWNLOAD_ARTIFACT_MODE: "production_pdf",
+    ALLOW_PRODUCTION_PDF: "true",
+    DOCRAPTOR_MODE: "production",
+    DOCRAPTOR_API_KEY: "unit-test-key",
+  });
+  const explicitProductionReceipt = resolveDocRaptorModeGovernanceReceipt();
+  assert.equal(explicitProductionReceipt.production_requested, true);
+  assert.equal(explicitProductionReceipt.production_requested_but_not_authorized, true);
+  assert.equal(explicitProductionReceipt.resolved_docraptor_mode, "test");
+  assert.equal(explicitProductionReceipt.resolved_report_download_artifact_mode, "docraptor_test_pdf");
+
+  const downgradedProductionCalls = [];
+  axios.post = async (url, body, options) => {
+    downgradedProductionCalls.push({ url, body, options });
+    return makePdfResponse("downgraded production pdf");
+  };
+  const downgradedProductionBuffer = await renderReportPdfBuffer({
+    finalHtml: "<html><body>explicit production request without owner auth</body></html>",
+    reportType: "screening",
+    reportDownloadArtifactMode: "production_pdf",
+    allowProductionPdf: true,
+    docraptorMode: "production",
+  });
+  assert.equal(Buffer.isBuffer(downgradedProductionBuffer), true);
+  assert.equal(downgradedProductionCalls.length, 1);
+  assert.equal(downgradedProductionCalls[0].body.test, true);
+  assert.match(downgradedProductionCalls[0].body.document_content, /explicit production request without owner auth/i);
+
+  setDocRaptorEnv({
+    REPORT_DOWNLOAD_ARTIFACT_MODE: "production_pdf",
+    ALLOW_PRODUCTION_PDF: "true",
+    DOCRAPTOR_MODE: "production",
+    DOCRAPTOR_API_KEY: "unit-test-key",
+    DOCRAPTOR_PRODUCTION_OWNER_AUTHORIZED: "true",
+  });
+  const authorizedReceipt = resolveDocRaptorModeGovernanceReceipt();
+  assert.equal(authorizedReceipt.production_requested, true);
+  assert.equal(authorizedReceipt.production_requested_but_not_authorized, false);
+  assert.equal(authorizedReceipt.resolved_docraptor_mode, "production");
+  assert.equal(authorizedReceipt.resolved_report_download_artifact_mode, "production_pdf");
+
+  const productionCalls = [];
+  axios.post = async (url, body, options) => {
+    productionCalls.push({ url, body, options });
+    return makePdfResponse("authorized production pdf");
+  };
+  const productionBuffer = await renderReportPdfBuffer({
+    finalHtml: "<html><body>authorized production request</body></html>",
+    reportType: "screening",
+    reportDownloadArtifactMode: "production_pdf",
+    allowProductionPdf: true,
+    docraptorMode: "production",
+  });
+  assert.equal(Buffer.isBuffer(productionBuffer), true);
+  assert.equal(productionCalls.length, 1);
+  assert.equal(productionCalls[0].body.test, false);
+  assert.match(productionCalls[0].body.document_content, /authorized production request/i);
+  assert.match(String(productionCalls[0].options.headers.Authorization || ""), /^Basic\s+/);
+
+  setDocRaptorEnv({
+    REPORT_DOWNLOAD_ARTIFACT_MODE: "docraptor_test_pdf",
+    ALLOW_PRODUCTION_PDF: "false",
+    DOCRAPTOR_MODE: "test",
+    DOCRAPTOR_API_KEY: "unit-test-key",
+  });
+  const explicitTestReceipt = resolveDocRaptorModeGovernanceReceipt();
+  assert.equal(explicitTestReceipt.resolved_docraptor_mode, "test");
+  assert.equal(explicitTestReceipt.resolved_report_download_artifact_mode, "docraptor_test_pdf");
+
+  const explicitTestCalls = [];
+  axios.post = async (url, body, options) => {
+    explicitTestCalls.push({ url, body, options });
+    return makePdfResponse("explicit docraptor test pdf");
+  };
+  const explicitTestBuffer = await renderReportPdfBuffer({
+    finalHtml: "<html><body>explicit test mode render</body></html>",
     reportType: "screening",
     reportDownloadArtifactMode: "docraptor_test_pdf",
     allowProductionPdf: false,
@@ -338,19 +422,22 @@ try {
     propertyName: "Generic Property",
     storagePath: "user-123/report-docraptor-test-123.pdf",
   });
+  assert.equal(Buffer.isBuffer(explicitTestBuffer), true);
+  assert.equal(explicitTestCalls.length, 1);
+  assert.equal(explicitTestCalls[0].body.test, true);
+  assert.match(explicitTestCalls[0].body.document_content, /explicit test mode render/i);
 
-  assert.equal(Buffer.isBuffer(docraptorTestBuffer), true);
-  assert.match(docraptorTestBuffer.toString("utf8"), /^%PDF-1\.4/);
-  assert.equal(docraptorTestCalls, 1);
-
-  process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "test_pdf";
-  process.env.ALLOW_PRODUCTION_PDF = "false";
-  process.env.DOCRAPTOR_MODE = "test";
-  process.env.DOCRAPTOR_API_KEY = "";
-
-  let docraptorCalls = 0;
+  setDocRaptorEnv({
+    REPORT_DOWNLOAD_ARTIFACT_MODE: "test_pdf",
+    ALLOW_PRODUCTION_PDF: "false",
+    DOCRAPTOR_MODE: "test",
+    DOCRAPTOR_API_KEY: "",
+  });
+  const stubReceipt = resolveDocRaptorModeGovernanceReceipt();
+  assert.equal(stubReceipt.resolved_report_download_artifact_mode, "stub_pdf");
+  let stubDocraptorCalls = 0;
   axios.post = async () => {
-    docraptorCalls += 1;
+    stubDocraptorCalls += 1;
     throw new Error("DocRaptor should not be called in prelaunch mode");
   };
 
@@ -411,42 +498,131 @@ try {
   assert.equal(stubModeArtifact.artifactSource, "created_download");
   assert.equal(stubModeArtifact.verifiedDownloadArtifact, true);
   assert.equal(stubModeArtifact.createdDownloadArtifact, true);
-  assert.equal(docraptorCalls, 0);
+  assert.equal(stubDocraptorCalls, 0);
   assert.equal(stubStorageAttempts.length, 1);
   assert.match(stubStorageAttempts[0].payload, /^%PDF-1\.4/);
   assert.match(stubStorageAttempts[0].payload, /InvestorIQ prelaunch test artifact/i);
   assert.match(stubStorageAttempts[0].payload, /Production PDF generation disabled/i);
 
-  process.env.REPORT_DOWNLOAD_ARTIFACT_MODE = "production_pdf";
-  process.env.ALLOW_PRODUCTION_PDF = "true";
-  process.env.DOCRAPTOR_MODE = "production";
-  process.env.DOCRAPTOR_API_KEY = "unit-test-key";
-
-  const productionPostCalls = [];
+  setDocRaptorEnv({
+    REPORT_DOWNLOAD_ARTIFACT_MODE: "production_pdf",
+    ALLOW_PRODUCTION_PDF: "true",
+    DOCRAPTOR_MODE: "production",
+    DOCRAPTOR_API_KEY: "unit-test-key",
+  });
+  const sharedInitialReceipt = resolveDocRaptorModeGovernanceReceipt();
+  const sharedAttemptCalls = [];
   axios.post = async (url, body, options) => {
-    productionPostCalls.push({ url, body, options });
-    return { data: Buffer.from("%PDF-1.4 production test pdf\n%%EOF\n", "utf8") };
+    sharedAttemptCalls.push({ url, body, options });
+    return makePdfResponse(`shared ${body.test ? "test" : "production"} pdf`);
   };
+  for (const renderAttempt of ["initial", "emergency_core", "css_recovery"]) {
+    const sharedBuffer = await renderReportPdfBuffer({
+      finalHtml: `<html><body>shared ${renderAttempt} render</body></html>`,
+      reportType: "screening",
+      reportDownloadArtifactMode: "production_pdf",
+      allowProductionPdf: true,
+      docraptorMode: "production",
+      renderAttempt,
+    });
+    assert.equal(Buffer.isBuffer(sharedBuffer), true);
+  }
+  assert.equal(sharedAttemptCalls.length, 3);
+  assert.equal(sharedAttemptCalls.every((call) => call.body.test === true), true);
+  assert.equal(sharedInitialReceipt.resolved_docraptor_mode, "test");
+  assert.equal(sharedInitialReceipt.resolved_report_download_artifact_mode, "docraptor_test_pdf");
 
-  const productionBuffer = await renderReportPdfBuffer({
-    finalHtml: "<html><body>prod screening html</body></html>",
+  const sharedContexts = [];
+  let sharedStoredBuffer = null;
+  let sharedDownloadCalls = 0;
+  let sharedRenderCalls = 0;
+  const sharedArtifact = await ensureReportDownloadArtifact({
+    supabaseAdmin: {
+      storage: {
+        from(bucketName) {
+          assert.equal(bucketName, "generated_reports");
+          return {
+            async download() {
+              sharedDownloadCalls += 1;
+              if (!sharedStoredBuffer) {
+                return { data: null, error: new Error("missing") };
+              }
+              return { data: sharedStoredBuffer, error: null };
+            },
+            async upload(storagePath, payload, options) {
+              sharedStoredBuffer = Buffer.isBuffer(payload) ? Buffer.from(payload) : Buffer.from(String(payload), "utf8");
+              sharedContexts.push({
+                storagePath,
+                payload: Buffer.isBuffer(payload) ? payload.toString("utf8") : String(payload),
+                options,
+              });
+              return { data: { path: storagePath }, error: null };
+            },
+          };
+        },
+      },
+      from() {
+        return {
+          delete() {
+            return {
+              eq() {
+                return Promise.resolve({ error: null });
+              },
+            };
+          },
+        };
+      },
+    },
+    job: {
+      id: "job-shared-governance-1",
+      user_id: "user-123",
+      report_type: "screening",
+    },
+    reportId: "report-shared-governance-1",
+    storagePath: "user-123/report-shared-governance-1.pdf",
+    finalHtml: "<html><body>shared governed artifact</body></html>",
     reportType: "screening",
+    reportSeed: "report-shared-governance-1",
+    propertyName: "Generic Property",
     reportDownloadArtifactMode: "production_pdf",
     allowProductionPdf: true,
     docraptorMode: "production",
-    reportSeed: "report-prod-123",
-    propertyName: "Generic Property",
-    storagePath: "user-123/report-prod-123.pdf",
+    deliveryGateStatus: "deliverable",
+    holdDelivery: false,
+    corePublishable: true,
+    buildEmergencyCoreHtml: async () => "<html><body>Emergency governed artifact</body></html>",
+    renderPdfBuffer: async (renderContext) => {
+      sharedContexts.push({
+        attempt: renderContext.renderAttempt,
+        receipt: renderContext.docraptorGovernanceReceipt,
+      });
+      sharedRenderCalls += 1;
+      if (sharedRenderCalls === 1) {
+        throw new Error("initial render failed");
+      }
+      return Buffer.from("%PDF-1.4 governed shared artifact\n%%EOF\n", "utf8");
+    },
+    runFinalPdfPublicationQualityBoss: passPublicationQualityBoss,
   });
+  assert.equal(sharedArtifact.verifiedDownloadArtifact, true);
+  assert.equal(sharedDownloadCalls >= 2, true);
+  const renderContexts = sharedContexts.filter((entry) => entry.attempt).map((entry) => entry.receipt);
+  assert.equal(renderContexts.length, 2);
+  assert.equal(renderContexts.every((receipt) => receipt.resolved_docraptor_mode === "test"), true);
+  assert.equal(renderContexts.every((receipt) => receipt.resolved_report_download_artifact_mode === "docraptor_test_pdf"), true);
 
-  assert.equal(Buffer.isBuffer(productionBuffer), true);
-  assert.match(productionBuffer.toString("utf8"), /^%PDF-1\.4/);
-  assert.equal(productionPostCalls.length, 1);
-  assert.equal(productionPostCalls[0].url, "https://api.docraptor.com/docs");
-  assert.equal(productionPostCalls[0].body.test, false);
-  assert.equal(productionPostCalls[0].body.document_type, "pdf");
-  assert.match(productionPostCalls[0].body.document_content, /prod screening html/);
-  assert.match(String(productionPostCalls[0].options.headers.Authorization || ""), /^Basic\s+/);
+  const safeReceipt = resolveDocRaptorModeGovernanceReceipt({
+    reportDownloadArtifactMode: "production_pdf",
+    allowProductionPdf: true,
+    docraptorMode: "production",
+    hasDocRaptorApiKey: true,
+    productionOwnerAuthorized: false,
+  });
+  const safeReceiptJson = JSON.stringify(safeReceipt);
+  assert.equal(
+    ["DOCRAPTOR_API_KEY", "Authorization", "document_content", "<html>"].some((needle) => safeReceiptJson.includes(needle)),
+    false
+  );
 } finally {
   axios.post = originalAxiosPost;
   restoreEnv();
