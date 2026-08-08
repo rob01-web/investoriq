@@ -64,7 +64,9 @@ function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-export function resolveCanonicalReportIdentity({ reportMode = null, reportType = null } = {}) {
+export function resolveCanonicalReportIdentity(input = {}) {
+  const { reportMode = null, reportType = null } =
+    input && typeof input === "object" && !Array.isArray(input) ? input : {};
   const mode = normalize(reportMode);
   const type = normalize(reportType);
   if (mode === SCREENING_REPORT_IDENTITY.reportMode) return SCREENING_REPORT_IDENTITY;
