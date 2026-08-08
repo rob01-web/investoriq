@@ -1,4 +1,7 @@
 export const DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH = 1000;
+export const DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_FIELD_LENGTH = 256;
+export const DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_ATTEMPTS = 5;
+export const DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_AGGREGATE_LENGTH = 4096;
 
 const SAFE_ATTEMPTS = new Set([
   "initial",
@@ -50,6 +53,12 @@ function truncate(value, maxLength = DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENG
   if (text.length <= maxLength) return text;
   if (maxLength <= 3) return text.slice(0, Math.max(0, maxLength));
   return `${text.slice(0, maxLength - 3)}...`;
+}
+
+function boundedText(value, maxLength = DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_FIELD_LENGTH) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  return truncate(text, maxLength);
 }
 
 function sanitizeText(value) {
@@ -307,15 +316,52 @@ function readHeader(headers, names) {
   return null;
 }
 
+function isRetryableDocRaptorFailure(error = null, status = null) {
+  if (Number.isFinite(Number(status)) && (Number(status) >= 500 || Number(status) === 429)) {
+    return true;
+  }
+  const normalizedCode = String(error?.code || "").trim().toUpperCase();
+  return new Set([
+    "ECONNRESET",
+    "ECONNABORTED",
+    "ETIMEDOUT",
+    "EAI_AGAIN",
+    "ENOTFOUND",
+    "ESOCKETTIMEDOUT",
+  ]).has(normalizedCode);
+}
+
+function buildDocRaptorNetworkDiagnostic(error, attempt) {
+  return boundProviderDiagnostic({
+    provider: "docraptor",
+    status: null,
+    attempt,
+    error_class: "network_failure",
+    code: boundedText(error?.code, 64),
+    message: boundedText(
+      error?.message ||
+        "DocRaptor request failed without an HTTP response.",
+      400
+    ),
+    retryable: isRetryableDocRaptorFailure(error, null),
+    has_response: false,
+    has_request: Boolean(error?.request),
+  });
+}
+
 export function buildDocRaptorProviderDiagnostic(error, { attempt = "initial" } = {}) {
   const response = error?.response;
-  if (!response) return null;
   const normalizedAttempt = SAFE_ATTEMPTS.has(attempt) ? attempt : "initial";
+  if (!response) {
+    return buildDocRaptorNetworkDiagnostic(error, normalizedAttempt);
+  }
   const diagnostic = {
     provider: "docraptor",
     status: Number.isFinite(Number(response.status)) ? Number(response.status) : null,
     attempt: normalizedAttempt,
     response_data: sanitizeDocRaptorResponseData(response.data),
+    error_class: "http_error",
+    retryable: isRetryableDocRaptorFailure(error, response.status),
   };
   const responseDataObject = parseResponseDataObject(response.data);
   const responseCode = responseDataObject
@@ -356,14 +402,14 @@ export function buildDocRaptorProviderDiagnostic(error, { attempt = "initial" } 
   ]) || sanitizeText(responseRequestId);
   const correlationId = sanitizeText(responseCorrelationId);
   const contentType = readHeader(response.headers, ["content-type"]);
-  if (code) diagnostic.code = truncate(code, 128);
-  if (message) diagnostic.message = truncate(message, 400);
-  if (type) diagnostic.type = truncate(type, 128);
-  if (field) diagnostic.field = truncate(field, 128);
-  if (name) diagnostic.name = truncate(name, 128);
-  if (requestId) diagnostic.request_id = truncate(requestId, 128);
-  if (correlationId) diagnostic.correlation_id = truncate(correlationId, 128);
-  if (contentType) diagnostic.content_type = truncate(contentType, 128);
+  if (code) diagnostic.code = boundedText(code, 128);
+  if (message) diagnostic.message = boundedText(message, 400);
+  if (type) diagnostic.type = boundedText(type, 128);
+  if (field) diagnostic.field = boundedText(field, 128);
+  if (name) diagnostic.name = boundedText(name, 128);
+  if (requestId) diagnostic.request_id = boundedText(requestId, 128);
+  if (correlationId) diagnostic.correlation_id = boundedText(correlationId, 128);
+  if (contentType) diagnostic.content_type = boundedText(contentType, 128);
   return boundProviderDiagnostic(diagnostic);
 }
 
@@ -379,7 +425,13 @@ export function attachDocRaptorProviderDiagnostic(error, options = {}) {
 
 export function mergeDocRaptorProviderDiagnostics(...diagnostics) {
   return diagnostics.reduce((byAttempt, diagnostic) => {
-    if (diagnostic?.attempt) byAttempt[diagnostic.attempt] = diagnostic;
+    if (!diagnostic?.attempt) return byAttempt;
+    if (Object.keys(byAttempt).length >= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_ATTEMPTS) return byAttempt;
+    if (byAttempt[diagnostic.attempt]) return byAttempt;
+    const candidate = { ...byAttempt, [diagnostic.attempt]: diagnostic };
+    if (JSON.stringify(candidate).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_AGGREGATE_LENGTH) {
+      return candidate;
+    }
     return byAttempt;
   }, {});
 }

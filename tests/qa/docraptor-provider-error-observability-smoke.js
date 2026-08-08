@@ -4,8 +4,11 @@ import {
   attachDocRaptorProviderDiagnostic,
   buildDocRaptorProviderDiagnostic,
   DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH,
+  DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_AGGREGATE_LENGTH,
+  DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_ATTEMPTS,
   mergeDocRaptorProviderDiagnostics,
 } from "../../api/_lib/docraptor-provider-diagnostics.js";
+import { resolveDocRaptorModeGovernanceReceipt } from "../../api/_lib/docraptor-mode-governance.js";
 import {
   buildUnavailableReportQualityManifestCandidate,
   finalizeBlockedReportQualityManifest,
@@ -174,6 +177,35 @@ assert.ok(
 );
 assert.equal(oversizedXmlDiagnostic.request_id.endsWith("..."), true);
 
+const networkError = new Error("socket hang up");
+networkError.code = "ECONNRESET";
+networkError.request = {
+  method: "POST",
+  headers: {
+    Authorization: authHeader,
+  },
+  data: richHtml,
+};
+networkError.config = {
+  headers: {
+    Authorization: authHeader,
+  },
+  data: richHtml,
+};
+const networkDiagnostic = buildDocRaptorProviderDiagnostic(networkError, { attempt: "initial" });
+assert.equal(networkDiagnostic.provider, "docraptor");
+assert.equal(networkDiagnostic.status, null);
+assert.equal(networkDiagnostic.error_class, "network_failure");
+assert.equal(networkDiagnostic.retryable, true);
+assert.equal(networkDiagnostic.has_response, false);
+assert.equal(networkDiagnostic.has_request, true);
+assert.equal(networkDiagnostic.response, undefined);
+assert.equal(networkDiagnostic.request, undefined);
+assert.equal(networkDiagnostic.config, undefined);
+assert.equal(JSON.stringify(networkDiagnostic).includes(authHeader), false);
+assert.equal(JSON.stringify(networkDiagnostic).includes(richHtml), false);
+assert.ok(JSON.stringify(networkDiagnostic).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH);
+
 const allFieldsOversizedXmlError = new Error("Request failed with status code 422");
 allFieldsOversizedXmlError.response = {
   status: 422,
@@ -199,6 +231,32 @@ const longDiagnostic = buildDocRaptorProviderDiagnostic(longError, { attempt: "c
 assert.ok(longDiagnostic.response_data.length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH);
 assert.equal(longDiagnostic.response_data.endsWith("..."), true);
 
+const semanticRecoveryError = new Error("Request failed with status code 422");
+semanticRecoveryError.response = {
+  status: 422,
+  data: { error_code: "semantic_recovery_rejected", message: "Semantic recovery was rejected." },
+  headers: { "x-docraptor-request-id": "dr-request-semantic" },
+};
+const semanticRecoveryDiagnostic = buildDocRaptorProviderDiagnostic(semanticRecoveryError, {
+  attempt: "semantic_recovery",
+});
+
+const aggregateDiagnostics = mergeDocRaptorProviderDiagnostics(
+  jsonDiagnostic,
+  textDiagnostic,
+  echoedHtmlDiagnostic,
+  xmlDiagnostic,
+  networkDiagnostic,
+  longDiagnostic,
+  semanticRecoveryDiagnostic,
+);
+assert.equal(Object.keys(aggregateDiagnostics).length, DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_ATTEMPTS);
+assert.equal(aggregateDiagnostics.initial.request_id, "dr-request-123");
+assert.equal(aggregateDiagnostics.emergency_core.request_id, "dr-request-text");
+assert.equal(aggregateDiagnostics.css_recovery.response_data, "[REDACTED_REQUEST_ECHO]");
+assert.equal(aggregateDiagnostics.semantic_recovery.request_id, "dr-request-semantic");
+assert.ok(JSON.stringify(aggregateDiagnostics).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_AGGREGATE_LENGTH);
+
 const emergencyError = new Error("Request failed with status code 422");
 emergencyError.response = {
   status: 422,
@@ -213,6 +271,21 @@ const diagnosticsByAttempt = mergeDocRaptorProviderDiagnostics(
 assert.equal(diagnosticsByAttempt.initial.request_id, "dr-request-123");
 assert.equal(diagnosticsByAttempt.emergency_core.request_id, "dr-request-emergency");
 assert.notDeepEqual(diagnosticsByAttempt.initial, diagnosticsByAttempt.emergency_core);
+
+const governedReceipt = resolveDocRaptorModeGovernanceReceipt({
+  reportDownloadArtifactMode: "production_pdf",
+  allowProductionPdf: true,
+  docraptorMode: "production",
+  hasDocRaptorApiKey: true,
+  productionOwnerAuthorized: false,
+});
+const governedReceiptJson = JSON.stringify(governedReceipt);
+assert.equal(governedReceipt.resolved_docraptor_mode, "test");
+assert.equal(governedReceipt.production_requested_but_not_authorized, true);
+assert.equal(
+  ["Authorization", "document_content", apiKey, authHeader, richHtml].some((needle) => governedReceiptJson.includes(needle)),
+  false
+);
 
 const candidate = buildUnavailableReportQualityManifestCandidate({
   jobId: "job-observability-test",

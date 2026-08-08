@@ -143,8 +143,8 @@ This strongly explains why:
 
 ### Remaining defects
 
-- [ ] Aggregate multi-attempt diagnostics can exceed intended 1,000-character ceiling.
-- [ ] Network/no-response failures remain weakly diagnosed.
+- [x] Aggregate multi-attempt diagnostics can exceed intended 1,000-character ceiling.
+- [x] Network/no-response failures remain weakly diagnosed.
 - [ ] Raw Axios/provider response data can still reach logs.
 - [ ] Both provider calls lack explicit timeout/deadline controls.
 
