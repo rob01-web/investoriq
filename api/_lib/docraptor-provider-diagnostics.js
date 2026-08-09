@@ -28,6 +28,7 @@ const SAFE_BODY_FIELDS = [
 
 const REQUEST_ECHO_PATTERN = /(?:document_content|<!doctype|<\s*\/?\s*[a-z][^>]*>)/i;
 const SECRET_PATTERN = /(authorization|api[_ -]?key|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|password|secret)\s*[:=]\s*["']?[^,"'\s}]+/gi;
+const TIMEOUT_ERROR_CODES = new Set(["ABORT_ERR", "ECONNABORTED", "ERR_CANCELED", "ETIMEDOUT", "ESOCKETTIMEDOUT"]);
 const SAFE_XML_FIELD_NAMES = new Map([
   ["code", "code"],
   ["error-code", "error_code"],
@@ -324,11 +325,27 @@ function isRetryableDocRaptorFailure(error = null, status = null) {
   return new Set([
     "ECONNRESET",
     "ECONNABORTED",
+    "ERR_CANCELED",
     "ETIMEDOUT",
     "EAI_AGAIN",
     "ENOTFOUND",
     "ESOCKETTIMEDOUT",
   ]).has(normalizedCode);
+}
+
+export function isDocRaptorTimeoutFailure(error = null) {
+  const normalizedCode = String(error?.code || "").trim().toUpperCase();
+  const normalizedName = String(error?.name || "").trim().toLowerCase();
+  const normalizedMessage = String(error?.message || "").trim().toLowerCase();
+  return (
+    TIMEOUT_ERROR_CODES.has(normalizedCode) ||
+    normalizedName === "aborterror" ||
+    normalizedName === "cancelederror" ||
+    normalizedMessage.includes("timeout") ||
+    normalizedMessage.includes("timed out") ||
+    normalizedMessage.includes("aborted") ||
+    normalizedMessage.includes("canceled")
+  );
 }
 
 function buildDocRaptorNetworkDiagnostic(error, attempt) {
@@ -349,9 +366,30 @@ function buildDocRaptorNetworkDiagnostic(error, attempt) {
   });
 }
 
-export function buildDocRaptorProviderDiagnostic(error, { attempt = "initial" } = {}) {
+function buildDocRaptorTimeoutDiagnostic(error, attempt, timeoutMs) {
+  return boundProviderDiagnostic({
+    provider: "docraptor",
+    status: null,
+    attempt,
+    error_class: "timeout",
+    code: boundedText(error?.code || "DOCRAPTOR_REQUEST_TIMEOUT", 64),
+    message: boundedText(
+      error?.message || `DocRaptor request timed out after ${timeoutMs || "an unknown"}ms.`,
+      400
+    ),
+    retryable: true,
+    has_response: false,
+    has_request: Boolean(error?.request),
+    timeout_ms: Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : null,
+  });
+}
+
+export function buildDocRaptorProviderDiagnostic(error, { attempt = "initial", timeoutMs = null } = {}) {
   const response = error?.response;
   const normalizedAttempt = SAFE_ATTEMPTS.has(attempt) ? attempt : "initial";
+  if (isDocRaptorTimeoutFailure(error)) {
+    return buildDocRaptorTimeoutDiagnostic(error, normalizedAttempt, timeoutMs);
+  }
   if (!response) {
     return buildDocRaptorNetworkDiagnostic(error, normalizedAttempt);
   }

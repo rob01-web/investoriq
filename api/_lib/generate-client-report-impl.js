@@ -6,7 +6,6 @@ import { ensureSentenceIntegrity } from "../../src/lib/sentenceIntegrity.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import axios from "axios"; // DocRaptor
 import { createClient } from "@supabase/supabase-js";
 import { INVESTORIQ_MASTER_PROMPT_V71 } from "../../lib/investoriqMasterPromptV71.js";
 import { runRenderedReportQaAdvisory } from "./qa-review.js";
@@ -105,6 +104,7 @@ import {
   attachDocRaptorProviderDiagnostic,
   mergeDocRaptorProviderDiagnostics,
 } from "./docraptor-provider-diagnostics.js";
+import { DOCRAPTOR_REQUEST_TIMEOUT_MS, requestDocRaptorPdf } from "./docraptor-request.js";
 import {
   buildReportRevisionRequestKey,
   normalizeReportRevisionKind,
@@ -9042,26 +9042,15 @@ try {
   }
   const renderDocRaptorPdf = async (documentContent, attempt = "initial") => {
     try {
-      return await axios.post(
-        "https://api.docraptor.com/docs",
-        {
-          test: docraptorMode !== "production",
-          document_content: documentContent,
-          name: "InvestorIQ-ClientReport.pdf",
-          document_type: "pdf",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Basic ${Buffer.from(
-              process.env.DOCRAPTOR_API_KEY + ":"
-            ).toString("base64")}`,
-          },
-          responseType: "arraybuffer",
-        }
-      );
+      return await requestDocRaptorPdf({
+        documentContent,
+        apiKey: process.env.DOCRAPTOR_API_KEY,
+        docraptorMode,
+        attempt,
+        timeoutMs: DOCRAPTOR_REQUEST_TIMEOUT_MS,
+      });
     } catch (error) {
-      attachDocRaptorProviderDiagnostic(error, { attempt });
+      attachDocRaptorProviderDiagnostic(error, { attempt, timeoutMs: DOCRAPTOR_REQUEST_TIMEOUT_MS });
       throw error;
     }
   };

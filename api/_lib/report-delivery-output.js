@@ -22,6 +22,7 @@ import {
   mergeDocRaptorProviderDiagnostics,
 } from "./docraptor-provider-diagnostics.js";
 import { resolveDocRaptorModeGovernanceReceipt } from "./docraptor-mode-governance.js";
+import { DOCRAPTOR_REQUEST_TIMEOUT_MS, requestDocRaptorPdf } from "./docraptor-request.js";
 
 export function sanitizeTypography(html) {
   return sanitizeFinalCustomerHtml(html);
@@ -1044,6 +1045,7 @@ export async function renderReportPdfBuffer({
   propertyName = "",
   storagePath = "",
   renderAttempt = "initial",
+  docraptorRequestTimeoutMs = DOCRAPTOR_REQUEST_TIMEOUT_MS,
 } = {}) {
   const docraptorGovernanceReceipt = resolveDocRaptorModeGovernanceReceipt({
     reportDownloadArtifactMode,
@@ -1065,26 +1067,17 @@ export async function renderReportPdfBuffer({
 
   const apiKey = String(process.env.DOCRAPTOR_API_KEY || "").trim();
   try {
-    const pdfResponse = await axios.post(
-      "https://api.docraptor.com/docs",
-      {
-        test: governedDocraptorMode !== "production",
-        document_content: String(finalHtml || ""),
-        name: "InvestorIQ-ClientReport.pdf",
-        document_type: "pdf",
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}`,
-        },
-        responseType: "arraybuffer",
-      }
-    );
+    const pdfResponse = await requestDocRaptorPdf({
+      documentContent: String(finalHtml || ""),
+      apiKey,
+      docraptorMode: governedDocraptorMode,
+      attempt: renderAttempt,
+      timeoutMs: docraptorRequestTimeoutMs,
+    });
 
     return Buffer.isBuffer(pdfResponse.data) ? pdfResponse.data : Buffer.from(pdfResponse.data);
   } catch (error) {
-    attachDocRaptorProviderDiagnostic(error, { attempt: renderAttempt });
+    attachDocRaptorProviderDiagnostic(error, { attempt: renderAttempt, timeoutMs: docraptorRequestTimeoutMs });
     throw error;
   }
 }
@@ -1117,6 +1110,7 @@ export async function ensureReportDownloadArtifact({
   reportIdentity = null,
   publicationTarget = process.env.REPORT_PUBLICATION_TARGET || "",
   runFinalPdfPublicationQualityBoss = assertFinalPdfPublicationQuality,
+  docraptorRequestTimeoutMs = DOCRAPTOR_REQUEST_TIMEOUT_MS,
 } = {}) {
   if (deliveryGateStatus !== "deliverable" || holdDelivery === true) {
     const err = new Error("Report download artifact blocked before resolution");
@@ -1272,6 +1266,7 @@ export async function ensureReportDownloadArtifact({
     docraptorMode: governedDocraptorMode,
     reportDownloadArtifactMode: artifactMode,
     docraptorGovernanceReceipt,
+    docraptorRequestTimeoutMs,
     job,
     reportSeed,
     propertyName,

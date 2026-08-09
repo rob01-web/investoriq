@@ -20,7 +20,7 @@ This file is intended to be updated continuously. Check items off only when the 
 - Production DocRaptor mode must not activate from `DOCRAPTOR_MODE=production`, `ALLOW_PRODUCTION_PDF=true`, or `REPORT_DOWNLOAD_ARTIFACT_MODE=production_pdf` alone
 - DocRaptor diagnostic safety/raw provider logging cleanup exists locally as `f844b9a`
 - `f844b9a` bounded network/no-response diagnostics and aggregate provider diagnostics
-- Remaining diagnostics risk: explicit DocRaptor/internal HTTP timeout/deadline handling still open
+- DocRaptor/provider timeout-deadline hardening exists locally in this packet via a shared 45s request deadline helper
 - Production DocRaptor quota remains exhausted: Production Docs 5/5 used; Test Docs 0/unlimited; billing period Aug 01, 2026 - Aug 31, 2026
 - DocRaptor production mode remains not owner-authorized
 - Provider acceptance remains unproven
@@ -170,7 +170,7 @@ This strongly explains why:
 - [x] Aggregate multi-attempt diagnostics can exceed intended 1,000-character ceiling.
 - [x] Network/no-response failures remain weakly diagnosed.
 - [ ] Raw Axios/provider response data can still reach logs.
-- [ ] Both provider calls lack explicit timeout/deadline controls.
+- [x] Explicit bounded timeout/deadline controls exist for both provider calls.
 
 ### Fresh handoff note
 
@@ -416,16 +416,16 @@ Hung calls can outlive worker leases or server runtimes.
 
 ### Required repair
 
-- [ ] Define bounded provider timeout.
+- [x] Define bounded provider timeout.
 - [ ] Define bounded internal request timeout.
-- [ ] Align timeout with worker lease/runtime budget.
-- [ ] Abort cleanly on timeout.
-- [ ] Classify timeout as infrastructure/provider failure, not customer-document failure.
+- [x] Align timeout with worker lease/runtime budget.
+- [x] Abort cleanly on timeout.
+- [x] Classify timeout as infrastructure/provider failure, not customer-document failure.
 
 ### Exit proof
 
-- [ ] Deterministic timeout tests.
-- [ ] Lease remains governed.
+- [x] Deterministic timeout tests.
+- [x] Lease remains governed.
 - [ ] No stranded rendering/publishing state.
 
 ---

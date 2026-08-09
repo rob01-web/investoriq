@@ -206,6 +206,37 @@ assert.equal(JSON.stringify(networkDiagnostic).includes(authHeader), false);
 assert.equal(JSON.stringify(networkDiagnostic).includes(richHtml), false);
 assert.ok(JSON.stringify(networkDiagnostic).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH);
 
+const timeoutError = new Error("timeout of 15ms exceeded");
+timeoutError.code = "ERR_CANCELED";
+timeoutError.request = {
+  method: "POST",
+  headers: {
+    Authorization: authHeader,
+  },
+  data: richHtml,
+};
+timeoutError.config = {
+  headers: {
+    Authorization: authHeader,
+  },
+  data: richHtml,
+};
+const timeoutDiagnostic = buildDocRaptorProviderDiagnostic(timeoutError, {
+  attempt: "initial",
+  timeoutMs: 15,
+});
+assert.equal(timeoutDiagnostic.provider, "docraptor");
+assert.equal(timeoutDiagnostic.status, null);
+assert.equal(timeoutDiagnostic.error_class, "timeout");
+assert.equal(timeoutDiagnostic.retryable, true);
+assert.equal(timeoutDiagnostic.has_response, false);
+assert.equal(timeoutDiagnostic.has_request, true);
+assert.equal(timeoutDiagnostic.timeout_ms, 15);
+assert.equal(JSON.stringify(timeoutDiagnostic).includes(apiKey), false);
+assert.equal(JSON.stringify(timeoutDiagnostic).includes(authHeader), false);
+assert.equal(JSON.stringify(timeoutDiagnostic).includes(richHtml), false);
+assert.ok(JSON.stringify(timeoutDiagnostic).length <= DOCRAPTOR_PROVIDER_DIAGNOSTIC_MAX_BODY_LENGTH);
+
 const allFieldsOversizedXmlError = new Error("Request failed with status code 422");
 allFieldsOversizedXmlError.response = {
   status: 422,
@@ -314,8 +345,10 @@ const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js
 const deliverySource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 assert.match(generatorSource, /attachDocRaptorProviderDiagnostic/);
-assert.equal((generatorSource.match(/https:\/\/api\.docraptor\.com\/docs/g) || []).length, 1);
-assert.equal((deliverySource.match(/https:\/\/api\.docraptor\.com\/docs/g) || []).length, 1);
+assert.match(generatorSource, /requestDocRaptorPdf/);
+assert.match(deliverySource, /requestDocRaptorPdf/);
+assert.equal((generatorSource.match(/https:\/\/api\.docraptor\.com\/docs/g) || []).length, 0);
+assert.equal((deliverySource.match(/https:\/\/api\.docraptor\.com\/docs/g) || []).length, 0);
 assert.doesNotMatch(generatorSource, /["']https:\/\/docraptor\.com\/docs["']/);
 assert.doesNotMatch(deliverySource, /["']https:\/\/docraptor\.com\/docs["']/);
 assert.match(generatorSource, /pdfResponse = await renderDocRaptorPdf\(emergencyHtml, "emergency_core"\);/);
