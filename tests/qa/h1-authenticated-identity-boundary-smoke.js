@@ -119,14 +119,24 @@ assert.doesNotMatch(checkoutRead, /metadata: session\.metadata/);
 
 const legal = fs.readFileSync('api/legal-acceptance.js', 'utf8');
 assert.match(legal, /const userId = auth\.actor\.id/);
-assert.match(legal, /POLICY_TEXT_HASH = createHash\('sha256'\)/);
+assert.match(legal, /INVESTORIQ_DISCLOSURE_VERSION/);
+assert.match(legal, /buildInvestorIQDisclosureAcceptanceRecord/);
+assert.doesNotMatch(legal, /POLICY_VERSION = 'v2026-01-14'/);
 assert.doesNotMatch(legal, /const \{ userId, policyTextHash \} = params/);
 assert.doesNotMatch(legal, /getUserById\(userId\)/);
+
+const disclosureAuthority = fs.readFileSync('src/lib/investoriq-disclosure-authority.js', 'utf8');
+assert.match(disclosureAuthority, /INVESTORIQ_DISCLOSURE_VERSION = 'v2026-08-02'/);
+assert.match(disclosureAuthority, /Monetary refunds are not available once report generation begins\./);
+assert.match(disclosureAuthority, /If an InvestorIQ system failure prevents publication, the qualifying report credit is restored\./);
+assert.doesNotMatch(disclosureAuthority, /Refunds are not available once report generation begins\./);
 
 const app = fs.readFileSync('src/App.jsx', 'utf8');
 assert.match(app, /checkout-session\?auth_context=1/);
 assert.match(app, /Navigate to="\/login\?next=\/dashboard"/);
 assert.doesNotMatch(app, /user\?\.email === adminEmail/);
+assert.match(app, /INVESTORIQ_DISCLOSURE_LABEL/);
+assert.match(app, /Analysis Disclosures" effectiveLabel=\{INVESTORIQ_DISCLOSURE_LABEL\}/);
 
 for (const frontendPath of ['src/pages/Pricing.jsx', 'src/pages/Dashboard.jsx']) {
   const source = fs.readFileSync(frontendPath, 'utf8');
@@ -139,6 +149,9 @@ assert.doesNotMatch(pricing, /userEmail:\s*user\.email/);
 const dashboard = fs.readFileSync('src/pages/Dashboard.jsx', 'utf8');
 assert.doesNotMatch(dashboard, /userId:\s*profile\?\.id/);
 assert.doesNotMatch(dashboard, /policyTextHash/);
+assert.match(dashboard, /INVESTORIQ_DISCLOSURE_TEXT/);
+assert.match(dashboard, /INVESTORIQ_DISCLOSURE_LABEL/);
+assert.match(dashboard, /fetchLegalAcceptance\(\)/);
 
 const checkoutSuccess = fs.readFileSync('src/pages/CheckoutSuccess.jsx', 'utf8');
 assert.match(checkoutSuccess, /Authorization: `Bearer \$\{accessToken\}`/);

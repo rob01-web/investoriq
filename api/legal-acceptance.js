@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { createHash } from 'node:crypto';
 import { resolveAuthenticatedActor } from './_lib/authenticated-actor.js';
-
-const POLICY_TEXT =
-  'InvestorIQ produces document-backed and framework-constrained underwriting, does not provide investment or appraisal advice, and will disclose any missing or degraded inputs in the final report. No invented data or gap-filling is performed.';
-const POLICY_TEXT_HASH = createHash('sha256').update(POLICY_TEXT).digest('hex');
-const POLICY_KEY = 'analysis_disclosures';
-const POLICY_VERSION = 'v2026-01-14';
+import {
+  INVESTORIQ_DISCLOSURE_KEY,
+  INVESTORIQ_DISCLOSURE_TEXT_HASH,
+  INVESTORIQ_DISCLOSURE_VERSION,
+  buildInvestorIQDisclosureAcceptanceRecord,
+} from '../src/lib/investoriq-disclosure-authority.js';
 
 export default async function handler(req, res) {
   try {
@@ -43,9 +42,9 @@ export default async function handler(req, res) {
         .from('legal_acceptances')
         .select('accepted_at')
         .eq('user_id', userId)
-        .eq('policy_key', POLICY_KEY)
-        .eq('policy_version', POLICY_VERSION)
-        .eq('policy_text_hash', POLICY_TEXT_HASH)
+        .eq('policy_key', INVESTORIQ_DISCLOSURE_KEY)
+        .eq('policy_version', INVESTORIQ_DISCLOSURE_VERSION)
+        .eq('policy_text_hash', INVESTORIQ_DISCLOSURE_TEXT_HASH)
         .order('accepted_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -70,15 +69,14 @@ export default async function handler(req, res) {
 
     const { data: insertedRow, error } = await supabase
       .from('legal_acceptances')
-      .insert({
-        user_id: userId,
-        user_email: auth.actor.email,
-        policy_key: POLICY_KEY,
-        policy_version: POLICY_VERSION,
-        policy_text_hash: POLICY_TEXT_HASH,
-        ip,
-        user_agent: userAgent,
-      })
+      .insert(
+        buildInvestorIQDisclosureAcceptanceRecord({
+          userId,
+          userEmail: auth.actor.email,
+          ip,
+          userAgent,
+        }),
+      )
       .select('accepted_at')
       .single();
 
@@ -89,9 +87,9 @@ export default async function handler(req, res) {
           .from('legal_acceptances')
           .select('accepted_at')
           .eq('user_id', userId)
-          .eq('policy_key', POLICY_KEY)
-          .eq('policy_version', POLICY_VERSION)
-          .eq('policy_text_hash', POLICY_TEXT_HASH)
+          .eq('policy_key', INVESTORIQ_DISCLOSURE_KEY)
+          .eq('policy_version', INVESTORIQ_DISCLOSURE_VERSION)
+          .eq('policy_text_hash', INVESTORIQ_DISCLOSURE_TEXT_HASH)
           .order('accepted_at', { ascending: false })
           .limit(1)
           .maybeSingle();

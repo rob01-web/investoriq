@@ -21,6 +21,10 @@ import {
   normalizeDashboardDocType,
   resolveDashboardCustomerStatus,
 } from '@/lib/dashboardCustomerCopy';
+import {
+  INVESTORIQ_DISCLOSURE_LABEL,
+  INVESTORIQ_DISCLOSURE_TEXT,
+} from '@/lib/investoriq-disclosure-authority';
 
 // DESIGN TOKENS
 const T = {
@@ -965,6 +969,27 @@ useEffect(() => {
       return data?.accepted_at || data?.acceptedAt || null;
     } catch (err) { console.error('Legal acceptance read error:', err); return null; }
   };
+  useEffect(() => {
+    let cancelled = false;
+    if (!profile?.id || !session?.access_token) return () => { cancelled = true; };
+
+    const syncLegalAcceptance = async () => {
+      const acceptedAt = await fetchLegalAcceptance();
+      if (cancelled) return;
+      if (acceptedAt) {
+        setAcknowledged(true);
+        setAckLocked(false);
+        setAckAcceptedAtLocal(new Date(acceptedAt));
+        return;
+      }
+      setAcknowledged(false);
+      setAckLocked(false);
+      setAckAcceptedAtLocal(null);
+    };
+
+    syncLegalAcceptance();
+    return () => { cancelled = true; };
+  }, [profile?.id, session?.access_token]);
   const formatAcceptedAtLocal = (value) => {
     if (!value) return '';
     const acceptedDate = value instanceof Date ? value : new Date(value);
@@ -1415,10 +1440,10 @@ useEffect(() => {
                     />
                     <div>
                       <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
-                        I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as unavailable in the report. Refunds are not available once report generation begins.
+                        {INVESTORIQ_DISCLOSURE_TEXT}
                       </div>
                       <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
-                        Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
+                        {INVESTORIQ_DISCLOSURE_LABEL}{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
                       </div>
                     </div>
                   </label>
@@ -1699,10 +1724,10 @@ useEffect(() => {
                 />
                 <div>
                   <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
-                    I acknowledge that InvestorIQ provides document-backed and framework-constrained analysis, uses no invented data, and discloses missing inputs as unavailable in the report. Refunds are not available once report generation begins.
+                    {INVESTORIQ_DISCLOSURE_TEXT}
                   </div>
                   <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
-                    Disclosures v2026-01-14{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
+                    {INVESTORIQ_DISCLOSURE_LABEL}{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
                   </div>
                 </div>
               </label>

@@ -15,6 +15,7 @@ import Contact        from '@/pages/Contact';
 import About          from '@/pages/About';
 import PricingPage    from '@/pages/Pricing';
 import { supabase }   from '@/lib/customSupabaseClient';
+import { INVESTORIQ_DISCLOSURE_LABEL } from '@/lib/investoriq-disclosure-authority';
 
 //  DESIGN TOKENS 
 const T = {
@@ -206,9 +207,9 @@ function TermsPage() {
         <li>User upload issues (wrong/missing docs) require a new purchase.</li>
       </ul>
       <h2>Refund Policy</h2>
-      <p>InvestorIQ reports are bespoke, property-specific analytical artifacts generated from documents you provide. Once report generation begins, refunds are not available.</p>
+      <p>InvestorIQ reports are bespoke, property-specific analytical artifacts generated from documents you provide. Once report generation begins, monetary refunds are not available.</p>
       <h2>Regeneration Policy</h2>
-      <p>If a report fails to generate or is incomplete due to a system or processing error caused by InvestorIQ, InvestorIQ will regenerate the report for the same property at no additional cost.</p>
+      <p>If an InvestorIQ system failure prevents publication, the qualifying report credit is restored to the customer's account.</p>
       <h2>Important Disclosures</h2>
       <p>InvestorIQ provides document-based analytical reports only. Reports do not constitute investment advice, financial advice, or an appraisal. InvestorIQ does not infer missing facts or fabricate unsupported conclusions. If required core documents cannot be verified, no report is published and the report credit is restored. Where source support is incomplete, affected sections may be limited, qualified, or omitted.</p>
       <h2>8. Availability and changes</h2>
@@ -261,7 +262,7 @@ function PrivacyPage() {
 
 function DisclosuresPage() {
   return (
-    <LegalShell title="Analysis Disclosures" effectiveLabel="Version: v2026-01-14">
+    <LegalShell title="Analysis Disclosures" effectiveLabel={INVESTORIQ_DISCLOSURE_LABEL}>
       <h2>1. Document-based outputs only</h2>
       <p>InvestorIQ produces underwriting outputs from uploaded source documents and framework-constrained underwriting logic. Outputs are not created from external data sources unless explicitly identified as such within the report.</p>
       <h2>2. No unsupported values and no gap-filling</h2>
