@@ -395,6 +395,85 @@ export default async function handler(req, res) {
         },
       });
 
+    const handoffTimedOutWorkerJob = async (job, meta = {}) => {
+      const currentAttemptId = job?.worker_attempt_id || null;
+      const { data: handoffRows, error: handoffErr } = await supabaseAdmin
+        .from('analysis_jobs')
+        .update({
+          status: 'queued',
+          started_at: null,
+          worker_attempt_id: null,
+          worker_lease_expires_at: null,
+          worker_claimed_at: null,
+          worker_last_heartbeat_at: null,
+          worker_claimed_by: null,
+          dead_lettered_at: null,
+          error_code: null,
+          error_message: null,
+          failure_reason: null,
+        })
+        .eq('id', job.id)
+        .eq('worker_attempt_id', currentAttemptId)
+        .eq('worker_claimed_by', workerInvocationId)
+        .select('id, status, worker_attempt_id, worker_claimed_by, worker_lease_expires_at')
+        .maybeSingle();
+
+      if (handoffErr) {
+        throw new Error(`Failed to yield worker lease for timebox handoff: ${handoffErr.message}`);
+      }
+
+      if (!handoffRows?.id) {
+        await writeStaleWorkerAttemptEvent(job, currentAttemptId, job?.status || 'unknown', {
+          reason: 'timebox_handoff_rejected',
+          ...meta,
+        });
+        throw makeStaleWorkerAttemptError('timebox_handoff_rejected');
+      }
+
+      const transitionErr = await writeStatusTransitionArtifact(
+        job.id,
+        'extracting',
+        'queued',
+        {
+          user_id: job.user_id,
+          reason: 'worker_timebox_defer',
+          ...meta,
+        }
+      );
+
+      if (transitionErr) {
+        throw new Error(`Failed to write timebox handoff transition artifact: ${transitionErr.message}`);
+      }
+
+      const handoffEventErr = await writeWorkerAttemptEvent({
+        job: {
+          ...job,
+          status: 'queued',
+          worker_attempt_id: null,
+          worker_claimed_by: null,
+          worker_lease_expires_at: null,
+          worker_claimed_at: null,
+          worker_last_heartbeat_at: null,
+        },
+        eventType: 'worker_timebox_defer',
+        attemptId: currentAttemptId,
+        fromStatus: 'extracting',
+        toStatus: 'queued',
+        meta: {
+          ...meta,
+          worker_attempt_id: currentAttemptId,
+          worker_claimed_by: workerInvocationId,
+          handoff_state: 'queued',
+        },
+      });
+
+      if (handoffEventErr) {
+        console.error('Failed to write worker_timebox_defer handoff event:', handoffEventErr.message);
+      }
+
+      return handoffRows;
+    };
+
     const renewWorkerLeaseForJob = async (job, attemptId = null, claimedBy = null) => {
       const currentAttemptId = attemptId || job?.worker_attempt_id || null;
       await assertCurrentWorkerInvocationOwnership(job, job?.status || 'unknown', {
@@ -1967,6 +2046,7 @@ export default async function handler(req, res) {
     const transitions = [];
     const blockedJobIds = [];
     const failedJobIds = [];
+    const deferredJobIds = new Set();
     const rollupWrittenJobIds = new Set();
     let passesRun = 0;
     const maxPasses = 10;
@@ -1994,7 +2074,8 @@ export default async function handler(req, res) {
       }
 
       if (queuedJobs && queuedJobs.length > 0) {
-        for (const job of queuedJobs) {
+        const eligibleQueuedJobs = queuedJobs.filter((job) => !deferredJobIds.has(job.id));
+        for (const job of eligibleQueuedJobs) {
           let claimedJob = null;
           try {
             const { data: claimRows, error: claimErr } = await supabaseAdmin
@@ -2134,7 +2215,7 @@ export default async function handler(req, res) {
           try {
           const elapsedSeconds = (Date.now() - startTime) / 1000;
           if (elapsedSeconds >= maxSeconds - 8) {
-            await writeWorkerEventArtifact(job.id, job.user_id, 'worker_timebox_defer', {
+            await handoffTimedOutWorkerJob(job, {
               invocation_id: workerInvocationId,
               stage: 'extracting',
               prior_status: 'extracting',
@@ -2142,6 +2223,7 @@ export default async function handler(req, res) {
               elapsed_seconds: elapsedSeconds,
               timestamp: nowIso,
             });
+            deferredJobIds.add(job.id);
             break;
           }
           await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_selected', {

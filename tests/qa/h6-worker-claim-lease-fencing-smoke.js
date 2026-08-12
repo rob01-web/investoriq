@@ -25,6 +25,9 @@ const allowedFiles = new Set([
   'docs/STATUS.md',
   'docs/ROADMAP.md',
   '!INVESTORIQ_CURRENT_GAMEPLAN_HANDOFF_UPDATED_2026-07-28.md',
+  '!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-08-06_GATE3_ACTIVE.md',
+  'docs/ROADMAP_UPDATED_2026-08-06_GATE3_ACTIVE.md',
+  'docs/STATUS_UPDATED_2026-08-06_GATE3_ACTIVE.md',
 ]);
 
 for (const file of changedFiles) {
@@ -89,6 +92,8 @@ for (const pattern of [
   /worker_admin_requeued/,
   /stale_worker_rejected/,
   /entitlement_restored/,
+  /handoffTimedOutWorkerJob/,
+  /deferredJobIds\.has\(job\.id\)/,
 ]) {
   assert.match(workerSource, pattern);
 }
@@ -276,6 +281,27 @@ const runExpiredRecoverySweep = (jobs, nowValue, recoveryInvocationId) =>
       recovered,
     };
   });
+const handoffJob = (state, attemptId, claimedBy, elapsedSeconds) => {
+  const { job } = state;
+  if (!matchesOwnership(job, attemptId, claimedBy)) return false;
+  if (job.status !== 'extracting') return false;
+  if ((elapsedSeconds || 0) < 42) return false;
+  job.status = 'queued';
+  job.worker_attempt_id = null;
+  job.worker_lease_expires_at = null;
+  job.worker_claimed_at = null;
+  job.worker_last_heartbeat_at = null;
+  job.worker_claimed_by = null;
+  return true;
+};
+const claimNextForInvocation = (state, invocation, claimedBy) => {
+  if (invocation.deferredJobIds.has(state.job.id)) return null;
+  const attemptId = claimNext(state, claimedBy);
+  if (attemptId) {
+    invocation.claimedJobIds.add(state.job.id);
+  }
+  return attemptId;
+};
 
 {
   const state = makeState();
@@ -344,6 +370,41 @@ const runExpiredRecoverySweep = (jobs, nowValue, recoveryInvocationId) =>
   assert.equal(transitionJob(state, attemptA, 'worker-a', 'extracting', 'underwriting'), false);
   assert.equal(failJob(state, attemptA, 'worker-a', 'extracting'), false);
   assert.equal(restoreEntitlement(state, attemptA, 'worker-a', 'failed'), false);
+}
+
+{
+  const state = makeState();
+  state.jobFiles = [
+    { id: 'file-rent-roll', job_id: state.job.id, doc_type: 'rent_roll', parse_status: 'parsed' },
+    { id: 'file-t12', job_id: state.job.id, doc_type: 't12', parse_status: 'parsed' },
+  ];
+
+  const invocationA = { claimedJobIds: new Set(), deferredJobIds: new Set() };
+  const invocationB = { claimedJobIds: new Set(), deferredJobIds: new Set() };
+
+  const attemptA = claimNext(state, 'worker-a');
+  assert.ok(attemptA);
+  assert.equal(handoffJob(state, attemptA, 'worker-a', 50), true);
+  invocationA.deferredJobIds.add(state.job.id);
+  assert.equal(state.job.status, 'queued');
+  assert.equal(state.job.worker_claimed_by, null);
+  assert.equal(state.job.worker_attempt_id, null);
+  assert.equal(state.job.worker_lease_expires_at, null);
+  assert.equal(claimNextForInvocation(state, invocationA, 'worker-a'), null);
+  assert.equal(renewLease(state, attemptA, 'worker-a'), false);
+  assert.equal(transitionJob(state, attemptA, 'worker-a', 'extracting', 'underwriting'), false);
+  assert.equal(failJob(state, attemptA, 'worker-a', 'extracting'), false);
+  assert.equal(state.jobFiles.every((file) => file.parse_status === 'parsed'), true);
+
+  const attemptB = claimNextForInvocation(state, invocationB, 'worker-b');
+  assert.ok(attemptB);
+  assert.notEqual(attemptB, attemptA);
+  assert.equal(state.job.status, 'extracting');
+  assert.equal(state.job.worker_claimed_by, 'worker-b');
+  assert.equal(state.job.worker_attempt_id, attemptB);
+  assert.equal(invocationB.claimedJobIds.has(state.job.id), true);
+  assert.equal(selectExpiredRecoveryJobs([state.job], fixedNow).length, 0);
+  assert.equal(state.jobFiles.filter((file) => file.parse_status === 'parsed').length, 2);
 }
 
 {
