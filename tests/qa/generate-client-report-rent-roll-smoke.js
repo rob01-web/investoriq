@@ -152,6 +152,9 @@ assert.equal(
   0,
   "Legacy mortgage-debt fallback must have zero production call sites"
 );
+assert.equal(reportSource.includes("finalPdfArtifactMode"), false);
+assert.match(reportSource, /pdf_artifact_mode:\s*reportDownloadArtifactMode/);
+assert.match(reportSource, /artifactMode:\s*reportDownloadArtifactMode/);
 const canonicalAcquisitionBridgeStart = reportSource.indexOf("// --- V2 SOURCE AUTHORITY BRIDGE START ---");
 const canonicalAcquisitionBridgeEnd = reportSource.indexOf(
   "// --- V2 SOURCE AUTHORITY BRIDGE END ---",

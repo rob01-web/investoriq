@@ -9054,9 +9054,8 @@ try {
       throw error;
     }
   };
-  const finalPdfArtifactMode = reportDownloadArtifactMode;
   const finalPdfPublicationTarget = String(process.env.REPORT_PUBLICATION_TARGET || "").trim() ||
-    (finalPdfArtifactMode === "production_pdf" ? "external_customer" : "internal_test");
+    (reportDownloadArtifactMode === "production_pdf" ? "external_customer" : "internal_test");
   const baseFinalPdfDeterministicContractQaSeal =
     acquisitionMemoV2Finalization?.deterministicContractQaSeal ||
     reportContractQaResult?.deterministic_contract_qa_seal ||
@@ -9175,7 +9174,7 @@ try {
       sourceReconciliation: finalPdfSourceReconciliation,
       financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
       reportIdentity: finalPdfReportIdentity,
-      artifactMode: finalPdfArtifactMode,
+      artifactMode: reportDownloadArtifactMode,
       publicationTarget: finalPdfPublicationTarget,
       sectionDispositionReceipts: options.sectionDispositionReceipts || finalPdfSectionDispositionReceipts,
       semanticRecompositionReceipt: options.semanticRecompositionReceipt || null,
@@ -9533,7 +9532,7 @@ try {
       storagePath: validatedStoragePath,
       report_type: reportType,
       url: signedData.signedUrl,
-      pdf_artifact_mode: finalPdfArtifactMode,
+      pdf_artifact_mode: reportDownloadArtifactMode,
       final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
       core_publishable: finalPdfCorePublishable,
       core_safe_html: finalPdfCoreSafeHtml,
