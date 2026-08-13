@@ -15,7 +15,10 @@ import Contact        from '@/pages/Contact';
 import About          from '@/pages/About';
 import PricingPage    from '@/pages/Pricing';
 import { supabase }   from '@/lib/customSupabaseClient';
-import { INVESTORIQ_DISCLOSURE_LABEL } from '@/lib/investoriq-disclosure-authority';
+import {
+  INVESTORIQ_DISCLOSURE_LABEL,
+  INVESTORIQ_DISCLOSURE_VERSION,
+} from '@/lib/investoriq-disclosure-authority';
 
 //  DESIGN TOKENS 
 const T = {
@@ -185,7 +188,7 @@ function LegalShell({ title, effectiveLabel, children }) {
 //  LEGAL PAGES 
 function TermsPage() {
   return (
-    <LegalShell title="Terms of Use" effectiveLabel="Version: v2026-01-14">
+    <LegalShell title="Terms of Use" effectiveLabel={`Version: ${INVESTORIQ_DISCLOSURE_VERSION}`}>
       <h2>1. Overview</h2>
       <p>InvestorIQ is a document-based real estate underwriting platform. Outputs are produced from the documents you upload. InvestorIQ is not a brokerage, appraiser, lender, or advisor.</p>
       <h2>2. Not advice and no reliance</h2>
@@ -230,7 +233,7 @@ function TermsPage() {
 
 function PrivacyPage() {
   return (
-    <LegalShell title="Privacy Policy" effectiveLabel="Effective: 2026-01-14">
+    <LegalShell title="Privacy Policy" effectiveLabel={`Effective: ${INVESTORIQ_DISCLOSURE_VERSION}`}>
       <h2>1. What we collect</h2>
       <ul>
         <li>Account information (name, email)</li>
