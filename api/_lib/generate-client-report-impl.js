@@ -40,6 +40,9 @@ import {
   constrainCanonicalSourcePackageToSourceTruth,
   isCanonicalSourceTruthPackage,
 } from "./source-truth-package.js";
+import {
+  buildCorePublicationConstitution,
+} from "./core-publication-constitution.js";
 import { buildReportQualityManifestCandidate } from "./report-quality-manifest.js";
 import { buildAcquisitionMemoProjection } from "./acquisition-memo-projection.js";
 import { buildCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
@@ -9107,13 +9110,22 @@ try {
       console.error("Failed to construct deterministic minimum core PDF fallback:", error);
     }
   }
-  const finalPdfCorePublishable = canonicalFinalPdfCorePublishable;
+  const finalPdfPublicationContract = Object.freeze({
+    artifactMode: reportDownloadArtifactMode,
+    corePublishable: canonicalFinalPdfCorePublishable,
+    constitution: buildCorePublicationConstitution({
+      sourceTruthPackage: sourceTruthPackageResult,
+      t12State: sourceTruthPackageResult?.core_input_sufficiency_state?.t12 || null,
+      rentRollState: sourceTruthPackageResult?.core_input_sufficiency_state?.rent_roll || null,
+      sourceReconciliationState: sourceTruthPackageResult?.source_reconciliation_state || null,
+    }),
+  });
   let initialArtifactIsEmergency = false;
   let initialRenderError = null;
   try {
     pdfResponse = await renderDocRaptorPdf(docHtml, "initial");
   } catch (error) {
-    if (finalPdfCorePublishable !== true) throw error;
+    if (finalPdfPublicationContract.corePublishable !== true) throw error;
     const emergencyHtml = String(finalPdfEmergencyCoreHtml || "").trim();
     if (!emergencyHtml) throw error;
     try {
@@ -9128,7 +9140,26 @@ try {
           emergencyError?.context?.provider_diagnostics,
         ),
       };
-      throw emergencyError;
+      return res.status(200).json({
+        success: true,
+        publication_state: "recovery_required",
+        publication_retry_required: true,
+        publication_retry_reason: "initial_emergency_core_render_failed",
+        core_publishable: finalPdfPublicationContract.corePublishable,
+        core_publication_constitution: finalPdfPublicationContract.constitution,
+        final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
+        diagnostics: {
+          publication_state: "recovery_required",
+          publication_retry_required: true,
+          publication_retry_reason: "initial_emergency_core_render_failed",
+          initial_render_error: error?.message || String(error),
+          emergency_core_render_error: emergencyError?.message || String(emergencyError),
+          provider_diagnostics_by_attempt: mergeDocRaptorProviderDiagnostics(
+            error?.context?.provider_diagnostics,
+            emergencyError?.context?.provider_diagnostics,
+          ),
+        },
+      });
     }
     initialArtifactIsEmergency = true;
     initialRenderError = error;
@@ -9137,7 +9168,7 @@ try {
     ? {
         ...baseFinalPdfDeterministicContractQaSeal,
         sectionDispositionReceipts: finalPdfSectionDispositionReceipts,
-        corePublishable: finalPdfCorePublishable,
+        corePublishable: finalPdfPublicationContract.corePublishable,
       }
     : null;
   const boundedRecovery = await runBoundedPdfCertificationRecovery({
@@ -9153,7 +9184,7 @@ try {
       (await renderDocRaptorPdf(finalHtml, renderAttempt)).data,
     buildEmergencyCoreHtml: async () => {
       if (String(finalPdfEmergencyCoreHtml || "").trim()) return finalPdfEmergencyCoreHtml;
-      if (!canonicalFinalPdfCorePublishable) return "";
+      if (finalPdfPublicationContract.corePublishable !== true) return "";
       const canonicalCoreFallbackInputs = resolveCanonicalCoreFallbackInputs({
         sourceTruthPackage: sourceTruthPackageResult,
         t12Payload,
@@ -9174,16 +9205,36 @@ try {
       sourceReconciliation: finalPdfSourceReconciliation,
       financialIntelligence: acquisitionMemoV2Finalization?.customerSurfaceModel?.financialIntelligence || null,
       reportIdentity: finalPdfReportIdentity,
-      artifactMode: reportDownloadArtifactMode,
+      artifactMode: finalPdfPublicationContract.artifactMode,
       publicationTarget: finalPdfPublicationTarget,
       sectionDispositionReceipts: options.sectionDispositionReceipts || finalPdfSectionDispositionReceipts,
       semanticRecompositionReceipt: options.semanticRecompositionReceipt || null,
     }),
     sectionDispositionReceipts: finalPdfSectionDispositionReceipts,
-    corePublishable: finalPdfCorePublishable,
+    corePublishable: finalPdfPublicationContract.corePublishable,
   });
   pdfResponse = { ...pdfResponse, data: boundedRecovery.pdfBuffer };
   finalPdfPublicationQualityBossResult = boundedRecovery.publicationQualityBoss;
+  if (boundedRecovery.publicationState === "recovery_required") {
+    return res.status(200).json({
+      success: true,
+      publication_state: "recovery_required",
+      publication_retry_required: true,
+      publication_retry_reason: boundedRecovery.publicationRetryReason || "publication_retry_required",
+      core_publishable: finalPdfPublicationContract.corePublishable,
+      core_publication_constitution: finalPdfPublicationContract.constitution,
+      final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
+      section_disposition_receipts: finalPdfSectionDispositionReceipts,
+      deterministic_contract_qa_seal: finalPdfDeterministicContractQaSeal,
+      diagnostics: {
+        publication_state: "recovery_required",
+        publication_retry_required: true,
+        publication_retry_reason: boundedRecovery.publicationRetryReason || "publication_retry_required",
+        publication_recovery_error: boundedRecovery.publicationRecoveryError || null,
+        publication_quality_boss: finalPdfPublicationQualityBossResult,
+      },
+    });
+  }
   if (boundedRecovery.terminalError) throw boundedRecovery.terminalError;
   if (jobId) {
     const pdfBossTimestamp = new Date().toISOString().replace(/:/g, "-");
@@ -9197,7 +9248,7 @@ try {
     }]);
     if (pdfBossArtifactError) console.error("Failed to write final_pdf_publication_quality_boss artifact:", pdfBossArtifactError);
   }
-  if (!finalPdfCorePublishable && !isFinalPdfCustomerDeliveryAllowed(finalPdfPublicationQualityBossResult)) {
+  if (!finalPdfPublicationContract.corePublishable && !isFinalPdfCustomerDeliveryAllowed(finalPdfPublicationQualityBossResult)) {
     const pdfBossError = new Error("Final PDF failed Publication Quality Boss certification");
     pdfBossError.code = TERMINAL_FAILURE_CODES.PDF_ARTIFACT_FAILED;
     pdfBossError.context = {
@@ -9302,13 +9353,28 @@ try {
     const publicationContext = {
       jobId: jobId || null,
       userId: effectiveUserId || null,
-      reportType: reportType || null,
-      deliveryGateStatus: deliveryGateDecisionResult?.delivery_gate_status || null,
-      holdDelivery: Boolean(holdDelivery),
-      coreValidRequiredCoverage: Boolean(canonicalDeliveryDecisionState?.core_valid_required_coverage),
-      publicationSeed,
-    };
-    let validatedStoragePath;
+    reportType: reportType || null,
+    deliveryGateStatus: deliveryGateDecisionResult?.delivery_gate_status || null,
+    holdDelivery: Boolean(holdDelivery),
+    coreValidRequiredCoverage: Boolean(canonicalDeliveryDecisionState?.core_valid_required_coverage),
+    publicationSeed,
+  };
+  const buildRecoverablePublicationResponse = (publicationRetryReason, diagnostics = {}) => res.status(200).json({
+    success: true,
+    publication_state: "recovery_required",
+    publication_retry_required: true,
+    publication_retry_reason: publicationRetryReason,
+    core_publishable: finalPdfPublicationContract.corePublishable,
+    core_publication_constitution: finalPdfPublicationContract.constitution,
+    final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
+    diagnostics: {
+      publication_state: "recovery_required",
+      publication_retry_required: true,
+      publication_retry_reason: publicationRetryReason,
+      ...diagnostics,
+    },
+  });
+  let validatedStoragePath;
     try {
       validatedStoragePath = assertValidReportPublicationInsert({
       storagePath,
@@ -9372,11 +9438,21 @@ try {
       if (!revisionRootReportId) {
         const revisionError = new Error(`Missing revision root report id for ${revisionKind} report publication`);
         revisionError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        if (finalPdfPublicationContract.corePublishable === true) {
+          return buildRecoverablePublicationResponse("missing_revision_root_report_id", {
+            revision_error: revisionError.message,
+          });
+        }
         throw revisionError;
       }
       if (!revisionNumber) {
         const revisionError = new Error(`Missing revision number for ${revisionKind} report publication`);
         revisionError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        if (finalPdfPublicationContract.corePublishable === true) {
+          return buildRecoverablePublicationResponse("missing_revision_number", {
+            revision_error: revisionError.message,
+          });
+        }
         throw revisionError;
       }
     }
@@ -9402,6 +9478,11 @@ try {
         .maybeSingle();
       if (existingReportError) {
         console.error("Existing revision lookup failed:", existingReportError, publicationContext);
+        if (finalPdfPublicationContract.corePublishable === true) {
+          return buildRecoverablePublicationResponse("existing_revision_lookup_failed", {
+            existing_report_error: existingReportError?.message || String(existingReportError),
+          });
+        }
         throw existingReportError;
       }
       if (existingReportRow?.id) {
@@ -9422,6 +9503,11 @@ try {
         console.error("Storage Upload Error:", uploadError);
         const storageError = new Error("Failed to upload report to storage");
         storageError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        if (finalPdfPublicationContract.corePublishable === true) {
+          return buildRecoverablePublicationResponse("storage_upload_failed", {
+            storage_upload_error: uploadError?.message || String(uploadError),
+          });
+        }
         throw storageError;
       }
     }
@@ -9462,6 +9548,11 @@ try {
       }
       const publicationError = new Error("Failed to create report record");
       publicationError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+      if (finalPdfPublicationContract.corePublishable === true) {
+        return buildRecoverablePublicationResponse("report_record_creation_failed", {
+          report_create_error: reportCreateError?.message || String(reportCreateError || ""),
+        });
+      }
       throw publicationError;
     }
     const reportId = reportRow.id;
@@ -9475,6 +9566,11 @@ try {
         console.error("Signed URL Error:", signedError);
         const publicationError = new Error("Failed to generate access link");
         publicationError.code = TERMINAL_FAILURE_CODES.STORAGE_PUBLICATION_FAILED;
+        if (finalPdfPublicationContract.corePublishable === true) {
+          return buildRecoverablePublicationResponse("signed_url_generation_failed", {
+            signed_url_error: signedError?.message || String(signedError),
+          });
+        }
         throw publicationError;
       }
       signedData = signedResult || signedData;
@@ -9532,9 +9628,10 @@ try {
       storagePath: validatedStoragePath,
       report_type: reportType,
       url: signedData.signedUrl,
-      pdf_artifact_mode: reportDownloadArtifactMode,
+      pdf_artifact_mode: finalPdfPublicationContract.artifactMode,
       final_pdf_publication_quality_boss: finalPdfPublicationQualityBossResult,
-      core_publishable: finalPdfCorePublishable,
+      core_publishable: finalPdfPublicationContract.corePublishable,
+      core_publication_constitution: finalPdfPublicationContract.constitution,
       core_safe_html: finalPdfCoreSafeHtml,
       emergency_core_html: finalPdfEmergencyCoreHtml,
       deterministic_contract_qa_seal: finalPdfDeterministicContractQaSeal,

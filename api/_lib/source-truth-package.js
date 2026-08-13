@@ -5,6 +5,9 @@ import {
   buildT12SufficiencyState,
 } from "./report-surface-contracts.js";
 import {
+  buildCorePublicationConstitution,
+} from "./core-publication-constitution.js";
+import {
   adjudicateSupportDocumentAuthority,
   buildSupportDocumentAuthorityShadowComparison,
 } from "./support-document-authority-adjudicator.js";
@@ -192,6 +195,27 @@ function selectValidatedCoreArtifact(artifacts, type, buildState) {
       return String(left.artifact.id).localeCompare(String(right.artifact.id));
     });
   return candidates[0] || null;
+}
+
+function selectStrongestRejectedCoreState(artifacts, type, buildState) {
+  const candidates = artifacts
+    .filter((artifact) => artifact.type === type)
+    .map((artifact) => ({
+      artifact,
+      state: buildState(resolveCoreFacts(artifact, type)),
+    }))
+    .filter((candidate) =>
+      candidate.state?.status === "contradiction" ||
+      candidate.state?.admin_review_required === true ||
+      candidate.state?.system_contract_failure === true
+    )
+    .sort((left, right) => {
+      const timestampDifference =
+        (Date.parse(right.artifact.created_at || "") || 0) - (Date.parse(left.artifact.created_at || "") || 0);
+      if (timestampDifference !== 0) return timestampDifference;
+      return String(left.artifact.id).localeCompare(String(right.artifact.id));
+    });
+  return candidates[0]?.state || null;
 }
 
 function buildCoreEntry(candidate, validatedRole) {
@@ -443,7 +467,8 @@ function hasAcceptedSupportRole(support, roles) {
   return roles.some((role) => acceptedRoles.has(role));
 }
 
-function buildSectionPolicy({ t12State, rentRollState, support, sourceReconciliationState }) {
+function buildSectionPolicy({ t12State, rentRollState, support, sourceReconciliationState, coreInputState }) {
+  const coreSourceMode = String(coreInputState?.evidence?.core_source_mode || "").trim().toLowerCase();
   const policy = {
     operating_statement: "render",
     operating_profile: "render",
@@ -460,6 +485,17 @@ function buildSectionPolicy({ t12State, rentRollState, support, sourceReconcilia
 
   if (t12State?.reason_code === "t12_gpr_missing") {
     policy.rent_upside = "collapse";
+    policy.source_reconciliation = "collapse";
+  }
+  if (coreSourceMode === "t12_minimum_core") {
+    policy.rent_upside = "collapse";
+    policy.occupancy_analysis = "collapse";
+    policy.source_reconciliation = "collapse";
+  }
+  if (coreSourceMode === "rent_roll_minimum_core") {
+    policy.operating_statement = "collapse";
+    policy.operating_profile = "collapse";
+    policy.expense_structure = "collapse";
     policy.source_reconciliation = "collapse";
   }
   if (rentRollState?.reason_code === "rent_roll_occupancy_not_modeled") {
@@ -664,29 +700,41 @@ export function buildCanonicalSourceTruthPackage({
     rentRollPayload,
     t12Payload,
   });
-  const t12State = selectedT12?.state || buildT12SufficiencyState({ t12Payload: null });
-  const rentRollState = selectedRentRoll?.state || buildRentRollSufficiencyState({ computedRentRoll: null, rentRollPayload: null });
+  const rejectedT12State = selectStrongestRejectedCoreState(
+    normalizedArtifacts,
+    "t12_parsed",
+    (payload) => buildT12SufficiencyState({ t12Payload: payload })
+  );
+  const rejectedRentRollState = selectStrongestRejectedCoreState(
+    normalizedArtifacts,
+    "rent_roll_parsed",
+    (payload) => buildRentRollSufficiencyState({ computedRentRoll: payload, rentRollPayload: payload })
+  );
+  const t12State = selectedT12?.state || rejectedT12State || buildT12SufficiencyState({ t12Payload: null });
+  const rentRollState = selectedRentRoll?.state || rejectedRentRollState || buildRentRollSufficiencyState({ computedRentRoll: null, rentRollPayload: null });
   const coreInputState = buildCoreInputSufficiencyState({
     t12Payload,
     computedRentRoll: rentRollPayload,
     rentRollPayload,
     sourceReconciliationState,
+    t12State,
+    rentRollState,
   });
   const coreFileIds = new Set(
     [selectedT12?.artifact?.file_id, selectedRentRoll?.artifact?.file_id].filter(Boolean)
   );
   const support = buildSupportAuthority(normalizedArtifacts, coreFileIds);
+  const coreSourceMode = String(coreInputState?.evidence?.core_source_mode || "").trim().toLowerCase();
   const corePublishable = Boolean(
-    selectedT12 &&
-    selectedRentRoll &&
-    isValidatedState(t12State) &&
-    isValidatedState(rentRollState) &&
-    isValidatedState(coreInputState)
+    isValidatedState(coreInputState) &&
+    coreSourceMode !== "insufficient_core"
   );
   const trueBlockers = [];
-  if (!selectedT12) trueBlockers.push("CORE_T12_NOT_VALIDATED");
-  if (!selectedRentRoll) trueBlockers.push("CORE_RENT_ROLL_NOT_VALIDATED");
-  if (selectedT12 && selectedRentRoll && !isValidatedState(coreInputState)) {
+  if (coreSourceMode === "insufficient_core") {
+    if (!isValidatedState(t12State)) trueBlockers.push("CORE_T12_NOT_VALIDATED");
+    if (!isValidatedState(rentRollState)) trueBlockers.push("CORE_RENT_ROLL_NOT_VALIDATED");
+  }
+  if (coreSourceMode !== "insufficient_core" && !isValidatedState(coreInputState)) {
     trueBlockers.push(coreInputState.reason_code || "CORE_OPERATING_EVIDENCE_NOT_VALIDATED");
   }
   const disclosures = [];
@@ -697,7 +745,7 @@ export function buildCanonicalSourceTruthPackage({
     });
   }
 
-  return deepFreeze({
+  const sourceTruthPackage = {
     source: SOURCE_TRUTH_MARKER,
     schema_version: SOURCE_TRUTH_SCHEMA_VERSION,
     job_id: jobId,
@@ -715,9 +763,20 @@ export function buildCanonicalSourceTruthPackage({
       rentRollState,
       support,
       sourceReconciliationState,
+      coreInputState,
     }),
     disclosures,
     source_reconciliation_state: sourceReconciliationState,
     core_input_sufficiency_state: coreInputState,
+  };
+
+  sourceTruthPackage.core_publication_constitution = buildCorePublicationConstitution({
+    sourceTruthPackage,
+    t12State,
+    rentRollState,
+    sourceReconciliationState,
+    coreInputState,
   });
+
+  return deepFreeze(sourceTruthPackage);
 }

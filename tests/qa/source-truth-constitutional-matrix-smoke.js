@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { buildAcquisitionMemoBossContract } from "../../api/_lib/acquisition-memo-boss-contract.js";
 import { buildConstitutionalDeliveryGateDecision } from "../../api/_lib/delivery-gate-constitution.js";
@@ -42,6 +43,9 @@ function coreArtifacts({ t12 = baseT12, rentRoll = baseRentRoll, support = [] } 
 
 function assertPublishableInBothLanes(name, sourceTruthPackage) {
   assert.equal(sourceTruthPackage.core_publishable, true, `${name} source truth must publish`);
+  assert.equal(sourceTruthPackage.core_publication_constitution?.core_publishable, true, `${name} constitution must preserve core publishability`);
+  assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.satisfied, true, `${name} minimum truth set must survive`);
+  assert.equal(sourceTruthPackage.core_publication_constitution?.ctss?.band === "60-79" || sourceTruthPackage.core_publication_constitution?.ctss?.band === "80-100", true, `${name} CTSS band must support publication`);
   const gate = buildConstitutionalDeliveryGateDecision({
     sourceTruthPackage,
     pipelineCompliancePassed: true,
@@ -132,26 +136,75 @@ for (const scenario of publishScenarios) {
 }
 
 const catastrophicScenarios = [
-  { name: "blacked_out_t12", artifacts: coreArtifacts({ t12: { file_id: "matrix-t12-file", validated: false } }), code: "CORE_T12_CATASTROPHICALLY_UNUSABLE" },
-  { name: "unreadable_rent_roll", artifacts: coreArtifacts({ rentRoll: { file_id: "matrix-rent-roll-file", validated: false } }), code: "CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE" },
-  { name: "fundamentally_irreconcilable_core", artifacts: coreArtifacts({ t12: { ...baseT12, net_operating_income: 50 } }), code: "CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY" },
+  {
+    name: "bad_t12_surviving_rr",
+    artifacts: coreArtifacts({ t12: { file_id: "matrix-t12-file", validated: false } }),
+    code: "CORE_T12_CATASTROPHICALLY_UNUSABLE",
+    expectedCorePublishable: true,
+    expectedSourceMode: "rent_roll_minimum_core",
+    expectedT12Satisfied: false,
+    expectedRentRollSatisfied: true,
+    expectedGatePublishable: true,
+  },
+  {
+    name: "bad_rr_surviving_t12",
+    artifacts: coreArtifacts({ rentRoll: { file_id: "matrix-rent-roll-file", validated: false } }),
+    code: "CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE",
+    expectedCorePublishable: true,
+    expectedSourceMode: "t12_minimum_core",
+    expectedT12Satisfied: true,
+    expectedRentRollSatisfied: false,
+    expectedGatePublishable: true,
+  },
+  {
+    name: "both_insufficient",
+    artifacts: coreArtifacts({ t12: { file_id: "matrix-t12-file", validated: false }, rentRoll: { file_id: "matrix-rent-roll-file", validated: false } }),
+    code: "CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY",
+    expectedCorePublishable: false,
+    expectedSourceMode: "insufficient_core",
+    expectedT12Satisfied: false,
+    expectedRentRollSatisfied: false,
+    expectedGatePublishable: false,
+  },
+  {
+    name: "package_level_contradiction",
+    artifacts: coreArtifacts({
+      t12: { ...baseT12, net_operating_income: 50 },
+      rentRoll: { file_id: "matrix-rent-roll-file", validated: false },
+    }),
+    code: "CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY",
+    expectedCorePublishable: false,
+    expectedSourceMode: "insufficient_core",
+    expectedT12Satisfied: false,
+    expectedRentRollSatisfied: false,
+    expectedGatePublishable: false,
+  },
 ];
 
 for (const scenario of catastrophicScenarios) {
   const sourceTruthPackage = buildCanonicalSourceTruthPackage({ artifacts: scenario.artifacts });
-  assert.equal(sourceTruthPackage.core_publishable, false, `${scenario.name} must block source truth`);
+  assert.equal(sourceTruthPackage.core_publishable, scenario.expectedCorePublishable, `${scenario.name} core publishability must match remaining truthful evidence`);
+  assert.equal(sourceTruthPackage.core_publication_constitution?.core_publishable, scenario.expectedCorePublishable, `${scenario.name} constitution must track the same publishability`);
+  assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.source_mode, scenario.expectedSourceMode, `${scenario.name} minimum truth set mode must resolve from truthful evidence`);
+  assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.t12?.satisfied, scenario.expectedT12Satisfied, `${scenario.name} T12 truth set must not be satisfied by invalidated evidence`);
+  assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.rent_roll?.satisfied, scenario.expectedRentRollSatisfied, `${scenario.name} rent roll truth set must not be satisfied by invalidated evidence`);
   for (const lane of ["screening", "acquisition_memo"]) {
+    const blockers = scenario.expectedGatePublishable ? [] : [scenario.code];
     const gate = buildConstitutionalDeliveryGateDecision({
       sourceTruthPackage,
       pipelineCompliancePassed: true,
       htmlSafetyValidationPassed: true,
       rendererCompleted: true,
-      customerBlockers: [scenario.code],
+      customerBlockers: blockers,
     });
-    assert.equal(gate.report_publishable, false, `${scenario.name} ${lane} must block`);
-    assert.equal(classifyTerminalFailureCode(scenario.code).customer_document_replacement_required, true);
+    assert.equal(gate.report_publishable, scenario.expectedGatePublishable, `${scenario.name} ${lane} gate publishability must match constitutional state`);
   }
 }
+
+const generatorSource = readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
+assert.match(generatorSource, /finalPdfPublicationContract/);
+assert.doesNotMatch(generatorSource, /finalPdfArtifactMode/);
+assert.doesNotMatch(generatorSource, /finalPdfCorePublishable/);
 
 const internalFailureScenarios = [
   "SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED",

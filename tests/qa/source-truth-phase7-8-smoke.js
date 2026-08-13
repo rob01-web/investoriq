@@ -38,6 +38,9 @@ const sourceTruthPackage = buildCanonicalSourceTruthPackage({
   ],
 });
 assert.equal(sourceTruthPackage.core_publishable, true);
+assert.equal(sourceTruthPackage.core_publication_constitution?.core_publishable, true);
+assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.satisfied, true);
+assert.equal(sourceTruthPackage.core_publication_constitution?.ctss?.band === "60-79" || sourceTruthPackage.core_publication_constitution?.ctss?.band === "80-100", true);
 
 const deliverable = buildConstitutionalDeliveryGateDecision({
   sourceTruthPackage,
@@ -97,6 +100,9 @@ assert.match(generatorSource, /sourceTruthPackage:\s*sourceTruthPackageResult/);
 assert.match(generatorSource, /pipelineCompliancePassed:/);
 assert.match(generatorSource, /htmlSafetyValidationPassed:/);
 assert.match(generatorSource, /rendererCompleted:/);
+assert.match(generatorSource, /finalPdfPublicationContract/);
+assert.doesNotMatch(generatorSource, /finalPdfArtifactMode/);
+assert.doesNotMatch(generatorSource, /finalPdfCorePublishable/);
 assert.match(generatorSource, /SOURCE_TRUTH_PACKAGE_CONSTRUCTION_FAILED/);
 assert.match(generatorSource, /PDF_ARTIFACT_FAILED/);
 assert.match(generatorSource, /STORAGE_PUBLICATION_FAILED/);

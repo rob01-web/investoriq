@@ -479,6 +479,36 @@ function buildPublishabilityState({
 export function buildT12SufficiencyState({
   t12Payload = null,
 } = {}) {
+  const explicitlyInvalidated = t12Payload?.validated === false || t12Payload?.core_t12_validation?.ok === false;
+  if (explicitlyInvalidated) {
+    const effectiveGrossIncome = coerceNumber(t12Payload?.effective_gross_income ?? t12Payload?.gross_income);
+    const totalOperatingExpenses = coerceNumber(t12Payload?.total_operating_expenses ?? t12Payload?.operating_expenses);
+    const netOperatingIncome = coerceNumber(t12Payload?.net_operating_income ?? t12Payload?.noi);
+    const grossPotentialRent = coerceNumber(t12Payload?.gross_potential_rent ?? t12Payload?.gross_scheduled_rent);
+    return buildPublishabilityState({
+      publishabilityBucket: "user_needs_documents",
+      status: "insufficient_inputs",
+      reasonCode: "t12_source_explicitly_invalidated",
+      customerDeliveryImpact: "block",
+      publicOutreachImpact: "block_until_review",
+      requiredInputs: ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
+      presentInputs: [
+        Number.isFinite(effectiveGrossIncome) ? "effective_gross_income" : null,
+        Number.isFinite(totalOperatingExpenses) ? "total_operating_expenses" : null,
+        Number.isFinite(netOperatingIncome) ? "net_operating_income" : null,
+        Number.isFinite(grossPotentialRent) ? "gross_potential_rent" : null,
+      ].filter(Boolean),
+      missingInputs: ["effective_gross_income", "total_operating_expenses", "net_operating_income"],
+      notes: ["source_explicitly_invalidated"],
+      evidence: {
+        effective_gross_income: effectiveGrossIncome,
+        total_operating_expenses: totalOperatingExpenses,
+        net_operating_income: netOperatingIncome,
+        gross_potential_rent: grossPotentialRent,
+        source_explicitly_invalidated: true,
+      },
+    });
+  }
   const effectiveGrossIncome = coerceNumber(t12Payload?.effective_gross_income ?? t12Payload?.gross_income);
   const totalOperatingExpenses = coerceNumber(t12Payload?.total_operating_expenses ?? t12Payload?.operating_expenses);
   const netOperatingIncome = coerceNumber(t12Payload?.net_operating_income ?? t12Payload?.noi);
@@ -565,6 +595,41 @@ export function buildRentRollSufficiencyState({
   computedRentRoll = null,
   rentRollPayload = null,
 } = {}) {
+  const explicitlyInvalidated = rentRollPayload?.validated === false || computedRentRoll?.validated === false;
+  if (explicitlyInvalidated) {
+    const totalUnitsRaw = coerceNumber(
+      computedRentRoll?.total_units ??
+        rentRollPayload?.total_units ??
+        rentRollPayload?.totals?.total_units
+    );
+    const annualInPlaceRent = coerceNumber(
+      computedRentRoll?.total_in_place_annual ??
+        computedRentRoll?.annual_in_place_rent ??
+        computedRentRoll?.total_annual_in_place ??
+        rentRollPayload?.total_in_place_annual ??
+        rentRollPayload?.totals?.in_place_rent_annual ??
+        rentRollPayload?.totals?.current_rent_annual
+    );
+    return buildPublishabilityState({
+      publishabilityBucket: "user_needs_documents",
+      status: "insufficient_inputs",
+      reasonCode: "rent_roll_source_explicitly_invalidated",
+      customerDeliveryImpact: "block",
+      publicOutreachImpact: "block_until_review",
+      requiredInputs: ["total_units", "annual_in_place_rent", "unit_mix_or_derivable_rows"],
+      presentInputs: [
+        Number.isFinite(totalUnitsRaw) && totalUnitsRaw > 0 ? "total_units" : null,
+        Number.isFinite(annualInPlaceRent) && annualInPlaceRent > 0 ? "annual_in_place_rent" : null,
+      ].filter(Boolean),
+      missingInputs: ["total_units", "annual_in_place_rent", "unit_mix_or_derivable_rows"],
+      notes: ["source_explicitly_invalidated"],
+      evidence: {
+        total_units: totalUnitsRaw,
+        annual_in_place_rent: annualInPlaceRent,
+        source_explicitly_invalidated: true,
+      },
+    });
+  }
   const totalUnitsRaw = coerceNumber(
     computedRentRoll?.total_units ??
       rentRollPayload?.total_units ??
@@ -758,9 +823,15 @@ export function buildCoreInputSufficiencyState({
   computedRentRoll = null,
   rentRollPayload = null,
   sourceReconciliationState = null,
+  t12State = null,
+  rentRollState = null,
 } = {}) {
-  const t12State = buildT12SufficiencyState({ t12Payload });
-  const rentRollState = buildRentRollSufficiencyState({ computedRentRoll, rentRollPayload });
+  const resolvedT12State = t12State && typeof t12State === "object"
+    ? t12State
+    : buildT12SufficiencyState({ t12Payload });
+  const resolvedRentRollState = rentRollState && typeof rentRollState === "object"
+    ? rentRollState
+    : buildRentRollSufficiencyState({ computedRentRoll, rentRollPayload });
   const reconciliationStatus = String(sourceReconciliationState?.status || "").toLowerCase();
   const reconciliationCustomerImpact = String(sourceReconciliationState?.customer_delivery_impact || "").toLowerCase();
   const reconciliationPublicImpact = String(sourceReconciliationState?.public_outreach_impact || "").toLowerCase();
@@ -775,67 +846,104 @@ export function buildCoreInputSufficiencyState({
       ? "section_constrained_publishable"
       : "section_constrained_publishable";
 
-  let publishabilityBucket = "core_sufficient_publishable";
-  if (t12State.user_needs_documents || rentRollState.user_needs_documents) {
-    publishabilityBucket = "user_needs_documents";
-  } else if (t12State.admin_review_required || rentRollState.admin_review_required || reconciliationBucket === "admin_review_required") {
+  const t12Sufficient =
+    resolvedT12State.status === "validated" &&
+    !resolvedT12State.user_needs_documents &&
+    !resolvedT12State.admin_review_required &&
+    !resolvedT12State.system_contract_failure;
+  const rentRollSufficient =
+    resolvedRentRollState.status === "validated" &&
+    !resolvedRentRollState.user_needs_documents &&
+    !resolvedRentRollState.admin_review_required &&
+    !resolvedRentRollState.system_contract_failure;
+  const hasSurvivingCoreLane = t12Sufficient || rentRollSufficient;
+  const coreSourceMode =
+    t12Sufficient && rentRollSufficient
+      ? "dual_source_core"
+      : t12Sufficient
+        ? "t12_minimum_core"
+        : rentRollSufficient
+          ? "rent_roll_minimum_core"
+          : "insufficient_core";
+
+  let publishabilityBucket = "user_needs_documents";
+  if (coreSourceMode === "dual_source_core") {
+    publishabilityBucket = reconciliationBucket === "disclose_only_publishable"
+      ? "disclose_only_publishable"
+      : reconciliationBucket === "section_constrained_publishable"
+        ? "section_constrained_publishable"
+        : "core_sufficient_publishable";
+  } else if (coreSourceMode === "t12_minimum_core" || coreSourceMode === "rent_roll_minimum_core") {
+    publishabilityBucket = reconciliationBucket === "admin_review_required"
+      ? "admin_review_required"
+      : reconciliationBucket === "disclose_only_publishable"
+        ? "disclose_only_publishable"
+        : "section_constrained_publishable";
+  } else if (!hasSurvivingCoreLane && (resolvedT12State.admin_review_required || resolvedRentRollState.admin_review_required || reconciliationBucket === "admin_review_required")) {
     publishabilityBucket = "admin_review_required";
-  } else if (t12State.system_contract_failure || rentRollState.system_contract_failure) {
+  } else if (!hasSurvivingCoreLane && (resolvedT12State.system_contract_failure || resolvedRentRollState.system_contract_failure)) {
     publishabilityBucket = "system_contract_failure";
-  } else if (reconciliationBucket === "disclose_only_publishable") {
-    publishabilityBucket = "disclose_only_publishable";
-  } else if (t12State.section_constrained_publishable || rentRollState.section_constrained_publishable || reconciliationBucket === "section_constrained_publishable") {
-    publishabilityBucket = "section_constrained_publishable";
   }
 
   return buildPublishabilityState({
     publishabilityBucket,
     status:
-      publishabilityBucket === "core_sufficient_publishable" ? "validated" :
-      publishabilityBucket === "section_constrained_publishable" ? "validated" :
-      publishabilityBucket === "disclose_only_publishable" ? "validated" :
-      publishabilityBucket === "public_or_outreach_only_blocker" ? "validated" :
-      publishabilityBucket === "user_needs_documents" ? "insufficient_inputs" :
-      publishabilityBucket === "admin_review_required" ? "contradiction" :
-      "system_failure",
-    reasonCode:
-      publishabilityBucket === "user_needs_documents"
-        ? t12State.user_needs_documents ? t12State.reason_code : rentRollState.reason_code
+      coreSourceMode === "insufficient_core"
+        ? "insufficient_inputs"
         : publishabilityBucket === "admin_review_required"
-        ? (t12State.admin_review_required ? t12State.reason_code : rentRollState.reason_code) || "source_reconciliation_required"
+          ? "contradiction"
+          : "validated",
+    reasonCode:
+      coreSourceMode === "insufficient_core"
+        ? resolvedT12State.user_needs_documents ? resolvedT12State.reason_code : resolvedRentRollState.reason_code
+        : publishabilityBucket === "admin_review_required"
+        ? (resolvedT12State.admin_review_required ? resolvedT12State.reason_code : resolvedRentRollState.reason_code) || "source_reconciliation_required"
         : reconciliationBucket === "disclose_only_publishable"
         ? sourceReconciliationState?.source_reconciliation_disclosure ? "source_reconciliation_disclosed" : null
         : null,
     customerDeliveryImpact:
-      publishabilityBucket === "disclose_only_publishable"
+      coreSourceMode === "insufficient_core"
+        ? "block"
+        : publishabilityBucket === "disclose_only_publishable"
         ? "disclose_only"
-        : publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure" || publishabilityBucket === "user_needs_documents"
+        : publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure"
         ? "block"
         : "none",
     publicOutreachImpact:
-      publishabilityBucket === "disclose_only_publishable"
+      coreSourceMode === "insufficient_core"
         ? "block_until_review"
-        : publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure" || publishabilityBucket === "user_needs_documents"
+        : publishabilityBucket === "disclose_only_publishable"
+        ? "block_until_review"
+        : publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure"
         ? "block_until_review"
         : t12State.public_outreach_impact === "block_until_review" || rentRollState.public_outreach_impact === "block_until_review" || reconciliationPublicImpact === "block_until_review"
         ? "block_until_review"
         : "none",
-    requiredInputs: ["t12_parsed", "rent_roll_parsed"],
-    presentInputs: [t12State, rentRollState]
+    requiredInputs:
+      coreSourceMode === "dual_source_core"
+        ? ["t12_parsed", "rent_roll_parsed"]
+        : coreSourceMode === "t12_minimum_core"
+          ? ["t12_parsed"]
+          : coreSourceMode === "rent_roll_minimum_core"
+            ? ["rent_roll_parsed"]
+            : ["t12_parsed", "rent_roll_parsed"],
+    presentInputs: [resolvedT12State, resolvedRentRollState]
       .flatMap((state) => Array.isArray(state?.present_inputs) ? state.present_inputs : [])
       .filter(Boolean),
-    missingInputs: [t12State, rentRollState]
+    missingInputs: [resolvedT12State, resolvedRentRollState]
       .flatMap((state) => Array.isArray(state?.missing_inputs) ? state.missing_inputs : [])
       .filter(Boolean),
     notes: [
-      t12State.reason_code,
-      rentRollState.reason_code,
+      resolvedT12State.reason_code,
+      resolvedRentRollState.reason_code,
+      coreSourceMode,
       sourceReconciliationState?.source_reconciliation_disclosure ? "source_reconciliation_disclosed" : null,
     ].filter(Boolean),
     evidence: {
-      t12_state: t12State,
-      rent_roll_state: rentRollState,
+      t12_state: resolvedT12State,
+      rent_roll_state: resolvedRentRollState,
       source_reconciliation_state: sourceReconciliationState || null,
+      core_source_mode: coreSourceMode,
     },
   });
 }

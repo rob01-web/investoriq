@@ -248,6 +248,9 @@ export async function runBoundedPdfCertificationRecovery({
     ? sectionDispositionReceipts
     : {};
   let pdfBuffer = initialPdfBuffer;
+  let publicationState = corePublishable === true ? "published" : "failed";
+  let publicationRetryRequired = false;
+  let publicationRetryReason = null;
   let publicationQualityBoss = null;
   let institutionalPdfRecovery = null;
   let semanticRecomposition = null;
@@ -263,7 +266,16 @@ export async function runBoundedPdfCertificationRecovery({
     artifactReplacementRequired,
     emergencyCoreFallbackUsed,
     coreSafeFallbackAttempted,
+    publicationState,
+    publicationRetryRequired,
+    publicationRetryReason,
   });
+
+  const markRecoverablePublicationState = (reason = "publication_retry_required") => {
+    publicationState = "recovery_required";
+    publicationRetryRequired = true;
+    publicationRetryReason = String(reason || "").trim() || "publication_retry_required";
+  };
 
   const certify = async (buffer, options = {}) => {
     try {
@@ -362,6 +374,7 @@ export async function runBoundedPdfCertificationRecovery({
         cause || emergencyHtmlResult.error || coreSafeHtmlBuildError,
         reason
       );
+      markRecoverablePublicationState(reason);
       return withRecoveryState({
         pdfBuffer,
         publicationQualityBoss: priorCertification,
@@ -369,7 +382,8 @@ export async function runBoundedPdfCertificationRecovery({
         semanticRecomposition,
         recoveryAttempted,
         semanticRecompositionAttempted,
-        terminalError: diagnostic,
+        terminalError: null,
+        publicationRecoveryError: diagnostic,
       });
     }
 
@@ -378,6 +392,7 @@ export async function runBoundedPdfCertificationRecovery({
       emergencyPdfBuffer = await render(emergencyHtml, "emergency_core");
     } catch (error) {
       const diagnostic = buildRecoveryDiagnostic(priorCertification, error, reason);
+      markRecoverablePublicationState(reason);
       return withRecoveryState({
         pdfBuffer,
         publicationQualityBoss: priorCertification,
@@ -385,7 +400,8 @@ export async function runBoundedPdfCertificationRecovery({
         semanticRecomposition,
         recoveryAttempted,
         semanticRecompositionAttempted,
-        terminalError: diagnostic,
+        terminalError: null,
+        publicationRecoveryError: diagnostic,
       });
     }
 
@@ -1122,6 +1138,30 @@ export async function ensureReportDownloadArtifact({
     throw err;
   }
   const normalizedStoragePath = typeof storagePath === "string" ? storagePath.trim() : "";
+  const resolvedCorePublishable =
+    corePublishable === true || deterministicContractQaSeal?.corePublishable === true;
+  const buildRecoverableArtifactResult = ({
+    publicationRetryReason = "publication_retry_required",
+    publicationQualityBoss = null,
+    institutionalPdfRecovery = null,
+    semanticRecomposition = null,
+    artifactReplacementRequired = false,
+    publicationRecoveryError = null,
+  } = {}) => ({
+    reportId: reportId || null,
+    storagePath: normalizedStoragePath,
+    artifactSource: "publication_retry_required",
+    verifiedDownloadArtifact: false,
+    createdDownloadArtifact: false,
+    publicationState: "recovery_required",
+    publicationRetryRequired: true,
+    publicationRetryReason: String(publicationRetryReason || "").trim() || "publication_retry_required",
+    publicationQualityBoss,
+    institutionalPdfRecovery,
+    semanticRecomposition,
+    artifactReplacementRequired: Boolean(artifactReplacementRequired),
+    publicationRecoveryError: publicationRecoveryError || null,
+  });
   if (!normalizedStoragePath) {
     const err = new Error("Missing valid report storage path before download artifact");
     err.code = "REPORT_GENERATION_FAILED";
@@ -1131,6 +1171,12 @@ export async function ensureReportDownloadArtifact({
       reportType: String(reportType || "").trim() || null,
       reportSeed: String(reportSeed || "").trim() || null,
     };
+    if (resolvedCorePublishable === true) {
+      return buildRecoverableArtifactResult({
+        publicationRetryReason: "missing_valid_storage_path",
+        publicationRecoveryError: err,
+      });
+    }
     throw err;
   }
 
@@ -1143,6 +1189,12 @@ export async function ensureReportDownloadArtifact({
       storagePath: normalizedStoragePath,
       bucketName,
     };
+    if (resolvedCorePublishable === true) {
+      return buildRecoverableArtifactResult({
+        publicationRetryReason: "missing_report_storage_client",
+        publicationRecoveryError: err,
+      });
+    }
     throw err;
   }
 
@@ -1167,8 +1219,6 @@ export async function ensureReportDownloadArtifact({
         deterministicContractQaSeal?.section_disposition_receipts ||
         deterministicContractQaSeal?.qualityManifest?.sectionDispositionReceipts ||
         {};
-  const resolvedCorePublishable =
-    corePublishable === true || deterministicContractQaSeal?.corePublishable === true;
   const certifyPdf = async (
     pdfBytes,
     {
@@ -1221,6 +1271,16 @@ export async function ensureReportDownloadArtifact({
     });
     if (existingRecovery.terminalError) {
       await cleanupCreatedReportRecord("existing PDF publication quality failure");
+      if (resolvedCorePublishable === true) {
+        return buildRecoverableArtifactResult({
+          publicationRetryReason: "existing_pdf_recovery_failed",
+          publicationQualityBoss: existingRecovery.publicationQualityBoss || null,
+          institutionalPdfRecovery: existingRecovery.institutionalPdfRecovery || null,
+          semanticRecomposition: existingRecovery.semanticRecomposition || null,
+          artifactReplacementRequired: existingRecovery.artifactReplacementRequired === true,
+          publicationRecoveryError: existingRecovery.terminalError,
+        });
+      }
       throw existingRecovery.terminalError;
     }
     if (existingRecovery.artifactReplacementRequired) {
@@ -1233,6 +1293,16 @@ export async function ensureReportDownloadArtifact({
         await cleanupCreatedReportRecord("existing PDF recovery upload failure");
         const error = new Error(`Failed to upload recovered report artifact: ${replacementUploadError.message}`);
         error.code = "PDF_ARTIFACT_FAILED";
+        if (resolvedCorePublishable === true) {
+          return buildRecoverableArtifactResult({
+            publicationRetryReason: "existing_pdf_recovery_upload_failed",
+            publicationQualityBoss: existingRecovery.publicationQualityBoss || null,
+            institutionalPdfRecovery: existingRecovery.institutionalPdfRecovery || null,
+            semanticRecomposition: existingRecovery.semanticRecomposition || null,
+            artifactReplacementRequired: true,
+            publicationRecoveryError: error,
+          });
+        }
         throw error;
       }
     }
@@ -1242,6 +1312,9 @@ export async function ensureReportDownloadArtifact({
       artifactSource: existingRecovery.artifactReplacementRequired ? "recovered_existing_download" : "existing_download",
       verifiedDownloadArtifact: true,
       createdDownloadArtifact: false,
+      publicationState: "published",
+      publicationRetryRequired: false,
+      publicationRetryReason: null,
       publicationQualityBoss: existingRecovery.publicationQualityBoss,
       institutionalPdfRecovery: existingRecovery.institutionalPdfRecovery,
       semanticRecomposition: existingRecovery.semanticRecomposition,
@@ -1257,6 +1330,12 @@ export async function ensureReportDownloadArtifact({
       storagePath: normalizedStoragePath,
       reportType: String(reportType || "").trim() || null,
     };
+    if (resolvedCorePublishable === true) {
+      return buildRecoverableArtifactResult({
+        publicationRetryReason: "missing_final_html",
+        publicationRecoveryError: err,
+      });
+    }
     throw err;
   }
 
@@ -1291,7 +1370,12 @@ export async function ensureReportDownloadArtifact({
   } catch (error) {
     if (resolvedCorePublishable !== true) throw error;
     const emergencyHtml = await resolveInitialEmergencyCoreHtml();
-    if (!emergencyHtml) throw error;
+    if (!emergencyHtml) {
+      return buildRecoverableArtifactResult({
+        publicationRetryReason: "initial_emergency_core_html_unavailable",
+        publicationRecoveryError: error,
+      });
+    }
     resolvedInitialEmergencyCoreHtml = emergencyHtml;
     try {
       initialPdfBuffer = await renderPdfBuffer({
@@ -1309,7 +1393,10 @@ export async function ensureReportDownloadArtifact({
           emergencyError?.context?.provider_diagnostics,
         ),
       };
-      throw emergencyError;
+      return buildRecoverableArtifactResult({
+        publicationRetryReason: "initial_emergency_core_render_failed",
+        publicationRecoveryError: emergencyError,
+      });
     }
     initialArtifactIsEmergency = true;
     initialRenderError = error;
@@ -1360,6 +1447,16 @@ export async function ensureReportDownloadArtifact({
       bucketName,
       createdReportRecord: Boolean(createdReportRecord),
     };
+    if (resolvedCorePublishable === true) {
+      return buildRecoverableArtifactResult({
+        publicationRetryReason: "storage_upload_failed",
+        publicationQualityBoss,
+        institutionalPdfRecovery,
+        semanticRecomposition,
+        artifactReplacementRequired: boundedRecovery.artifactReplacementRequired === true,
+        publicationRecoveryError: err,
+      });
+    }
     throw err;
   }
 
@@ -1380,6 +1477,16 @@ export async function ensureReportDownloadArtifact({
       bucketName,
       createdReportRecord: Boolean(createdReportRecord),
     };
+    if (resolvedCorePublishable === true) {
+      return buildRecoverableArtifactResult({
+        publicationRetryReason: "storage_verification_failed",
+        publicationQualityBoss,
+        institutionalPdfRecovery,
+        semanticRecomposition,
+        artifactReplacementRequired: boundedRecovery.artifactReplacementRequired === true,
+        publicationRecoveryError: err,
+      });
+    }
     throw err;
   }
 
@@ -1389,6 +1496,9 @@ export async function ensureReportDownloadArtifact({
     artifactSource: "created_download",
     verifiedDownloadArtifact: true,
     createdDownloadArtifact: true,
+    publicationState: "published",
+    publicationRetryRequired: false,
+    publicationRetryReason: null,
     publicationQualityBoss,
     institutionalPdfRecovery,
     semanticRecomposition,
