@@ -21,6 +21,9 @@ import {
 import {
   enforcePremiumAcquisitionUnderwritingV1WorkerPublication,
 } from './_lib/premium-acquisition-underwriting-v1-external-certification.js';
+import {
+  createConstitutionalWorkerLifecycle,
+} from './_lib/worker-constitutional-lifecycle.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 const normalizeAuditText = (value) => String(value || '').toLowerCase();
@@ -98,6 +101,152 @@ export const analyzeCoreParserRejectionTextSignals = ({ docType, text, parseErro
     text_signal_snapshot: signals,
   };
 };
+
+export const resolveStructuredFinancialSourceGateDisposition = ({
+  hasRentRollParsed = false,
+  hasT12Parsed = false,
+} = {}) => {
+  const hasAnyParsed = Boolean(hasRentRollParsed || hasT12Parsed);
+  const hasBothParsed = Boolean(hasRentRollParsed && hasT12Parsed);
+  const sourceMode = hasBothParsed
+    ? 'dual_source_core'
+    : hasT12Parsed
+      ? 't12_minimum_core'
+      : hasRentRollParsed
+        ? 'rent_roll_minimum_core'
+        : 'insufficient_core';
+
+  return {
+    shouldContinue: hasAnyParsed,
+    hasAnyParsed,
+    hasBothParsed,
+    sourceMode,
+    reasonCode: hasAnyParsed ? sourceMode : 'both_insufficient_structured_sources',
+  };
+};
+
+export const resolveStructuredFinancialWorkerGateDecision = ({
+  hasRentRollParsed = false,
+  hasT12Parsed = false,
+  sourceTruthPackage = null,
+  stage = null,
+} = {}) => {
+  const gateDisposition = resolveStructuredFinancialSourceGateDisposition({
+    hasRentRollParsed,
+    hasT12Parsed,
+  });
+
+  if (gateDisposition.shouldContinue) {
+    return {
+      ...gateDisposition,
+      action: 'continue',
+      stage: stage || null,
+    };
+  }
+
+  const canonicalSourceTruth = sourceTruthPackage?.source === 'canonical_source_truth_package';
+  const sourceTruthPublishable =
+    sourceTruthPackage?.core_publication_constitution?.core_publishable === true ||
+    sourceTruthPackage?.core_publishable === true;
+
+  if (canonicalSourceTruth && sourceTruthPublishable) {
+    return {
+      ...gateDisposition,
+      action: 'continue',
+      stage: stage || null,
+      sourceMode:
+        String(sourceTruthPackage?.core_publication_constitution?.minimum_truth_set?.source_mode || '')
+          .trim()
+          .toLowerCase() || gateDisposition.sourceMode,
+      reasonCode: 'truthful_minimum_core_report_constructible',
+    };
+  }
+
+  if (canonicalSourceTruth) {
+    const missing = [];
+    if (!hasRentRollParsed) missing.push('rent_roll');
+    if (!hasT12Parsed) missing.push('t12');
+    return {
+      ...gateDisposition,
+      action: 'terminal',
+      stage: stage || null,
+      sourceMode:
+        String(sourceTruthPackage?.core_publication_constitution?.minimum_truth_set?.source_mode || '')
+          .trim()
+          .toLowerCase() || gateDisposition.sourceMode,
+      missingCoreSources: missing,
+      reasonCode: missing.length === 1
+        ? missing[0] === 'rent_roll'
+          ? 'CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE'
+          : 'CORE_T12_CATASTROPHICALLY_UNUSABLE'
+        : 'CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY',
+    };
+  }
+
+  return {
+    ...gateDisposition,
+    action: 'lookup_recovery_required',
+    stage: stage || null,
+  };
+};
+
+export async function handlePublicationRetryRequiredHandoff({
+  job = {},
+  reportData = null,
+  nowIso = new Date().toISOString(),
+  transitionWorkerJob,
+  writeWorkerEventArtifact,
+} = {}) {
+  if (typeof transitionWorkerJob !== 'function' || typeof writeWorkerEventArtifact !== 'function') {
+    throw new TypeError('Publication retry handoff requires transition and event writers');
+  }
+
+  const retryReason = String(reportData?.publication_retry_reason || 'publication_retry_required').trim() || 'publication_retry_required';
+  let transitionedRow = null;
+  try {
+    transitionedRow = await transitionWorkerJob(job, 'rendering', 'queued', {
+      reason: retryReason,
+      publication_state: 'recovery_required',
+      publication_retry_reason: retryReason,
+      report_id: reportData?.reportId || null,
+      storage_path: reportData?.storagePath || null,
+    });
+  } catch (transitionErr) {
+    return {
+      success: false,
+      retryReason,
+      transitionError: transitionErr,
+      transitionedRow: null,
+      retryEventError: null,
+    };
+  }
+
+  if (!transitionedRow?.id || String(transitionedRow?.status || '').trim().toLowerCase() !== 'queued') {
+    return {
+      success: false,
+      retryReason,
+      transitionError: new Error('Recoverable publication retry handoff did not resolve to queued status'),
+      transitionedRow,
+      retryEventError: null,
+    };
+  }
+
+  const retryEventError = await writeWorkerEventArtifact(job.id, job.user_id, 'report_publication_retry_required', {
+    publication_state: 'recovery_required',
+    publication_retry_reason: retryReason,
+    report_id: reportData?.reportId || null,
+    storage_path: reportData?.storagePath || null,
+    timestamp: nowIso,
+  });
+
+  return {
+    success: true,
+    retryReason,
+    transitionError: null,
+    transitionedRow,
+    retryEventError,
+  };
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -825,7 +974,7 @@ export default async function handler(req, res) {
         `Processing failed during ${stage}. ` +
         'Please log in to your InvestorIQ dashboard to review the job status.';
       const failureErrorCode = stage === 'extracting' ? 'PARSER_ERROR' : 'WORKER_ERROR';
-      await applyTerminalFailureOutcome(job, {
+      const terminalFailureResult = await applyTerminalFailureOutcome(job, {
         errorCode: failureErrorCode,
         errorMessage: safeMessage,
         restore: {
@@ -836,24 +985,7 @@ export default async function handler(req, res) {
           logContext: `job_failed_${stage}`,
         },
       });
-
-      await supabaseAdmin.from('analysis_artifacts').insert([
-        {
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'worker_event',
-          bucket: 'internal',
-          object_path: `analysis_jobs/${job.id}/worker_event/job_failed/${safeTimestamp(nowIso)}.json`,
-          payload: {
-            event: 'job_failed',
-            stage,
-            message: safeMessage,
-            stack: String(err?.stack || err?.message || err || ''),
-            timestamp: nowIso,
-          },
-        },
-      ]);
-
+      return terminalFailureResult;
     };
 
     const hasCreditConsumed = async (jobId) => {
@@ -1145,118 +1277,19 @@ export default async function handler(req, res) {
       });
     }
 
-    const applyTerminalFailureOutcome = async (job, options = {}) => {
-      const {
-        fromStatus = null,
-        expectedCurrentStatus = null,
-        errorCode = null,
-        errorMessage = null,
-        failureReason = null,
-        transitionMeta = {},
-        restore = null,
-      } = options;
-
-      const workerAttemptId = job.worker_attempt_id || null;
-      const guardedCurrentStatus = expectedCurrentStatus || fromStatus || job.status || null;
-      await assertCurrentWorkerInvocationOwnership(job, guardedCurrentStatus, {
-        reason: 'terminal_failure_ownership_check',
-      });
-      if (!workerAttemptId || !guardedCurrentStatus) {
-        await writeStaleWorkerAttemptEvent(job, workerAttemptId, guardedCurrentStatus || 'unknown', {
-          reason: 'missing_worker_attempt_id',
-        });
-        throw makeStaleWorkerAttemptError('missing_worker_attempt_id');
-      }
-
-      const { data: failedRows, error: failErr } = await supabaseAdmin.rpc('fail_worker_job', {
-        p_job_id: job.id,
-        p_worker_attempt_id: workerAttemptId,
-        p_expected_current_status: guardedCurrentStatus,
-        p_error_code: errorCode || null,
-        p_error_message: errorMessage || null,
-        p_failure_reason: failureReason || null,
-        p_claimed_by: workerInvocationId,
-      });
-
-      if (failErr) {
-        throw new Error(`Failed to mark job failed: ${failErr.message}`);
-      }
-
-      const failedJob = Array.isArray(failedRows) ? failedRows[0] : failedRows;
-      if (!failedJob?.id) {
-        await writeStaleWorkerAttemptEvent(job, workerAttemptId, guardedCurrentStatus, {
-          reason: 'fenced_failure_rejected',
-          error_code: errorCode || null,
-        });
-        throw makeStaleWorkerAttemptError('fenced_failure_rejected');
-      }
-
-      const terminalStatus = String(failedJob.status || 'failed');
-      const transitionStatus = terminalStatus === 'dead_letter' ? 'dead_letter' : 'failed';
-
-      if (fromStatus) {
-        const transitionErr = await writeStatusTransitionArtifact(
-          job.id,
-          fromStatus,
-          transitionStatus,
-          { user_id: job.user_id, ...(transitionMeta || {}) }
-        );
-        if (transitionErr) {
-          throw new Error(`Failed to write ${fromStatus}->${transitionStatus} status transition artifact: ${transitionErr.message}`);
-        }
-      }
-
-      const failedEventType = transitionStatus === 'dead_letter'
-        ? 'worker_dead_lettered'
-        : 'worker_attempt_failed';
-      const failedEventErr = await writeWorkerAttemptEvent({
-        job: failedJob,
-        eventType: failedEventType,
-        attemptId: workerAttemptId,
-        fromStatus: guardedCurrentStatus,
-        toStatus: transitionStatus,
-        meta: {
-          error_code: errorCode || null,
-          error_message: errorMessage || null,
-          failure_reason: failureReason || null,
-          ...transitionMeta,
-        },
-      });
-      if (failedEventErr) {
-        throw new Error(`Failed to write ${failedEventType} event: ${failedEventErr.message}`);
-      }
-
-      const creditRestoration = {
-        state: restore?.enabled ? 'restoration_attempted' : 'not_required',
-        restored: false,
-        skipped: false,
-        error: null,
-      };
-      if (restore?.enabled) {
-        try {
-          const restoreResult = await restoreEntitlementForFailedJob(
-            failedJob,
-            restore.reason || 'terminal_failure',
-            restore.errorCode || errorCode || 'WORKER_ERROR',
-            workerAttemptId
-          );
-          creditRestoration.state = restoreResult?.skipped ? 'already_restored' : 'restored';
-          creditRestoration.restored = restoreResult?.skipped !== true;
-          creditRestoration.skipped = restoreResult?.skipped === true;
-        } catch (restoreErr) {
-          creditRestoration.state = 'restoration_failed';
-          creditRestoration.error = restoreErr?.message || String(restoreErr);
-          if (restore.strict) {
-            throw new Error(`Failed to restore entitlement: ${restoreErr.message}`);
-          }
-          console.error(
-            `[worker] Failed to restore entitlement for ${restore.logContext || 'terminal-failure'} job ${job.id}:`,
-            restoreErr?.message
-          );
-        }
-      }
-      return { creditRestoration };
-    };
+    const { applyTerminalFailureOutcome, recoverExpiredPublishableJob } = createConstitutionalWorkerLifecycle({
+      supabaseAdmin,
+      workerInvocationId,
+      nowIso,
+      loadLatestArtifactPayload,
+      writeWorkerEventArtifact,
+      writeStatusTransitionArtifact,
+      restoreEntitlementForFailedJob,
+      assertCurrentWorkerInvocationOwnership,
+      writeStaleWorkerAttemptEvent,
+      makeStaleWorkerAttemptError,
+      transitionWorkerJob,
+    });
 
     const pdfBossAllowsCustomerDelivery = (boss = null) => {
       const blockingCodes = Array.isArray(boss?.blocking_issue_codes) ? boss.blocking_issue_codes : [];
@@ -1776,6 +1809,56 @@ export default async function handler(req, res) {
           },
         });
 
+        const retryReason = 'worker_timeout';
+        const retryResult = await recoverExpiredPublishableJob({
+          job: controlJob,
+          currentStatus,
+          retryReason,
+          claimedBy: 'admin-run-worker',
+          recoveryContext: 'controlled_fail_exact_expired_worker_job',
+        });
+        if (retryResult?.success === true) {
+          const auditErr = await writeAdminControlAudit(controlJob, controlledAction, 'allowed', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            to_status: 'queued',
+            note: 'Constitutional timeout recovery requeued publishable job.',
+          });
+          if (auditErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${auditErr.message}` });
+          }
+          return res.status(200).json({
+            ok: true,
+            action: controlledAction,
+            job_id: controlJob.id,
+            previous_status: currentStatus,
+            final_status: 'queued',
+            worker_attempt_count: attemptCount,
+            worker_attempt_id: attemptId,
+            entitlement_restored: false,
+            entitlement_already_restored: false,
+            credit_balance_changed: false,
+            message: 'Constitutional timeout recovery requeued publishable job.',
+          });
+        }
+
+        if (retryResult?.recoveryRequired === true) {
+          const blockedErr = await writeAdminControlAudit(controlJob, controlledAction, 'blocked', {
+            previous_status: controlJob.status,
+            previous_error_code: controlJob.error_code || null,
+            note: 'Constitutional timeout recovery requeue failed.',
+          });
+          if (blockedErr) {
+            return res.status(500).json({ ok: false, error: `Failed to write audit event: ${blockedErr.message}` });
+          }
+          return res.status(409).json({
+            ok: false,
+            error: 'Constitutional timeout recovery requeue failed.',
+            job_id: controlJob.id,
+            job_status: currentStatus,
+          });
+        }
+
         const { data: timeoutRows, error: timeoutErr } = await supabaseAdmin.rpc('fail_expired_worker_job', {
           p_job_id: controlJob.id,
           p_worker_attempt_id: attemptId,
@@ -1942,6 +2025,7 @@ export default async function handler(req, res) {
       }
       return !!job.worker_lease_expires_at;
     });
+    const terminalTimedOutJobIds = new Set();
 
     if (timedOutJobs.length > 0) {
       for (const job of timedOutJobs) {
@@ -1957,6 +2041,17 @@ export default async function handler(req, res) {
               threshold_minutes: 30,
             },
           });
+
+          const retryResult = await recoverExpiredPublishableJob({
+            job,
+            currentStatus: job.status,
+            retryReason: 'worker_timeout',
+            claimedBy: 'admin-run-worker',
+            recoveryContext: 'timeout_sweep',
+          });
+          if (retryResult?.success === true || retryResult?.recoveryRequired === true) {
+            continue;
+          }
 
           const { data: timeoutRows, error: timeoutErr } = await supabaseAdmin.rpc('fail_expired_worker_job', {
             p_job_id: job.id,
@@ -2011,6 +2106,7 @@ export default async function handler(req, res) {
             'TIMEOUT',
             timeoutRow.worker_attempt_id || job.worker_attempt_id || null
           );
+          terminalTimedOutJobIds.add(job.id);
         } catch (err) {
           return res.status(500).json({
             error: 'Failed to apply timeout failure outcome',
@@ -2019,20 +2115,23 @@ export default async function handler(req, res) {
         }
       }
 
-      const timeoutArtifacts = timedOutJobs.map((job) => ({
-        job_id: job.id,
-        user_id: job.user_id,
-        type: 'worker_event',
-        bucket: 'internal',
-        object_path: `analysis_jobs/${job.id}/worker_event/timeout/${safeTimestamp(nowIso)}.json`,
-        payload: {
-          event: 'timeout',
-          status_was: job.status,
-          threshold_minutes: 30,
-          worker_attempt_id: job.worker_attempt_id || null,
-          timestamp: nowIso,
-        },
-      }));
+      const timeoutArtifacts = Array.from(terminalTimedOutJobIds).map((jobId) => {
+        const job = timedOutJobs.find((item) => item.id === jobId);
+        return {
+          job_id: job.id,
+          user_id: job.user_id,
+          type: 'worker_event',
+          bucket: 'internal',
+          object_path: `analysis_jobs/${job.id}/worker_event/timeout/${safeTimestamp(nowIso)}.json`,
+          payload: {
+            event: 'timeout',
+            status_was: job.status,
+            threshold_minutes: 30,
+            worker_attempt_id: job.worker_attempt_id || null,
+            timestamp: nowIso,
+          },
+        };
+      });
 
       const { error: timeoutArtifactErr } = await supabaseAdmin
         .from('analysis_artifacts')
@@ -2130,7 +2229,7 @@ export default async function handler(req, res) {
               .maybeSingle();
 
             if (purchaseErr || !purchaseRow?.id) {
-              await applyTerminalFailureOutcome(claimedJob, {
+              const terminalFailureResult = await applyTerminalFailureOutcome(claimedJob, {
                 fromStatus: 'extracting',
                 errorCode: 'PURCHASE_NOT_CONSUMED',
                 errorMessage: 'PURCHASE_NOT_CONSUMED',
@@ -2142,6 +2241,9 @@ export default async function handler(req, res) {
                   logContext: 'purchase_not_consumed queued',
                 },
               });
+              if (terminalFailureResult?.terminalApplied === false) {
+                continue;
+              }
 
               await supabaseAdmin.from('analysis_job_events').insert([
                 {
@@ -2190,7 +2292,7 @@ export default async function handler(req, res) {
             }
           } catch (err) {
             const failureOutcome = await recordJobFailure(claimedJob || job, 'queued', err);
-            if (!failureOutcome?.stale && !failedJobIds.includes((claimedJob || job).id)) {
+            if (failureOutcome?.terminalApplied === true && !failureOutcome?.stale && !failedJobIds.includes((claimedJob || job).id)) {
               failedJobIds.push((claimedJob || job).id);
             }
             continue;
@@ -2245,7 +2347,7 @@ export default async function handler(req, res) {
             .maybeSingle();
 
           if (purchaseErr || !purchaseRow?.id) {
-            await applyTerminalFailureOutcome(job, {
+            const terminalFailureResult = await applyTerminalFailureOutcome(job, {
               fromStatus: 'extracting',
               errorCode: 'PURCHASE_NOT_CONSUMED',
               errorMessage: 'PURCHASE_NOT_CONSUMED',
@@ -2257,6 +2359,9 @@ export default async function handler(req, res) {
                 logContext: 'purchase_not_consumed extracting',
               },
             });
+            if (terminalFailureResult?.terminalApplied === false) {
+              continue;
+            }
 
             await supabaseAdmin.from('analysis_job_events').insert([
               {
@@ -2458,7 +2563,13 @@ export default async function handler(req, res) {
             (file) => file.doc_type === 't12'
           );
 
-          if (!hasRentRollParsed || !hasT12Parsed) {
+          const structuredSourceGateDecision = resolveStructuredFinancialWorkerGateDecision({
+            hasRentRollParsed,
+            hasT12Parsed,
+            stage: 'extracting',
+          });
+
+          if (!structuredSourceGateDecision.shouldContinue) {
             const hasStructuredFinancialDoc = (jobFiles || []).some((file) => {
               const docType = String(file.doc_type || '').toLowerCase();
               return docType === 'rent_roll' || docType === 't12';
@@ -2521,28 +2632,6 @@ export default async function handler(req, res) {
                   }
                 }
 
-                const needsDocsUpdate = {
-                  failure_reason: `Missing structured financials: ${missingStructured.join(', ')}`,
-                };
-                await applyTerminalFailureOutcome(job, {
-                  fromStatus: 'extracting',
-                  expectedCurrentStatus: 'extracting',
-                  errorCode: 'MISSING_STRUCTURED_FINANCIALS',
-                  errorMessage:
-                    'Generation halted due to document integrity validation. Required structured Rent Roll and T12/Operating Statement inputs could not be validated.',
-                  failureReason: needsDocsUpdate.failure_reason,
-                  restore: {
-                    enabled: true,
-                    reason: 'missing_structured_financials',
-                    errorCode: 'MISSING_STRUCTURED_FINANCIALS',
-                    strict: true,
-                  },
-                });
-
-                if (!blockedJobIds.includes(job.id)) {
-                  blockedJobIds.push(job.id);
-                }
-
                 const { data: existingEvent } = await supabaseAdmin
                   .from('analysis_artifacts')
                   .select('id')
@@ -2570,20 +2659,7 @@ export default async function handler(req, res) {
                   if (workerEventErr) {
                     throw new Error(`Failed to write worker event artifact: ${workerEventErr.message}`);
                   }
-
-                  const { data: existingEmail } = await supabaseAdmin
-                    .from('analysis_artifacts')
-                    .select('id')
-                    .eq('job_id', job.id)
-                    .eq('type', 'email_sent')
-                    .eq('bucket', 'system')
-                    .eq('payload->>email_type', 'missing_structured_financials')
-                    .limit(1)
-                    .maybeSingle();
-
                 }
-
-                continue;
               }
 
               const anyPending = relevantFiles.some((file) => {
@@ -2737,7 +2813,7 @@ export default async function handler(req, res) {
               failure_reason:
                 'Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.',
             };
-            await applyTerminalFailureOutcome(job, {
+            const terminalFailureResult = await applyTerminalFailureOutcome(job, {
               fromStatus: 'extracting',
               expectedCurrentStatus: 'extracting',
               errorCode: 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS',
@@ -2751,6 +2827,9 @@ export default async function handler(req, res) {
                 strict: true,
               },
             });
+            if (terminalFailureResult?.terminalApplied === false) {
+              continue;
+            }
 
             if (!blockedJobIds.includes(job.id)) {
               blockedJobIds.push(job.id);
@@ -2948,7 +3027,7 @@ export default async function handler(req, res) {
           continue;
           } catch (err) {
             const failureOutcome = await recordJobFailure(job, 'extracting', err);
-            if (!failureOutcome?.stale && !failedJobIds.includes(job.id)) {
+            if (failureOutcome?.terminalApplied === true && !failureOutcome?.stale && !failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
             continue;
@@ -2999,7 +3078,7 @@ export default async function handler(req, res) {
           }
           } catch (err) {
             const failureOutcome = await recordJobFailure(job, 'underwriting', err);
-            if (!failureOutcome?.stale && !failedJobIds.includes(job.id)) {
+            if (failureOutcome?.terminalApplied === true && !failureOutcome?.stale && !failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
             continue;
@@ -3065,71 +3144,114 @@ export default async function handler(req, res) {
           const parsed = parsedFiles || [];
           const hasRentRoll = parsed.some((file) => file.doc_type === 'rent_roll');
           const hasT12 = parsed.some((file) => file.doc_type === 't12');
+          const sourceTruthPackage = await loadLatestArtifactPayload(job.id, 'source_truth_package');
 
-          if (!hasRentRoll || !hasT12) {
+          const structuredSourceGateDecision = resolveStructuredFinancialWorkerGateDecision({
+            hasRentRollParsed: hasRentRoll,
+            hasT12Parsed: hasT12,
+            sourceTruthPackage,
+            stage: 'rendering',
+          });
+
+          if (!structuredSourceGateDecision.shouldContinue) {
             const missing = [];
             if (!hasRentRoll) missing.push('rent_roll');
             if (!hasT12) missing.push('t12');
+            const sourceMode = String(sourceTruthPackage?.core_publication_constitution?.minimum_truth_set?.source_mode || '').trim().toLowerCase();
+            const sourceTruthPublishable =
+              sourceTruthPackage?.core_publication_constitution?.core_publishable === true ||
+              sourceTruthPackage?.core_publishable === true;
 
-            await applyTerminalFailureOutcome(job, {
-              fromStatus: 'rendering',
-              expectedCurrentStatus: 'rendering',
-              errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
-              restore: {
-                enabled: true,
-                reason: 'rendering_integrity_validation_failed',
-                errorCode: 'MISSING_REQUIRED_SOURCE_DATA',
-                strict: true,
-              },
-            });
-
-            if (!blockedJobIds.includes(job.id)) {
-              blockedJobIds.push(job.id);
-            }
-
-            const { data: existingMissingDoc } = await supabaseAdmin
-              .from('analysis_artifacts')
-              .select('id')
-              .eq('job_id', job.id)
-              .eq('type', 'missing_required_documents')
-              .limit(1)
-              .maybeSingle();
-
-            if (!existingMissingDoc?.id) {
-              const { error: missingArtifactErr } = await supabaseAdmin
-                .from('analysis_artifacts')
-                .insert([
-                  {
-                    job_id: job.id,
-                    user_id: job.user_id,
-                    type: 'missing_required_documents',
-                    bucket: 'system',
-                    object_path: `analysis_jobs/${job.id}/missing_required_documents/${safeTimestamp(nowIso)}.json`,
-                    payload: {
-                      missing,
-                      timestamp: nowIso,
-                      job_id: job.id,
-                    },
-                  },
-                ]);
-
-              if (missingArtifactErr) {
-                throw new Error(
-                  `Failed to write missing_required_documents artifact: ${missingArtifactErr.message}`
-                );
+            if (sourceTruthPackage?.source === 'canonical_source_truth_package' && sourceTruthPublishable) {
+              const collapseReason = sourceMode || (missing.length === 1 ? `${missing[0]}_minimum_core` : 'dual_source_core');
+              const collapseEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'core_section_collapse_required', {
+                source_mode: collapseReason,
+                missing_core_sources: missing,
+                report_id: job.report_id || null,
+                timestamp: nowIso,
+              });
+              if (collapseEventErr) {
+                console.error('[worker] Failed to write core_section_collapse_required event:', collapseEventErr.message);
               }
+              continue;
             }
 
-            const { data: existingEmail } = await supabaseAdmin
-              .from('analysis_artifacts')
-              .select('id')
-              .eq('job_id', job.id)
-              .eq('type', 'email_sent')
-              .eq('bucket', 'system')
-              .eq('payload->>email_type', 'missing_structured_financials')
-              .limit(1)
-              .maybeSingle();
+            if (sourceTruthPackage?.source === 'canonical_source_truth_package') {
+              const terminalErrorCode =
+                missing.length === 1
+                  ? missing[0] === 'rent_roll'
+                    ? 'CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE'
+                    : 'CORE_T12_CATASTROPHICALLY_UNUSABLE'
+                  : 'CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY';
+              const terminalFailureResult = await applyTerminalFailureOutcome(job, {
+                fromStatus: 'rendering',
+                expectedCurrentStatus: 'rendering',
+                errorCode: terminalErrorCode,
+                failureReason: `source_mode=${sourceMode || 'insufficient_core'}`,
+                transitionMeta: {
+                  missing_core_sources: missing,
+                  source_mode: sourceMode || 'insufficient_core',
+                },
+                restore: {
+                  enabled: true,
+                  reason: 'rendering_integrity_validation_failed',
+                  errorCode: terminalErrorCode,
+                  strict: true,
+                },
+                sourceTruthPackage,
+              });
+              if (terminalFailureResult?.terminalApplied === false) {
+                continue;
+              }
 
+              if (!blockedJobIds.includes(job.id)) {
+                blockedJobIds.push(job.id);
+              }
+
+              const { data: existingMissingDoc } = await supabaseAdmin
+                .from('analysis_artifacts')
+                .select('id')
+                .eq('job_id', job.id)
+                .eq('type', 'missing_required_documents')
+                .limit(1)
+                .maybeSingle();
+
+              if (!existingMissingDoc?.id) {
+                const { error: missingArtifactErr } = await supabaseAdmin
+                  .from('analysis_artifacts')
+                  .insert([
+                    {
+                      job_id: job.id,
+                      user_id: job.user_id,
+                      type: 'missing_required_documents',
+                      bucket: 'system',
+                      object_path: `analysis_jobs/${job.id}/missing_required_documents/${safeTimestamp(nowIso)}.json`,
+                      payload: {
+                        missing,
+                        timestamp: nowIso,
+                        job_id: job.id,
+                      },
+                    },
+                  ]);
+
+                if (missingArtifactErr) {
+                  throw new Error(
+                    `Failed to write missing_required_documents artifact: ${missingArtifactErr.message}`
+                  );
+                }
+              }
+
+              continue;
+            }
+
+            const sourceTruthLookupEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'source_truth_lookup_recovery_required', {
+              source_mode: sourceMode || null,
+              missing_core_sources: missing,
+              timestamp: nowIso,
+            });
+            if (sourceTruthLookupEventErr) {
+              console.error('[worker] Failed to write source_truth_lookup_recovery_required event:', sourceTruthLookupEventErr.message);
+            }
             continue;
           }
 
@@ -3191,7 +3313,7 @@ export default async function handler(req, res) {
                 mismatchUpdate.error_message = mismatchMessage;
               }
 
-              await applyTerminalFailureOutcome(job, {
+              const terminalFailureResult = await applyTerminalFailureOutcome(job, {
                 fromStatus: 'rendering',
                 expectedCurrentStatus: 'rendering',
                 errorCode: mismatchUpdate.error_code || null,
@@ -3205,6 +3327,9 @@ export default async function handler(req, res) {
                   strict: true,
                 },
               });
+              if (terminalFailureResult?.terminalApplied === false) {
+                continue;
+              }
 
               if (!blockedJobIds.includes(job.id)) {
                 blockedJobIds.push(job.id);
@@ -3378,6 +3503,37 @@ export default async function handler(req, res) {
                   };
                 }
                 const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
+                const publicationRetryRequired =
+                  reportData?.publication_state === 'recovery_required' ||
+                  reportData?.publication_retry_required === true;
+                if (publicationRetryRequired) {
+                  const retryHandoff = await handlePublicationRetryRequiredHandoff({
+                    job,
+                    reportData,
+                    nowIso,
+                    transitionWorkerJob,
+                    writeWorkerEventArtifact,
+                  });
+                  if (!retryHandoff.success) {
+                    console.error('[worker] Failed to requeue recoverable publication:', retryHandoff.transitionError?.message || 'unknown transition error');
+                    const retryHandoffErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_publication_retry_handoff_failed', {
+                      publication_state: 'recovery_required',
+                      publication_retry_reason: retryHandoff.retryReason,
+                      report_id: reportData?.reportId || null,
+                      storage_path: reportData?.storagePath || null,
+                      transition_error: retryHandoff.transitionError?.message || String(retryHandoff.transitionError || 'unknown transition error'),
+                      timestamp: nowIso,
+                    });
+                    if (retryHandoffErr) {
+                      console.error('[worker] Failed to write publication retry handoff failure artifact:', retryHandoffErr.message);
+                    }
+                    continue;
+                  }
+                  if (retryHandoff.retryEventError) {
+                    console.error('[worker] Failed to write publication retry artifact:', retryHandoff.retryEventError.message);
+                  }
+                  continue;
+                }
                 const deliveryGateStatus = resolvedDeliveryDecision.deliveryGateStatus;
                 const shouldHoldDeliveryOutcome =
                   (deliveryGateStatus === 'user_needs_documents' && !resolvedDeliveryDecision.coreValidRequiredCoverage) ||
@@ -3537,6 +3693,9 @@ export default async function handler(req, res) {
                 logContext: 'report_generation_failed',
               },
             });
+            if (terminalFailureResult?.terminalApplied === false) {
+              continue;
+            }
             await finalizeAndPersistBlockedManifest({
               job,
               reportData,
@@ -3560,7 +3719,7 @@ export default async function handler(req, res) {
               to_status: 'failed',
             });
             passTransitions += 1;
-            if (!failedJobIds.includes(job.id)) {
+            if (terminalFailureResult?.terminalApplied === true && !failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
 
@@ -3620,6 +3779,9 @@ export default async function handler(req, res) {
                 logContext: 'needs-documents',
               },
             });
+            if (terminalFailureResult?.terminalApplied === false) {
+              continue;
+            }
             await finalizeAndPersistBlockedManifest({
               job,
               reportData,
@@ -3642,7 +3804,7 @@ export default async function handler(req, res) {
               to_status: 'failed',
             });
             passTransitions += 1;
-            if (!failedJobIds.includes(job.id)) {
+            if (terminalFailureResult?.terminalApplied === true && !failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
             await writeWorkerEventArtifact(job.id, job.user_id, 'delivery_gate_decision', {
@@ -3677,6 +3839,9 @@ export default async function handler(req, res) {
                 logContext: 'deliverable-missing-artifact',
               },
             });
+            if (terminalFailureResult?.terminalApplied === false) {
+              continue;
+            }
             await finalizeAndPersistBlockedManifest({
               job,
               reportData,
@@ -3693,7 +3858,7 @@ export default async function handler(req, res) {
               to_status: 'failed',
             });
             passTransitions += 1;
-            if (!failedJobIds.includes(job.id)) {
+            if (terminalFailureResult?.terminalApplied === true && !failedJobIds.includes(job.id)) {
               failedJobIds.push(job.id);
             }
             const workerEventErr = await writeWorkerEventArtifact(job.id, job.user_id, 'report_generation_failed', {
@@ -4026,6 +4191,9 @@ export default async function handler(req, res) {
             }
             // } await recordJobFailure(job, 'rendering', err);
             const failureOutcome = await recordJobFailure(job, 'rendering', err);
+            if (failureOutcome?.terminalApplied === false) {
+              continue;
+            }
             if (!failureOutcome?.stale) {
               await finalizeAndPersistBlockedManifest({
                 job,
@@ -4050,9 +4218,9 @@ export default async function handler(req, res) {
       }
     }
 
-    for (const job of timedOutJobs) {
-      if (!failedJobIds.includes(job.id)) {
-        failedJobIds.push(job.id);
+    for (const jobId of terminalTimedOutJobIds) {
+      if (!failedJobIds.includes(jobId)) {
+        failedJobIds.push(jobId);
       }
     }
 
