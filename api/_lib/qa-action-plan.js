@@ -675,9 +675,29 @@ function actionForManagerDecision(decision) {
   };
 }
 
-function actionForReportContractViolation(violation) {
+function actionForReportContractViolation(violation, {
+  coreSufficiencyPublishable = false,
+} = {}) {
   if (!violation) return null;
   const code = String(violation?.code || "REPORT_CONTRACT_VIOLATION");
+  if (coreSufficiencyPublishable && isCoreValidNonBlockingIssueCode(code)) {
+    return {
+      code,
+      title: violation?.message || "Core-valid non-blocking contract incident",
+      source_artifact: "report_contract_qa",
+      severity: normalizeSeverity(violation?.severity),
+      action_type: "advisory_only",
+      owner_area: "qa_calibration",
+      recommended_next_step: "No customer-blocking action required; record the incident and continue publication for core-valid output.",
+      requires_code_patch: false,
+      requires_regeneration: false,
+      blocks_customer_delivery: false,
+      blocks_public_sample: false,
+      blocks_high_value_outreach: false,
+      safe_to_auto_fix: false,
+      evidence: violation?.evidence || null,
+    };
+  }
   const hardPublicOrDebug =
     code === "HARD_PUBLIC_LANGUAGE_CONTRACT" ||
     String(violation?.category || "") === "public_language";
@@ -852,7 +872,6 @@ const deterministicCustomerHardDefectCodes = new Set([
   "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
   "HARD_PUBLIC_LANGUAGE_CONTRACT",
   "INTERNAL_DEBUG_LANGUAGE_LEAK",
-  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
   "REPORT_TYPE_SECTION_LEAK",
 ]);
 
@@ -1047,6 +1066,7 @@ function isCustomerPublishBlockingViolationWithContext(violation, {
   if (isDeterministicSelfHealRenderViolation) {
     return !hasExplicitPostSelfHealCleanOutputProof(violation);
   }
+  if (coreSufficiencyPublishable && isCoreValidNonBlockingIssueCode(code)) return false;
   if (isOptionalSupportingContractOverblockViolation(violation, { coreSufficiencyPublishable })) return false;
   const customerImpact = normalizeImpactValue(
     violation?.customer_delivery_impact ??
@@ -1760,6 +1780,7 @@ const CORE_VALID_NON_BLOCKING_ISSUE_CODES = new Set([
   "FULL_UNDERWRITING_SUPPORT_UNDERUSED",
   "PURCHASE_ASSUMPTIONS_NOT_STRUCTURED_FOR_DEBT",
   "ACQUISITION_CURRENT_DEBT_SEPARATION_CONTRACT",
+  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
 ]);
 
 function isValidatedSufficiencyState(state = null) {
@@ -2474,6 +2495,9 @@ export function buildQaActionPlan({
 } = {}) {
   const actions = [];
   const debtContext = collectDebtContext({ sourceReportCoverageQa, qaFixRouting });
+  const coreSufficiencyPublishable = isCoreSufficiencyPublishableBucket(
+    sourceReportCoverageQa?.core_input_sufficiency_state?.publishability_bucket
+  );
 
   for (const flag of Array.isArray(reportQaFlags) ? reportQaFlags : []) {
     const action = actionForReportFlag(flag, debtContext);
@@ -2496,7 +2520,7 @@ export function buildQaActionPlan({
     if (action) pushAction(actions, action);
   }
   for (const violation of Array.isArray(reportContractQa?.violations) ? reportContractQa.violations : []) {
-    const action = actionForReportContractViolation(violation);
+    const action = actionForReportContractViolation(violation, { coreSufficiencyPublishable });
     if (action) pushAction(actions, action);
   }
 

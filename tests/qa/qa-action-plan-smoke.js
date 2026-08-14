@@ -1,8 +1,20 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { buildQaActionPlan, buildDeliveryGateDecision, buildCanonicalDeliveryDecisionState } from "../../api/_lib/qa-action-plan.js";
 import { buildQaFixRouting } from "../../api/_lib/qa-fix-routing.js";
 import { buildSourceReconciliationState } from "../../api/_lib/report-surface-contracts.js";
 const qaActionPlanTest = (await import("../../api/_lib/qa-action-plan.js")).__test__;
+const qaActionPlanSource = fs.readFileSync("api/_lib/qa-action-plan.js", "utf8");
+const hardDefectSetStart = qaActionPlanSource.indexOf("const deterministicCustomerHardDefectCodes");
+const hardDefectSetEnd = qaActionPlanSource.indexOf("const deterministicRegenerationRequiredCodes", hardDefectSetStart);
+
+assert.match(qaActionPlanSource, /CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT/);
+assert.match(qaActionPlanSource, /CORE_VALID_NON_BLOCKING_ISSUE_CODES/);
+assert.ok(hardDefectSetStart >= 0 && hardDefectSetEnd > hardDefectSetStart);
+assert.doesNotMatch(
+  qaActionPlanSource.slice(hardDefectSetStart, hardDefectSetEnd),
+  /CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT/
+);
 
 const validatedCoreCoverageAuthority = {
   artifact_inventory: {
@@ -2316,7 +2328,6 @@ for (const hardDefectCode of [
   "RENDERED_TEMPLATE_TOKEN_LEAK",
   "INTERNAL_DEBUG_LANGUAGE_LEAK",
   "RENDERED_MOJIBAKE_LEAK",
-  "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
   "REPORT_TYPE_SECTION_LEAK",
 ]) {
   const hardDefectGate = buildDeliveryGateDecision({
@@ -2353,6 +2364,50 @@ for (const hardDefectCode of [
   assert.equal(hardDefectGate.customer_delivery_ready, false, `${hardDefectCode} must block customer delivery`);
   assert.equal(hardDefectGate.report_blocked, true, `${hardDefectCode} must keep the report blocked`);
 }
+
+const publishableCoreContractIncidentGate = buildDeliveryGateDecision({
+  sourceReportCoverageQa: validatedCoreCoverageAuthority,
+  reportContractQa: {
+    contract_status: "warn",
+    customer_delivery_ready: true,
+    violations: [
+      {
+        code: "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
+        severity: "high",
+        category: "classification_contract",
+        blocks_customer_delivery: true,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+  qaActionPlan: {
+    customer_delivery_ready: true,
+    public_sample_ready: true,
+    high_value_outreach_ready: true,
+    prioritized_actions: [
+      {
+        code: "CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT",
+        action_type: "advisory_only",
+        owner_area: "qa_calibration",
+        requires_code_patch: false,
+        requires_regeneration: false,
+        blocks_customer_delivery: false,
+        blocks_public_sample: false,
+        blocks_high_value_outreach: false,
+      },
+    ],
+  },
+});
+assert.equal(publishableCoreContractIncidentGate.delivery_gate_status, "deliverable");
+assert.equal(publishableCoreContractIncidentGate.customer_publish_eligible, true);
+assert.equal(publishableCoreContractIncidentGate.report_publishable, true);
+assert.equal(publishableCoreContractIncidentGate.customer_delivery_ready, true);
+assert.equal(publishableCoreContractIncidentGate.report_blocked, false);
+assert.equal(
+  (publishableCoreContractIncidentGate.customer_publish_blockers || []).includes("CORE_METRICS_WITH_INSUFFICIENT_DATA_CONTRACT"),
+  false
+);
 
 const tokenNamedPlan = buildQaActionPlan({
   sourceReportCoverageQa: { qa_status: "pass", deterministic_flags: [] },
