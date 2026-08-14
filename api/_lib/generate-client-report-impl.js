@@ -8898,6 +8898,11 @@ if (docraptorMode === "production" && !allowProductionPdf) {
   }
   throw new Error("PRODUCTION_PDF_DISABLED");
 }
+let finalPdfPublicationContract = null;
+let finalPdfCoreSafeHtml = "";
+let finalPdfEmergencyCoreHtml = "";
+let finalPdfDeterministicContractQaSeal = null;
+let finalPdfSectionDispositionReceipts = {};
 try {
   docHtml = sanitizeTypography(qaHtml);
   // V2-owned final HTML remains under orchestrator/Boss control; legacy reconciliation and section-heal
@@ -9063,7 +9068,7 @@ try {
     acquisitionMemoV2Finalization?.deterministicContractQaSeal ||
     reportContractQaResult?.deterministic_contract_qa_seal ||
     null;
-  const finalPdfSectionDispositionReceipts =
+  finalPdfSectionDispositionReceipts =
     acquisitionMemoV2Finalization?.customerSurfaceModel?.sectionDispositionReceipts || {};
   const canonicalFinalPdfCorePublishable = Boolean(
     isCanonicalSourceTruthPackage(sourceTruthPackageResult) &&
@@ -9078,8 +9083,8 @@ try {
     reportType,
     reportTier,
   });
-  let finalPdfCoreSafeHtml = "";
-  let finalPdfEmergencyCoreHtml = "";
+  finalPdfCoreSafeHtml = "";
+  finalPdfEmergencyCoreHtml = "";
   let finalPdfCoreSafeHtmlBuildError = null;
   if (canonicalFinalPdfCorePublishable) {
     const canonicalCoreFallbackInputs = resolveCanonicalCoreFallbackInputs({
@@ -9110,7 +9115,7 @@ try {
       console.error("Failed to construct deterministic minimum core PDF fallback:", error);
     }
   }
-  const finalPdfPublicationContract = Object.freeze({
+  finalPdfPublicationContract = Object.freeze({
     artifactMode: reportDownloadArtifactMode,
     corePublishable: canonicalFinalPdfCorePublishable,
     constitution: buildCorePublicationConstitution({
@@ -9164,7 +9169,7 @@ try {
     initialArtifactIsEmergency = true;
     initialRenderError = error;
   }
-  const finalPdfDeterministicContractQaSeal = baseFinalPdfDeterministicContractQaSeal
+  finalPdfDeterministicContractQaSeal = baseFinalPdfDeterministicContractQaSeal
     ? {
         ...baseFinalPdfDeterministicContractQaSeal,
         sectionDispositionReceipts: finalPdfSectionDispositionReceipts,

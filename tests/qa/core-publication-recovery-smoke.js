@@ -13,6 +13,38 @@ import {
   resolveConstitutionalTerminalFailureDisposition,
 } from "../../api/_lib/worker-constitutional-lifecycle.js";
 
+const generateClientReportSource = fs.readFileSync(
+  "api/_lib/generate-client-report-impl.js",
+  "utf8"
+);
+
+const finalPdfScopeDeclarationIndex =
+  generateClientReportSource.indexOf('let finalPdfPublicationContract = null;');
+const finalPdfRenderTryIndex =
+  generateClientReportSource.indexOf(
+    "try {",
+    finalPdfScopeDeclarationIndex
+  );
+const finalSuccessResponseIndex =
+  generateClientReportSource.indexOf('pdf_artifact_mode: finalPdfPublicationContract.artifactMode');
+
+assert.ok(
+  finalPdfScopeDeclarationIndex >= 0,
+  "finalPdfPublicationContract must be declared outside the PDF render try/catch"
+);
+assert.ok(
+  finalPdfRenderTryIndex > finalPdfScopeDeclarationIndex,
+  "final PDF response variables must be declared before the PDF render try/catch"
+);
+assert.ok(
+  finalSuccessResponseIndex > finalPdfRenderTryIndex,
+  "final success response must consume the hoisted final PDF publication contract"
+);
+assert.doesNotMatch(
+  generateClientReportSource,
+  /const finalPdfPublicationContract = Object\.freeze\(/,
+  "finalPdfPublicationContract must not be block-scoped inside the PDF render try"
+);
 const queuedTransitionMigrationSource = fs.readFileSync(
   "supabase/migrations/20260814000100_transition_worker_job_release_queued_ownership.sql",
   "utf8"
