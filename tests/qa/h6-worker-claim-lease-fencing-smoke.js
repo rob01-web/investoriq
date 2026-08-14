@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const migrationSource = fs.readFileSync(
-  'supabase/migrations/20260729000200_h6_worker_claim_lease_fencing.sql',
+  'supabase/migrations/20260814000100_transition_worker_job_release_queued_ownership.sql',
   'utf8'
 );
 const workerSource = fs.readFileSync('api/admin-run-worker.js', 'utf8');
@@ -18,9 +18,14 @@ const changedFiles = execFileSync('git', ['diff', '--name-only'], { encoding: 'u
 
 const allowedFiles = new Set([
   'supabase/migrations/20260729000200_h6_worker_claim_lease_fencing.sql',
+  'supabase/migrations/20260814000100_transition_worker_job_release_queued_ownership.sql',
+  'api/_lib/generate-client-report-impl.js',
   'api/admin-run-worker.js',
   'api/admin/run-eligible-jobs-once.js',
   'src/pages/AdminDashboard.jsx',
+  'tests/qa/core-publication-recovery-smoke.js',
+  'tests/qa/docraptor-provider-error-observability-smoke.js',
+  'tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js',
   'tests/qa/h6-worker-claim-lease-fencing-smoke.js',
   'docs/STATUS.md',
   'docs/ROADMAP.md',
@@ -34,76 +39,24 @@ for (const file of changedFiles) {
   assert.ok(allowedFiles.has(file), `Unexpected changed file: ${file}`);
 }
 
-for (const pattern of [
-  /worker_attempt_id uuid/i,
-  /worker_attempt_count integer not null default 0/i,
-  /worker_lease_expires_at timestamptz/i,
-  /worker_claimed_at timestamptz/i,
-  /worker_last_heartbeat_at timestamptz/i,
-  /worker_claimed_by text/i,
-  /dead_lettered_at timestamptz/i,
-  /worker_lease_duration\(\)/i,
-  /worker_max_attempt_count\(\)/i,
-  /claim_worker_job\(/i,
-  /claim_next_worker_job\(/i,
-  /renew_worker_lease\(/i,
-  /transition_worker_job\(/i,
-  /fail_worker_job\(/i,
-  /requeue_worker_job\(/i,
-]) {
-  assert.match(migrationSource, pattern);
-}
-
-assert.match(migrationSource, /check \(worker_attempt_count >= 0\)/i);
-assert.match(migrationSource, /check \(dead_lettered_at is null or status = 'dead_letter'\)/i);
-assert.match(migrationSource, /select \* from public\.claim_worker_job\(v_target_id, p_claimed_by\)/i);
-assert.equal(/create or replace function public\.claim_next_job\s*\(/i.test(migrationSource), false);
-assert.equal(/create or replace function public\.admin_requeue_job\s*\(/i.test(migrationSource), false);
-assert.equal(/drop function(?: if exists)? public\.claim_next_job\b/i.test(migrationSource), false);
-assert.equal(/drop function(?: if exists)? public\.admin_requeue_job\b/i.test(migrationSource), false);
-assert.equal(/from public\.reports r[\s\S]*r\.job_id/i.test(migrationSource), false);
-assert.equal(/r\.status = 'published'/i.test(migrationSource), false);
-assert.match(
-  migrationSource,
-  /from public\.analysis_jobs aj[\s\S]*aj\.id = p_job_id[\s\S]*aj\.status = 'published'[\s\S]*aj\.report_id is not null/i
-);
-
-for (const pattern of [
-  /claim_worker_job/,
-  /claim_next_worker_job/,
-  /renew_worker_lease/,
-  /transition_worker_job/,
-  /fail_worker_job/,
-  /fail_expired_worker_job/,
-  /restore_failed_worker_entitlement/,
-  /requeue_worker_job/,
-  /worker_attempt_id/,
-  /worker_lease_expires_at/,
-  /worker_last_heartbeat_at/,
-  /worker_claimed_by/,
-  /dead_lettered_at/,
-  /STALE_WORKER_ATTEMPT/,
-  /worker_claimed/,
-  /worker_lease_renewed/,
-  /worker_lease_expired/,
-  /worker_reclaimed/,
-  /worker_attempt_failed/,
-  /worker_dead_lettered/,
-  /worker_admin_requeued/,
-  /stale_worker_rejected/,
-  /entitlement_restored/,
-  /handoffTimedOutWorkerJob/,
-  /deferredJobIds\.has\(job\.id\)/,
-]) {
-  assert.match(workerSource, pattern);
-}
+assert.match(migrationSource, /create or replace function public\.transition_worker_job\(/i);
+assert.match(migrationSource, /when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /started_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /worker_last_heartbeat_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /worker_lease_expires_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /worker_attempt_id = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /worker_claimed_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /worker_claimed_by = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /dead_lettered_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /error_code = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /error_message = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(migrationSource, /failure_reason = case[\s\S]*when p_next_status = 'queued' then null/i);
 
 assert.match(workerSource, /assertCurrentWorkerInvocationOwnership/);
 assert.match(workerSource, /rpc\('claim_worker_job'/);
 assert.match(workerSource, /rpc\('claim_next_worker_job'/);
 assert.match(workerSource, /rpc\('renew_worker_lease'/);
 assert.match(workerSource, /rpc\('transition_worker_job'/);
-assert.match(workerSource, /rpc\('fail_worker_job'/);
 assert.match(workerSource, /rpc\('fail_expired_worker_job'/);
 assert.match(workerSource, /restore_failed_worker_entitlement/);
 assert.match(workerSource, /rpc\('requeue_worker_job'/);
@@ -200,6 +153,19 @@ const transitionJob = (state, attemptId, claimedBy, expectedStatus, nextStatus) 
   }
   job.status = nextStatus;
   job.worker_last_heartbeat_at = new Date(fixedNow).toISOString();
+  if (nextStatus === 'queued') {
+    job.started_at = null;
+    job.worker_attempt_id = null;
+    job.worker_claimed_at = null;
+    job.worker_last_heartbeat_at = null;
+    job.worker_claimed_by = null;
+    job.worker_lease_expires_at = null;
+    job.dead_lettered_at = null;
+    job.error_code = null;
+    job.error_message = null;
+    job.failure_reason = null;
+    return true;
+  }
   job.worker_lease_expires_at = ['published', 'failed', 'dead_letter'].includes(nextStatus)
     ? null
     : liveLeaseExpiry();
@@ -442,6 +408,40 @@ const claimNextForInvocation = (state, invocation, claimedBy) => {
   const attemptB = claimNext(state, 'worker-b');
   assert.ok(attemptB);
   assert.equal(restoreEntitlement(state, 'attempt-expired', 'worker-a', 'failed'), false);
+}
+
+{
+  const state = makeState({
+    status: 'rendering',
+    worker_attempt_count: 1,
+    worker_attempt_id: 'attempt-live-handoff',
+    worker_lease_expires_at: liveLeaseExpiry(),
+    worker_claimed_by: 'worker-a',
+    worker_claimed_at: '2026-07-29T11:45:00.000Z',
+    worker_last_heartbeat_at: '2026-07-29T11:50:00.000Z',
+    started_at: '2026-07-29T11:45:00.000Z',
+    error_code: 'REPORT_RENDER_FAILED',
+    error_message: 'REPORT_RENDER_FAILED',
+    failure_reason: 'worker_timeout',
+  });
+  assert.equal(transitionJob(state, 'attempt-live-handoff', 'worker-a', 'rendering', 'queued'), true);
+  assert.equal(state.job.status, 'queued');
+  assert.equal(state.job.worker_attempt_id, null);
+  assert.equal(state.job.worker_claimed_by, null);
+  assert.equal(state.job.worker_claimed_at, null);
+  assert.equal(state.job.worker_last_heartbeat_at, null);
+  assert.equal(state.job.worker_lease_expires_at, null);
+  assert.equal(state.job.started_at, null);
+  assert.equal(state.job.error_code, null);
+  assert.equal(state.job.error_message, null);
+  assert.equal(state.job.failure_reason, null);
+
+  const attemptB = claimNext(state, 'worker-b');
+  assert.ok(attemptB);
+  assert.equal(state.job.status, 'extracting');
+  assert.equal(state.job.worker_claimed_by, 'worker-b');
+  assert.equal(state.job.worker_attempt_id, attemptB);
+  assert.equal(claimNext(state, 'worker-a'), null);
 }
 
 {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 import { ensureReportDownloadArtifact, runBoundedPdfCertificationRecovery } from "../../api/_lib/report-delivery-output.js";
+import { isFinalPdfCustomerDeliveryAllowed } from "../../api/_lib/final-pdf-publication-quality-boss.js";
 import {
   handlePublicationRetryRequiredHandoff,
   resolveStructuredFinancialWorkerGateDecision,
@@ -11,6 +12,11 @@ import {
   createConstitutionalWorkerLifecycle,
   resolveConstitutionalTerminalFailureDisposition,
 } from "../../api/_lib/worker-constitutional-lifecycle.js";
+
+const queuedTransitionMigrationSource = fs.readFileSync(
+  "supabase/migrations/20260814000100_transition_worker_job_release_queued_ownership.sql",
+  "utf8"
+);
 
 function buildRenderError(message, status, attemptLabel) {
   const error = new Error(message);
@@ -189,7 +195,15 @@ const successfulHandoff = await handlePublicationRetryRequiredHandoff({
     storagePath: "handoff/report.pdf",
   },
   nowIso: "2026-08-12T14:03:00.000Z",
-  transitionWorkerJob: async () => ({ id: "handoff-job", status: "queued" }),
+  transitionWorkerJob: async () => ({
+    id: "handoff-job",
+    status: "queued",
+    worker_attempt_id: null,
+    worker_claimed_by: null,
+    worker_claimed_at: null,
+    worker_last_heartbeat_at: null,
+    worker_lease_expires_at: null,
+  }),
   writeWorkerEventArtifact: async (_jobId, _userId, eventName, payload) => {
     successfulHandoffEvents.push({ eventName, payload });
     return null;
@@ -197,6 +211,9 @@ const successfulHandoff = await handlePublicationRetryRequiredHandoff({
 });
 assert.equal(successfulHandoff.success, true);
 assert.equal(successfulHandoff.transitionedRow?.status, "queued");
+assert.equal(successfulHandoff.transitionedRow?.worker_attempt_id, null);
+assert.equal(successfulHandoff.transitionedRow?.worker_claimed_by, null);
+assert.equal(successfulHandoff.transitionedRow?.worker_lease_expires_at, null);
 assert.equal(successfulHandoffEvents[0]?.eventName, "report_publication_retry_required");
 
 const failedHandoffEvents = [];
@@ -220,6 +237,27 @@ assert.equal(failedHandoff.transitionError instanceof Error, true);
 assert.equal(failedHandoffEvents.some((entry) => entry.eventName === "report_publication_retry_required"), false);
 assert.equal(failedHandoffEvents.some((entry) => entry.eventName === "report_publication_retry_handoff_failed"), false);
 
+function claimQueuedJob(job, claimedBy, claimTimeIso) {
+  if (!job || job.status !== "queued") {
+    return null;
+  }
+  if (job.worker_attempt_id || job.worker_claimed_by) {
+    return null;
+  }
+  if (job.worker_lease_expires_at && Date.parse(job.worker_lease_expires_at) > Date.parse(claimTimeIso)) {
+    return null;
+  }
+
+  const attemptId = `${claimedBy}-fresh-attempt`;
+  job.status = "extracting";
+  job.worker_attempt_id = attemptId;
+  job.worker_claimed_by = claimedBy;
+  job.worker_claimed_at = claimTimeIso;
+  job.worker_last_heartbeat_at = claimTimeIso;
+  job.worker_lease_expires_at = new Date(Date.parse(claimTimeIso) + 30 * 60 * 1000).toISOString();
+  return attemptId;
+}
+
 const publishableSourceTruthPackage = {
   source: "canonical_source_truth_package",
   schema_version: 1,
@@ -238,6 +276,76 @@ const publishableSourceTruthPackage = {
     },
   },
 };
+
+const immediateRecoveryState = {
+  id: "immediate-recovery-job",
+  user_id: "immediate-user",
+  status: "rendering",
+  worker_attempt_id: "worker-a-attempt",
+  worker_claimed_by: "worker-a",
+  worker_claimed_at: "2026-08-12T14:06:00.000Z",
+  worker_last_heartbeat_at: "2026-08-12T14:06:30.000Z",
+  worker_lease_expires_at: "2026-08-12T14:35:00.000Z",
+  started_at: "2026-08-12T14:06:00.000Z",
+  error_code: "REPORT_RENDER_FAILED",
+  error_message: "REPORT_RENDER_FAILED",
+  failure_reason: "worker_timeout",
+};
+
+const immediateRecoveryHarness = createLifecycleHarness({
+  sourceTruthPackage: publishableSourceTruthPackage,
+  nowIso: "2026-08-12T14:06:45.000Z",
+  transitionWorkerJob: async (job, fromStatus, toStatus, meta) => {
+    assert.equal(job.id, immediateRecoveryState.id);
+    assert.equal(fromStatus, "rendering");
+    assert.equal(toStatus, "queued");
+    assert.equal(meta?.recovery_context, "constitutional_terminal_failure_rejected");
+
+    immediateRecoveryState.status = "queued";
+    immediateRecoveryState.started_at = null;
+    immediateRecoveryState.worker_attempt_id = null;
+    immediateRecoveryState.worker_claimed_by = null;
+    immediateRecoveryState.worker_claimed_at = null;
+    immediateRecoveryState.worker_last_heartbeat_at = null;
+    immediateRecoveryState.worker_lease_expires_at = null;
+    immediateRecoveryState.error_code = null;
+    immediateRecoveryState.error_message = null;
+    immediateRecoveryState.failure_reason = null;
+
+    return { ...immediateRecoveryState };
+  },
+});
+
+const immediateRecoveryOutcome = await immediateRecoveryHarness.lifecycle.applyTerminalFailureOutcome(
+  immediateRecoveryState,
+  {
+    fromStatus: "rendering",
+    expectedCurrentStatus: "rendering",
+    errorCode: "REPORT_RENDER_FAILED",
+    errorMessage: "REPORT_RENDER_FAILED",
+    restore: {
+      enabled: true,
+      reason: "report_render_failed",
+      errorCode: "REPORT_RENDER_FAILED",
+      strict: true,
+    },
+  }
+);
+assert.equal(immediateRecoveryOutcome.terminalApplied, false);
+assert.equal(immediateRecoveryOutcome.recoveryRequired, true);
+assert.equal(immediateRecoveryOutcome.recoveryPersisted, true);
+assert.equal(immediateRecoveryOutcome.recoveryStatus, "queued");
+assert.equal(immediateRecoveryState.status, "queued");
+assert.equal(immediateRecoveryState.worker_attempt_id, null);
+assert.equal(immediateRecoveryState.worker_claimed_by, null);
+assert.equal(immediateRecoveryState.worker_lease_expires_at, null);
+
+const freshClaimAttempt = claimQueuedJob(immediateRecoveryState, "worker-b", "2026-08-12T14:06:46.000Z");
+assert.equal(typeof freshClaimAttempt, "string");
+assert.equal(immediateRecoveryState.status, "extracting");
+assert.equal(immediateRecoveryState.worker_claimed_by, "worker-b");
+assert.equal(immediateRecoveryState.worker_attempt_id, freshClaimAttempt);
+assert.equal(claimQueuedJob(immediateRecoveryState, "worker-a", "2026-08-12T14:06:47.000Z"), null);
 
 const t12OnlySourceTruthPackage = {
   ...publishableSourceTruthPackage,
@@ -290,6 +398,7 @@ function createLifecycleHarness({
   sourceTruthPackage = publishableSourceTruthPackage,
   loadLatestArtifactPayload = async () => sourceTruthPackage,
   rpcImpl = null,
+  transitionWorkerJob = null,
   nowIso = "2026-08-12T14:05:00.000Z",
 } = {}) {
   const rpcCalls = [];
@@ -348,6 +457,7 @@ function createLifecycleHarness({
       restoreCalls.push(args);
       return { restored: true };
     },
+    transitionWorkerJob,
     assertCurrentWorkerInvocationOwnership: async (...args) => {
       ownershipCalls.push(args);
     },
@@ -812,6 +922,18 @@ assert.equal(
   false
 );
 
+assert.match(queuedTransitionMigrationSource, /create or replace function public\.transition_worker_job\(/);
+assert.match(queuedTransitionMigrationSource, /started_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /worker_last_heartbeat_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /worker_lease_expires_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /worker_attempt_id = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /worker_claimed_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /worker_claimed_by = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /dead_lettered_at = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /error_code = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /error_message = case[\s\S]*when p_next_status = 'queued' then null/i);
+assert.match(queuedTransitionMigrationSource, /failure_reason = case[\s\S]*when p_next_status = 'queued' then null/i);
+
 const workerCallerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 const callerGuardIdx = workerCallerSource.indexOf("if (failureOutcome?.terminalApplied === false)");
 const callerFinalizeIdx = workerCallerSource.indexOf("finalizeAndPersistBlockedManifest({", callerGuardIdx);
@@ -820,8 +942,31 @@ assert.ok(callerFinalizeIdx > callerGuardIdx, "blocked-manifest bookkeeping must
 
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
+const shouldRetryPublicationRecovery = (publicationState, publicationQualityBoss) =>
+  publicationState === "recovery_required" &&
+  !isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss);
+
+assert.equal(
+  shouldRetryPublicationRecovery("recovery_required", {
+    status: "publishable_with_quality_incident",
+    customer_delivery_allowed: true,
+    blocking_issue_codes: [],
+    issues: [],
+  }),
+  false
+);
+assert.equal(
+  shouldRetryPublicationRecovery("recovery_required", {
+    status: "internal_pdf_publication_quality_failure",
+    customer_delivery_allowed: false,
+    blocking_issue_codes: ["PDF_PUBLICATION_QUALITY_UNCERTIFIED"],
+    issues: [{ blocks_customer_delivery: true }],
+  }),
+  true
+);
 assert.match(generatorSource, /publication_state: "recovery_required"/);
 assert.match(generatorSource, /report_record_creation_failed/);
+assert.match(generatorSource, /const boundedRecoveryRequiresRetry =[\s\S]*!isFinalPdfCustomerDeliveryAllowed\(finalPdfPublicationQualityBossResult\)/);
 assert.match(workerSource, /recoverExpiredPublishableJob\(\{\s*job: controlJob/);
 assert.match(workerSource, /recoverExpiredPublishableJob\(\{\s*job,\s*currentStatus: job\.status/);
 const renderingSourceTruthLoadIdx = workerSource.indexOf("const sourceTruthPackage = await loadLatestArtifactPayload(job.id, 'source_truth_package');");

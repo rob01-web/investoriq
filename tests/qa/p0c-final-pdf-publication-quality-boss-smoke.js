@@ -15,6 +15,7 @@ const emergencyCoreBuilderIndex = generatorSource.indexOf('finalPdfEmergencyCore
 const initialRichRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(docHtml, "initial");');
 const initialEmergencyRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(emergencyHtml, "emergency_core");');
 const boundedPdfRecoveryIndex = generatorSource.indexOf('const boundedRecovery = await runBoundedPdfCertificationRecovery({');
+const boundedRecoveryRetryGuardIndex = generatorSource.indexOf('const boundedRecoveryRequiresRetry =');
 const directStorageUploadIndex = generatorSource.indexOf('.upload(validatedStoragePath, pdfResponse.data, {');
 assert.ok(docRaptorCallIndex >= 0 && boundedPdfRecoveryIndex > docRaptorCallIndex);
 assert.ok(canonicalCoreStateIndex > docRaptorCallIndex);
@@ -22,14 +23,17 @@ assert.ok(emergencyCoreBuilderIndex > canonicalCoreStateIndex);
 assert.ok(initialRichRenderIndex > emergencyCoreBuilderIndex);
 assert.ok(initialEmergencyRenderIndex > initialRichRenderIndex);
 assert.ok(boundedPdfRecoveryIndex > initialEmergencyRenderIndex);
+assert.ok(boundedRecoveryRetryGuardIndex > boundedPdfRecoveryIndex);
 const generatorInitialRenderControl = generatorSource.slice(initialRichRenderIndex, boundedPdfRecoveryIndex);
 assert.equal(
   (generatorInitialRenderControl.match(/pdfResponse = await renderDocRaptorPdf\(emergencyHtml, "emergency_core"\);/g) || []).length,
   1
 );
-assert.match(generatorInitialRenderControl, /if \(finalPdfCorePublishable !== true\) throw error;/);
+assert.match(generatorSource, /publication_retry_required/);
+assert.match(generatorSource, /publication_state: "recovery_required"/);
+assert.match(generatorSource, /!isFinalPdfCustomerDeliveryAllowed\(finalPdfPublicationQualityBossResult\)/);
 assert.match(generatorInitialRenderControl, /if \(!emergencyHtml\) throw error;/);
-assert.match(generatorInitialRenderControl, /catch \(emergencyError\)[\s\S]*throw emergencyError;/);
+assert.doesNotMatch(generatorInitialRenderControl, /throw emergencyError;/);
 assert.match(generatorSource, /initialArtifactIsEmergency/);
 assert.match(generatorSource, /initialRenderError/);
 assert.match(generatorSource, /initialPdfBuffer: pdfResponse\.data/);

@@ -9215,7 +9215,10 @@ try {
   });
   pdfResponse = { ...pdfResponse, data: boundedRecovery.pdfBuffer };
   finalPdfPublicationQualityBossResult = boundedRecovery.publicationQualityBoss;
-  if (boundedRecovery.publicationState === "recovery_required") {
+  const boundedRecoveryRequiresRetry =
+    boundedRecovery.publicationState === "recovery_required" &&
+    !isFinalPdfCustomerDeliveryAllowed(finalPdfPublicationQualityBossResult);
+  if (boundedRecoveryRequiresRetry) {
     return res.status(200).json({
       success: true,
       publication_state: "recovery_required",
