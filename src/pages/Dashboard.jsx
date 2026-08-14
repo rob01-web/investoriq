@@ -1003,13 +1003,13 @@ useEffect(() => {
       return false;
     }
 
-    const auditResponse = await fetch('/api/disclosure-session-ack', {
+    const auditResponse = await fetch('/api/legal-acceptance', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${currentSessionToken}`,
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ session_ack: true }),
     });
     if (!auditResponse.ok) {
       console.error('Disclosure session ack audit failed:', await auditResponse.text());

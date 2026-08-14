@@ -36,6 +36,8 @@ export default async function handler(req, res) {
     }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const userId = auth.actor.id;
+    const sessionIdentifier = auth.sessionIdentifier || null;
+    const sessionIdentifierSource = auth.sessionIdentifierSource || null;
 
     if (req.method === 'GET') {
       const { data: existingRow, error: readErr } = await supabase
@@ -57,6 +59,88 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         accepted_at: existingRow?.accepted_at || null,
+      });
+    }
+
+    const sessionAckRequested =
+      req.body?.session_ack === true ||
+      req.body?.sessionAck === true ||
+      req.body?.ack_type === 'session';
+
+    if (sessionAckRequested) {
+      if (!sessionIdentifier) {
+        return res.status(500).json({
+          error: 'SESSION_IDENTIFIER_UNAVAILABLE',
+        });
+      }
+
+      const ip =
+        req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+        req.socket?.remoteAddress ||
+        null;
+
+      const userAgent = req.headers['user-agent'] || null;
+
+      const payload = {
+        user_id: userId,
+        disclosure_key: INVESTORIQ_DISCLOSURE_KEY,
+        disclosure_version: INVESTORIQ_DISCLOSURE_VERSION,
+        disclosure_text_hash: INVESTORIQ_DISCLOSURE_TEXT_HASH,
+        session_identifier: sessionIdentifier,
+        acknowledged_at: new Date().toISOString(),
+        ip,
+        user_agent: userAgent,
+      };
+
+      const { data: insertedRow, error } = await supabase
+        .from('disclosure_session_ack_events')
+        .insert(payload)
+        .select(
+          'id, user_id, disclosure_key, disclosure_version, disclosure_text_hash, session_identifier, acknowledged_at, ip, user_agent, created_at',
+        )
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          const { data: existingRow, error: readErr } = await supabase
+            .from('disclosure_session_ack_events')
+            .select(
+              'id, user_id, disclosure_key, disclosure_version, disclosure_text_hash, session_identifier, acknowledged_at, ip, user_agent, created_at',
+            )
+            .eq('user_id', userId)
+            .eq('disclosure_key', INVESTORIQ_DISCLOSURE_KEY)
+            .eq('disclosure_version', INVESTORIQ_DISCLOSURE_VERSION)
+            .eq('disclosure_text_hash', INVESTORIQ_DISCLOSURE_TEXT_HASH)
+            .eq('session_identifier', sessionIdentifier)
+            .order('acknowledged_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (readErr) {
+            console.error('Disclosure session ack duplicate read error:', readErr);
+            return res.status(500).json({
+              error: 'Failed to read disclosure session acknowledgement',
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            alreadyRecorded: true,
+            sessionIdentifierSource,
+            record: existingRow || null,
+          });
+        }
+
+        console.error('Disclosure session ack insert error:', error);
+        return res.status(500).json({
+          error: 'Failed to record disclosure session acknowledgement',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        sessionIdentifierSource,
+        record: insertedRow || null,
       });
     }
 
