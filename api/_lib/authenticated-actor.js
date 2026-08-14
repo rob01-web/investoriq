@@ -23,6 +23,43 @@ function normalizeOwnershipId(value) {
   return String(value || '').trim();
 }
 
+function readJwtPayload(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payloadBase64 + '='.repeat((4 - (payloadBase64.length % 4)) % 4);
+    const json = Buffer.from(padded, 'base64').toString('utf8');
+    const payload = JSON.parse(json);
+    return payload && typeof payload === 'object' ? payload : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function resolveSessionIdentifier(token) {
+  const payload = readJwtPayload(token);
+  if (!payload) return { sessionIdentifier: null, sessionIdentifierSource: null };
+
+  const sessionId = String(payload.session_id || '').trim();
+  if (sessionId) {
+    return {
+      sessionIdentifier: sessionId,
+      sessionIdentifierSource: 'jwt.session_id',
+    };
+  }
+
+  const jti = String(payload.jti || '').trim();
+  if (jti) {
+    return {
+      sessionIdentifier: jti,
+      sessionIdentifierSource: 'jwt.jti',
+    };
+  }
+
+  return { sessionIdentifier: null, sessionIdentifierSource: null };
+}
+
 export function resolveAuthenticatedResourceOwnership({
   auth = null,
   resourceOwnerId = null,
@@ -116,6 +153,8 @@ export async function resolveAuthenticatedActor(
     return { ok: false, status: 401, error: 'UNAUTHORIZED' };
   }
 
+  const { sessionIdentifier, sessionIdentifierSource } = resolveSessionIdentifier(token);
+
   return {
     ok: true,
     token,
@@ -123,5 +162,7 @@ export async function resolveAuthenticatedActor(
       id: user.id,
       email: user.email || null,
     },
+    sessionIdentifier,
+    sessionIdentifierSource,
   };
 }

@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
+import { clearSessionDisclosureAck } from '@/lib/sessionDisclosureAck';
 
 /**
  * Supabase Authentication Context  -  InvestorIQ
@@ -171,6 +172,7 @@ export const AuthProvider = ({ children }) => {
   /** Log out the current user and reset local profile state */
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
+    clearSessionDisclosureAck();
     profileRef.current = null;
     userRef.current = null;
     lastTokenRef.current = '';

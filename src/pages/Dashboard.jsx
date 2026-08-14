@@ -25,6 +25,11 @@ import {
   INVESTORIQ_DISCLOSURE_LABEL,
   INVESTORIQ_DISCLOSURE_TEXT,
 } from '@/lib/investoriq-disclosure-authority';
+import {
+  clearSessionDisclosureAck,
+  readSessionDisclosureAck,
+  writeSessionDisclosureAck,
+} from '@/lib/sessionDisclosureAck';
 
 // DESIGN TOKENS
 const T = {
@@ -122,6 +127,20 @@ const hairlineRule = {
   borderTop:  `1px solid ${T.hairline}`,
   margin:     '20px 0',
 };
+
+function formatSessionDisclosureAck(value) {
+  if (!value) return '';
+  const acceptedDate = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(acceptedDate.getTime())) return '';
+  return acceptedDate.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
 
 // Primary button - Forest Green / Gold hover
 function PrimaryBtn({ children, onClick, disabled, style = {}, loading = false }) {
@@ -340,7 +359,7 @@ function NoticeBox({ type = 'info', children }) {
 // MAIN COMPONENT
 export default function Dashboard() {
   const { toast } = useToast();
-  const { user, profile, session, fetchProfile, signOut } = useAuth();
+  const { user, profile, session, loading: authLoading, fetchProfile, signOut } = useAuth();
 const DASHBOARD_DIAG_MINIMAL = false;
   const DISMISSED_JOBS_KEY = "investoriq_dismissed_jobs";
   const loadDismissedJobs = () => {
@@ -384,7 +403,6 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [lockedJobIdForUploads, setLockedJobIdForUploads] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [ackLocked, setAckLocked] = useState(false);
   const [ackAcceptedAtLocal, setAckAcceptedAtLocal] = useState(null);
   const [ackSubmitting, setAckSubmitting] = useState(false);
   const [stagedBatchId, setStagedBatchId] = useState(null);
@@ -744,7 +762,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
     setRentRollCoverage({ provided, total, percent });
   };
 
-    useEffect(() => {
+  useEffect(() => {
   const syncEverything = async () => {
     await Promise.all([
       fetchEntitlements(),
@@ -753,9 +771,6 @@ const DASHBOARD_DIAG_MINIMAL = false;
       fetchRecentJobs(),
       fetchReports(),
     ]);
-    setAcknowledged(false);
-    setAckLocked(false);
-    setAckAcceptedAtLocal(null);
   };
   if (profile?.id) syncEverything();
 }, [profile?.id]);
@@ -957,52 +972,95 @@ useEffect(() => {
       return { ok: true, acceptedAt };
     } catch (err) { console.error('Legal acceptance error:', err); return false; }
   };
-  const fetchLegalAcceptance = async () => {
-    const accessToken = session?.access_token || '';
-    if (!accessToken) return null;
-    try {
-      const res = await fetch('/api/legal-acceptance', {
-        headers: { Authorization: `Bearer ${accessToken}` },
+  const finalizeDisclosureSessionAck = async () => {
+    const accepted = await recordLegalAcceptance();
+    if (!accepted?.ok) {
+      toast({
+        title: 'Unable to record acknowledgement',
+        description: 'Please try again.',
+        variant: 'destructive',
       });
-      if (!res.ok) { console.error('Legal acceptance read failed:', await res.text()); return null; }
-      const data = await res.json().catch(() => ({}));
-      return data?.accepted_at || data?.acceptedAt || null;
-    } catch (err) { console.error('Legal acceptance read error:', err); return null; }
+      return false;
+    }
+
+    const currentSessionToken = session?.access_token || '';
+    if (!currentSessionToken) {
+      toast({
+        title: 'Session expired',
+        description: 'Please sign in again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    const currentUserId = user?.id || null;
+    if (!currentUserId) {
+      toast({
+        title: 'Not authenticated',
+        description: 'Please sign in again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    const auditResponse = await fetch('/api/disclosure-session-ack', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${currentSessionToken}`,
+      },
+      body: JSON.stringify({}),
+    });
+    if (!auditResponse.ok) {
+      console.error('Disclosure session ack audit failed:', await auditResponse.text());
+      toast({
+        title: 'Unable to record session acknowledgement',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    const auditData = await auditResponse.json().catch(() => ({}));
+    const acknowledgedAt = auditData?.record?.acknowledged_at || new Date().toISOString();
+
+    const stored = writeSessionDisclosureAck({ userId: currentUserId, acknowledgedAt });
+    if (!stored) {
+      toast({
+        title: 'Unable to store acknowledgement',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    setAcknowledged(true);
+    setAckAcceptedAtLocal(new Date(acknowledgedAt));
+    return true;
   };
   useEffect(() => {
-    let cancelled = false;
-    if (!profile?.id || !session?.access_token) return () => { cancelled = true; };
+    const currentUserId = user?.id || null;
+    const currentSessionToken = session?.access_token || '';
 
-    const syncLegalAcceptance = async () => {
-      const acceptedAt = await fetchLegalAcceptance();
-      if (cancelled) return;
-      if (acceptedAt) {
-        setAcknowledged(true);
-        setAckLocked(false);
-        setAckAcceptedAtLocal(new Date(acceptedAt));
-        return;
-      }
+    if (authLoading) return;
+
+    if (!currentUserId || !currentSessionToken) {
+      clearSessionDisclosureAck();
       setAcknowledged(false);
-      setAckLocked(false);
       setAckAcceptedAtLocal(null);
-    };
+      setAckSubmitting(false);
+      return;
+    }
 
-    syncLegalAcceptance();
-    return () => { cancelled = true; };
-  }, [profile?.id, session?.access_token]);
-  const formatAcceptedAtLocal = (value) => {
-    if (!value) return '';
-    const acceptedDate = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(acceptedDate.getTime())) return '';
-    return acceptedDate.toLocaleString([], {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
+    const storedAck = readSessionDisclosureAck();
+    if (storedAck?.userId === currentUserId && storedAck?.acknowledgedAt) {
+      setAcknowledged(true);
+      setAckAcceptedAtLocal(new Date(storedAck.acknowledgedAt));
+      return;
+    }
+
+    setAcknowledged(false);
+    setAckAcceptedAtLocal(null);
+  }, [authLoading, user?.id, session?.access_token]);
   const handleUploadSuccess = async () => {
     if (!profile?.id) return;
     toast({ title: 'Uploads received', description: 'Documents are stored and ready for review.' });
@@ -1139,9 +1197,6 @@ useEffect(() => {
         if (propertyInputRef.current) propertyInputRef.current.value = '';
       }
       if (!DASHBOARD_DIAG_MINIMAL) setUploadedFiles([]);
-      setAcknowledged(false);
-      setAckLocked(false);
-      setAckAcceptedAtLocal(null);
       setStagedBatchId(null);
       setTimeout(() => {
         fetchInProgressJobs();
@@ -1418,36 +1473,37 @@ useEffect(() => {
                   </div>
                 )}
                 <div style={{ padding:'14px 16px', background:acknowledged ? T.okBg : T.warm, border:`1px solid ${acknowledged ? T.okBorder : T.hairlineMid}`, marginTop:12, marginBottom:12 }}>
-                  <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor:'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={acknowledged}
-                      disabled={ackSubmitting}
-                      onChange={async (e) => {
-                        const next = e.target.checked;
-                        if (ackSubmitting) return;
-                        if (!next) { setAcknowledged(false); setAckLocked(false); setAckAcceptedAtLocal(null); return; }
-                        setAckSubmitting(true);
-                        const accepted = await recordLegalAcceptance();
-                        if (!accepted?.ok) {
-                          toast({ title: 'Unable to record acknowledgement', description: 'Please try again.', variant: 'destructive' });
-                          setAcknowledged(false); setAckLocked(false); setAckSubmitting(false); return;
-                        }
-                        const acceptedAtValue = accepted?.acceptedAt ? new Date(accepted.acceptedAt) : new Date();
-                        setAcknowledged(true); setAckLocked(false); setAckAcceptedAtLocal(acceptedAtValue); setAckSubmitting(false);
-                      }}
-                      style={{ marginTop:2, flexShrink:0 }}
-                    />
-                    <div>
-                      <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
-                        {INVESTORIQ_DISCLOSURE_TEXT}
-                      </div>
-                      <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
-                        {INVESTORIQ_DISCLOSURE_LABEL}{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
-                      </div>
-                    </div>
-                  </label>
-                </div>
+      <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor:'pointer' }}>
+        <input
+          type="checkbox"
+          checked={acknowledged}
+          disabled={ackSubmitting}
+          onChange={async (e) => {
+            const next = e.target.checked;
+            if (ackSubmitting) return;
+            if (!next) {
+              clearSessionDisclosureAck();
+              setAcknowledged(false);
+              setAckAcceptedAtLocal(null);
+              return;
+            }
+            setAckSubmitting(true);
+            const ok = await finalizeDisclosureSessionAck();
+            setAckSubmitting(false);
+            if (!ok) return;
+          }}
+          style={{ marginTop:2, flexShrink:0 }}
+        />
+        <div>
+          <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:400, color:T.ink2, lineHeight:1.6 }}>
+            {INVESTORIQ_DISCLOSURE_TEXT}
+          </div>
+          <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
+            {INVESTORIQ_DISCLOSURE_LABEL}{ackAcceptedAtLocal ? ` - ACKNOWLEDGED ${formatSessionDisclosureAck(ackAcceptedAtLocal)}` : ''}
+          </div>
+        </div>
+      </label>
+    </div>
                 <PrimaryBtn
                   onClick={handleAnalyze}
                   loading={loading}
@@ -1710,15 +1766,16 @@ useEffect(() => {
                   onChange={async (e) => {
                     const next = e.target.checked;
                     if (ackSubmitting) return;
-                    if (!next) { setAcknowledged(false); setAckLocked(false); setAckAcceptedAtLocal(null); return; }
-                    setAckSubmitting(true);
-                    const accepted = await recordLegalAcceptance();
-                    if (!accepted?.ok) {
-                      toast({ title: 'Unable to record acknowledgement', description: 'Please try again.', variant: 'destructive' });
-                      setAcknowledged(false); setAckLocked(false); setAckSubmitting(false); return;
+                    if (!next) {
+                      clearSessionDisclosureAck();
+                      setAcknowledged(false);
+                      setAckAcceptedAtLocal(null);
+                      return;
                     }
-                    const acceptedAtValue = accepted?.acceptedAt ? new Date(accepted.acceptedAt) : new Date();
-                    setAcknowledged(true); setAckLocked(false); setAckAcceptedAtLocal(acceptedAtValue); setAckSubmitting(false);
+                    setAckSubmitting(true);
+                    const ok = await finalizeDisclosureSessionAck();
+                    setAckSubmitting(false);
+                    if (!ok) return;
                   }}
                   style={{ marginTop:2, flexShrink:0 }}
                 />
@@ -1727,7 +1784,7 @@ useEffect(() => {
                     {INVESTORIQ_DISCLOSURE_TEXT}
                   </div>
                   <div style={{ ...labelMono, marginTop:6, color:T.ink4 }}>
-                    {INVESTORIQ_DISCLOSURE_LABEL}{ackAcceptedAtLocal ? ` - Accepted ${formatAcceptedAtLocal(ackAcceptedAtLocal)}` : ''}
+                    {INVESTORIQ_DISCLOSURE_LABEL}{ackAcceptedAtLocal ? ` - ACKNOWLEDGED ${formatSessionDisclosureAck(ackAcceptedAtLocal)}` : ''}
                   </div>
                 </div>
               </label>
