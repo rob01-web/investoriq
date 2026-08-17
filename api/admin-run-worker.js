@@ -2242,6 +2242,7 @@ export default async function handler(req, res) {
                 },
               });
               if (terminalFailureResult?.terminalApplied === false) {
+                deferredJobIds.add(job.id);
                 continue;
               }
 
@@ -2360,6 +2361,7 @@ export default async function handler(req, res) {
               },
             });
             if (terminalFailureResult?.terminalApplied === false) {
+              deferredJobIds.add(job.id);
               continue;
             }
 
@@ -2828,6 +2830,7 @@ export default async function handler(req, res) {
               },
             });
             if (terminalFailureResult?.terminalApplied === false) {
+              deferredJobIds.add(job.id);
               continue;
             }
 
@@ -3201,6 +3204,7 @@ export default async function handler(req, res) {
                 sourceTruthPackage,
               });
               if (terminalFailureResult?.terminalApplied === false) {
+                deferredJobIds.add(job.id);
                 continue;
               }
 
@@ -3328,6 +3332,7 @@ export default async function handler(req, res) {
                 },
               });
               if (terminalFailureResult?.terminalApplied === false) {
+                deferredJobIds.add(job.id);
                 continue;
               }
 
@@ -3412,7 +3417,7 @@ export default async function handler(req, res) {
   }
 }
 
-          if (!storagePath) {
+          if (!reportData) {
             if (!baseUrl) {
               generatorError = 'Missing base URL for report generation.';
             } else {
@@ -3694,6 +3699,7 @@ export default async function handler(req, res) {
               },
             });
             if (terminalFailureResult?.terminalApplied === false) {
+              deferredJobIds.add(job.id);
               continue;
             }
             await finalizeAndPersistBlockedManifest({
@@ -3780,6 +3786,7 @@ export default async function handler(req, res) {
               },
             });
             if (terminalFailureResult?.terminalApplied === false) {
+              deferredJobIds.add(job.id);
               continue;
             }
             await finalizeAndPersistBlockedManifest({
@@ -3840,6 +3847,7 @@ export default async function handler(req, res) {
               },
             });
             if (terminalFailureResult?.terminalApplied === false) {
+              deferredJobIds.add(job.id);
               continue;
             }
             await finalizeAndPersistBlockedManifest({

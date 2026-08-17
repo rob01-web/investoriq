@@ -916,7 +916,7 @@ export function buildCoreInputSufficiencyState({
         ? "block_until_review"
         : publishabilityBucket === "admin_review_required" || publishabilityBucket === "system_contract_failure"
         ? "block_until_review"
-        : t12State.public_outreach_impact === "block_until_review" || rentRollState.public_outreach_impact === "block_until_review" || reconciliationPublicImpact === "block_until_review"
+        : resolvedT12State.public_outreach_impact === "block_until_review" || resolvedRentRollState.public_outreach_impact === "block_until_review" || reconciliationPublicImpact === "block_until_review"
         ? "block_until_review"
         : "none",
     requiredInputs:

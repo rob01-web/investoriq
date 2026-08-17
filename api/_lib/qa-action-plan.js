@@ -872,7 +872,6 @@ const deterministicCustomerHardDefectCodes = new Set([
   "PUBLIC_LANGUAGE_CONTRACT_VIOLATION",
   "HARD_PUBLIC_LANGUAGE_CONTRACT",
   "INTERNAL_DEBUG_LANGUAGE_LEAK",
-  "REPORT_TYPE_SECTION_LEAK",
 ]);
 
 const deterministicRegenerationRequiredCodes = new Set([
@@ -907,7 +906,6 @@ const knownSelfHealRenderContractCodes = new Set([
   "CURRENT_DEBT_DSCR_CANONICAL_VALUE_DRIFT",
   "SECTION_ELIGIBILITY_CURRENT_DEBT_RENDER_DRIFT",
   "SECTION_ELIGIBILITY_REFI_RENDER_DRIFT",
-  "REPORT_TYPE_SECTION_LEAK",
   "SCREENING_UNDERWRITING_SECTION_LEAK",
   "UNSUPPORTED_CURRENT_DEBT_RENDERED",
   "UNSUPPORTED_CURRENT_DEBT_ANALYSIS_RENDERED",
@@ -1257,10 +1255,7 @@ function buildPublishEligibilitySummary({
   const coreSufficiencyPublishable = isCoreSufficiencyPublishableBucket(coreInputSufficiencyState?.publishability_bucket);
   const coreValidRequiredCoverage = isCoreValidRequiredCoverageState(sourceReportCoverageQa);
   const sourceReconciliationIsDiscloseOnly = isDiscloseOnlySourceReconciliationState(sourceReconciliationState);
-  const sourceInventory = sourceReportCoverageQa?.artifact_inventory || {};
-  const t12Ready = Boolean(sourceInventory?.t12_parsed?.present && sourceInventory?.t12_parsed?.has_core_totals);
-  const rentRollReady = Boolean(sourceInventory?.rent_roll_parsed?.present);
-  const requiredCoreCoverageReady = t12Ready && rentRollReady;
+  const requiredCoreCoverageReady = coreValidRequiredCoverage;
 
   const deterministicPublicSampleBlockers = uniqueCodes(
     (Array.isArray(deterministicFlags) ? deterministicFlags : [])
@@ -1800,11 +1795,16 @@ export function isCoreValidRequiredCoverageState(sourceReportCoverageQa = null) 
   const coreInputSufficiencyState = sourceReportCoverageQa?.core_input_sufficiency_state || null;
   const t12State = sourceReportCoverageQa?.t12_sufficiency_state || coreInputSufficiencyState?.evidence?.t12_state || null;
   const rentRollState = sourceReportCoverageQa?.rent_roll_sufficiency_state || coreInputSufficiencyState?.evidence?.rent_roll_state || null;
-  return Boolean(
+  const t12Ready = Boolean(
     sourceInventory?.t12_parsed?.present &&
+    isValidatedSufficiencyState(t12State)
+  );
+  const rentRollReady = Boolean(
     sourceInventory?.rent_roll_parsed?.present &&
-    isValidatedSufficiencyState(t12State) &&
-    isValidatedSufficiencyState(rentRollState) &&
+    isValidatedSufficiencyState(rentRollState)
+  );
+  return Boolean(
+    (t12Ready || rentRollReady) &&
     isValidatedSufficiencyState(coreInputSufficiencyState)
   );
 }
@@ -2267,6 +2267,7 @@ export function buildDeliveryGateDecision({
       const code = String(finding?.code || "").toUpperCase();
       return (
         classifyReportContractViolationCode(code) === "self_heal_render" &&
+        !(coreValidRequiredCoverage && isCoreValidNonBlockingIssueCode(code)) &&
         !provenSelfHealCodes.has(code)
       );
     }) ||
@@ -2404,12 +2405,23 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
     String(state.delivery_gate_status || "").toLowerCase() === "admin_review_required";
   const hasExplicitCanonicalCustomerAllowed =
     state.customer_delivery_allowed !== undefined && state.customer_delivery_allowed !== null;
-  const customerBlockers = Array.isArray(state.customer_publish_blockers) ? state.customer_publish_blockers : [];
+  const rawCustomerBlockers = Array.isArray(state.customer_blockers)
+    ? state.customer_blockers
+    : Array.isArray(state.customer_publish_blockers)
+      ? state.customer_publish_blockers
+      : [];
+  const customerBlockers = rawCustomerBlockers.filter((code) => {
+    const normalized = String(code || "").toUpperCase();
+    if (!normalized) return false;
+    if (coreValidRequiredCoverage && deliveryGateStatus === "deliverable" && isCoreValidNonBlockingIssueCode(normalized)) {
+      return false;
+    }
+    return true;
+  });
   const customerDeliveryAllowed = Boolean(
     coreValidRequiredCoverage &&
     deliveryGateStatus === "deliverable" &&
-    hasExplicitCanonicalCustomerAllowed &&
-    state.customer_delivery_allowed === true &&
+    (!hasExplicitCanonicalCustomerAllowed || state.customer_delivery_allowed === true) &&
     state.hold_delivery !== true &&
     customerBlockers.length === 0 &&
     !wasDeprecatedAdminReviewStatus
@@ -2422,7 +2434,9 @@ export function buildCanonicalDeliveryDecisionState(deliveryGateDecision = null)
   const customerStatusLabel =
     deliveryGateStatus === "deliverable" && customerDeliveryAllowed
       ? "ready"
-      : deliveryGateStatus === "user_needs_documents"
+      : coreValidRequiredCoverage && deliveryGateStatus === "deliverable" && !customerDeliveryAllowed
+        ? "publication_held"
+        : deliveryGateStatus === "user_needs_documents"
           ? "failed"
           : null;
   const customerMessage =

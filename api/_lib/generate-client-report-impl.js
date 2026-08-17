@@ -8689,6 +8689,22 @@ try {
   }
   } catch (err) {
     console.error("Failed to build delivery_gate_decision artifact:", err?.message || err);
+
+    const constitutionalFallbackDeliveryGate = buildConstitutionalDeliveryGateDecision({
+      sourceTruthPackage: sourceTruthPackageResult,
+      pipelineCompliancePassed: false,
+      htmlSafetyValidationPassed: false,
+      rendererCompleted: typeof qaHtml === "string" && qaHtml.trim().length > 0,
+      customerBlockers: sourceTruthPackageResult?.true_blockers || [],
+      complianceDecision: null,
+    });
+
+    deliveryGateDecisionResult = {
+      ...constitutionalFallbackDeliveryGate,
+      readiness_fallback_used: true,
+      delivery_gate_build_error: err?.message || String(err),
+    };
+    deliveryDecisionStateResult = buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
   }
   const normalizedDeliveryAliases = buildDeliveryResponseCompatibilityAliases(deliveryDecisionStateResult);
   const normalizedDeliveryGateDecision = deliveryGateDecisionResult
@@ -9072,8 +9088,7 @@ try {
     acquisitionMemoV2Finalization?.customerSurfaceModel?.sectionDispositionReceipts || {};
   const canonicalFinalPdfCorePublishable = Boolean(
     isCanonicalSourceTruthPackage(sourceTruthPackageResult) &&
-    deliveryGateDecisionResult?.delivery_gate_status === "deliverable" &&
-    deliveryDecisionStateResult?.core_valid_required_coverage === true
+    sourceTruthPackageResult?.core_publishable === true
   );
   const finalPdfSourceReconciliation =
     acquisitionMemoV2Finalization?.customerSurfaceModel?.sourceTruth?.sourceReconciliation ||
