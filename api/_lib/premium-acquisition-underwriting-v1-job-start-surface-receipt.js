@@ -46,19 +46,14 @@ function buildPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
   const capability = explicitCapabilityEnabled(capabilityEnabled);
   const normalizedReportType = text(job?.report_type).toLowerCase();
   const premiumEligibleByTime =
-    capability &&
-    activationAt &&
-    jobCreatedAt &&
-    Date.parse(jobCreatedAt) >= Date.parse(activationAt);
+    capability && activationAt && jobCreatedAt && Date.parse(jobCreatedAt) >= Date.parse(activationAt);
   const requestedSurfaceVersion =
     normalizedReportType === 'underwriting' && premiumEligibleByTime
       ? PREMIUM_ACQUISITION_UNDERWRITING_V1_SURFACE_VERSION
       : BASE_ACQUISITION_UNDERWRITING_SURFACE_VERSION;
 
   if (capability && !activationAt) {
-    throw new Error(
-      'PREMIUM_UNDERWRITING_ACTIVATION_TIMESTAMP_REQUIRED_WHEN_CAPABILITY_ENABLED',
-    );
+    throw new Error('PREMIUM_UNDERWRITING_ACTIVATION_TIMESTAMP_REQUIRED_WHEN_CAPABILITY_ENABLED');
   }
   if (!jobCreatedAt) {
     throw new Error('JOB_CREATED_AT_REQUIRED_FOR_REPORT_SURFACE_ASSIGNMENT');
@@ -72,13 +67,8 @@ function buildPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
     resolvedAt,
     assignmentScope: EXTERNAL_JOB_START_ASSIGNMENT_SCOPE,
   });
-  if (
-    !receipt.valid ||
-    !isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt(receipt)
-  ) {
-    const error = new Error(
-      'PREMIUM_UNDERWRITING_JOB_START_SURFACE_ASSIGNMENT_FAILED',
-    );
+  if (!receipt.valid || !isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt(receipt)) {
+    const error = new Error('PREMIUM_UNDERWRITING_JOB_START_SURFACE_ASSIGNMENT_FAILED');
     error.context = { receipt };
     throw error;
   }
@@ -92,6 +82,19 @@ async function resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceRe
   activationStartedAt = null,
   resolvedAt = null,
 } = {}) {
+  const capability = explicitCapabilityEnabled(capabilityEnabled);
+
+  // Premium OFF means outside the active authority graph: no Premium read, write,
+  // receipt persistence, certification prerequisite, or publication veto.
+  if (!capability) {
+    return buildPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
+      job,
+      capabilityEnabled: false,
+      activationStartedAt: null,
+      resolvedAt,
+    });
+  }
+
   if (!supabaseAdmin?.from) {
     throw new Error('SUPABASE_ADMIN_REQUIRED_FOR_JOB_START_SURFACE_RECEIPT');
   }
@@ -108,19 +111,15 @@ async function resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceRe
   }
   const existingReceipt = existingRows?.[0]?.payload || null;
   if (existingReceipt) {
-    return buildPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
-      job,
-      existingReceipt,
-    });
+    return buildPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({ job, existingReceipt });
   }
 
-  const receipt =
-    buildPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
-      job,
-      capabilityEnabled,
-      activationStartedAt,
-      resolvedAt,
-    });
+  const receipt = buildPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
+    job,
+    capabilityEnabled: true,
+    activationStartedAt,
+    resolvedAt,
+  });
   const safeResolvedAt = receipt.resolvedAt.replace(/:/g, '-');
   const { error: insertError } = await supabaseAdmin
     .from('analysis_artifacts')
@@ -129,8 +128,7 @@ async function resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceRe
       user_id: job?.user_id || null,
       type: JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE,
       bucket: 'internal',
-      object_path:
-        `analysis_jobs/${receipt.jobId}/${JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE}/${safeResolvedAt}.json`,
+      object_path: `analysis_jobs/${receipt.jobId}/${JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE}/${safeResolvedAt}.json`,
       payload: receipt,
     }]);
   if (insertError) throw insertError;
