@@ -10,6 +10,7 @@
 
     { "src": "^/api/customer-job-status/?$", "dest": "/api/legal-acceptance?customer_route=job_status" },
     { "src": "^/api/customer-report-removal/?$", "dest": "/api/legal-acceptance?customer_route=report_removal" },
+    { "src": "^/api/customer-report-download/?$", "dest": "/api/legal-acceptance?customer_route=report_download" },
     { "src": "^/api/admin/quality-incidents/?$", "dest": "/api/admin/queue-metrics?admin_route=quality_incidents" },
 
     { "src": "^/api/(.*)$", "dest": "/api/$1" },
