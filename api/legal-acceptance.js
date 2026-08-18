@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { resolveAuthenticatedActor } from './_lib/authenticated-actor.js';
+import { handleCustomerBoundaryRoute } from './_lib/customer-boundary-handler.js';
 import {
   INVESTORIQ_DISCLOSURE_KEY,
   INVESTORIQ_DISCLOSURE_TEXT_HASH,
@@ -38,6 +39,14 @@ export default async function handler(req, res) {
     const userId = auth.actor.id;
     const sessionIdentifier = auth.sessionIdentifier || null;
     const sessionIdentifierSource = auth.sessionIdentifierSource || null;
+
+    const customerBoundaryResponse = await handleCustomerBoundaryRoute({
+      req,
+      res,
+      auth,
+      supabase,
+    });
+    if (customerBoundaryResponse) return customerBoundaryResponse;
 
     if (req.method === 'GET') {
       const { data: existingRow, error: readErr } = await supabase
