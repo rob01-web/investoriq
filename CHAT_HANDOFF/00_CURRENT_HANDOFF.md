@@ -56,6 +56,33 @@ P0-A2 Customer-Safe Read / Report-Removal Boundary:
 
 Do not revoke the remaining read/delete policies before their customer-facing replacements are deployed.
 
+## NON-NEGOTIABLE PUBLICATION DOCTRINE
+
+- InvestorIQ is engineered toward a **99.999% publish objective** for properly admitted jobs: every report with a defensible surviving canonical core should publish.
+- Core-Gated Publish-or-Collapse is absolute after valid admission.
+- Canonical downstream source modes are `dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, and `insufficient_core`.
+- The first three are publish-capable states. Only genuinely insufficient/invalid canonical core may fail on source sufficiency grounds.
+- Weak, missing, contradictory, irrelevant, incomplete, or unusable optional/supporting evidence must not independently destroy a valid-core report.
+- Weak dependent sections should qualify, compact, collapse, omit, or publish with a quality incident instead of causing whole-report failure.
+- A valid survivor lane must survive failure of the other core lane when the canonical source truth still supports a defensible report.
+- Internal failures such as source-truth construction exceptions, contract failures, rendering failures, PDF failures, storage failures, persistence failures, manifest failures, recovery failures, and other platform defects remain InvestorIQ internal failures. They must never be converted into customer-document blame.
+- No legacy alias, stale field, historical product path, Premium path, smoke test, QA helper, compatibility layer, or archived doctrine may override current canonical source truth, publication obligation, delivery authority, or finalization authority.
+- Smoke tests are supporting evidence only and have zero constitutional authority over the current architecture.
+- Do not declare PASS, fixed, publication-ready, or launch-ready from code inspection or smoke tests alone when fresh production evidence is still required.
+
+## WORKING STYLE / CODEX USAGE
+
+- Conserve Codex usage aggressively.
+- Use Codex only when it materially advances implementation, targeted code investigation, or proof.
+- Prefer one tightly bounded Codex prompt over exploratory back-and-forth.
+- Avoid asking Codex to chase one tiny issue after another. First establish the relevant authority boundary and evidence.
+- Apply a stop-loss mindset to retries: do not burn repeated Codex attempts without materially new evidence.
+- ChatGPT should do as much reasoning, repo inspection, synthesis, and implementation planning as possible before delegating work to Codex.
+- ChatGPT replies should normally be short: brief verdict, only the key facts needed, and the exact next move.
+- Do not produce giant recaps unless explicitly requested or genuinely necessary for a handoff/audit artifact.
+- Maintain momentum: finish the current bounded packet, record the result, and move directly to the next dependency.
+- Evidence beats optimism. Never call something PASS because it looks likely to work.
+
 ## HARD BOUNDARIES
 
 - No fresh RETEST yet.
