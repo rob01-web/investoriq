@@ -52,17 +52,10 @@ async function requestJson(baseSupabase, url, options = {}) {
 class CustomerArtifactQueryBuilder {
   constructor(baseSupabase) {
     this.baseSupabase = baseSupabase;
-    this.filters = {
-      jobIds: [],
-      type: null,
-      events: [],
-      limit: null,
-    };
+    this.filters = { jobIds: [], type: null, events: [], limit: null };
   }
 
-  select() {
-    return this;
-  }
+  select() { return this; }
 
   eq(column, value) {
     if (column === 'job_id') this.filters.jobIds = normalizeJobIds(value);
@@ -77,9 +70,7 @@ class CustomerArtifactQueryBuilder {
     return this;
   }
 
-  order() {
-    return this;
-  }
+  order() { return this; }
 
   limit(value) {
     const parsed = Number(value);
@@ -106,13 +97,8 @@ class CustomerArtifactQueryBuilder {
     return { data: rows, error: null };
   }
 
-  maybeSingle() {
-    return this.execute({ maybeSingle: true });
-  }
-
-  then(resolve, reject) {
-    return this.execute().then(resolve, reject);
-  }
+  maybeSingle() { return this.execute({ maybeSingle: true }); }
+  then(resolve, reject) { return this.execute().then(resolve, reject); }
 }
 
 function governedRemovalError(error) {
@@ -152,18 +138,14 @@ class CustomerReportDeleteBuilder {
     return { data: data?.reports || [], error: null };
   }
 
-  then(resolve, reject) {
-    return this.execute().then(resolve, reject);
-  }
+  then(resolve, reject) { return this.execute().then(resolve, reject); }
 }
 
 function wrapReportsTable(baseSupabase) {
   const table = baseSupabase.from('reports');
   return new Proxy(table, {
     get(target, property) {
-      if (property === 'delete') {
-        return () => new CustomerReportDeleteBuilder(baseSupabase);
-      }
+      if (property === 'delete') return () => new CustomerReportDeleteBuilder(baseSupabase);
       const value = Reflect.get(target, property, target);
       return typeof value === 'function' ? value.bind(target) : value;
     },
@@ -200,20 +182,32 @@ function wrapStorage(baseSupabase) {
   });
 }
 
+function wrapRpc(baseSupabase) {
+  return (functionName, args = {}, options = {}) => {
+    if (functionName === 'queue_job_for_processing') {
+      // Governed admission already creates a queued job atomically. The old second
+      // customer queue mutation is intentionally retired and remains DB-inaccessible.
+      return Promise.resolve({
+        data: { status: 'queued', governedAdmissionAlreadyQueued: true },
+        error: null,
+      });
+    }
+    return baseSupabase.rpc(functionName, args, options);
+  };
+}
+
 export function wrapSupabaseWithCustomerBoundaries(baseSupabase) {
   const storage = wrapStorage(baseSupabase);
+  const rpc = wrapRpc(baseSupabase);
 
   return new Proxy(baseSupabase, {
     get(target, property) {
       if (property === 'storage') return storage;
+      if (property === 'rpc') return rpc;
       if (property === 'from') {
         return (tableName) => {
-          if (tableName === 'analysis_artifacts') {
-            return new CustomerArtifactQueryBuilder(baseSupabase);
-          }
-          if (tableName === 'reports') {
-            return wrapReportsTable(baseSupabase);
-          }
+          if (tableName === 'analysis_artifacts') return new CustomerArtifactQueryBuilder(baseSupabase);
+          if (tableName === 'reports') return wrapReportsTable(baseSupabase);
           return baseSupabase.from(tableName);
         };
       }
