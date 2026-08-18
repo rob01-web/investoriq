@@ -53,17 +53,17 @@ assert.match(p0c, /PUBLICATION_CANONICAL_DELIVERY_DECISION_REQUIRED/);
 assert.match(p0c, /create or replace function public\.promote_report_revision_to_current\s*\(/i);
 assert.match(p0c, /report_revision_has_published_analysis_job/);
 
-// 5. Customer visibility is server-governed and lineage-fenced.
-assert.match(customerBoundary, /customer-report-removal/);
-assert.match(customerBoundary, /customer-job-status/);
+// 5. Customer visibility is server-governed and exposes only sanctioned surfaces.
+assert.match(customerBoundary, /route === 'job_status'/);
+assert.match(customerBoundary, /route === 'report_removal'/);
 assert.doesNotMatch(customerBoundary, /source_truth_package/);
 assert.doesNotMatch(customerBoundary, /premium_acquisition_underwriting/);
 assert.doesNotMatch(customerBoundary, /worker_recovery_episodes/);
-
-// 6. Automatic scheduler remains external to GitHub manual fallback; Vercel budget remains consolidated.
-assert.match(workerKick, /workflow_dispatch/);
-assert.doesNotMatch(workerKick, /schedule:/);
 assert.match(vercel, /customer-job-status/);
 assert.match(vercel, /customer-report-removal/);
+
+// 6. Automatic scheduler remains external to GitHub manual fallback.
+assert.match(workerKick, /workflow_dispatch/);
+assert.doesNotMatch(workerKick, /schedule:/);
 
 console.log('PASS launch-critical architecture authority smoke');
