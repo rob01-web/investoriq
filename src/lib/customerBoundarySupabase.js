@@ -115,6 +115,13 @@ class CustomerArtifactQueryBuilder {
   }
 }
 
+function governedRemovalError(error) {
+  const failure = new Error(error?.message || 'Governed report removal failed');
+  failure.code = error?.code || 'REPORT_REMOVAL_FAILED';
+  failure.status = error?.status || null;
+  return failure;
+}
+
 class CustomerReportDeleteBuilder {
   constructor(baseSupabase) {
     this.baseSupabase = baseSupabase;
@@ -130,10 +137,10 @@ class CustomerReportDeleteBuilder {
 
   async execute() {
     if (!this.reportId || this.invalidFilter) {
-      return {
-        data: null,
-        error: { message: 'Governed report removal requires one exact report id', code: 'INVALID_REPORT_REMOVAL' },
-      };
+      throw governedRemovalError({
+        message: 'Governed report removal requires one exact report id',
+        code: 'INVALID_REPORT_REMOVAL',
+      });
     }
 
     const { data, error } = await requestJson(this.baseSupabase, '/api/customer-report-removal', {
@@ -141,7 +148,7 @@ class CustomerReportDeleteBuilder {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ report_id: this.reportId }),
     });
-    if (error) return { data: null, error };
+    if (error) throw governedRemovalError(error);
     return { data: data?.reports || [], error: null };
   }
 
