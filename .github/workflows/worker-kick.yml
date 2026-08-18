@@ -1,11 +1,9 @@
 name: InvestorIQ Worker Kick
 
 on:
-  # Automatic schedule temporarily paused for controlled Vercel exact-job proof.
-  # Restore the schedule block below after Vercel worker success is proven.
-  # schedule:
-  #   - cron: "*/5 * * * *"   # every 5 minutes
-  workflow_dispatch: {}   # manual emergency fallback retained
+  # Automatic scheduling authority is Supabase Cron / pg_net.
+  # This workflow is manual emergency fallback only.
+  workflow_dispatch: {}
 
 concurrency:
   group: worker-kick
@@ -14,17 +12,12 @@ concurrency:
 jobs:
   kick:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 6
     steps:
-      - name: Call InvestorIQ worker
+      - name: Call canonical InvestorIQ worker
         run: |
-          curl -sS -X POST "https://investoriq.tech/api/admin/run-eligible-jobs-once" \
-            -H "x-admin-run-key: ${{ secrets.ADMIN_RUN_KEY }}" \
-            -H "Content-Type: application/json" \
-            --data "{}"
-      - name: Call admin-run-worker
-        run: |
-          curl -sS -X POST "https://investoriq.tech/api/admin-run-worker" \
+          curl --fail-with-body --connect-timeout 15 --max-time 330 -sS \
+            -X POST "https://investoriq.tech/api/admin-run-worker" \
             -H "x-admin-run-key: ${{ secrets.ADMIN_RUN_KEY }}" \
             -H "Content-Type: application/json" \
             --data "{}"
