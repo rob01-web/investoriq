@@ -1,0 +1,43 @@
+name: InvestorIQ Launch QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'lib/**'
+      - 'src/**'
+      - 'supabase/**'
+      - 'tests/qa/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vercel.json'
+      - '.github/workflows/launch-qa.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: investoriq-launch-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  launch-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run canonical launch QA
+        run: npm run test:qa
