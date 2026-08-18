@@ -18,11 +18,7 @@ const SAFE_WORKER_EVENTS = new Set([
 ]);
 
 function parseCsv(value, max = 50) {
-  return String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, max);
+  return String(value || '').split(',').map((item) => item.trim()).filter(Boolean).slice(0, max);
 }
 
 function clampLimit(value) {
@@ -35,14 +31,11 @@ function safeDeliveryDecision(payload = {}) {
   const nested = payload?.deliveryDecisionState;
   const candidate = nested && typeof nested === 'object'
     ? nested
-    : payload && typeof payload === 'object'
-      ? payload
-      : null;
-
+    : payload && typeof payload === 'object' ? payload : null;
   if (!candidate || candidate.source !== 'canonical_delivery_decision') return null;
-
   return {
     source: 'canonical_delivery_decision',
+    action: candidate.action ?? null,
     delivery_gate_status: candidate.delivery_gate_status ?? null,
     customer_status_label: candidate.customer_status_label ?? null,
     customer_status_reason_code: candidate.customer_status_reason_code ?? null,
@@ -57,30 +50,19 @@ function safeDeliveryDecision(payload = {}) {
 function sanitizeWorkerEvent(row) {
   const event = String(row?.payload?.event || '').trim();
   if (!SAFE_WORKER_EVENTS.has(event)) return null;
-
   if (FAILURE_EVENTS.has(event) || event === 'entitlement_restored') {
-    return {
-      job_id: row.job_id,
-      type: 'worker_event',
-      payload: { event },
-      created_at: row.created_at,
-    };
+    return { job_id: row.job_id, type: 'worker_event', payload: { event }, created_at: row.created_at };
   }
-
   if (event === 'delivery_gate_decision') {
     const deliveryDecisionState = safeDeliveryDecision(row.payload || {});
     if (!deliveryDecisionState) return null;
     return {
       job_id: row.job_id,
       type: 'worker_event',
-      payload: {
-        event: 'delivery_gate_decision',
-        deliveryDecisionState,
-      },
+      payload: { event: 'delivery_gate_decision', deliveryDecisionState },
       created_at: row.created_at,
     };
   }
-
   return null;
 }
 
@@ -90,19 +72,14 @@ function sanitizeRentRoll(row) {
   if (Array.isArray(payload.units)) provided = payload.units.length;
   else if (typeof payload.unit_count === 'number') provided = payload.unit_count;
   else if (typeof payload.total_units_provided === 'number') provided = payload.total_units_provided;
-
   let total = null;
   if (typeof payload.total_units === 'number') total = payload.total_units;
   else if (typeof payload.totalUnits === 'number') total = payload.totalUnits;
   else if (typeof payload.property_total_units === 'number') total = payload.property_total_units;
-
   return {
     job_id: row.job_id,
     type: 'rent_roll_parsed',
-    payload: {
-      unit_count: provided,
-      total_units: total,
-    },
+    payload: { unit_count: provided, total_units: total },
     created_at: row.created_at,
   };
 }
@@ -112,59 +89,39 @@ async function handleCustomerJobStatus({ req, res, auth, supabase }) {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   const requestedJobIds = parseCsv(req.query?.job_ids || req.query?.job_id);
-  if (requestedJobIds.length === 0) return res.status(200).json({ rows: [] });
-
+  if (!requestedJobIds.length) return res.status(200).json({ rows: [] });
   const requestedType = String(req.query?.type || '').trim();
-  if (!['worker_event', 'rent_roll_parsed'].includes(requestedType)) {
-    return res.status(200).json({ rows: [] });
-  }
-
+  if (!['worker_event', 'rent_roll_parsed'].includes(requestedType)) return res.status(200).json({ rows: [] });
   const requestedEvents = new Set(parseCsv(req.query?.events || req.query?.event, 20));
   const limit = clampLimit(req.query?.limit);
 
   const { data: ownedJobs, error: ownedJobsError } = await supabase
-    .from('analysis_jobs')
-    .select('id')
-    .eq('user_id', auth.actor.id)
-    .in('id', requestedJobIds);
-
-  if (ownedJobsError) {
-    console.error('customer-job-status owned job lookup failed:', ownedJobsError);
-    return res.status(500).json({ error: 'STATUS_LOOKUP_FAILED' });
-  }
-
+    .from('analysis_jobs').select('id').eq('user_id', auth.actor.id).in('id', requestedJobIds);
+  if (ownedJobsError) return res.status(500).json({ error: 'STATUS_LOOKUP_FAILED' });
   const ownedJobIds = (ownedJobs || []).map((row) => row.id);
-  if (ownedJobIds.length === 0) return res.status(200).json({ rows: [] });
+  if (!ownedJobIds.length) return res.status(200).json({ rows: [] });
 
-  let query = supabase
-    .from('analysis_artifacts')
+  let query = supabase.from('analysis_artifacts')
     .select('job_id, type, payload, created_at')
     .in('job_id', ownedJobIds)
     .eq('type', requestedType)
     .order('created_at', { ascending: false });
-
   if (limit) query = query.limit(limit);
-
   const { data: rows, error: rowsError } = await query;
-  if (rowsError) {
-    console.error('customer-job-status artifact lookup failed:', rowsError);
-    return res.status(500).json({ error: 'STATUS_LOOKUP_FAILED' });
-  }
+  if (rowsError) return res.status(500).json({ error: 'STATUS_LOOKUP_FAILED' });
 
   const safeRows = [];
   for (const row of rows || []) {
     if (requestedType === 'worker_event') {
       const event = String(row?.payload?.event || '').trim();
-      if (requestedEvents.size > 0 && !requestedEvents.has(event)) continue;
+      if (requestedEvents.size && !requestedEvents.has(event)) continue;
       const safe = sanitizeWorkerEvent(row);
       if (safe) safeRows.push(safe);
-      continue;
+    } else {
+      safeRows.push(sanitizeRentRoll(row));
     }
-    safeRows.push(sanitizeRentRoll(row));
   }
-
   return res.status(200).json({ rows: safeRows });
 }
 
@@ -177,50 +134,32 @@ async function handleCustomerReportRemoval({ req, res, auth, supabase }) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   const reportId = String(req.body?.report_id || req.body?.reportId || '').trim();
   if (!reportId) return res.status(400).json({ error: 'REPORT_ID_REQUIRED' });
 
   const { data: report, error: reportError } = await supabase
     .from('reports')
     .select('id, user_id, revision_family_key, revision_root_report_id')
-    .eq('id', reportId)
-    .maybeSingle();
-
-  if (reportError) {
-    console.error('customer-report-removal report lookup failed:', reportError);
-    return res.status(500).json({ error: 'REPORT_LOOKUP_FAILED' });
-  }
+    .eq('id', reportId).maybeSingle();
+  if (reportError) return res.status(500).json({ error: 'REPORT_LOOKUP_FAILED' });
   if (!report) return res.status(404).json({ error: 'REPORT_NOT_FOUND' });
 
   const ownership = resolveAuthenticatedResourceOwnership({
-    auth,
-    resourceOwnerId: report.user_id,
-    allowAdminBypass: true,
-    resourceType: 'report',
+    auth, resourceOwnerId: report.user_id, allowAdminBypass: true, resourceType: 'report',
   });
   if (!ownership.ok) return res.status(ownership.status).json({ error: ownership.error });
 
-  let familyQuery = supabase
-    .from('reports')
+  let familyQuery = supabase.from('reports')
     .select('id, user_id, revision_family_key, revision_root_report_id')
     .eq('user_id', report.user_id);
-
-  if (report.revision_family_key) {
-    familyQuery = familyQuery.eq('revision_family_key', report.revision_family_key);
-  } else if (report.revision_root_report_id) {
+  if (report.revision_family_key) familyQuery = familyQuery.eq('revision_family_key', report.revision_family_key);
+  else if (report.revision_root_report_id) {
     const rootId = report.revision_root_report_id;
     familyQuery = familyQuery.or(`id.eq.${rootId},revision_root_report_id.eq.${rootId}`);
-  } else {
-    familyQuery = familyQuery.eq('id', report.id);
-  }
+  } else familyQuery = familyQuery.eq('id', report.id);
 
   const { data: familyRows, error: familyError } = await familyQuery;
-  if (familyError) {
-    console.error('customer-report-removal family lookup failed:', familyError);
-    return res.status(500).json({ error: 'REPORT_FAMILY_LOOKUP_FAILED' });
-  }
-
+  if (familyError) return res.status(500).json({ error: 'REPORT_FAMILY_LOOKUP_FAILED' });
   const reportIds = uniqueIds(familyRows?.length ? familyRows : [report]);
   const removedBy = isInvestorIQAdmin(auth.actor) ? 'admin' : 'customer';
   const removalRows = reportIds.map((id) => ({
@@ -230,16 +169,9 @@ async function handleCustomerReportRemoval({ req, res, auth, supabase }) {
     removed_by_role: removedBy,
     removed_at: new Date().toISOString(),
   }));
-
   const { error: removalError } = await supabase
-    .from('customer_report_removals')
-    .upsert(removalRows, { onConflict: 'report_id' });
-
-  if (removalError) {
-    console.error('customer-report-removal tombstone failed:', removalError);
-    return res.status(500).json({ error: 'REPORT_REMOVAL_FAILED' });
-  }
-
+    .from('customer_report_removals').upsert(removalRows, { onConflict: 'report_id' });
+  if (removalError) return res.status(500).json({ error: 'REPORT_REMOVAL_FAILED' });
   return res.status(200).json({
     success: true,
     removal_mode: 'retained_hidden',
@@ -247,9 +179,80 @@ async function handleCustomerReportRemoval({ req, res, auth, supabase }) {
   });
 }
 
+async function handleCustomerReportDownload({ req, res, auth, supabase }) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const storagePath = String(req.body?.storage_path || req.body?.storagePath || '').trim();
+  if (!storagePath) return res.status(400).json({ error: 'STORAGE_PATH_REQUIRED' });
+
+  const { data: report, error: reportError } = await supabase
+    .from('reports')
+    .select('id, user_id, status, storage_path, revision_request_key, revision_source_job_id, is_current_revision')
+    .eq('user_id', auth.actor.id)
+    .eq('storage_path', storagePath)
+    .eq('status', 'published')
+    .eq('is_current_revision', true)
+    .maybeSingle();
+  if (reportError) return res.status(500).json({ error: 'DOWNLOAD_REPORT_LOOKUP_FAILED' });
+  if (!report) return res.status(404).json({ error: 'CURRENT_REPORT_NOT_FOUND' });
+
+  const { data: removed } = await supabase
+    .from('customer_report_removals').select('report_id').eq('report_id', report.id).maybeSingle();
+  if (removed?.report_id) return res.status(404).json({ error: 'CURRENT_REPORT_NOT_FOUND' });
+
+  const { data: receipt, error: receiptError } = await supabase
+    .from('report_publication_receipts')
+    .select('id, job_id, report_id, user_id, revision_request_key, storage_path, manifest_artifact_id, publication_status, canonical_delivery_action')
+    .eq('report_id', report.id)
+    .eq('user_id', auth.actor.id)
+    .eq('publication_status', 'complete')
+    .maybeSingle();
+  if (receiptError) return res.status(500).json({ error: 'DOWNLOAD_RECEIPT_LOOKUP_FAILED' });
+  if (!receipt || receipt.job_id !== report.revision_source_job_id
+      || receipt.revision_request_key !== report.revision_request_key
+      || receipt.storage_path !== report.storage_path
+      || !['DELIVER', 'DELIVER_WITH_QUALITY_INCIDENT'].includes(receipt.canonical_delivery_action)) {
+    return res.status(409).json({ error: 'DOWNLOAD_PUBLICATION_LINEAGE_INCOMPLETE' });
+  }
+
+  const { data: job, error: jobError } = await supabase
+    .from('analysis_jobs')
+    .select('id, user_id, report_id, status')
+    .eq('id', receipt.job_id).eq('user_id', auth.actor.id).maybeSingle();
+  if (jobError) return res.status(500).json({ error: 'DOWNLOAD_JOB_LOOKUP_FAILED' });
+  if (!job || job.status !== 'published' || job.report_id !== report.id) {
+    return res.status(409).json({ error: 'DOWNLOAD_JOB_LINEAGE_INCOMPLETE' });
+  }
+
+  const { data: manifest, error: manifestError } = await supabase
+    .from('analysis_artifacts')
+    .select('id, job_id, type')
+    .eq('id', receipt.manifest_artifact_id)
+    .eq('job_id', job.id)
+    .eq('type', 'report_quality_manifest')
+    .maybeSingle();
+  if (manifestError) return res.status(500).json({ error: 'DOWNLOAD_MANIFEST_LOOKUP_FAILED' });
+  if (!manifest) return res.status(409).json({ error: 'DOWNLOAD_MANIFEST_REQUIRED' });
+
+  const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(storagePath, 300);
+  if (error || !data?.signedUrl) return res.status(409).json({ error: 'DOWNLOAD_ARTIFACT_UNAVAILABLE' });
+
+  return res.status(200).json({
+    success: true,
+    signedUrl: data.signedUrl,
+    expiresIn: 300,
+    report_id: report.id,
+    publication_receipt_id: receipt.id,
+  });
+}
+
 export async function handleCustomerBoundaryRoute({ req, res, auth, supabase }) {
   const route = String(req.query?.customer_route || '').trim();
   if (route === 'job_status') return handleCustomerJobStatus({ req, res, auth, supabase });
   if (route === 'report_removal') return handleCustomerReportRemoval({ req, res, auth, supabase });
+  if (route === 'report_download') return handleCustomerReportDownload({ req, res, auth, supabase });
   return null;
 }
