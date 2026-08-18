@@ -1,4 +1,4 @@
-export const REPORT_IDENTITY_AUTHORITY_VERSION = "canonical_report_identity_v1";
+export const REPORT_IDENTITY_AUTHORITY_VERSION = "canonical_report_identity_v2";
 
 function freezeIdentity(identity) {
   return Object.freeze({
@@ -30,33 +30,31 @@ export const SCREENING_REPORT_IDENTITY = freezeIdentity({
 });
 
 export const UNDERWRITING_REPORT_IDENTITY = freezeIdentity({
-  identityKey: "underwriting",
-  reportFamily: "acquisition_memo",
+  // `underwriting` remains the commerce/API compatibility value. The constitutional
+  // product and revision family are explicitly Full Underwriting.
+  identityKey: "full_underwriting",
+  reportFamily: "full_underwriting",
   reportMode: "v1_core",
   reportType: "underwriting",
   reportTier: 2,
   canonicalTitle: "Underwriting Report",
   fullTitle: "InvestorIQ Underwriting Report",
-  acceptedReportTypes: [
-    "underwriting",
-    "acquisition",
-    "acquisition_memo",
-    "full_underwriting",
-    "underwriting_report",
-    "underwriting_v1",
-    "tier_2",
-    "tier2",
-  ],
-  // The legacy alias remains valid only for pre-final compatibility surfaces.
-  acceptedVisibleTitles: ["Underwriting Report", "Acquisition Memo", "Acquisition Memorandum"],
+  acceptedReportTypes: ["underwriting", "full_underwriting", "underwriting_report"],
+  acceptedVisibleTitles: ["Underwriting Report"],
   requiredPdfTextAnchors: ["Underwriting Report"],
-  prohibitedVisibleTitles: ["Preliminary Investment Screening Memorandum", "Screening Signal"],
+  prohibitedVisibleTitles: [
+    "Preliminary Investment Screening Memorandum",
+    "Screening Signal",
+    "Acquisition Memo",
+    "Acquisition Memorandum",
+  ],
 });
 
 export const REPORT_IDENTITY_AUTHORITY = Object.freeze({
   source: "canonical_report_identity_authority",
   version: REPORT_IDENTITY_AUTHORITY_VERSION,
   screening: SCREENING_REPORT_IDENTITY,
+  full_underwriting: UNDERWRITING_REPORT_IDENTITY,
   underwriting: UNDERWRITING_REPORT_IDENTITY,
 });
 
