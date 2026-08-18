@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { wrapSupabaseWithCustomerBoundaries } from './customerBoundarySupabase';
 
 /**
  * InvestorIQ Supabase Client
@@ -17,11 +18,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Initialize and export the Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const baseSupabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
 });
+
+// Customer-facing reads/removals are routed through governed server boundaries.
+export const supabase = wrapSupabaseWithCustomerBoundaries(baseSupabase);
