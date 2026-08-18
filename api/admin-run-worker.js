@@ -15,13 +15,6 @@ import {
   finalizeReportQualityManifest,
 } from './_lib/report-quality-manifest.js';
 import {
-  JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE,
-  resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt,
-} from './_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js';
-import {
-  enforcePremiumAcquisitionUnderwritingV1WorkerPublication,
-} from './_lib/premium-acquisition-underwriting-v1-external-certification.js';
-import {
   createConstitutionalWorkerLifecycle,
 } from './_lib/worker-constitutional-lifecycle.js';
 
@@ -766,7 +759,7 @@ export default async function handler(req, res) {
               userId: job.user_id || null,
               reportFamily: String(job.report_type || '').toLowerCase() === 'screening'
                 ? 'screening'
-                : 'acquisition_memo',
+                : 'full_underwriting',
               reportType: job.report_type || null,
               reportMode: String(job.report_type || '').toLowerCase() === 'screening'
                 ? 'screening_v1'
@@ -783,7 +776,7 @@ export default async function handler(req, res) {
             userId: job.user_id || null,
             reportFamily: String(job.report_type || '').toLowerCase() === 'screening'
               ? 'screening'
-              : 'acquisition_memo',
+              : 'full_underwriting',
             reportType: job.report_type || null,
             reportMode: String(job.report_type || '').toLowerCase() === 'screening'
               ? 'screening_v1'
@@ -2264,17 +2257,6 @@ export default async function handler(req, res) {
               continue;
             }
 
-            await resolveOrPersistPremiumAcquisitionUnderwritingV1JobStartSurfaceReceipt({
-              supabaseAdmin,
-              job: claimedJob,
-              capabilityEnabled:
-                process.env.PREMIUM_ACQUISITION_UNDERWRITING_V1 || false,
-              activationStartedAt:
-                process.env.PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATED_AT ||
-                null,
-              resolvedAt: nowIso,
-            });
-
             transitions.push({
               job_id: claimedJob.id,
               from_status: 'queued',
@@ -3484,29 +3466,6 @@ export default async function handler(req, res) {
                 }
               } else {
                 reportData = await reportRes.json().catch(() => ({}));
-                const premiumJobStartSurfaceReceipt =
-                  await loadLatestArtifactPayload(
-                    job.id,
-                    JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE,
-                  );
-                const premiumPublicationEnforcement =
-                  enforcePremiumAcquisitionUnderwritingV1WorkerPublication({
-                    jobSurfaceReceipt: premiumJobStartSurfaceReceipt,
-                    externalCertificationReceipt:
-                      reportData?.premium_underwriting_external_certification ||
-                      null,
-                  });
-                if (premiumPublicationEnforcement.publicationBlocked === true) {
-                  generatorErrorCode = 'REPORT_RENDER_FAILED';
-                  generatorError =
-                    'Promised premium underwriting certification was not established.';
-                  generatorFailurePayload = {
-                    failure_class: 'internal_system_failure',
-                    customer_document_failure: false,
-                    premium_underwriting_publication_enforcement:
-                      premiumPublicationEnforcement,
-                  };
-                }
                 const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
                 const publicationRetryRequired =
                   reportData?.publication_state === 'recovery_required' ||

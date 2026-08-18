@@ -11,7 +11,7 @@ process.env.QA_REVIEW_ENABLED ||= "false";
 process.env.ACQ_MEMO_V2_SOURCE_AUTHORITY ||= "true";
 
 const { default: generateClientReport } = await import("../../api/generate-client-report.js");
-const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
+const { buildCanonicalSourcePackage } = await import("../../api/_lib/legacy-source-package-fixture.js");
 const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
 const {
   assessAcquisitionMemoBossCompliance,

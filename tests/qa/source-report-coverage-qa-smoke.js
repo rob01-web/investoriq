@@ -1839,7 +1839,7 @@ const acquisitionMemoV2SurfaceResult = buildSourceReportCoverageQa({
   propertyName: "Acquisition Memo V2 Surface",
   reportType: "underwriting",
   reportTier: 2,
-  surfaceContractVersion: "acquisition_memo_v2",
+  surfaceContractVersion: "full_underwriting_v1",
   uploadedFiles: [],
   artifacts: [],
   html: [

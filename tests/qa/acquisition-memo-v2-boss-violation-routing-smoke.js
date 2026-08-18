@@ -3,7 +3,7 @@ import assert from "assert";
 process.env.NODE_ENV ||= "test";
 process.env.INVESTORIQ_ENABLE_TEST_HOOKS ||= "true";
 
-const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
+const { buildCanonicalSourcePackage } = await import("../../api/_lib/legacy-source-package-fixture.js");
 const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
 const { renderAcquisitionMemo } = await import("../../api/_lib/acquisition-memo-renderer.js");
 const { renderCompleteAcquisitionMemoV2Html } = await import("../../api/_lib/acquisition-memo-v2-document.js");

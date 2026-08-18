@@ -92,7 +92,7 @@ await orchestratorModule.link(async (specifier, referencingModule) => {
 await orchestratorModule.evaluate();
 const { runAcquisitionMemoV2Orchestrator } = orchestratorModule.namespace;
 
-const { buildCanonicalSourcePackage } = await import("./api/_lib/canonical-source-package.js");
+const { buildCanonicalSourcePackage } = await import("./api/_lib/legacy-source-package-fixture.js");
 const { buildAcquisitionMemoProjection } = await import("./api/_lib/acquisition-memo-projection.js");
 const { buildAcquisitionMemoBossContract } = await import("./api/_lib/acquisition-memo-boss-contract.js");
 

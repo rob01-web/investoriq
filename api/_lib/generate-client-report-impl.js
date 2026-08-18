@@ -46,28 +46,12 @@ import {
 import { buildReportQualityManifestCandidate } from "./report-quality-manifest.js";
 import { buildAcquisitionMemoProjection } from "./acquisition-memo-projection.js";
 import { buildCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
-import {
-  buildPremiumAcquisitionUnderwritingV1ExternalGeneration,
-} from "./premium-acquisition-underwriting-v1-external-generation.js";
-import {
-  observePremiumAcquisitionUnderwritingV1Quality,
-} from "./premium-acquisition-underwriting-v1-quality-observer.js";
-import {
-  EXTERNAL_CERTIFICATION_ARTIFACT_TYPE,
-  certifyPremiumAcquisitionUnderwritingV1External,
-} from "./premium-acquisition-underwriting-v1-external-certification.js";
-import {
-  JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE,
-} from "./premium-acquisition-underwriting-v1-job-start-surface-receipt.js";
-import {
-  isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt,
-} from "./premium-acquisition-underwriting-v1-job-surface-authority.js";
 import { renderAcquisitionMemo } from "./acquisition-memo-renderer.js";
 import {
   buildAcquisitionMemoBossContract,
   validateAcquisitionMemoBossContract,
 } from "./acquisition-memo-boss-contract.js";
-import { runAcquisitionMemoV2Pipeline } from "./acquisition-memo-v2-pipeline.js";
+import { runFullUnderwritingPipeline } from "./full-underwriting-pipeline.js";
 import {
   buildAcquisitionMemoV2DocumentTreatmentSummaryHtml as buildAcquisitionMemoV2DocumentTreatmentSummaryHtmlLane,
   buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtml as buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtmlLane,
@@ -3003,7 +2987,6 @@ export default async function handler(req, res) {
     let jobReportType = null;
     let jobUserId = null;
     let jobPropertyName = null;
-    let premiumJobStartSurfaceReceipt = null;
     const adminAuthorized = isAdminRegen || Boolean(headerKey && headerKey === adminRunKey);
     if (jobId) {
       const { data: jobRow } = await supabase
@@ -3022,30 +3005,6 @@ export default async function handler(req, res) {
       }
       if (jobUserId && effectiveUserId && jobUserId !== effectiveUserId) {
         return res.status(403).json({ error: "Job ownership mismatch" });
-      }
-      const { data: surfaceReceiptRows, error: surfaceReceiptError } =
-        await supabase
-          .from("analysis_artifacts")
-          .select("payload")
-          .eq("job_id", jobId)
-          .eq("type", JOB_START_SURFACE_RECEIPT_ARTIFACT_TYPE)
-          .order("created_at", { ascending: true })
-          .limit(2);
-      if (surfaceReceiptError) throw surfaceReceiptError;
-      if (Array.isArray(surfaceReceiptRows) && surfaceReceiptRows.length > 1) {
-        throw new Error("MULTIPLE_JOB_START_SURFACE_RECEIPTS_DETECTED");
-      }
-      premiumJobStartSurfaceReceipt = surfaceReceiptRows?.[0]?.payload || null;
-      if (
-        premiumJobStartSurfaceReceipt &&
-        (
-          !isCanonicalPremiumAcquisitionUnderwritingV1JobSurfaceReceipt(
-            premiumJobStartSurfaceReceipt,
-          ) ||
-          premiumJobStartSurfaceReceipt.jobId !== jobId
-        )
-      ) {
-        throw new Error("INVALID_PREMIUM_JOB_START_SURFACE_RECEIPT");
       }
     }
     if (isAdminRegen) {
@@ -4930,20 +4889,6 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           asOfDate: acquisitionMemoGeneratedAt.slice(0, 10),
         })
       : null;
-    const premiumExternalGeneration =
-      effectiveReportMode === "v1_core"
-        ? buildPremiumAcquisitionUnderwritingV1ExternalGeneration({
-            jobSurfaceReceipt: premiumJobStartSurfaceReceipt,
-            sourceTruthPackage: sourceTruthPackageResult,
-            financialIntelligence: acquisitionMemoFinancialIntelligence,
-          })
-        : {
-            enabled: false,
-            reportSurfaceVersion: null,
-            premiumUnderwritingCapabilityEnabled: false,
-            premiumUnderwritingModel: null,
-            generationReceipt: null,
-          };
     let acquisitionMemoV2Bridge = null;
     let acquisitionMemoV2Finalization = null;
     const sourceTruthCanonicalSourcePackage = constrainCanonicalSourcePackageToSourceTruth(
@@ -5394,16 +5339,10 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         propertyAddress: displayPropertyAddress,
         propertyTitle: displayPropertyTitle,
       },
-      premiumUnderwritingModel:
-        premiumExternalGeneration.premiumUnderwritingModel,
-      premiumUnderwritingCapabilityEnabled:
-        premiumExternalGeneration.premiumUnderwritingCapabilityEnabled,
-      reportSurfaceVersion:
-        premiumExternalGeneration.reportSurfaceVersion,
     };
     if (acquisitionMemoV2OwnsFinalHtml) {
       const finalBossCompliance = acquisitionMemoV2Finalization ||
-        (await runAcquisitionMemoV2Pipeline({
+        (await runFullUnderwritingPipeline({
           acquisitionMemoV2DocumentArgs,
           acquisitionMemoBossContract,
         })) || {
@@ -5428,7 +5367,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         finalBossCompliance.deliveryState ||
         null;
       if (!finalV2DeliveryDecision) {
-        throw new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+        throw new Error("Full Underwriting HTML failed representation compliance");
       }
       if (!finalV2DeliveryDecision.customer_publish_eligible) {
         await persistFinalAcquisitionMemoV2ComplianceDiagnostics({
@@ -5437,11 +5376,11 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           diagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
           finalDeliveryDecision: finalV2DeliveryDecision,
         });
-        console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {
+        console.error("Full Underwriting HTML failed representation compliance", {
           violations: finalBossCompliance.compliance?.violations || [],
           finalDeliveryDecision: finalV2DeliveryDecision,
         });
-        const finalBossError = new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+        const finalBossError = new Error("Full Underwriting HTML failed representation compliance");
         finalBossError.code = "REPORT_GENERATION_FAILED";
         finalBossError.context = {
           compliance: finalBossCompliance.compliance || null,
@@ -8074,7 +8013,7 @@ try {
       acquisitionAssumptionState ||
       null,
     sourceTruthPackage: sourceTruthPackageResult,
-    surfaceContractVersion: acquisitionMemoV2Finalization ? "acquisition_memo_v2" : null,
+    surfaceContractVersion: acquisitionMemoV2Finalization ? "full_underwriting_v1" : null,
     sectionEligibility:
       underwritingState?.core?.sections?.eligibilityState ||
       sectionEligibility ||
@@ -8812,7 +8751,7 @@ try {
         reportQualityManifestCandidate = buildReportQualityManifestCandidate({
           jobId,
           userId: effectiveUserId || null,
-          reportFamily: "acquisition_memo",
+          reportFamily: "full_underwriting",
           reportType,
           reportMode: effectiveReportMode,
           propertyName: propertyNameDisplay || property_name || jobPropertyName || null,
@@ -8847,7 +8786,7 @@ try {
         });
       } catch (manifestErr) {
         console.error(
-          "Failed to build blocked Acquisition Memo Report Quality Manifest candidate:",
+          "Failed to build blocked Full Underwriting Report Quality Manifest candidate:",
           manifestErr?.context || manifestErr?.message || manifestErr
         );
       }
@@ -8974,7 +8913,7 @@ try {
     }
   } else if (isAcqMemoV2FinalHtml) {
     const finalBossCompliance = acquisitionMemoV2Finalization ||
-      (await runAcquisitionMemoV2Pipeline({
+      (await runFullUnderwritingPipeline({
         acquisitionMemoV2DocumentArgs,
         acquisitionMemoBossContract,
       })) || {
@@ -8999,7 +8938,7 @@ try {
       finalBossCompliance.deliveryState ||
       null;
     if (!finalV2DeliveryDecision) {
-      throw new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+      throw new Error("Full Underwriting HTML failed representation compliance");
     }
     acquisitionMemoV2Finalization = assertSealedOutputImmutable({
       ...acquisitionMemoV2Finalization,
@@ -9018,11 +8957,11 @@ try {
         diagnostics: finalBossCompliance.finalComplianceDiagnostics || null,
         finalDeliveryDecision: finalV2DeliveryDecision,
       });
-      console.error("Final Acquisition Memo V2 HTML failed Boss compliance", {
+      console.error("Full Underwriting HTML failed representation compliance", {
         violations: finalBossCompliance.compliance?.violations || [],
         finalDeliveryDecision: finalV2DeliveryDecision,
       });
-      const finalBossError = new Error("Final Acquisition Memo V2 HTML failed Boss compliance");
+      const finalBossError = new Error("Full Underwriting HTML failed representation compliance");
       finalBossError.code = "REPORT_GENERATION_FAILED";
       finalBossError.context = {
         compliance: finalBossCompliance.compliance || null,
@@ -9290,82 +9229,6 @@ try {
   }
   throw err;
 }
-    const premiumUnderwritingQualityObservation =
-      observePremiumAcquisitionUnderwritingV1Quality({
-        premiumUnderwritingModel:
-          premiumExternalGeneration.premiumUnderwritingModel,
-        renderedHtml: docHtml,
-        premiumUnderwritingCapabilityEnabled:
-          premiumExternalGeneration.premiumUnderwritingCapabilityEnabled,
-        reportSurfaceVersion:
-          premiumExternalGeneration.reportSurfaceVersion,
-      });
-    const premiumUnderwritingExternalCertification =
-      certifyPremiumAcquisitionUnderwritingV1External({
-        jobSurfaceReceipt: premiumJobStartSurfaceReceipt,
-        generationReceipt: premiumExternalGeneration.generationReceipt,
-        premiumUnderwritingModel:
-          premiumExternalGeneration.premiumUnderwritingModel,
-        qualityObservation: premiumUnderwritingQualityObservation,
-        pdfPublicationQualityBoss: finalPdfPublicationQualityBossResult,
-      });
-    if (
-      jobId &&
-      premiumUnderwritingExternalCertification.certificationRequired === true
-    ) {
-      const premiumCertificationTimestamp =
-        new Date().toISOString().replace(/:/g, "-");
-      const { error: premiumCertificationArtifactError } = await supabase
-        .from("analysis_artifacts")
-        .insert([{
-          job_id: jobId,
-          user_id: effectiveUserId || null,
-          type: EXTERNAL_CERTIFICATION_ARTIFACT_TYPE,
-          bucket: "internal",
-          object_path:
-            `analysis_jobs/${jobId}/${EXTERNAL_CERTIFICATION_ARTIFACT_TYPE}/${premiumCertificationTimestamp}.json`,
-          payload: premiumUnderwritingExternalCertification,
-        }]);
-      if (premiumCertificationArtifactError) {
-        const persistenceError = new Error(
-          "PREMIUM_UNDERWRITING_EXTERNAL_CERTIFICATION_PERSISTENCE_FAILED",
-        );
-        persistenceError.code = TERMINAL_FAILURE_CODES.REPORT_RENDER_FAILED;
-        persistenceError.context = {
-          failure_class: "internal_system_failure",
-          customer_document_failure: false,
-          job_id: jobId,
-          report_surface_version:
-            premiumUnderwritingExternalCertification.reportSurfaceVersion,
-        };
-        throw persistenceError;
-      }
-    }
-    if (
-      premiumUnderwritingExternalCertification.reportPublicationBlocker ===
-        true ||
-      (
-        premiumUnderwritingExternalCertification.certificationRequired ===
-          true &&
-        premiumUnderwritingExternalCertification.externalPremiumCertified !==
-          true
-      )
-    ) {
-      const certificationError = new Error(
-        "PREMIUM_UNDERWRITING_EXTERNAL_CERTIFICATION_FAILED",
-      );
-      certificationError.code = TERMINAL_FAILURE_CODES.REPORT_RENDER_FAILED;
-      certificationError.context = {
-        failure_class: "internal_system_failure",
-        customer_document_failure: false,
-        job_id: jobId || null,
-        report_surface_version:
-          premiumUnderwritingExternalCertification.reportSurfaceVersion,
-        premium_underwriting_external_certification:
-          premiumUnderwritingExternalCertification,
-      };
-      throw certificationError;
-    }
         const canonicalDeliveryDecisionState = deliveryDecisionStateResult || buildCanonicalDeliveryDecisionState(deliveryGateDecisionResult);
         const holdDelivery = Boolean(canonicalDeliveryDecisionState.hold_delivery);
     const publicationSeed = jobId || crypto.randomUUID();
@@ -9605,7 +9468,7 @@ try {
           jobId,
           userId: effectiveUserId || null,
           reportId,
-          reportFamily: "acquisition_memo",
+          reportFamily: "full_underwriting",
           reportType,
           reportMode: effectiveReportMode,
           propertyName: propertyNameDisplay || propertyName || null,
@@ -9640,7 +9503,7 @@ try {
           candidate: reportQualityManifestCandidate,
         });
       } catch (manifestErr) {
-        console.error("Failed to build Acquisition Memo Report Quality Manifest candidate:", manifestErr?.context || manifestErr?.message || manifestErr);
+        console.error("Failed to build Full Underwriting Report Quality Manifest candidate:", manifestErr?.context || manifestErr?.message || manifestErr);
       }
     }
     // 13. Return JSON with the report URL and report_id
@@ -9660,14 +9523,6 @@ try {
       deterministic_contract_qa_seal: finalPdfDeterministicContractQaSeal,
       section_disposition_receipts: finalPdfSectionDispositionReceipts,
       report_quality_manifest_candidate: reportQualityManifestCandidate,
-      premium_underwriting_job_start_surface_receipt:
-        premiumJobStartSurfaceReceipt,
-      premium_underwriting_generation_receipt:
-        premiumExternalGeneration.generationReceipt,
-      premium_underwriting_quality_observation:
-        premiumUnderwritingQualityObservation,
-      premium_underwriting_external_certification:
-        premiumUnderwritingExternalCertification,
       deliveryDecisionState: canonicalDeliveryDecisionState,
     delivery_gate_status: deliveryAliases.delivery_gate_status,
     customer_delivery_allowed: deliveryAliases.customer_delivery_allowed,

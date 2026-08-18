@@ -3,7 +3,7 @@ import assert from "assert/strict";
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 
-const { buildRefiDebtRenderState } = await import("../../api/_lib/report-surface-render-helpers.js");
+const { buildRefiDebtRenderState } = await import("../../api/_lib/legacy-report-surface-render-helpers.js");
 const { buildFinancingEnvelopeGrid } = await import("../../api/_lib/screening-report-renderer.js");
 const { buildScreeningRefiSufficiencyTable } = await import("../../api/_lib/screening-report-renderer.js");
 

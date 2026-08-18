@@ -9,7 +9,7 @@ process.env.DOCRAPTOR_API_KEY ||= "test-docractor-key";
 process.env.QA_REVIEW_ENABLED ||= "false";
 
 const generateClientReport = (await import("../../api/generate-client-report.js")).default;
-const { buildCanonicalSourcePackage } = await import("../../api/_lib/canonical-source-package.js");
+const { buildCanonicalSourcePackage } = await import("../../api/_lib/legacy-source-package-fixture.js");
 const { buildAcquisitionMemoProjection } = await import("../../api/_lib/acquisition-memo-projection.js");
 const { renderAcquisitionMemo } = await import("../../api/_lib/acquisition-memo-renderer.js");
 const { renderCompleteAcquisitionMemoV2Html } = await import("../../api/_lib/acquisition-memo-v2-document.js");

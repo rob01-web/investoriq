@@ -2,7 +2,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 
 import { inferSupportingDocTypeFromText } from "../../api/parse/parse-doc.js";
-import { buildCanonicalSourcePackage } from "../../api/_lib/canonical-source-package.js";
+import { buildCanonicalSourcePackage } from "../../api/_lib/legacy-source-package-fixture.js";
 import { buildSourceReportCoverageQa } from "../../api/_lib/source-report-coverage-qa.js";
 import {
   buildCanonicalSourceTruthPackage,

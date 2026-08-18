@@ -1,7 +1,7 @@
 import assert from "assert";
 import fs from "fs";
 
-import { buildCanonicalSourcePackage } from "../../api/_lib/canonical-source-package.js";
+import { buildCanonicalSourcePackage } from "../../api/_lib/legacy-source-package-fixture.js";
 import { buildAcquisitionMemoProjection } from "../../api/_lib/acquisition-memo-projection.js";
 import {
   buildAcquisitionMemoBossContract,

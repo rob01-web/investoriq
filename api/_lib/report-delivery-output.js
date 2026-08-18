@@ -745,27 +745,7 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
   const hasCanonicalDeliveryGateState =
     state.source === "canonical_delivery_decision" &&
     state.core_valid_required_coverage === true;
-  const finalBossCompliance = state.finalBossCompliance && typeof state.finalBossCompliance === "object"
-    ? state.finalBossCompliance
-    : {};
-  const hasCanonicalAcquisitionFinalDecision =
-    state.version === "acq_memo_v2_final_delivery_decision_v1" &&
-    state.product === "acquisition_memo_v2" &&
-    state.final_delivery_authority === "final_boss_customer_surface_model_delivery_decision" &&
-    state.final_delivery_status === "deliverable" &&
-    state.coreGate?.publishAllowed === true &&
-    finalBossCompliance.ok === true &&
-    finalBossCompliance.bossOk === true &&
-    finalBossCompliance.customerSurfaceModelOk === true &&
-    finalBossCompliance.customerSurfaceHtmlOk === true &&
-    Number(finalBossCompliance.violationCount) === 0 &&
-    state.customer_delivery_ready === true &&
-    state.customer_publish_eligible === true &&
-    state.report_publishable === true &&
-    state.report_blocked === false &&
-    Array.isArray(state.blockingReasons) &&
-    state.blockingReasons.length === 0;
-  const hasCanonicalCoreValidState = hasCanonicalDeliveryGateState || hasCanonicalAcquisitionFinalDecision;
+  const hasCanonicalCoreValidState = hasCanonicalDeliveryGateState;
   const deliveryGateStatus = hasCanonicalCoreValidState ? rawDeliveryGateStatus : "blocked";
   const customerDeliveryGateStatus =
     rawDeliveryGateStatus === "user_needs_documents"
@@ -778,9 +758,7 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
       : Array.isArray(state.blockingReasons)
         ? state.blockingReasons
         : [];
-  const canonicalCustomerDeliveryAllowed = hasCanonicalAcquisitionFinalDecision
-    ? state.customer_delivery_ready === true && state.customer_publish_eligible === true && state.report_publishable === true
-    : state.customer_delivery_allowed === true;
+  const canonicalCustomerDeliveryAllowed = state.customer_delivery_allowed === true;
   const customerDeliveryAllowed =
     hasCanonicalCoreValidState &&
     canonicalCustomerDeliveryAllowed &&
@@ -797,9 +775,7 @@ export function buildDeliveryResponseCompatibilityAliases(deliveryDecisionState 
         : "customer_deliverable_with_internal_advisory")
       : (rawDeliveryGateStatus === "user_needs_documents" ? "replacement_source_required" : "customer_deliverable");
   const readinessHierarchy = {
-    final_delivery_authority: hasCanonicalAcquisitionFinalDecision
-      ? state.final_delivery_authority
-      : "delivery_gate",
+    final_delivery_authority: "delivery_gate",
     final_delivery_status: customerDeliveryGateStatus,
     customer_delivery_ready: customerDeliveryAllowed,
     customer_publish_eligible: customerDeliveryAllowed,

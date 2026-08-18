@@ -595,7 +595,7 @@ export function buildSourceReportCoverageQa({
   const canonicalSourceTruthPackage = isCanonicalSourceTruthPackage(sourceTruthPackage)
     ? sourceTruthPackage
     : null;
-  const usesAcquisitionMemoV2Surface = surfaceContractVersion === "acquisition_memo_v2";
+  const usesFullUnderwritingSurface = surfaceContractVersion === "full_underwriting_v1";
   const loanResolution = resolveCanonicalLoanTermSheetArtifacts(artifacts);
   const taxonomyLookup = buildSupportDocDisplayLookup(artifacts);
   const files = uploadedFiles.map((row) => normalizeFile(row, taxonomyLookup));
@@ -994,7 +994,7 @@ export function buildSourceReportCoverageQa({
     !renderedDebtLimitationCopyPresent;
   if (
     isFullUnderwriting &&
-    !usesAcquisitionMemoV2Surface &&
+    !usesFullUnderwritingSurface &&
     canonicalSectionAuthorityPresent &&
     hasBroadCanonicalUnderwritingEligibility &&
     (
@@ -1022,7 +1022,7 @@ export function buildSourceReportCoverageQa({
   }
   if (
     isFullUnderwriting &&
-    !usesAcquisitionMemoV2Surface &&
+    !usesFullUnderwritingSurface &&
     !canonicalSectionAuthorityPresent &&
     supportPackageLooksBroad &&
     eligibleSections.length >= 5 &&
@@ -1070,7 +1070,7 @@ export function buildSourceReportCoverageQa({
     artifactInventory.property_tax_parsed.present;
   if (
     isFullUnderwriting &&
-    !usesAcquisitionMemoV2Surface &&
+    !usesFullUnderwritingSurface &&
     !canonicalSectionAuthorityPresent &&
     materialSupportFiles.length >= 2 &&
     supportPackageLooksBroad &&

@@ -60,7 +60,7 @@ const legacyAliasResolution = resolveReportTypeAndTier({ bodyReportType: "acquis
 assert.equal(legacyAliasResolution.ok, false);
 assert.equal(legacyAliasResolution.explicitUnknown, true);
 
-assert.equal(canonicalIdentityReceipt.reportFamily, "acquisition_memo");
+assert.equal(canonicalIdentityReceipt.reportFamily, "full_underwriting");
 assert.equal(canonicalIdentityReceipt.reportMode, "v1_core");
 assert.equal(canonicalIdentityReceipt.reportType, "underwriting");
 assert.equal(canonicalIdentityReceipt.reportTier, 2);
@@ -93,13 +93,6 @@ assert.equal(new Set(htmlRuns).size, 1);
 const html = htmlRuns[0];
 assert.equal(html, fixture.html);
 
-const premiumDisabledHtml = renderCompleteAcquisitionMemoV2Html({
-  ...baseArgs,
-  premiumUnderwritingCapabilityEnabled: false,
-  premiumUnderwritingModel: structuredClone(fixture.customerSurfaceModel),
-  reportSurfaceVersion: "premium_acquisition_underwriting_v1",
-});
-assert.equal(premiumDisabledHtml, html);
 
 const htmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, fixture.customerSurfaceModel);
 assert.equal(htmlValidation.ok, true, JSON.stringify(htmlValidation.issues, null, 2));
@@ -138,7 +131,7 @@ const manifestCandidate = buildReportQualityManifestCandidate({
   jobId,
   userId: "h12-h13-user",
   reportId: "h12-h13-report",
-  reportFamily: "acquisition_memo",
+  reportFamily: "full_underwriting",
   reportType: fixture.reportMeta.reportType,
   reportMode: fixture.reportMeta.reportMode,
   propertyName: fixture.reportMeta.propertyName,
@@ -152,7 +145,7 @@ const manifestCandidate = buildReportQualityManifestCandidate({
   deliveryDecision: deliverableDecision,
 });
 assert.equal(validateReportQualityManifest(manifestCandidate).ok, true, JSON.stringify(validateReportQualityManifest(manifestCandidate).issues, null, 2));
-assert.equal(manifestCandidate.report.reportFamily, "acquisition_memo");
+assert.equal(manifestCandidate.report.reportFamily, "full_underwriting");
 assert.equal(manifestCandidate.report.reportType, "underwriting");
 assert.equal(manifestCandidate.report.reportMode, "v1_core");
 assert.equal(manifestCandidate.receipts.sourceTruth.source, "canonical_source_truth_package");

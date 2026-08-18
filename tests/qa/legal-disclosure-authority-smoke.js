@@ -57,7 +57,8 @@ assert.deepEqual(acceptanceRecord, {
 const dashboard = fs.readFileSync('src/pages/Dashboard.jsx', 'utf8');
 assert.match(dashboard, /INVESTORIQ_DISCLOSURE_TEXT/);
 assert.match(dashboard, /INVESTORIQ_DISCLOSURE_LABEL/);
-assert.match(dashboard, /fetchLegalAcceptance\(\)/);
+assert.match(dashboard, /recordLegalAcceptance/);
+assert.match(dashboard, /fetch\(['"]\/api\/legal-acceptance['"]/);
 
 const app = fs.readFileSync('src/App.jsx', 'utf8');
 assert.match(app, /INVESTORIQ_DISCLOSURE_LABEL/);

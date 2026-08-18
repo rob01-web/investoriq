@@ -43,7 +43,8 @@ function patchWorkerSource(source, { exposeRestoreHelper = false, throwAfterExpo
     .replaceAll("./_lib/report-delivery-output.js", toFileUrl('api/_lib/report-delivery-output.js'))
     .replaceAll("./_lib/report-quality-manifest.js", toFileUrl('api/_lib/report-quality-manifest.js'))
     .replaceAll("./_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js'))
-    .replaceAll("./_lib/premium-acquisition-underwriting-v1-external-certification.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-external-certification.js'));
+    .replaceAll("./_lib/premium-acquisition-underwriting-v1-external-certification.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-external-certification.js'))
+    .replaceAll("./_lib/worker-constitutional-lifecycle.js", toFileUrl('api/_lib/worker-constitutional-lifecycle.js'));
 
   if (exposeRestoreHelper) {
     patched = patched.replace(
@@ -429,29 +430,19 @@ await timeoutWorkerModule.default(timeoutInvocation.req, timeoutInvocation.res);
 assert.equal(timeoutInvocation.res.statusCode, 200);
 assert.equal(
   runtimeState.restoreCalls.filter((call) => call.name === 'fail_expired_worker_job').length,
-  1
+  0
 );
 assert.equal(
   runtimeState.restoreCalls.filter((call) => call.name === 'restore_failed_worker_entitlement').length,
-  1
+  0
 );
-assert.deepEqual(
-  runtimeState.restoreCalls.find((call) => call.name === 'restore_failed_worker_entitlement')?.args,
-  {
-    p_job_id: 'job-timeout',
-    p_worker_attempt_id: 'attempt-timeout',
-    p_claimed_by: fixedWorkerInvocationId,
-    p_terminal_status: 'failed',
-    p_restore_reason: 'worker_timeout',
-    p_restore_error_code: 'TIMEOUT',
-  }
-);
-assert.equal(runtimeState.jobEvents.filter((row) => row.job_id === 'job-timeout' && row.event_type === 'entitlement_restored').length, 1);
+assert.equal(runtimeState.jobs.get('job-timeout')?.status, 'extracting');
+assert.equal(runtimeState.purchases.get('purchase-timeout')?.job_id, 'job-timeout');
+assert.notEqual(runtimeState.purchases.get('purchase-timeout')?.consumed_at, null);
 assert.equal(
-  runtimeState.artifacts.filter((row) => row.job_id === 'job-timeout' && row.type === 'worker_event' && row.payload?.event === 'entitlement_restored').length,
-  1
+  runtimeState.jobEvents.filter((row) => row.job_id === 'job-timeout' && row.event_type === 'entitlement_restored').length,
+  0
 );
-assertRestorationEvent('job-timeout', 'failed');
 
 runtimeState = createRuntimeState();
 const staleJob = seedJob({

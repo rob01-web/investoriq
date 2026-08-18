@@ -13,7 +13,13 @@ const p0d = read('supabase/migrations/20260818130000_p0_d_recovery_observability
 const identity = read('api/_lib/report-identity-authority.js');
 const customerBoundary = read('api/_lib/customer-boundary-handler.js');
 const canonicalDelivery = read('api/_lib/canonical-delivery-action.js');
-const premiumReceipt = read('api/_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js');
+const fullUnderwritingPipeline = read('api/_lib/full-underwriting-pipeline.js');
+const fullUnderwritingDocument = read('api/_lib/acquisition-memo-v2-document.js');
+const representationDecision = read('api/_lib/acquisition-memo-v2-final-decision.js');
+const requestContext = read('api/_lib/report-request-context.js');
+const generatorImpl = read('api/_lib/generate-client-report-impl.js');
+const worker = read('api/admin-run-worker.js');
+const packageJson = JSON.parse(read('package.json'));
 const workerKick = read('.github/workflows/worker-kick.yml');
 const vercel = read('vercel.json');
 
@@ -40,8 +46,23 @@ assert.match(p0d, /legacy_job_reconciliation_decisions/);
 assert.match(identity, /reportFamily:\s*["']full_underwriting["']/);
 assert.doesNotMatch(identity, /reportFamily:\s*["']acquisition_memo["']/);
 assert.match(p0b, /product_identity in \('screening', 'full_underwriting'\)/i);
-assert.match(premiumReceipt, /Premium OFF means outside the active authority graph/i);
-assert.match(premiumReceipt, /if \(!capability\)/);
+assert.doesNotMatch(requestContext, /[\"']ic[\"']\s*,/i);
+assert.doesNotMatch(generatorImpl, /premium-acquisition-underwriting-v1/i);
+assert.doesNotMatch(worker, /premium-acquisition-underwriting-v1/i);
+assert.doesNotMatch(fullUnderwritingDocument, /premium-acquisition-underwriting-v1/i);
+assert.match(fullUnderwritingPipeline, /product:\s*["']full_underwriting["']/);
+assert.match(fullUnderwritingPipeline, /historicalImplementationHasConstitutionalAuthority:\s*false/);
+assert.doesNotMatch(generatorImpl, /runAcquisitionMemoV2Pipeline/);
+assert.match(generatorImpl, /runFullUnderwritingPipeline/);
+assert.match(representationDecision, /product:\s*["']full_underwriting["']/);
+assert.match(representationDecision, /representation_quality_decision_only/);
+assert.equal(packageJson.scripts.qa, 'node tests/qa/run-all.js');
+assert.equal(packageJson.scripts['qa:launch-core'], undefined);
+assert.equal(packageJson.scripts['qa:full'], undefined);
+assert.equal(packageJson.scripts['qa:premium-underwriting'], undefined);
+for (const scriptName of Object.keys(packageJson.scripts).filter((name) => name.startsWith('qa:'))) {
+  assert.match(scriptName, /^qa:(component|diagnostic|utility):/, `non-canonical QA script must be explicitly classified: ${scriptName}`);
+}
 
 // 4. Canonical delivery and publication authority.
 assert.match(canonicalDelivery, /DELIVER_WITH_QUALITY_INCIDENT/);

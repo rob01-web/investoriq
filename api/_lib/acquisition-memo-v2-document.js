@@ -3,7 +3,6 @@ import { buildDocumentTreatmentSummaryHtml } from "./document-treatment-authorit
 import { formatInterestRatePercent } from "./report-formatting-helpers.js";
 import { ACQUISITION_FINANCING_DISPLAY_LABELS } from "./acquisition-financing-display-contract.js";
 import { UNDERWRITING_REPORT_IDENTITY } from "./report-identity-authority.js";
-import { renderPremiumAcquisitionUnderwritingV1Expansion } from "./premium-acquisition-underwriting-v1-renderer.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -1920,9 +1919,6 @@ export function renderCompleteAcquisitionMemoV2Html({
   bossContract = null,
   customerSurfaceModel = null,
   financialIntelligence = null,
-  premiumUnderwritingModel = null,
-  premiumUnderwritingCapabilityEnabled = false,
-  reportSurfaceVersion = null,
 } = {}) {
   try {
     const hasCanonicalBreakEvenContract = Boolean(customerSurfaceModel?.financialTruth?.breakEvenOccupancy);
@@ -1990,14 +1986,6 @@ export function renderCompleteAcquisitionMemoV2Html({
     const dataCoverageSection = renderSafely("Data Coverage & Source Limitations", () => renderDataCoverageSection({ sourcePackage, renderedAcquisitionMemo, acquisitionMemoProjection, bossContract, customerSurfaceModel }), { pageBreakBefore: true, bossSection: bossSections.dataCoverageSourceLimitations });
     const treatmentSection = renderSafely("Source Context / Support Document Treatment", () => renderDocumentTreatmentSection(renderedAcquisitionMemo, sourcePackage, bossContract, customerSurfaceModel), { pageBreakBefore: true, bossSection: bossSections.sourceContextSupportDocumentTreatment });
     const methodologySection = renderSafely("Methodology & Data Transparency", () => renderMethodologySection(), { pageBreakBefore: true });
-    const premiumExpansionHtml = renderPremiumAcquisitionUnderwritingV1Expansion({
-      premiumUnderwritingModel,
-      premiumUnderwritingCapabilityEnabled,
-      reportSurfaceVersion,
-    }).html;
-    const premiumExpansionInsertion = premiumExpansionHtml
-      ? `    ${premiumExpansionHtml}\n`
-      : "";
     const footerSection = `<div class="report-footer"><div class="report-footer-inner"><span>${escapeHtml(UNDERWRITING_REPORT_IDENTITY.fullTitle)} | Confidential</span><span>&copy; InvestorIQ Technologies Inc.</span></div></div>`;
 
     return `<!DOCTYPE html>
@@ -2222,7 +2210,7 @@ export function renderCompleteAcquisitionMemoV2Html({
       ${appraisalContextSection}
       ${coreReconciliationAnalysisSection}
     </section>
-${premiumExpansionInsertion}    <section class="institutional-chapter" data-iq-chapter="source-appendix">
+    <section class="institutional-chapter" data-iq-chapter="source-appendix">
       <div class="chapter-heading">Source Appendix</div>
       ${dataCoverageSection}
       ${treatmentSection}
@@ -2233,7 +2221,7 @@ ${premiumExpansionInsertion}    <section class="institutional-chapter" data-iq-c
 </body>
 </html>`;
   } catch (err) {
-    console.warn("[investoriq] acquisition memo v2 render fallback", {
+    console.warn("[investoriq] full underwriting representation render fallback", {
       message: err?.message || String(err || ""),
     });
     return buildMinimalAcquisitionMemoV2Html({

@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   buildDeliveryGateDecision,
@@ -13,8 +13,17 @@ const baseCoverage = {
     t12_parsed: { present: true, has_core_totals: true },
     rent_roll_parsed: { present: true },
   },
+  t12_sufficiency_state: {
+    publishability_bucket: "core_sufficient_publishable",
+    status: "validated",
+  },
+  rent_roll_sufficiency_state: {
+    publishability_bucket: "core_sufficient_publishable",
+    status: "validated",
+  },
   core_input_sufficiency_state: {
     publishability_bucket: "core_sufficient_publishable",
+    status: "validated",
   },
 };
 
@@ -26,7 +35,7 @@ const deliverableGate = buildDeliveryGateDecision({
 const deliverableState = buildCanonicalDeliveryDecisionState(deliverableGate);
 assert.equal(deliverableState.customer_delivery_allowed, true);
 assert.equal(deliverableState.hold_delivery, false);
-assert.equal(deliverableState.core_valid_required_coverage, false);
+assert.equal(deliverableState.core_valid_required_coverage, true);
 
 const coreValidCoverage = {
   qa_status: "pass",
@@ -247,6 +256,7 @@ assert.equal(adminReviewState.core_valid_required_coverage, false);
 
 const docraptorOnlyGate = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "deliverable",
+  core_valid_required_coverage: true,
   customer_publish_eligible: false,
   customer_delivery_ready: false,
   customer_publish_blockers: [],
@@ -264,6 +274,7 @@ assert.equal(docraptorOnlyGate.high_value_outreach_ready, false);
 
 const docraptorWithCustomerBlockerGate = buildCanonicalDeliveryDecisionState({
   delivery_gate_status: "deliverable",
+  core_valid_required_coverage: true,
   customer_publish_eligible: true,
   customer_delivery_ready: true,
   customer_publish_blockers: ["RENDERED_TEMPLATE_TOKEN_LEAK"],
@@ -279,6 +290,7 @@ assert.equal(docraptorWithCustomerBlockerGate.customer_status_label, "publicatio
 const canonicalPrecedenceOverLegacyAliases = buildCanonicalDeliveryDecisionState({
   source: "canonical_delivery_decision",
   delivery_gate_status: "deliverable",
+  core_valid_required_coverage: true,
   customer_delivery_allowed: true,
   hold_delivery: false,
   customer_publish_eligible: false,
@@ -293,24 +305,33 @@ assert.equal(canonicalPrecedenceOverLegacyAliases.customer_status_label, "ready"
 assert.equal(canonicalPrecedenceOverLegacyAliases.customer_status_reason_code, null);
 assert.equal(canonicalPrecedenceOverLegacyAliases.legacy_compatibility?.customer_status_reason_code, "customer_publish_eligible");
 
-const generatorSource = fs.readFileSync("api/generate-client-report.js", "utf8");
-assert.match(generatorSource, /deliveryDecisionState:/);
-assert.match(generatorSource, /payload:\s*\{[\s\S]*deliveryDecisionState:/);
-assert.match(generatorSource, /function buildDeliveryResponseCompatibilityAliases\(/);
-assert.match(generatorSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(blockedDecisionState\)/);
-assert.match(generatorSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(canonicalDeliveryDecisionState\)/);
-assert.match(generatorSource, /legacy_compatibility:\s*\{/);
-assert.match(generatorSource, /customer_delivery_allowed:\s*customerDeliveryAllowed/);
-assert.match(generatorSource, /legacy_compatibility:\s*\{[\s\S]{0,220}customer_delivery_ready:\s*customerDeliveryAllowed/);
-assert.match(generatorSource, /legacy_compatibility:\s*\{[\s\S]{0,220}customer_publish_eligible:\s*customerDeliveryAllowed/);
-assert.match(generatorSource, /legacy_compatibility:\s*\{[\s\S]{0,220}hold_delivery:\s*holdDelivery/);
-assert.match(generatorSource, /coreValidRequiredCoverage: Boolean\(canonicalDeliveryDecisionState\?\.core_valid_required_coverage\)/);
-assert.match(generatorSource, /deliveryGateDecisionResult\?\.delivery_gate_status === "user_needs_documents" &&[\s\S]{0,120}deliveryDecisionStateResult\?\.core_valid_required_coverage !== true/);
-assert.match(generatorSource, /coreValidRequiredCoverage: Boolean\(canonicalDeliveryDecisionState\?\.core_valid_required_coverage\),/);
-assert.match(generatorSource, /holdDelivery,?\s*\n/);
-assert.match(generatorSource, /public_sample_ready:\s*Boolean\(state\.public_sample_ready\)/);
-assert.match(generatorSource, /high_value_outreach_ready:\s*Boolean\(state\.high_value_outreach_ready\)/);
-assert.match(generatorSource, /hold_delivery:/);
-assert.match(generatorSource, /holdDelivery:/);
+const generatorWrapperSource = fs.readFileSync("api/generate-client-report.js", "utf8");
+const generatorHandlerSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
+const generatorImplSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
+const deliveryOutputSource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
+
+// Public route remains a thin wrapper; implementation authority lives behind it.
+assert.match(generatorWrapperSource, /generate-client-report-handler\.js/);
+assert.match(generatorHandlerSource, /generate-client-report-impl\.js/);
+
+// Canonical delivery-state payloads and fail-closed branching live in the implementation.
+assert.match(generatorImplSource, /deliveryDecisionState:/);
+assert.match(generatorImplSource, /payload:\s*\{[\s\S]*deliveryDecisionState:/);
+assert.match(generatorImplSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(blockedDecisionState\)/);
+assert.match(generatorImplSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(canonicalDeliveryDecisionState\)/);
+assert.match(generatorImplSource, /deliveryGateDecisionResult\?\.delivery_gate_status === "user_needs_documents" &&[\s\S]{0,180}deliveryDecisionStateResult\?\.core_valid_required_coverage !== true/);
+assert.match(generatorImplSource, /coreValidRequiredCoverage: Boolean\(canonicalDeliveryDecisionState\?\.core_valid_required_coverage\)/);
+
+// Compatibility aliases are centralized in report-delivery-output.js.
+assert.match(deliveryOutputSource, /export function buildDeliveryResponseCompatibilityAliases\(/);
+assert.match(deliveryOutputSource, /customer_delivery_allowed:\s*customerDeliveryAllowed/);
+assert.match(deliveryOutputSource, /customer_delivery_ready:\s*customerDeliveryAllowed/);
+assert.match(deliveryOutputSource, /customer_publish_eligible:\s*customerDeliveryAllowed/);
+assert.match(deliveryOutputSource, /report_publishable:\s*customerDeliveryAllowed/);
+assert.match(deliveryOutputSource, /report_blocked:\s*!customerDeliveryAllowed/);
+assert.match(deliveryOutputSource, /hold_delivery:\s*holdDelivery/);
+assert.match(deliveryOutputSource, /holdDelivery/);
+assert.match(deliveryOutputSource, /public_sample_ready:\s*publicSampleReady/);
+assert.match(deliveryOutputSource, /high_value_outreach_ready:\s*highValueOutreachReady/);
 
 console.log("delivery decision state smoke PASS");

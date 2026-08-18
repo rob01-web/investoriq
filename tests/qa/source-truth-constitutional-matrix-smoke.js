@@ -69,7 +69,7 @@ function assertPublishableInBothLanes(name, sourceTruthPackage) {
   });
   assert.equal(screening.sealedLane, "screening_lane");
 
-  const acquisitionContract = buildAcquisitionMemoBossContract({
+  const fullUnderwritingRepresentationContract = buildAcquisitionMemoBossContract({
     canonicalSourcePackage: { supportDocs: new Map() },
     sourceTruthPackage,
     acquisitionMemoProjection: { supportDocProjection: {}, financingReadinessSignals: {} },
@@ -78,7 +78,7 @@ function assertPublishableInBothLanes(name, sourceTruthPackage) {
     reportMeta: { reportMode: "v1_core" },
     reportMode: "v1_core",
   });
-  assert.equal(acquisitionContract.coreGate.publishAllowed, true, `${name} Acquisition Memo must publish`);
+  assert.equal(fullUnderwritingRepresentationContract.coreGate.publishAllowed, true, `${name} Full Underwriting representation must preserve canonical publishability`);
 }
 
 const missingGpr = structuredClone(baseT12);
@@ -188,7 +188,7 @@ for (const scenario of catastrophicScenarios) {
   assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.source_mode, scenario.expectedSourceMode, `${scenario.name} minimum truth set mode must resolve from truthful evidence`);
   assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.t12?.satisfied, scenario.expectedT12Satisfied, `${scenario.name} T12 truth set must not be satisfied by invalidated evidence`);
   assert.equal(sourceTruthPackage.core_publication_constitution?.minimum_truth_set?.rent_roll?.satisfied, scenario.expectedRentRollSatisfied, `${scenario.name} rent roll truth set must not be satisfied by invalidated evidence`);
-  for (const lane of ["screening", "acquisition_memo"]) {
+  for (const lane of ["screening", "full_underwriting"]) {
     const blockers = scenario.expectedGatePublishable ? [] : [scenario.code];
     const gate = buildConstitutionalDeliveryGateDecision({
       sourceTruthPackage,
@@ -213,7 +213,7 @@ const internalFailureScenarios = [
   "STORAGE_PUBLICATION_FAILED",
 ];
 for (const code of internalFailureScenarios) {
-  for (const lane of ["screening", "acquisition_memo"]) {
+  for (const lane of ["screening", "full_underwriting"]) {
     const classification = classifyTerminalFailureCode(code);
     assert.equal(classification.failure_class, "internal_system_failure", `${code} ${lane} must be internal`);
     assert.equal(classification.customer_document_replacement_required, false);

@@ -1,7 +1,7 @@
 import assert from "assert";
 import { describe, it } from "node:test";
 
-import { buildCanonicalSourcePackage } from "../../api/_lib/canonical-source-package.js";
+import { buildCanonicalSourcePackage } from "../../api/_lib/legacy-source-package-fixture.js";
 import { buildAcquisitionMemoProjection } from "../../api/_lib/acquisition-memo-projection.js";
 import { renderAcquisitionMemo } from "../../api/_lib/acquisition-memo-renderer.js";
 

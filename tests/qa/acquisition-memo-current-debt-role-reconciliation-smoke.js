@@ -1,6 +1,6 @@
 import assert from "assert/strict";
 
-import { buildCanonicalSourcePackage } from "../../api/_lib/canonical-source-package.js";
+import { buildCanonicalSourcePackage } from "../../api/_lib/legacy-source-package-fixture.js";
 import { reconcileAcquisitionMemoV2SupportDocRole } from "../../api/_lib/acquisition-memo-v2-role-reconciler.js";
 
 function buildCurrentDebtSourcePackage() {

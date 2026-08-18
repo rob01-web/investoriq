@@ -14,14 +14,13 @@ export function resolveReportTypeAndTier({
   const canonicalByToken = new Map([
     ["screening", "screening"],
     ["underwriting", "underwriting"],
-    ["ic", "ic"],
     ["full_underwriting", "underwriting"],
     ["underwriting_report", "underwriting"],
     ["underwriting_v1", "underwriting"],
     ["tier_2", "underwriting"],
     ["tier2", "underwriting"],
   ]);
-  const allowedTypes = ["screening", "underwriting", "ic"];
+  const allowedTypes = ["screening", "underwriting"];
   const supportedAliases = [
     "full_underwriting",
     "underwriting_report",
@@ -52,7 +51,7 @@ export function resolveReportTypeAndTier({
       supportedAliases,
     };
   }
-  const reportTier = canonicalType === "underwriting" ? 2 : canonicalType === "ic" ? 3 : 1;
+  const reportTier = canonicalType === "underwriting" ? 2 : 1;
   return {
     ok: true,
     reportType: canonicalType,

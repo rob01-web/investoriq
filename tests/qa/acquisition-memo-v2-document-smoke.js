@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import { buildCanonicalSourcePackage } from "../../api/_lib/canonical-source-package.js";
+import { buildCanonicalSourcePackage } from "../../api/_lib/legacy-source-package-fixture.js";
 import { buildAcquisitionMemoProjection } from "../../api/_lib/acquisition-memo-projection.js";
 import { buildAcquisitionMemoV2CustomerSurfaceModel } from "../../api/_lib/acquisition-memo-v2-customer-surface-model.js";
 import { renderAcquisitionMemo } from "../../api/_lib/acquisition-memo-renderer.js";

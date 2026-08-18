@@ -17,7 +17,7 @@ const {
 } = await import("../../api/_lib/document-treatment-authority.js");
 const {
   buildT12SummaryHtml,
-} = await import("../../api/_lib/report-surface-render-helpers.js");
+} = await import("../../api/_lib/legacy-report-surface-render-helpers.js");
 const {
   buildScreeningDataCoverageSummary,
 } = await import("../../api/_lib/screening-report-renderer.js");

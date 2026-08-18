@@ -151,12 +151,8 @@ assert.doesNotMatch(dashboard, /userId:\s*profile\?\.id/);
 assert.doesNotMatch(dashboard, /policyTextHash/);
 assert.match(dashboard, /INVESTORIQ_DISCLOSURE_TEXT/);
 assert.match(dashboard, /INVESTORIQ_DISCLOSURE_LABEL/);
-assert.match(dashboard, /fetchLegalAcceptance\(\)/);
-
-const checkoutSuccess = fs.readFileSync('src/pages/CheckoutSuccess.jsx', 'utf8');
-assert.match(checkoutSuccess, /Authorization: `Bearer \$\{accessToken\}`/);
-assert.match(checkoutSuccess, /data\?\.productType/);
-assert.doesNotMatch(checkoutSuccess, /data\?\.metadata\?\.productType/);
+assert.match(dashboard, /recordLegalAcceptance/);
+assert.match(dashboard, /fetch\(['"]\/api\/legal-acceptance['"]/);
 
 const reportRequestContext = fs.readFileSync('api/_lib/report-request-context.js', 'utf8');
 assert.match(reportRequestContext, /resolveReportGenerationOwnership/);

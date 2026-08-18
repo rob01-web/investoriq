@@ -1,4 +1,4 @@
-const DECISION_VERSION = "acq_memo_v2_final_delivery_decision_v1";
+const DECISION_VERSION = "full_underwriting_representation_decision_v1";
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -157,8 +157,8 @@ export function buildAcquisitionMemoV2FinalDeliveryDecision({
 
   return {
     version: DECISION_VERSION,
-    product: "acquisition_memo_v2",
-    final_delivery_authority: "final_boss_customer_surface_model_delivery_decision",
+    product: "full_underwriting",
+    final_delivery_authority: "representation_quality_decision_only",
     final_delivery_status: publishable ? "deliverable" : "blocked",
     customer_delivery_ready: publishable,
     customer_publish_eligible: publishable,

@@ -250,7 +250,7 @@ const deliverableDecision = {
 const candidate = buildReportQualityManifestCandidate({
   jobId: "manifest-job",
   userId: "manifest-user",
-  reportFamily: "acquisition_memo",
+  reportFamily: "full_underwriting",
   reportType: "underwriting",
   reportMode: "v1_core",
   propertyName: "Manifest Test Property",
@@ -326,7 +326,7 @@ factConflictSourceTruth.support.fact_conflicts = [{
 }];
 const factConflictCandidate = buildReportQualityManifestCandidate({
   jobId: "manifest-fact-conflict-job",
-  reportFamily: "acquisition_memo",
+  reportFamily: "full_underwriting",
   reportType: "underwriting",
   reportMode: "v1_core",
   propertyName: "Manifest Fact Conflict Property",
@@ -423,7 +423,7 @@ assert.equal(validateReportQualityManifest(qualityIncidentManifest, { requireFin
 const unavailableCandidate = buildUnavailableReportQualityManifestCandidate({
   jobId: "blocked-manifest-job",
   userId: "manifest-user",
-  reportFamily: "acquisition_memo",
+  reportFamily: "full_underwriting",
   reportType: "underwriting",
   reportMode: "v1_core",
   propertyName: "Blocked Manifest Property",

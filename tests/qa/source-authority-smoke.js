@@ -2,7 +2,7 @@ import assert from "assert";
 import fs from "fs";
 import path from "path";
 
-import { buildCanonicalSourcePackage as buildLegacyFixtureSourcePackage } from "../../api/_lib/canonical-source-package.js";
+import { buildCanonicalSourcePackage as buildLegacyFixtureSourcePackage } from "../../api/_lib/legacy-source-package-fixture.js";
 
 function buildStonebridgeLegacyFixtureSourcePackage() {
   const uploadedFiles = [
@@ -56,14 +56,14 @@ function collectProductionJavaScriptFiles(root) {
   return files;
 }
 
-const legacyFixtureOwner = path.resolve("api/_lib/canonical-source-package.js");
+const legacyFixtureOwner = path.resolve("api/_lib/legacy-source-package-fixture.js");
 const productionJavaScriptFiles = [
   ...collectProductionJavaScriptFiles(path.resolve("api")),
   ...collectProductionJavaScriptFiles(path.resolve("lib")),
 ].filter((filePath) => path.resolve(filePath) !== legacyFixtureOwner);
 const legacyFixtureProductionUses = productionJavaScriptFiles.filter((filePath) => {
   const source = fs.readFileSync(filePath, "utf8");
-  const importsLegacyFixtureBuilder = /import[\s\S]{0,240}\bbuildCanonicalSourcePackage\b[\s\S]{0,240}from\s*["'][^"']*canonical-source-package\.js["']/.test(source);
+  const importsLegacyFixtureBuilder = /import[\s\S]{0,240}\bbuildCanonicalSourcePackage\b[\s\S]{0,240}from\s*["'][^"']*legacy-source-package-fixture\.js["']/.test(source);
   const callsLegacyFixtureBuilder = /\bbuildCanonicalSourcePackage\s*\(/.test(source);
   return importsLegacyFixtureBuilder || callsLegacyFixtureBuilder;
 });

@@ -7,7 +7,7 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1";
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "test-key";
 process.env.ADMIN_RUN_KEY = process.env.ADMIN_RUN_KEY || "test-admin-run-key";
 
-const renderHelpers = await import("../../api/_lib/report-surface-render-helpers.js");
+const renderHelpers = await import("../../api/_lib/legacy-report-surface-render-helpers.js");
 const {
   buildCanonicalSupportDocAuthorityRows,
   buildDocumentTreatmentSummaryHtml,
