@@ -1,9 +1,6 @@
 function normalizeJobIds(value) {
   const values = Array.isArray(value) ? value : [value];
-  return values
-    .map((item) => String(item || '').trim())
-    .filter(Boolean)
-    .slice(0, 50);
+  return values.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 50);
 }
 
 async function getAccessToken(baseSupabase) {
@@ -14,17 +11,11 @@ async function getAccessToken(baseSupabase) {
 
 async function requestJson(baseSupabase, url, options = {}) {
   const accessToken = await getAccessToken(baseSupabase);
-  if (!accessToken) {
-    return { data: null, error: { message: 'Session expired', code: 'UNAUTHORIZED' } };
-  }
-
+  if (!accessToken) return { data: null, error: { message: 'Session expired', code: 'UNAUTHORIZED' } };
   try {
     const response = await fetch(url, {
       ...options,
-      headers: {
-        ...(options.headers || {}),
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { ...(options.headers || {}), Authorization: `Bearer ${accessToken}` },
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -39,13 +30,7 @@ async function requestJson(baseSupabase, url, options = {}) {
     }
     return { data: body, error: null };
   } catch (error) {
-    return {
-      data: null,
-      error: {
-        message: error?.message || 'Request failed',
-        code: 'NETWORK_ERROR',
-      },
-    };
+    return { data: null, error: { message: error?.message || 'Request failed', code: 'NETWORK_ERROR' } };
   }
 }
 
@@ -54,49 +39,40 @@ class CustomerArtifactQueryBuilder {
     this.baseSupabase = baseSupabase;
     this.filters = { jobIds: [], type: null, events: [], limit: null };
   }
-
   select() { return this; }
-
   eq(column, value) {
     if (column === 'job_id') this.filters.jobIds = normalizeJobIds(value);
     else if (column === 'type') this.filters.type = String(value || '').trim();
     else if (column === 'payload->>event') this.filters.events = normalizeJobIds(value);
     return this;
   }
-
   in(column, values) {
     if (column === 'job_id') this.filters.jobIds = normalizeJobIds(values);
     else if (column === 'payload->>event') this.filters.events = normalizeJobIds(values);
     return this;
   }
-
   order() { return this; }
-
   limit(value) {
     const parsed = Number(value);
     this.filters.limit = Number.isFinite(parsed) && parsed > 0 ? Math.min(Math.floor(parsed), 100) : null;
     return this;
   }
-
   async execute({ maybeSingle = false } = {}) {
     const params = new URLSearchParams();
     if (this.filters.jobIds.length) params.set('job_ids', this.filters.jobIds.join(','));
     if (this.filters.type) params.set('type', this.filters.type);
     if (this.filters.events.length) params.set('events', this.filters.events.join(','));
     if (this.filters.limit) params.set('limit', String(this.filters.limit));
-
     const { data, error } = await requestJson(
       this.baseSupabase,
       `/api/customer-job-status?${params.toString()}`,
       { method: 'GET' },
     );
     if (error) return { data: null, error };
-
     const rows = Array.isArray(data?.rows) ? data.rows : [];
     if (maybeSingle) return { data: rows[0] || null, error: null };
     return { data: rows, error: null };
   }
-
   maybeSingle() { return this.execute({ maybeSingle: true }); }
   then(resolve, reject) { return this.execute().then(resolve, reject); }
 }
@@ -114,13 +90,11 @@ class CustomerReportDeleteBuilder {
     this.reportId = null;
     this.invalidFilter = false;
   }
-
   eq(column, value) {
     if (column === 'id' && !this.reportId) this.reportId = String(value || '').trim();
     else this.invalidFilter = true;
     return this;
   }
-
   async execute() {
     if (!this.reportId || this.invalidFilter) {
       throw governedRemovalError({
@@ -128,7 +102,6 @@ class CustomerReportDeleteBuilder {
         code: 'INVALID_REPORT_REMOVAL',
       });
     }
-
     const { data, error } = await requestJson(this.baseSupabase, '/api/customer-report-removal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -137,7 +110,6 @@ class CustomerReportDeleteBuilder {
     if (error) throw governedRemovalError(error);
     return { data: data?.reports || [], error: null };
   }
-
   then(resolve, reject) { return this.execute().then(resolve, reject); }
 }
 
@@ -159,11 +131,9 @@ function wrapStorage(baseSupabase) {
         const value = Reflect.get(target, property, target);
         return typeof value === 'function' ? value.bind(target) : value;
       }
-
       return (bucketName) => {
         const bucket = target.from(bucketName);
         if (bucketName !== 'generated_reports') return bucket;
-
         return new Proxy(bucket, {
           get(bucketTarget, bucketProperty) {
             if (bucketProperty === 'remove') {
@@ -172,6 +142,20 @@ function wrapStorage(baseSupabase) {
                 error: null,
                 governedRemovalDeferred: true,
               });
+            }
+            if (bucketProperty === 'createSignedUrl') {
+              return async (storagePath) => {
+                const { data, error } = await requestJson(baseSupabase, '/api/customer-report-download', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ storage_path: String(storagePath || '').trim() }),
+                });
+                if (error) return { data: null, error };
+                return {
+                  data: { signedUrl: data?.signedUrl || null },
+                  error: data?.signedUrl ? null : { message: 'Download artifact unavailable', code: 'DOWNLOAD_ARTIFACT_UNAVAILABLE' },
+                };
+              };
             }
             const value = Reflect.get(bucketTarget, bucketProperty, bucketTarget);
             return typeof value === 'function' ? value.bind(bucketTarget) : value;
@@ -185,8 +169,6 @@ function wrapStorage(baseSupabase) {
 function wrapRpc(baseSupabase) {
   return (functionName, args = {}, options = {}) => {
     if (functionName === 'queue_job_for_processing') {
-      // Governed admission already creates a queued job atomically. The old second
-      // customer queue mutation is intentionally retired and remains DB-inaccessible.
       return Promise.resolve({
         data: { status: 'queued', governedAdmissionAlreadyQueued: true },
         error: null,
@@ -199,7 +181,6 @@ function wrapRpc(baseSupabase) {
 export function wrapSupabaseWithCustomerBoundaries(baseSupabase) {
   const storage = wrapStorage(baseSupabase);
   const rpc = wrapRpc(baseSupabase);
-
   return new Proxy(baseSupabase, {
     get(target, property) {
       if (property === 'storage') return storage;
