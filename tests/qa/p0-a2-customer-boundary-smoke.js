@@ -87,11 +87,15 @@ try {
   assert.match(migration, /revoke delete on table public\.reports from anon, authenticated/i);
   assert.match(migration, /customer_report_removals/i);
 
-  const statusEndpoint = fs.readFileSync(path.join(repoRoot, 'api/customer-job-status.js'), 'utf8');
-  assert.doesNotMatch(statusEndpoint, /source_truth_package|premium|recovery[_-]/i);
-  assert.match(statusEndpoint, /delivery_gate_decision/);
-  assert.match(statusEndpoint, /entitlement_restored/);
-  assert.match(statusEndpoint, /rent_roll_parsed/);
+  const boundaryHandler = fs.readFileSync(path.join(repoRoot, 'api/_lib/customer-boundary-handler.js'), 'utf8');
+  assert.doesNotMatch(boundaryHandler, /source_truth_package|premium|recovery[_-]/i);
+  assert.match(boundaryHandler, /delivery_gate_decision/);
+  assert.match(boundaryHandler, /entitlement_restored/);
+  assert.match(boundaryHandler, /rent_roll_parsed/);
+
+  const vercelConfig = fs.readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8');
+  assert.match(vercelConfig, /customer-job-status.*customer_route=job_status/s);
+  assert.match(vercelConfig, /customer-report-removal.*customer_route=report_removal/s);
 
   console.log('P0-A2 customer boundary smoke: PASS');
 } finally {
