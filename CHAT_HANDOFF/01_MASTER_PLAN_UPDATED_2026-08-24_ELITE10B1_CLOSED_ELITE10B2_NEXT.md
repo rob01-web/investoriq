@@ -1,8 +1,8 @@
 # INVESTORIQ - MASTER PLAN CARRY-FORWARD
 
-**Date:** 2026-08-24  
+**Date:** 2026-08-25  
 **Program:** ELITE Full Underwriting product upgrade  
-**Checkpoint:** ELITE-10A CLOSED LOCALLY / ELITE-10B1 CLOSED LOCALLY / ELITE-10B2 NEXT
+**Checkpoint:** STONEBRIDGE REAL-INPUT PASS / INTERNAL GIT CHECKPOINT CREATED / FINAL SURGICAL POLISH NEXT
 
 > **DO NOT RESTART THE COMPLETED REPOSITORY / PIPELINE MONSTER AUDIT.**
 >
@@ -12,17 +12,33 @@
 
 ## Hard operating locks
 
-- LOCAL ONLY.
+- INTERNAL GIT BRANCH ONLY; NO PRODUCTION DEPLOYMENT.
 - ELITE-02 through ELITE-10B1 remain CLOSED LOCALLY.
 - Supabase Cron remains PAUSED.
-- No production RETEST, worker invocation, deploy, or GitHub push.
-- Preserve the dirty accumulated working tree.
+- No production RETEST, worker invocation, `main` merge, production deploy, or pull request without explicit authorization.
+- Consolidated commits to `internal-final-surgical-polish-20260825` are authorized.
+- Vercel Ignored Build Step is saved as `Only build production`; internal branch pushes are skipped.
+- The accumulated working tree is preserved at Git checkpoint `76d4da4979b0a4a9b310788f884efcefe0ceaf7d`.
 - Full Underwriting remains $499.
 - Premium remains OFF and future-only.
 - DocRaptor remains TEST-only; no `production_pdf` or production-provider calls.
 - No pricing, billing, entitlement, publication, or worker changes are authorized by visual work.
 - Customer-facing prose should avoid em dashes and obvious AI-writing fingerprints.
 - Never guess. Exact local evidence comes before every diagnosis, edit, calculation, or contract change.
+
+## Current Git collaboration authority
+
+- Repository: `rob01-web/investoriq`
+- Internal branch: `internal-final-surgical-polish-20260825`
+- Branch checkpoint: `76d4da4979b0a4a9b310788f884efcefe0ceaf7d`
+- Production base: `3acec05fbdda66bd381b40adef4781a89cab7d2f`
+- Production `main`: unchanged
+- Checkpointed files: 104
+- Remaining local-only entry: excluded Blackstone reference PDF
+
+The previous ZIP/PowerShell patch-runner loop is retired. The assistant may inspect, edit, test, and commit consolidated batches directly on the internal branch. Rob receives one guarded `git pull --ff-only` synchronization command at a deliberate checkpoint. No merge or deployment is implied by branch work.
+
+The corrected V2 diagnostic recorded 22 targeted passes and the first 11 launch-critical QA gates before a PowerShell wrapper promoted a child-process stderr storage warning to a terminating error. This is incomplete certification, not a demonstrated code assertion failure. Full required regression remains open.
 
 ## Protected authority chain
 
@@ -77,12 +93,12 @@ When a valid-core renderer or storage failure prevents immediate artifact public
 - ELITE-09: Quality Manifest Upgrade - CLOSED LOCALLY
 - ELITE-10A: Global Institutional Design System - CLOSED LOCALLY
 - ELITE-10B1: Light Institutional Cover - **CLOSED LOCALLY**
-- ELITE-10B2: Investment Committee opening pages - **NEXT**
-- ELITE-10C: Operating / scenario / driver surfaces
-- ELITE-10D: Transaction / diligence / debt surfaces
-- ELITE-10E: Valuation / reconciliation surfaces
-- ELITE-10F: Source Appendix / Quality Manifest polish
-- ELITE-10G: full-document visual and production-provider certification
+- ELITE-10B2: Investment Committee opening pages - **IMPLEMENTED IN CURRENT STONEBRIDGE BASELINE; FINAL POLISH OPEN**
+- ELITE-10C: Operating / scenario / driver surfaces - **IMPLEMENTED; FINAL POLISH OPEN**
+- ELITE-10D: Transaction / diligence / debt surfaces - **IMPLEMENTED; DUPLICATE LEGACY SUPPRESSION OPEN**
+- ELITE-10E: Valuation / reconciliation surfaces - **IMPLEMENTED; CONTRADICTION REPAIR OPEN**
+- ELITE-10F: Source Appendix / Quality Manifest polish - **IMPLEMENTED; WORDING REPAIR OPEN**
+- ELITE-10G: full-document visual and production-provider certification - **FINAL LOCAL SURGICAL POLISH / VISUAL + MATH REVIEW NEXT**
 
 ## ELITE-10B1 closure record
 
@@ -159,78 +175,20 @@ Certification passed the full cumulative, constitutional, institutional, custome
 
 This is the current certified architecture. Do not regress tests or presentation assumptions back to the former six-chapter contract.
 
-## ELITE-10 execution sequence
+## Current final-polish execution sequence
 
-### B2 - Investment Committee opening pages
-
-B2 begins with read-only inspection. No code should change until exact current ownership is established.
-
-Inspect:
-
-- Executive Summary,
-- Committee Overview,
-- key metrics snapshot,
-- underwriting observations,
-- primary constraint / review disclosure,
-- current chapter heading and page-break composition,
-- relevant ELITE Chapter 1 model/renderer,
-- customer-surface model authority,
-- source-backed metric provenance,
-- any legacy opening-page blocks still competing with ELITE output.
-
-Objectives:
-
-- establish a clear investment-committee hierarchy,
-- make transaction identity and decision-critical metrics immediately legible,
-- surface the primary constraint or review issue without creating recommendation authority,
-- distinguish source-backed evidence, deterministic analysis, scenarios, and unresolved diligence,
-- improve decision density without dashboard clutter,
-- keep the locked B1 cover untouched,
-- avoid unsupported claims or hidden authority changes.
-
-Exact first read-only command:
-
-```powershell
-Set-Location "C:\Users\robmc\Desktop\InvestorIQ\InvestorIQ-Empire-v1"
-
-$file = "api/_lib/acquisition-memo-v2-document.js"
-
-Select-String `
-    -Path $file `
-    -Pattern 'Executive Summary|Committee Overview|committee-overview|render.*Executive|render.*Committee' `
-    -Context 4,6
-```
-
-### C - Operating, scenario, and driver surfaces
-
-- rationalize tables and charts,
-- strengthen driver emphasis,
-- make assumptions and sensitivities explicit,
-- preserve canonical calculations and evidence class boundaries.
-
-### D - Transaction, diligence, and debt surfaces
-
-- clarify transaction terms, maturity, coverage, and diligence priority,
-- preserve debt labels and prohibited refinance-language controls.
-
-### E - Valuation and reconciliation surfaces
-
-- sharpen valuation hierarchy,
-- preserve accepted NOI and cap-rate authority,
-- show supported comparators and reconciliation without inventing returns.
-
-### F - Source Appendix and Quality Manifest
-
-- make evidence treatment investor-readable,
-- retain detailed trust and limitations without internal-log aesthetics.
-
-### G - Full-document certification
-
-- full cumulative and institutional stack,
-- full PDF visual inspection,
-- customer surface, Boss Contract, Source Truth, final handoff, and Gate 10V,
-- controlled production-provider font proof only when explicitly authorized,
-- actual-report source-document and math reconciliation.
+1. Remove all customer-facing em and en dash punctuation while preserving mathematics, ISO dates, linguistic hyphens, and source-stated ranges.
+2. Remove internal/governed engineering language from customer copy.
+3. Fix the page 9 missing dollar sign.
+4. Reduce repeated scenario disclaimers without weakening scenario/source boundaries.
+5. Suppress duplicate legacy transaction and debt presentation when ELITE surfaces are active.
+6. Fix the Capital Plan contradiction and naturalize maturity wording.
+7. Normalize `-0.0%` to `0.0%` without masking real negative values.
+8. Fix the valuation cap-rate-sensitivity contradiction.
+9. Fix Quality Manifest coverage wording so it describes the surfaces actually received.
+10. Keep Methodology & Data Transparency in the Source Appendix without forcing a dedicated page.
+11. Preserve content-driven pagination and the absence of any report page cap.
+12. Run consolidated regression, synchronize the branch once, generate Stonebridge exactly once, and complete final visual plus math review.
 
 ## Acceptance doctrine
 
