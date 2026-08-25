@@ -32,9 +32,13 @@ for (const sourcePath of [
   assert.match(html, new RegExp(sourcePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
 }
 
-const capRows = html.match(/data-iq-cap-rate-row="accepted"/gi) || [];
-assert.equal(capRows.length, 1);
-assert.match(html, /data-iq-cap-rate="0\.07"[\s\S]{0,260}\$13,500,000[\s\S]{0,260}\$210,938/i);
+assert.match(html, /data-iq-section="eliteValuationReconciliation"/i);
+assert.match(html, /data-iq-subsection="accepted-value-indication"/i);
+assert.match(html, /Accepted T12 NOI[\s\S]{0,180}\$945,000/i);
+assert.match(html, /Accepted Going-In Cap Rate[\s\S]{0,180}7\.00%/i);
+assert.match(html, /InvestorIQ Implied Value[\s\S]{0,180}\$13,500,000/i);
+assert.match(html, /Implied Value Per Unit[\s\S]{0,180}\$210,938/i);
+assert.equal((html.match(/data-iq-cap-rate-row="accepted"/gi) || []).length, 0);
 assert.doesNotMatch(html, /<tr[^>]*><td>5\.0%<\/td>/i);
 assert.doesNotMatch(html, /<tr[^>]*><td>6\.0%<\/td>/i);
 assert.doesNotMatch(html, /standardized framework benchmark/i);

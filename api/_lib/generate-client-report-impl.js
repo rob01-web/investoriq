@@ -235,7 +235,7 @@ async function persistReportQualityManifestCandidate({
 }
 function sanitizeReportIdentityTitle(value) {
   const raw = sanitizePropertyNameDisplayText(value)?.trim() || String(value || "").trim();
-  return raw.replace(/^(?:generation failed|report generation failed|report failed|render failed|generation error|error|failed)\s*[-:–—]\s*/i, "").trim() || raw || "Property";
+  return raw.replace(/^(?:generation failed|report generation failed|report failed|render failed|generation error|error|failed)\s*[-:\u2013\u2014]\s*/i, "").trim() || raw || "Property";
 }
 function normalizeVisibleReportClassification({
   baseClass = null,
@@ -627,7 +627,7 @@ function buildCurrentDebtScorecardEntry({
         value: formatMultiple(canonicalDscrForScore, 2),
         pts: canonicalDscrForScore > 1.35 ? 10 : canonicalDscrForScore >= 1.25 ? 7 : 3,
         max: 10,
-        band: canonicalDscrForScore > 1.35 ? "Above 1.35x" : canonicalDscrForScore >= 1.25 ? "1.25–1.35x" : "Below 1.25x",
+        band: canonicalDscrForScore > 1.35 ? "Above 1.35x" : canonicalDscrForScore >= 1.25 ? "1.25-1.35x" : "Below 1.25x",
       },
     };
   }
@@ -3073,7 +3073,7 @@ export default async function handler(req, res) {
     // ------------------------------------------------------------------
 // Sample-mode fallback: prevent unresolved {{TOKENS}} from crashing
 // ------------------------------------------------------------------
-    
+
     const tables = body.tables || {};
     const charts = body.charts || {};
     // Optional financials payload; falls back to sample values
@@ -9496,6 +9496,20 @@ try {
           sourcePackageQa: sourcePackageQaResult,
           qaManagerReview: qaManagerReviewResult,
           finalPdfPublicationQualityBoss: finalPdfPublicationQualityBossResult,
+          reportIdentity: finalPdfReportIdentity,
+          revisionIdentity: {
+            revisionKind,
+            revisionFamilyKey: reportRow?.revision_family_key ?? revisionFamilyKey ?? null,
+            revisionRootReportId: reportRow?.revision_root_report_id ?? revisionRootReportId ?? null,
+            revisionParentReportId: reportRow?.revision_parent_report_id ?? revisionParentReportId ?? null,
+            revisionNumber: reportRow?.revision_number ?? revisionNumber ?? null,
+            revisionRequestKey: reportRow?.revision_request_key ?? revisionRequestKey ?? null,
+            revisionSourceJobId: reportRow?.revision_source_job_id ?? revisionSourceJobId ?? null,
+            isCurrentRevision: reportRow?.is_current_revision === true,
+            revisionPublishedAt: reportRow?.revision_published_at || null,
+          },
+          corePublicationConstitution: finalPdfPublicationContract.constitution,
+          certificationCompletedAt: new Date().toISOString(),
         });
         await persistReportQualityManifestCandidate({
           jobId,

@@ -251,7 +251,7 @@ function normalizeCustomerSurfaceSupportRole(role) {
 
 function normalizeCustomerPunctuation(value) {
   return String(value || "")
-    .replace(/&(?:mdash|ndash);|&#(?:8211|8212);|&#x(?:2013|2014);|[–—]/gi, " - ")
+    .replace(/&(?:mdash|ndash);|&#(?:8211|8212);|&#x(?:2013|2014);|[\u2013\u2014]/gi, " - ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -2242,8 +2242,8 @@ function normalizeHtmlText(html) {
     .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
-    .replace(/&mdash;|&#8212;|&#x2014;/gi, "—")
-    .replace(/&ndash;|&#8211;|&#x2013;/gi, "–")
+    .replace(/&(?:mdash|ndash);|&#(?:8211|8212);|&#x(?:2013|2014);/gi, " - ")
+    .replace(/\s*[\u2014\u2013]\s*/g, " - ")
     .replace(/&#39;/gi, "'")
     .replace(/&quot;/gi, "\"")
     .replace(/\s+/g, " ")

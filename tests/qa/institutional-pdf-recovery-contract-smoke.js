@@ -78,11 +78,13 @@ assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.inferredValueReconstructionA
 
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const deliverySource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
-for (const source of [generatorSource, deliverySource]) {
-  assert.match(source, /buildInstitutionalPdfRecoveryHtml/);
-  assert.match(source, /isInstitutionalPdfRecoveryEligible/);
-}
-assert.match(generatorSource, /approvedHtml:\s*docHtml/);
+assert.match(
+  generatorSource,
+  /const boundedRecovery = await runBoundedPdfCertificationRecovery\(\{[\s\S]{0,320}finalHtml:\s*docHtml/,
+);
+assert.match(deliverySource, /export async function runBoundedPdfCertificationRecovery/);
+assert.match(deliverySource, /buildInstitutionalPdfRecoveryHtml/);
+assert.match(deliverySource, /isInstitutionalPdfRecoveryEligible/);
 assert.match(deliverySource, /approvedHtml:\s*finalHtml/);
 assert.doesNotMatch(`${generatorSource}\n${deliverySource}`, /Stonebridge|RETEST\s*31|Final Attack Test/i);
 

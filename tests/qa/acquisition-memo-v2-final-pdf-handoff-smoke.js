@@ -692,8 +692,9 @@ assertNormalizedVisibleTextContains({
   pattern: /\$185,000/i,
   label: "$185,000",
 });
-assert.equal(finalPdfHandoffHtml.includes("T12_Stonebridge_Lofts_Attack_Test_8.xlsx"), true);
-assert.equal(finalPdfHandoffHtml.includes("Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx"), true);
+const finalPdfHandoffHtmlWithoutSoftWrapMarkers = finalPdfHandoffHtml.replace(/<wbr\s*\/?>/gi, "");
+assert.equal(finalPdfHandoffHtmlWithoutSoftWrapMarkers.includes("T12_Stonebridge_Lofts_Attack_Test_8.xlsx"), true);
+assert.equal(finalPdfHandoffHtmlWithoutSoftWrapMarkers.includes("Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx"), true);
 
 assert.match(finalPdfHandoffHtml, /Debt Service and Coverage/i);
 assert.match(finalPdfHandoffHtml, /Current Debt[\s\S]{0,240}2\.01x/i);
@@ -791,7 +792,7 @@ assert.equal(genericCoverIdentity, "12 Units");
 assert.equal(/<span>Asset Class<\/span><strong>12[- ]Unit/i.test(genericFinalPdfHandoffHtml), false);
 assert.equal(/64-Unit Multifamily/i.test(genericCoverIdentity), false);
 assert.equal(/\b(Boss Contract|V2 Canonical Package|Source Authority|canonical source package|V2 projection|assertion code names|stack trace)\b/i.test(genericFinalPdfHandoffHtml), false);
-const tamperedMissingFactHtml = genericFinalPdfHandoffHtml.replace("Property Taxes", "Property Tax");
+const tamperedMissingFactHtml = genericFinalPdfHandoffHtml.replaceAll("Property Taxes", "Property Tax");
 assert.equal(validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(tamperedMissingFactHtml, genericLocalCustomerSurfaceModel).ok, false);
 const genericCurrentDscr = Number(genericLocalCustomerSurfaceModel?.financialIntelligence?.customerSections?.debtServiceCoverage?.facts?.currentDebt?.dscr);
 assert.equal(Number.isFinite(genericCurrentDscr), true);

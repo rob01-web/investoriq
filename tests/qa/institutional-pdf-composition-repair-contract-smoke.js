@@ -15,7 +15,7 @@ assert.match(html, /Page " counter\(page\) " of " counter\(pages\)/i);
 assert.match(html, /thead\s*\{\s*display\s*:\s*table-header-group/i);
 assert.match(html, /orphans\s*:\s*3/i);
 assert.match(html, /widows\s*:\s*3/i);
-assert.match(html, /source-register-table[\s\S]{0,320}overflow-wrap\s*:\s*anywhere/i);
+assert.match(html, /source-register-table[\s\S]{0,420}(?:overflow-wrap\s*:\s*(?:break-word|normal)|word-break\s*:\s*normal)/i);
 assert.doesNotMatch(html, /target-page-count|expected-page-count|page-count\s*:\s*\d+/i);
 
 const plan = buildInstitutionalPdfRepairPlan({

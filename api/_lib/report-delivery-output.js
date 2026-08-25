@@ -502,7 +502,7 @@ export async function runBoundedPdfCertificationRecovery({
       terminalError: finalized.terminalError,
     });
   }
-  if (!initial.error && isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss)) {
+  if (!initial.error && isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss) && !isInstitutionalPdfRecoveryEligible(publicationQualityBoss)) {
     return withRecoveryState({
       pdfBuffer,
       publicationQualityBoss,
@@ -586,7 +586,7 @@ export async function runBoundedPdfCertificationRecovery({
     ...recovery.receipt,
     initialCertificationStatus: initial.result?.status || null,
     finalCertificationStatus: publicationQualityBoss?.status || null,
-    recovered: isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss),
+    recovered: publicationQualityBoss?.ok === true,
     customerDeliveryPreserved: isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss),
   };
   if (!cssRecovery.error && isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss)) {
@@ -688,7 +688,7 @@ export async function runBoundedPdfCertificationRecovery({
   semanticRecomposition = {
     ...semanticRecomposition,
     finalCertificationStatus: publicationQualityBoss?.status || null,
-    recovered: isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss),
+    recovered: publicationQualityBoss?.ok === true,
     customerDeliveryPreserved: isFinalPdfCustomerDeliveryAllowed(publicationQualityBoss),
   };
 

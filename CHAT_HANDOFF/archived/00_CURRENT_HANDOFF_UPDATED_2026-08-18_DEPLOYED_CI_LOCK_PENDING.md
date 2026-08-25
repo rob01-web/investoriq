@@ -1,11 +1,63 @@
 # INVESTORIQ — CURRENT CHAT HANDOFF
 
 **Date:** 2026-08-18
-**Status:** P1 REPOSITORY AUTHORITY CLEANUP + LAUNCH QA REBUILD COMPLETE LOCALLY — NOT PRODUCTION CERTIFIED
-**Current operating mode:** LOCAL ONLY / VERCEL PRESERVATION
+**Status:** P0/P1 MONSTER-AUDIT REPAIR BATCH DEPLOYED TO PRODUCTION — VERCEL READY — GITHUB CI LOCKFILE FOLLOW-UP PENDING — NOT YET PRODUCTION CERTIFIED
+**Current operating mode:** DEPLOYMENT COMPLETE / CRON STILL PAUSED / NO PRODUCTION RETEST / MINIMAL CI FOLLOW-UP ONLY
 **Master plan:** `01_MASTER_PLAN.md`
 
 > **THE FULL INVESTORIQ REPOSITORY / PIPELINE AUDIT IS COMPLETE. DO NOT START ANOTHER BROAD AUDIT IN A FRESH CHAT. CONTINUE DIRECTLY FROM THE RECORDED IMPLEMENTATION CHECKPOINT. TARGETED INVESTIGATION IS ALLOWED ONLY WHEN NEW CONTRADICTORY EVIDENCE REQUIRES IT.**
+
+## 2026-08-18 17:45 EDT — DEPLOYMENT WIN / EXACT FRESH-CHAT CHECKPOINT
+
+**Monster-audit repair status:** the full repository/pipeline audit is complete and the resulting P0/P1 repair batch has now been committed and deployed. **DO NOT restart a broad audit.**
+
+### Consolidated repair commit
+
+- Commit: `9df57f0` — `fix: complete InvestorIQ P0 P1 pipeline authority repair`
+- Scope: 73 files changed; 2,003 insertions; 5,165 deletions.
+- Push to `origin/main`: PASS.
+- Vercel production deployment: **READY / CURRENT** for commit `9df57f0`.
+- Deployment duration observed in Vercel UI: ~33 seconds.
+- No production report RETEST has been run after this deployment.
+- No worker invocation has been performed after this deployment.
+- Supabase Cron remains intentionally **PAUSED**.
+
+### GitHub Actions follow-up — NOT a pipeline regression
+
+The push-triggered `InvestorIQ Launch QA` workflow failed **before canonical QA ran**. Exact failure:
+
+- step: `npm ci`
+- reason: `package.json` and `package-lock.json` were out of sync
+- exact missing lock entry: `yaml@2.9.0`
+- `Run canonical launch QA` was **SKIPPED**
+- Node 20 deprecation message was a warning, not the failure cause
+
+Local repair already executed:
+
+```powershell
+npm install --package-lock-only
+```
+
+Result:
+
+- command completed successfully
+- `package-lock.json` is now modified locally and **not yet committed/pushed**
+- npm reported 27 dependency vulnerabilities; **do not run `npm audit fix` or `npm audit fix --force` as part of this lockfile synchronization step**
+
+### Exact next action in the fresh chat
+
+1. Inspect the `package-lock.json` diff only and confirm it is the expected lock synchronization.
+2. Commit only the lockfile follow-up.
+3. Push once to clear GitHub Actions.
+4. Do **not** run a production report, worker, Cron, or broad certification cycle merely to satisfy the CI workflow.
+5. After the tiny CI housekeeping item is closed, continue directly into **ELITE Full Underwriting report upgrade**.
+
+### Supporting local evidence already complete
+
+- local production build: PASS
+- `git diff --check`: PASS
+- canonical local QA runner: **19/19 PASS**
+- this QA result is regression evidence only; it has zero constitutional/production-certification authority
 
 ## CURRENT POSITION
 
@@ -17,17 +69,16 @@ Dominant architecture diagnosis remains resolved by design direction:
 
 > **AUTHORITY ACCUMULATION** — newer authorities had been layered over stale, duplicate, historical, or future-product authorities without retiring the old ones.
 
-## TEMPORARY HARD RULE — VERCEL PRESERVATION
+## CURRENT POST-DEPLOYMENT PRESERVATION RULE
 
-Until explicitly lifted by the owner:
+The one consolidated P0/P1 deployment has now been completed. From this checkpoint:
 
-- no GitHub push that triggers Vercel
-- no deploy
-- no production RETEST
+- one tiny GitHub CI lockfile follow-up push is permitted
+- no production RETEST yet
 - no production worker invocation
-- no Vercel CLI / production log inspection
 - no Supabase Cron re-enable
-- batch local work and proofs first
+- no repeated Vercel/log/deploy loop
+- continue report-quality work locally after CI housekeeping
 
 Supabase Cron `investoriq-admin-run-worker` remains intentionally **PAUSED** (`active = false`).
 
@@ -140,7 +191,7 @@ Repository cleanup also deletes/archives the dead/duplicate files listed above a
 
 ## NEXT IMPLEMENTATION PHASE
 
-**Next = ELITE Full Underwriting report upgrade, LOCAL ONLY.**
+**Next = close the tiny `package-lock.json` GitHub CI synchronization, then ELITE Full Underwriting report upgrade, LOCAL ONLY.**
 
 Focus next on institutional-quality report information architecture, evidence-disciplined analysis, executive-grade visuals, section disposition/collapse behavior, polished Quality Manifest, and sharper Screening vs Full Underwriting differentiation.
 

@@ -199,13 +199,14 @@ assert.match(finalHtml, /<\/body>/i);
 assert.match(finalHtml, /<\/html>/i);
 
 assert.match(finalHtml, /INVESTORIQ/i);
-assert.match(finalHtml, /ACQUISITION MEMO/i);
-assert.match(finalHtml, /64-Unit Multifamily/i);
+assert.match(finalHtml, /Investment Committee Memorandum/i);
+assert.match(finalHtml, /<span>Property Scale<\/span><strong>64 Units<\/strong>/i);
 assert.match(finalHtml, /Executive Summary/i);
 assert.match(finalHtml, /Committee Overview/i);
 assert.match(finalHtml, /Underwriting Observations/i);
 assert.match(finalHtml, /Unit Mix and Rent Positioning/i);
-assert.match(finalHtml, /Rent Position \/ Whole-Property Value Context/i);
+assert.match(finalHtml, /Annual Gross Rent Difference/i);
+assert.match(finalHtml, /Valuation Position &(?:amp;)? Reconciliation/i);
 assert.match(finalHtml, /Cap-Rate Value Indication/i);
 assert.match(finalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(finalHtml, /Debt \/ Financing Context/i);
@@ -229,7 +230,10 @@ assert.match(finalHtml, /<td>Break-Even Occupancy<\/td><td style="font-weight:60
 assert.equal(/Implied Value Sensitivity at Stabilization|\$5,712,000|\$4,760,000|\$4,080,000/i.test(finalHtml), false);
 assert.match(finalHtml, /<td>Purchase Price<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
 assert.match(finalHtml, /<td>Going-In Cap Rate<\/td><td style="font-weight:600;">7\.0%<\/td>/i);
-assert.match(finalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
+assert.match(finalHtml, /<tr><td>Accepted T12 NOI<\/td><td>\$945,000<\/td>/i);
+assert.match(finalHtml, /<tr><td>Accepted Going-In Cap Rate<\/td><td>7\.00%<\/td>/i);
+assert.match(finalHtml, /<tr><td>InvestorIQ Implied Value<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
+assert.match(finalHtml, /<tr><td>Implied Value Per Unit<\/td><td>\$210,938<\/td>/i);
 assert.doesNotMatch(finalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
 
 assert.match(finalHtml, /1BR/i);

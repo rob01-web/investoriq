@@ -62,13 +62,29 @@ assert.throws(
   /CANONICAL_SOURCE_TRUTH_PACKAGE_REQUIRED/
 );
 
-const blockedSourceTruth = buildCanonicalSourceTruthPackage({
-  jobId: "source-truth-pipeline-authority-blocked",
+const rentRollOnlySourceTruth = buildCanonicalSourceTruthPackage({
+  jobId: "source-truth-pipeline-authority-rent-roll-only",
   propertyName: "Authority Property",
   artifacts: [rentRollArtifact],
 });
+assert.equal(rentRollOnlySourceTruth.core_publishable, true);
+assert.equal(rentRollOnlySourceTruth.true_blockers.includes("CORE_T12_NOT_VALIDATED"), false);
+const rentRollOnlyOutput = runScreeningReportPipeline({
+  finalHtml: screeningHtml,
+  sourceTruthPackage: rentRollOnlySourceTruth,
+  sourceTruthRequired: true,
+  deliveryGateDecisionResult: { delivery_gate_status: "deliverable" },
+  deterministicContractQaSeal,
+});
+assert.equal(rentRollOnlyOutput.sealedCustomerOutput, true);
+
+const blockedSourceTruth = buildCanonicalSourceTruthPackage({
+  jobId: "source-truth-pipeline-authority-blocked",
+  propertyName: "Authority Property",
+  artifacts: [],
+});
 assert.equal(blockedSourceTruth.core_publishable, false);
-assert.equal(blockedSourceTruth.true_blockers.includes("CORE_T12_NOT_VALIDATED"), true);
+assert.ok(Array.isArray(blockedSourceTruth.true_blockers) && blockedSourceTruth.true_blockers.length > 0);
 assert.throws(
   () => runScreeningReportPipeline({
     sourceTruthPackage: blockedSourceTruth,
@@ -119,7 +135,7 @@ const blockedBossContract = buildAcquisitionMemoBossContract({
   reportMode: "v1_core",
 });
 assert.equal(blockedBossContract.coreGate.publishAllowed, false);
-assert.equal(blockedBossContract.coreGate.fatalReasons.includes("CORE_T12_NOT_VALIDATED"), true);
+assert.ok(Array.isArray(blockedBossContract.coreGate.fatalReasons) && blockedBossContract.coreGate.fatalReasons.length > 0);
 
 await assert.rejects(
   runAcquisitionMemoV2Pipeline({

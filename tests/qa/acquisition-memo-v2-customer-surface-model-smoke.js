@@ -419,6 +419,27 @@ assert.equal(model.valueSemantics.wholePropertyValue.goingInCapRate, 0.07);
 assert.equal(Math.round(model.valueSemantics.wholePropertyValue.impliedValueAtGoingInCapRate || 0), 13500000);
 assert.equal(Math.round(model.valueSemantics.rentUpsideValue.annualRentUpside || 0), 285600);
 
+const debtCapacityFactsForSyntheticHtml = model.sections?.debtCapacityAndCoverage?.facts || {};
+const formatSyntheticPercent = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const pct = Math.abs(n) <= 1 ? n * 100 : n;
+  return `${pct.toFixed(1)}%`;
+};
+const formatSyntheticMoney = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? `$${Math.round(n).toLocaleString("en-US")}` : "";
+};
+const debtCapacitySyntheticHtml = [
+  model.sections?.debtCapacityAndCoverage?.visibleLabel,
+  formatSyntheticPercent(debtCapacityFactsForSyntheticHtml.proposedDebtYield?.result),
+  formatSyntheticPercent(debtCapacityFactsForSyntheticHtml.proposedMortgageConstant?.result),
+  formatSyntheticPercent(debtCapacityFactsForSyntheticHtml.currentDebtInclusiveBreakEvenOccupancy?.result),
+  formatSyntheticPercent(debtCapacityFactsForSyntheticHtml.proposedDebtInclusiveBreakEvenOccupancy?.result),
+  formatSyntheticMoney(debtCapacityFactsForSyntheticHtml.currentDebtInclusiveBreakEvenMonthlyRentPerUnit?.result),
+  formatSyntheticMoney(debtCapacityFactsForSyntheticHtml.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit?.result),
+].filter(Boolean).map((value) => `<div>${value}</div>`).join("\n");
+
 const syntheticHtml = `
   <html><body>
     <h1>Stonebridge Lofts Acquisition Memo</h1>
@@ -449,6 +470,7 @@ const syntheticHtml = `
     <div>Utilities $86,000</div>
     <div>Property Management $60,000</div>
     <div>Payroll / Admin $28,000</div>
+    ${debtCapacitySyntheticHtml}
     <div>Operating Statement / TTM Summary</div>
     <div>Data Coverage / Source Limitations</div>
     <div>Methodology / Data Transparency</div>
@@ -581,6 +603,17 @@ assert.match(genericModel.sections.unitMix.facts.unit_mix[1].label, /3BR/i);
 assert.equal(genericModel.sections.operatingStatementTTMSummary.facts.expense_lines[0].amount, 42000);
 assert.equal(genericModel.sections.operatingStatementTTMSummary.facts.expense_lines[1].amount, 54000);
 
+const genericDebtCapacityFactsForSyntheticHtml = genericModel.sections?.debtCapacityAndCoverage?.facts || {};
+const genericDebtCapacitySyntheticHtml = [
+  genericModel.sections?.debtCapacityAndCoverage?.visibleLabel,
+  formatSyntheticPercent(genericDebtCapacityFactsForSyntheticHtml.proposedDebtYield?.result),
+  formatSyntheticPercent(genericDebtCapacityFactsForSyntheticHtml.proposedMortgageConstant?.result),
+  formatSyntheticPercent(genericDebtCapacityFactsForSyntheticHtml.currentDebtInclusiveBreakEvenOccupancy?.result),
+  formatSyntheticPercent(genericDebtCapacityFactsForSyntheticHtml.proposedDebtInclusiveBreakEvenOccupancy?.result),
+  formatSyntheticMoney(genericDebtCapacityFactsForSyntheticHtml.currentDebtInclusiveBreakEvenMonthlyRentPerUnit?.result),
+  formatSyntheticMoney(genericDebtCapacityFactsForSyntheticHtml.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit?.result),
+].filter(Boolean).map((value) => `<div>${value}</div>`).join("\n");
+
 const genericHtml = `
   <html><body>
     <h1>Harbor Ridge Acquisition Memo</h1>
@@ -592,6 +625,7 @@ const genericHtml = `
     <div>${genericModel.sections.renovationContext.visibleLabel}</div>
     <div>${genericModel.sections.marketSurveyContext.visibleLabel}</div>
     <div>${genericModel.sections.environmentalContext.visibleLabel}</div>
+    ${genericDebtCapacitySyntheticHtml}
     <div>Current Outstanding Balance $5,400,000</div>
     <div>Interest Rate 5.25%</div>
     <div>Amortization Remaining 21 years</div>

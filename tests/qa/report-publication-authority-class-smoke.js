@@ -209,12 +209,20 @@ assert.equal(advisoryTimeout.result.verifiedDownloadArtifact, true);
 
 const richRendererError = new Error("rich renderer outage");
 const emergencyRendererError = new Error("emergency renderer outage");
-await assert.rejects(
-  () => runScenario({ renderPlan: [richRendererError, emergencyRendererError], emergencyCoreHtml: "<html><body>Minimum core</body></html>" }),
-  (error) => error === emergencyRendererError
-);
-const totalOutageFakes = buildFakes({ renderPlan: [new Error("rich"), new Error("emergency")] });
-assert.equal(totalOutageFakes.calls.uploaded.length, 0);
+const totalRendererOutage = await runScenario({
+  renderPlan: [richRendererError, emergencyRendererError],
+  emergencyCoreHtml: "<html><body>Minimum core</body></html>",
+});
+assert.equal(totalRendererOutage.result.artifactSource, "publication_retry_required");
+assert.equal(totalRendererOutage.result.verifiedDownloadArtifact, false);
+assert.equal(totalRendererOutage.result.createdDownloadArtifact, false);
+assert.equal(totalRendererOutage.result.publicationState, "recovery_required");
+assert.equal(totalRendererOutage.result.publicationRetryRequired, true);
+assert.equal(totalRendererOutage.result.publicationRetryReason, "initial_emergency_core_render_failed");
+assert.equal(totalRendererOutage.result.publicationRecoveryError, emergencyRendererError);
+assert.equal(totalRendererOutage.result.publicationRecoveryError?.context?.initial_render_error, "rich renderer outage");
+assert.equal(totalRendererOutage.result.publicationRecoveryError?.context?.emergency_core_render_error, "emergency renderer outage");
+assert.equal(totalRendererOutage.calls.uploaded.length, 0);
 
 const insufficientCoreError = new Error("rich renderer outage");
 await assert.rejects(

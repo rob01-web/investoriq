@@ -311,6 +311,7 @@ export function buildInstitutionalGate10ReportFixture(jobId = 'gate-10-report-jo
     acquisitionMemoProjection,
     renderedAcquisitionMemo,
     sourcePackage,
+    sourceTruthPackage,
     t12Payload: sourceTruthPackage.core.t12.accepted_facts,
     coreMetrics,
     reportMeta,

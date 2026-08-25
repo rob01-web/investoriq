@@ -1,4 +1,168 @@
-﻿# INVESTORIQ â€” FINAL PIPELINE REPAIR & ELITE GAME PLAN
+# 2026-08-19 CARRY-FORWARD STATUS — ELITE-08 CLOSED LOCALLY / ELITE-09 NEXT
+
+> **FULL REPOSITORY / PIPELINE AUDIT IS COMPLETE. DO NOT RESTART IT.**
+>
+> **ELITE-02 THROUGH ELITE-08 ARE CLOSED LOCALLY. DO NOT RE-OPEN THEM ABSENT NEW CONTRADICTORY EVIDENCE.**
+
+Current ELITE checkpoint:
+
+- P0/P1 repaired architecture remains the protected foundation.
+- ELITE report work remains **LOCAL ONLY**.
+- Supabase Cron remains **PAUSED**.
+- No production RETEST is authorized.
+- No worker invocation is authorized.
+- No deploy is authorized.
+- No pricing change is authorized.
+- Premium remains future-only and OFF.
+- Local ELITE changes are accumulated and not yet committed/pushed/deployed.
+
+Completed ELITE sequence:
+
+- ELITE-02 — Investment Committee Overview: CLOSED LOCALLY
+- ELITE-03 — Operating Intelligence: CLOSED LOCALLY
+- ELITE-04 — Scenario Engine v1: CLOSED LOCALLY
+- ELITE-05 — Underwriting Driver Analysis: CLOSED LOCALLY
+- ELITE-06 — Transaction / Diligence Intelligence: CLOSED LOCALLY WITH CUMULATIVE REGRESSION PROOF
+- ELITE-07 — Debt Intelligence: CLOSED LOCALLY WITH CUMULATIVE REGRESSION PROOF
+- ELITE-08 — Valuation & Reconciliation Upgrade: CLOSED LOCALLY WITH FULL CUMULATIVE + INSTITUTIONAL PROOF
+- **NEXT = ELITE-09 — Quality Manifest Redesign**
+
+Final ELITE-08 proof:
+
+- customer-visible language boundary 7/7 PASS
+- appraisal customer-surface contract 9/9 PASS
+- valuation engine 72/72 PASS
+- renderer 44/44 PASS
+- document wiring 15/15 PASS
+- valuation institutional regression 21/21 PASS
+- real cumulative ELITE-02→08 pipeline regression PASS
+- ELITE-07 debt institutional regression preserved 36/36 PASS
+- ELITE-06 transaction/diligence institutional regression preserved 24/24 PASS
+- institutional PDF information architecture PASS
+- customer surface PASS
+- boss contract PASS
+- Source Truth pipeline authority PASS
+- final PDF handoff smoke `ok`
+- Gate 10V PASS
+- syntax PASS
+- `git diff --check` clean apart from expected CRLF warnings
+
+Permanent ELITE-08 boundary lessons:
+
+- accepted appraisal context may never overwrite canonical T12 operating truth;
+- appraisal display formatting must remain aligned with the canonical customer-surface contract;
+- provenance repair firewall remains non-negotiable and was not weakened;
+- internal `source_backed` evidence semantics may remain internal, while visible institutional report language must not leak `source-backed`;
+- value sensitivity reuses ELITE-04 governed scenario authority rather than creating a duplicate scenario authority;
+- no unsupported IRR, MOIC, hold period, exit cap, terminal value, rent growth, recommendation, or lender decision may be invented.
+
+### Acceptance doctrine for ELITE-09 onward
+
+A targeted smoke PASS can never close an ELITE packet by itself.
+
+Every remaining packet must prove:
+1. targeted contract / renderer / wiring behavior,
+2. cumulative real ELITE stack / institutional rendering,
+3. customer-surface and boss-contract compliance,
+4. Source Truth authority preservation,
+5. final PDF handoff compatibility,
+6. Gate 10V compatibility,
+7. syntax / diff integrity.
+
+Only then may it be called **CLOSED LOCALLY**.
+
+---
+# 2026-08-19 CARRY-FORWARD STATUS — ELITE-07 CLOSED LOCALLY / ELITE-08 NEXT
+
+> **FULL REPOSITORY / PIPELINE AUDIT IS COMPLETE. DO NOT RESTART IT.**
+>
+> **ELITE-02 THROUGH ELITE-07 ARE CLOSED LOCALLY. DO NOT RE-OPEN THEM ABSENT NEW CONTRADICTORY EVIDENCE.**
+
+Current ELITE checkpoint:
+
+- P0/P1 repaired architecture remains the protected foundation.
+- ELITE report work remains **LOCAL ONLY**.
+- Supabase Cron remains **PAUSED**.
+- No production RETEST is authorized.
+- No worker invocation is authorized.
+- No deploy is authorized.
+- No pricing change is authorized.
+- Premium remains future-only and OFF.
+- Local ELITE changes are accumulated and not yet committed/pushed/deployed.
+
+Completed ELITE sequence:
+
+- ELITE-02 — Investment Committee Overview: CLOSED LOCALLY
+- ELITE-03 — Operating Intelligence: CLOSED LOCALLY
+- ELITE-04 — Scenario Engine v1: CLOSED LOCALLY
+- ELITE-05 — Underwriting Driver Analysis: CLOSED LOCALLY
+- ELITE-06 — Transaction / Diligence Intelligence: CLOSED LOCALLY WITH CUMULATIVE REGRESSION PROOF
+- ELITE-07 — Debt Intelligence: CLOSED LOCALLY WITH CUMULATIVE REGRESSION PROOF
+- **NEXT = ELITE-08 — Valuation & Reconciliation Upgrade**
+
+Final ELITE-07 proof:
+
+- debt engine 116/116 PASS
+- debt renderer 36/36 PASS
+- document wiring 15/15 PASS
+- cumulative ELITE-02→07 pipeline regression PASS
+- debt institutional regression 36/36 PASS
+- transaction/diligence institutional regression preserved 24/24 PASS
+- institutional PDF information architecture PASS
+- customer surface PASS
+- boss contract PASS
+- Source Truth pipeline authority PASS
+- final PDF handoff smoke `ok`
+- Gate 10V PASS
+- syntax PASS
+- `git diff --check` clean apart from expected CRLF warnings
+
+Important ELITE-07 boundary decisions now locked:
+
+- canonical **Break-Even Occupancy** remains exclusively OpEx / T12 GPR;
+- debt-inclusive occupancy uses **Debt-Inclusive Occupancy Coverage Point**;
+- customer-visible `refinance` / `refi` surfaces remain prohibited;
+- debt sensitivity is scenario-derived and never source evidence;
+- no lender covenant, risk grade, credit decision, recommendation, or source-truth mutation is created by ELITE debt analysis.
+
+### Acceptance doctrine for ELITE-08 onward
+
+A targeted smoke PASS can never close an ELITE packet by itself.
+
+Every remaining packet must prove:
+1. targeted contract / renderer / wiring behavior,
+2. cumulative real ELITE stack / institutional rendering,
+3. customer-surface and boss-contract compliance,
+4. Source Truth authority preservation,
+5. final PDF handoff compatibility,
+6. Gate 10V compatibility,
+7. syntax / diff integrity.
+
+Only then may it be called **CLOSED LOCALLY**.
+
+---
+
+# HISTORICAL — 2026-08-18 CARRY-FORWARD STATUS — P0/P1 REPAIR BATCH DEPLOYED — SUPERSEDED BY 2026-08-19 ELITE CHECKPOINT
+
+> **FULL REPOSITORY / PIPELINE AUDIT IS COMPLETE. DO NOT RESTART IT.** Continue from implementation checkpoints only unless new contradictory evidence requires targeted investigation.
+
+Current checkpoint:
+
+- P0/P1 monster-audit repair batch committed as `9df57f0` (`fix: complete InvestorIQ P0 P1 pipeline authority repair`).
+- Push to `origin/main`: PASS.
+- Vercel production deployment for `9df57f0`: **READY / CURRENT**.
+- No post-deploy production report RETEST has been run.
+- Worker has not been invoked.
+- Supabase Cron remains paused.
+- Local build PASS; `git diff --check` PASS; canonical local regression QA 19/19 PASS (supporting evidence only, not production certification).
+- GitHub Actions did not reach canonical QA because `npm ci` failed on lockfile drift: `yaml@2.9.0` missing from `package-lock.json`.
+- Local `npm install --package-lock-only` completed successfully and modified only the lockfile at the current checkpoint; the lockfile follow-up is not yet committed/pushed.
+- Do not use `npm audit fix` / `--force` as part of this synchronization step.
+- Historical next task at that checkpoint: lockfile synchronization followed by ELITE work. **This is superseded by the 2026-08-19 ELITE-07 closure checkpoint above.**
+
+---
+
+# INVESTORIQ â€” FINAL PIPELINE REPAIR & ELITE GAME PLAN
 **Date:** 2026-08-17
 **Status:** ARCHITECTURE PLAN ONLY â€” NO PATCHES HAVE BEEN AUTHORIZED BY THIS DOCUMENT
 **Primary source of truth:** Full Pipeline Audit Working Ledger through Finding 236, plus consolidated architecture findings 237â€“288 from the continuation chat.
@@ -945,6 +1109,24 @@ Do this **after the pipeline constitution is stable enough that report-output wo
 
 The report upgrade should improve analysis quality without creating new source authorities.
 
+## 6.0 2026-08-19 IMPLEMENTATION CHECKPOINT
+
+The report-brain upgrade has completed ELITE-02 through ELITE-07 locally.
+
+Current completed analytical layers:
+- Investment Committee Overview
+- Operating Intelligence
+- Scenario Engine v1
+- Underwriting Driver Analysis
+- Transaction / Diligence Intelligence
+- Debt Intelligence
+
+These layers are downstream consumers only. They do not own Source Truth, publication, delivery, worker lifecycle, revision authority, or pricing.
+
+**Next analytical layer: ELITE-08 — Valuation & Reconciliation Upgrade.**
+
+ELITE-08 must reconcile supported value indications and transaction bases without inventing institutional-style return assumptions. It may use accepted purchase price, accepted/governed going-in cap rate, accepted T12 NOI, source-backed appraisal context, and already-governed scenario outputs where those inputs are present. Unsupported inputs must collapse.
+
 # ELITE PRINCIPLE
 
 > Better analysis may derive more insight from canonical facts, but it may never invent stronger evidence than the uploaded/adjudicated sources support.
@@ -1284,6 +1466,9 @@ InvestorIQ is **ELITE** when, in addition:
 27. documentation consolidation
 
 ## ELITE â€” PRODUCT QUALITY UPGRADE
+
+**Current execution checkpoint:** ELITE-02 through ELITE-08 CLOSED LOCALLY; **ELITE-09 NEXT**.
+
 
 28. institutional Full Underwriting information architecture
 29. executive-grade visual system

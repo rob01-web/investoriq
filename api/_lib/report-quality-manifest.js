@@ -1,4 +1,11 @@
-const MANIFEST_SCHEMA_VERSION = 1;
+const MANIFEST_SCHEMA_VERSION = 2;
+const MANIFEST_CONTRACT_VERSION = "report_quality_manifest_v2";
+const ALLOWED_CORE_SOURCE_MODES = new Set([
+  "dual_source_core",
+  "t12_minimum_core",
+  "rent_roll_minimum_core",
+  "insufficient_core",
+]);
 const MANIFEST_CANDIDATE_SOURCE = "report_quality_manifest_candidate";
 const MANIFEST_FINAL_SOURCE = "canonical_report_quality_manifest";
 const SOURCE_TRUTH_SOURCE = "canonical_source_truth_package";
@@ -51,6 +58,175 @@ function deepFreeze(value) {
 
 function unique(values) {
   return [...new Set(asArray(values).map(text).filter(Boolean))];
+}
+
+function normalizeReportIdentity(reportIdentity = null) {
+  const source = asObject(reportIdentity);
+  if (Object.keys(source).length === 0) return null;
+  return {
+    source: text(source.source) || null,
+    version: text(source.version) || null,
+    identityKey: text(source.identityKey) || null,
+    reportFamily: text(source.reportFamily) || null,
+    reportMode: text(source.reportMode) || null,
+    reportType: text(source.reportType) || null,
+    reportTier: Number.isFinite(Number(source.reportTier)) ? Number(source.reportTier) : null,
+    canonicalTitle: text(source.canonicalTitle) || null,
+    fullTitle: text(source.fullTitle) || null,
+    requiredPdfTextAnchors: unique(source.requiredPdfTextAnchors),
+  };
+}
+
+function normalizeRevisionIdentity(revisionIdentity = null, reportId = null) {
+  const source = asObject(revisionIdentity);
+  const kind = text(source.revisionKind || source.revision_kind || source.kind) || "original";
+  const explicitNumber = Number(source.revisionNumber ?? source.revision_number ?? source.number);
+  const revisionNumber = Number.isInteger(explicitNumber) && explicitNumber >= 1
+    ? explicitNumber
+    : kind === "original"
+      ? 1
+      : null;
+  const normalizedReportId = text(reportId) || null;
+  const explicitFamilyKey = text(source.revisionFamilyKey || source.revision_family_key || source.familyKey) || null;
+  const explicitRootReportId = text(source.revisionRootReportId || source.revision_root_report_id || source.rootReportId) || null;
+  return {
+    kind,
+    number: revisionNumber,
+    familyKey: explicitFamilyKey || (kind === "original" ? normalizedReportId : explicitRootReportId),
+    rootReportId: explicitRootReportId || (kind === "original" ? normalizedReportId : null),
+    parentReportId: text(source.revisionParentReportId || source.revision_parent_report_id || source.parentReportId) || null,
+    requestKey: text(source.revisionRequestKey || source.revision_request_key || source.requestKey) || null,
+    sourceJobId: text(source.revisionSourceJobId || source.revision_source_job_id || source.sourceJobId) || null,
+    isCurrentRevision: source.isCurrentRevision === true || source.is_current_revision === true,
+    publishedAt: text(source.revisionPublishedAt || source.revision_published_at || source.publishedAt) || null,
+    authority: {
+      source: "canonical_report_revision_receipt",
+      authorityCreating: false,
+      receiptOnly: true,
+    },
+  };
+}
+
+function resolveCoreSourceMode(sourceTruthPackage, corePublicationConstitution = null) {
+  const constitution = asObject(corePublicationConstitution);
+  const explicit = text(
+    constitution?.minimum_truth_set?.source_mode ||
+      constitution?.minimumTruthSet?.sourceMode ||
+      sourceTruthPackage?.core_publication_constitution?.minimum_truth_set?.source_mode ||
+      sourceTruthPackage?.corePublicationConstitution?.minimumTruthSet?.sourceMode ||
+      sourceTruthPackage?.core_input_sufficiency_state?.evidence?.core_source_mode
+  ).toLowerCase();
+  if (ALLOWED_CORE_SOURCE_MODES.has(explicit)) return explicit;
+
+  const t12Accepted = Object.keys(asObject(sourceTruthPackage?.core?.t12?.accepted_facts)).length > 0;
+  const rentRollAccepted = Object.keys(asObject(sourceTruthPackage?.core?.rent_roll?.accepted_facts)).length > 0;
+  if (t12Accepted && rentRollAccepted) return "dual_source_core";
+  if (t12Accepted) return "t12_minimum_core";
+  if (rentRollAccepted) return "rent_roll_minimum_core";
+  return "insufficient_core";
+}
+
+function buildSourceBasisReceipt(sourceTruthPackage, corePublicationConstitution = null) {
+  const constitution = asObject(corePublicationConstitution);
+  return {
+    sourceMode: resolveCoreSourceMode(sourceTruthPackage, constitution),
+    sourceTruthSource: text(sourceTruthPackage?.source) || null,
+    sourceTruthSchemaVersion: Number.isFinite(Number(sourceTruthPackage?.schema_version))
+      ? Number(sourceTruthPackage.schema_version)
+      : null,
+    constitutionSource: text(constitution?.source) || null,
+    constitutionVersion: text(constitution?.version) || null,
+    corePublishable: sourceTruthPackage?.core_publishable === true,
+    authority: {
+      source: "canonical_source_truth_receipt",
+      authorityCreating: false,
+      receiptOnly: true,
+    },
+  };
+}
+
+function buildScenarioAnalysisBasisReceipt(customerSurfaceModel, reportIdentity = null) {
+  const identity = asObject(reportIdentity);
+  const sections = Object.values(asObject(customerSurfaceModel?.sections));
+  const boundarySignals = sections
+    .map((section) => section?.boundaries?.noUnsupportedScenarioInference)
+    .filter((value) => typeof value === "boolean");
+  const isFullUnderwriting =
+    text(identity?.identityKey) === "full_underwriting" ||
+    text(identity?.reportFamily) === "full_underwriting" ||
+    text(customerSurfaceModel?.reportMode) === "v1_core";
+  return {
+    applicable: isFullUnderwriting,
+    basis: isFullUnderwriting ? "governed_base_facts_with_versioned_sensitivity" : "not_applicable",
+    customerSurfaceModelVersion: text(customerSurfaceModel?.modelVersion) || null,
+    noUnsupportedScenarioInference:
+      boundarySignals.length > 0 ? boundarySignals.every((value) => value === true) : null,
+    authority: {
+      source: "customer_surface_scenario_policy_receipt",
+      authorityCreating: false,
+      receiptOnly: true,
+    },
+  };
+}
+
+function buildCalculationAuthorityReceipt(calculations, customerSurfaceModel) {
+  const institutional = asObject(customerSurfaceModel?.financialIntelligence);
+  return {
+    source: text(institutional?.source) || null,
+    receiptVersion: Number.isFinite(Number(institutional?.receiptVersion))
+      ? Number(institutional.receiptVersion)
+      : null,
+    formulaVersions: unique(asArray(calculations).map((receipt) => receipt?.formulaVersion)),
+    calculationCount: asArray(calculations).length,
+    eligibleCalculationCount: asArray(calculations).filter((receipt) => receipt?.eligible === true).length,
+    authoritySources: unique(asArray(calculations).map((receipt) => receipt?.authority?.source)),
+    authority: {
+      source: "calculation_receipt_summary",
+      authorityCreating: false,
+      receiptOnly: true,
+    },
+  };
+}
+
+function buildCertificationReceipt(finalPdfPublicationQualityBoss, certificationCompletedAt = null, receiptRecordedAt = null) {
+  const boss = asObject(finalPdfPublicationQualityBoss);
+  const present = Object.keys(boss).length > 0;
+  return {
+    present,
+    source: present ? text(boss.authority) || "final_pdf_publication_quality_boss" : null,
+    version: present ? text(boss.version) || null : null,
+    status: present ? text(boss.status) || null : null,
+    strictInstitutionalCertified: present ? boss.strict_institutional_certified === true || finalPdfStrictlyCertified(boss) : false,
+    customerDeliveryAllowed: present ? finalPdfCustomerDeliveryAllowed(boss) : false,
+    completedAt: present ? text(certificationCompletedAt) || null : null,
+    receiptRecordedAt: present ? text(receiptRecordedAt) || null : null,
+    authority: {
+      source: "final_pdf_certification_receipt",
+      authorityCreating: false,
+      receiptOnly: true,
+    },
+  };
+}
+
+function buildCandidateReceiptIdentity({ jobId = null, reportId = null } = {}) {
+  const normalizedJobId = text(jobId) || "unknown_job";
+  const normalizedReportId = text(reportId) || "pending_report";
+  return {
+    candidateReceiptId: `report_quality_manifest_candidate:${normalizedJobId}:${normalizedReportId}`,
+    manifestReceiptId: null,
+    publicationReceiptId: null,
+  };
+}
+
+function buildFinalReceiptIdentity({ jobId = null, reportId = null, finalizedAt = null } = {}) {
+  const normalizedJobId = text(jobId) || "unknown_job";
+  const normalizedReportId = text(reportId) || "unknown_report";
+  return {
+    candidateReceiptId: `report_quality_manifest_candidate:${normalizedJobId}:${normalizedReportId}`,
+    manifestReceiptId: `canonical_report_quality_manifest:${normalizedReportId}`,
+    publicationReceiptId: `report_publication:${normalizedReportId}`,
+    finalizedAt: text(finalizedAt) || null,
+  };
 }
 
 function sourceIdentityKey(documentClass, fileId, artifactId = null) {
@@ -552,6 +728,22 @@ export function validateReportQualityManifest(manifest, { requireFinal = false }
     }
   }
 
+  const sourceMode = text(manifest?.sourceBasis?.sourceMode).toLowerCase();
+  if (sourceMode && !ALLOWED_CORE_SOURCE_MODES.has(sourceMode)) {
+    push("MANIFEST_CORE_SOURCE_MODE_INVALID", "sourceBasis.sourceMode", "Manifest source mode must use the constitutional core source-mode vocabulary.");
+  }
+  const revision = asObject(manifest?.revision);
+  if (Object.keys(revision).length > 0) {
+    const revisionNumber = Number(revision.number);
+    if (!text(revision.kind) || !Number.isInteger(revisionNumber) || revisionNumber < 1) {
+      push("MANIFEST_REVISION_IDENTITY_INVALID", "revision", "Manifest revision identity requires a kind and positive revision number.");
+    }
+  }
+  const certification = asObject(manifest?.certification);
+  if (certification.present === true && !text(certification.source)) {
+    push("MANIFEST_CERTIFICATION_SOURCE_MISSING", "certification.source", "A present certification receipt requires its source identity.");
+  }
+
   if (requireFinal || source === MANIFEST_FINAL_SOURCE) {
     const publicationState = text(manifest?.publication?.state);
     const deliveryReceipt = asObject(manifest?.receipts?.deliveryGate);
@@ -566,6 +758,12 @@ export function validateReportQualityManifest(manifest, { requireFinal = false }
       }
       if (!text(manifest?.report?.reportId) || !text(manifest?.publication?.storagePath)) {
         push("MANIFEST_FINAL_PUBLICATION_IDENTITY_MISSING", "publication", "Published manifest requires report and storage identity.");
+      }
+      if (!text(manifest?.receiptIdentity?.manifestReceiptId) || !text(manifest?.receiptIdentity?.publicationReceiptId)) {
+        push("MANIFEST_FINAL_RECEIPT_IDENTITY_MISSING", "receiptIdentity", "Published manifest requires canonical manifest and publication receipt identities.");
+      }
+      if (!text(manifest?.revision?.kind) || !Number.isInteger(Number(manifest?.revision?.number))) {
+        push("MANIFEST_FINAL_REVISION_IDENTITY_MISSING", "revision", "Published manifest requires a normalized revision identity.");
       }
       if (delivery.status !== "deliverable" || delivery.customerDeliveryAllowed !== true || delivery.holdDelivery === true) {
         push("MANIFEST_FINAL_DELIVERY_NOT_ALLOWED", "receipts.deliveryGate", "Published manifest requires explicit deliverable authority.");
@@ -619,6 +817,10 @@ export function buildReportQualityManifestCandidate({
   sourcePackageQa = null,
   qaManagerReview = null,
   finalPdfPublicationQualityBoss = null,
+  reportIdentity = null,
+  revisionIdentity = null,
+  corePublicationConstitution = null,
+  certificationCompletedAt = null,
 } = {}) {
   if (sourceTruthPackage?.source !== SOURCE_TRUTH_SOURCE) {
     throw new Error("REPORT_QUALITY_MANIFEST_CANONICAL_SOURCE_TRUTH_REQUIRED");
@@ -635,11 +837,22 @@ export function buildReportQualityManifestCandidate({
   const calculations = customerSurfaceModel
     ? buildCalculationReceipts(customerSurfaceModel)
     : [];
+  const normalizedReportIdentity = normalizeReportIdentity(reportIdentity);
+  const normalizedRevisionIdentity = normalizeRevisionIdentity(revisionIdentity, reportId);
+  const sourceBasis = buildSourceBasisReceipt(sourceTruthPackage, corePublicationConstitution);
+  const scenarioAnalysisBasis = buildScenarioAnalysisBasisReceipt(customerSurfaceModel, normalizedReportIdentity);
+  const calculationAuthority = buildCalculationAuthorityReceipt(calculations, customerSurfaceModel);
+  const certification = buildCertificationReceipt(
+    finalPdfPublicationQualityBoss,
+    certificationCompletedAt,
+    generatedAt
+  );
   const delivery = explicitDeliveryState(deliveryDecision);
   const supportDocuments = documents.filter((document) => document.documentClass === "support");
   const candidate = {
     source: MANIFEST_CANDIDATE_SOURCE,
     schemaVersion: MANIFEST_SCHEMA_VERSION,
+    contractVersion: MANIFEST_CONTRACT_VERSION,
     generatedAt,
     finalizedAt: null,
     authority: {
@@ -657,7 +870,16 @@ export function buildReportQualityManifestCandidate({
       reportType: text(reportType) || null,
       reportMode: text(reportMode) || null,
       propertyName: text(propertyName) || null,
+      identity: normalizedReportIdentity,
     },
+    revision: normalizedRevisionIdentity,
+    sourceBasis,
+    analysisBasis: {
+      scenario: scenarioAnalysisBasis,
+      calculations: calculationAuthority,
+    },
+    certification,
+    receiptIdentity: buildCandidateReceiptIdentity({ jobId, reportId }),
     qualityState: {
       corePublishable,
       trueBlockers: unique(sourceTruthPackage?.true_blockers),
@@ -686,6 +908,8 @@ export function buildReportQualityManifestCandidate({
         schemaVersion: sourceTruthPackage.schema_version,
         corePublishable,
         trueBlockers: clone(asArray(sourceTruthPackage?.true_blockers)),
+        sourceMode: sourceBasis.sourceMode,
+        constitution: clone(asObject(corePublicationConstitution)),
       },
       customerSurfaceModel: customerSurfaceModel
         ? {
@@ -758,6 +982,7 @@ export function buildUnavailableReportQualityManifestCandidate({
   const candidate = {
     source: MANIFEST_CANDIDATE_SOURCE,
     schemaVersion: MANIFEST_SCHEMA_VERSION,
+    contractVersion: MANIFEST_CONTRACT_VERSION,
     generatedAt,
     finalizedAt: null,
     authority: {
@@ -775,7 +1000,24 @@ export function buildUnavailableReportQualityManifestCandidate({
       reportType: text(reportType) || null,
       reportMode: text(reportMode) || null,
       propertyName: text(propertyName) || null,
+      identity: null,
     },
+    revision: normalizeRevisionIdentity(null, null),
+    sourceBasis: {
+      sourceMode: "insufficient_core",
+      sourceTruthSource: null,
+      sourceTruthSchemaVersion: null,
+      constitutionSource: null,
+      constitutionVersion: null,
+      corePublishable: false,
+      authority: { source: "canonical_source_truth_receipt", authorityCreating: false, receiptOnly: true },
+    },
+    analysisBasis: {
+      scenario: buildScenarioAnalysisBasisReceipt(null, null),
+      calculations: buildCalculationAuthorityReceipt([], null),
+    },
+    certification: buildCertificationReceipt(null, null, generatedAt),
+    receiptIdentity: buildCandidateReceiptIdentity({ jobId, reportId: null }),
     qualityState: {
       corePublishable: false,
       trueBlockers: unique([blockerCode]),
@@ -846,6 +1088,17 @@ export function finalizeReportQualityManifest({
       ...clone(candidate.report),
       reportId: text(reportId) || null,
     },
+    revision: normalizeRevisionIdentity(candidate.revision, reportId),
+    certification: buildCertificationReceipt(
+      finalPdfPublicationQualityBoss,
+      candidate?.certification?.completedAt || finalizedAt,
+      candidate?.certification?.receiptRecordedAt || candidate?.generatedAt || finalizedAt
+    ),
+    receiptIdentity: buildFinalReceiptIdentity({
+      jobId: candidate?.report?.jobId,
+      reportId,
+      finalizedAt,
+    }),
     qualityState: {
       ...clone(candidate.qualityState),
       confidence: finalPdfStrictlyCertified(finalPdfPublicationQualityBoss)
@@ -903,6 +1156,13 @@ export function finalizeBlockedReportQualityManifest({
       ...clone(candidate.report),
       reportId: text(reportId) || null,
     },
+    revision: normalizeRevisionIdentity(candidate.revision, reportId),
+    certification: buildCertificationReceipt(null, null, candidate?.generatedAt || finalizedAt),
+    receiptIdentity: buildFinalReceiptIdentity({
+      jobId: candidate?.report?.jobId,
+      reportId: reportId || candidate?.report?.reportId,
+      finalizedAt,
+    }),
     qualityState: {
       ...clone(candidate.qualityState),
       confidence: "verified_terminal_block",
@@ -942,6 +1202,8 @@ export function finalizeBlockedReportQualityManifest({
 
 export const REPORT_QUALITY_MANIFEST_CONTRACT = deepFreeze({
   schemaVersion: MANIFEST_SCHEMA_VERSION,
+  contractVersion: MANIFEST_CONTRACT_VERSION,
+  coreSourceModes: [...ALLOWED_CORE_SOURCE_MODES],
   candidateSource: MANIFEST_CANDIDATE_SOURCE,
   finalSource: MANIFEST_FINAL_SOURCE,
   authorityCreating: false,

@@ -357,7 +357,7 @@ export function buildCurrentDebtScorecardEntry({
         value: formatMultiple(canonicalDscrForScore, 2),
         pts: canonicalDscrForScore > 1.35 ? 10 : canonicalDscrForScore >= 1.25 ? 7 : 3,
         max: 10,
-        band: canonicalDscrForScore > 1.35 ? "Above 1.35x" : canonicalDscrForScore >= 1.25 ? "1.25–1.35x" : "Below 1.25x",
+        band: canonicalDscrForScore > 1.35 ? "Above 1.35x" : canonicalDscrForScore >= 1.25 ? "1.25-1.35x" : "Below 1.25x",
       },
     };
   }
@@ -377,7 +377,7 @@ export function buildCurrentDebtScorecardEntry({
         value: formatMultiple(currentDebtCoverage.dscr, 2),
         pts: currentDebtCoverage.dscr > 1.35 ? 10 : currentDebtCoverage.dscr >= 1.25 ? 7 : 3,
         max: 10,
-        band: currentDebtCoverage.dscr > 1.35 ? "Above 1.35x" : currentDebtCoverage.dscr >= 1.25 ? "1.25–1.35x" : "Below 1.25x",
+        band: currentDebtCoverage.dscr > 1.35 ? "Above 1.35x" : currentDebtCoverage.dscr >= 1.25 ? "1.25-1.35x" : "Below 1.25x",
       },
     };
   }
@@ -421,7 +421,7 @@ export function buildDealScorecardState({
       value: formatPercent1(expenseRatioR),
       pts,
       max: 10,
-      band: expenseRatioR < 0.55 ? "Below 55%" : expenseRatioR <= 0.65 ? "55–65%" : "Above 65%",
+      band: expenseRatioR < 0.55 ? "Below 55%" : expenseRatioR <= 0.65 ? "55-65%" : "Above 65%",
     });
   }
   if (Number.isFinite(noiMarginR)) {
@@ -433,7 +433,7 @@ export function buildDealScorecardState({
       value: formatPercent1(noiMarginR),
       pts,
       max: 10,
-      band: noiMarginR > 0.45 ? "Above 45%" : noiMarginR >= 0.35 ? "35–45%" : "Below 35%",
+      band: noiMarginR > 0.45 ? "Above 45%" : noiMarginR >= 0.35 ? "35-45%" : "Below 35%",
     });
   }
   if (Number.isFinite(execOccupancy)) {
@@ -445,7 +445,7 @@ export function buildDealScorecardState({
       value: formatPercent1(execOccupancy),
       pts,
       max: 10,
-      band: execOccupancy > 0.95 ? "Above 95%" : execOccupancy >= 0.85 ? "85–95%" : "Below 85%",
+      band: execOccupancy > 0.95 ? "Above 95%" : execOccupancy >= 0.85 ? "85-95%" : "Below 85%",
     });
   }
   if (Number.isFinite(breakEvenOccR)) {
@@ -457,7 +457,7 @@ export function buildDealScorecardState({
       value: formatPercent1(breakEvenOccR),
       pts,
       max: 10,
-      band: breakEvenOccR < 0.70 ? "Below 70%" : breakEvenOccR <= 0.80 ? "70–80%" : "Above 80%",
+      band: breakEvenOccR < 0.70 ? "Below 70%" : breakEvenOccR <= 0.80 ? "70-80%" : "Above 80%",
     });
   }
   if (Number.isFinite(marketRentPremiumRatio) && !Number.isNaN(marketRentPremiumRatio)) {
@@ -470,7 +470,7 @@ export function buildDealScorecardState({
       value: formatPercent1(marketRentPremiumRatio),
       pts,
       max: 10,
-      band: pct > 15 ? ">15% upside" : pct >= 5 ? "5–15% upside" : "<5% upside",
+      band: pct > 15 ? ">15% upside" : pct >= 5 ? "5-15% upside" : "<5% upside",
     });
   }
 

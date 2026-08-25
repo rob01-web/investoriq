@@ -604,7 +604,7 @@ function hasMeaningfulTableBodyRows(tableHtml) {
   if (!raw) return false;
   const rowMatches = raw.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
   const placeholderPatterns = [
-    /^(?:no data|data not available|n\/a|not available|none|—|–|-)\.?$/i,
+    /^(?:no data|data not available|n\/a|not available|none|\u2014|\u2013|-)\.?$/i,
     /^no\s+(?:expense|income)?\s*(?:drivers?|lines?|rows?|items?)$/i,
     /^no\s+meaningful\s+(?:rows?|data)$/i,
     /^placeholder(?:\s+row)?$/i,

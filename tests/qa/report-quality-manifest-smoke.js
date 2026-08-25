@@ -519,15 +519,36 @@ assert.match(workerSource, /finalizeReportQualityManifest/);
 assert.match(workerSource, /finalizeBlockedReportQualityManifest/);
 assert.match(workerSource, /type:\s*'report_quality_manifest'/);
 assert.match(workerSource, /customer_delivery_unchanged:\s*true/);
-assert.ok(
-  workerSource.indexOf("const completeUpdate = { status: 'published' }") <
-    workerSource.indexOf("const manifestCandidate = reportData?.report_quality_manifest_candidate"),
-  "Manifest finalization must occur only after the verified report reaches the published path"
+const creditReconciliationIndex = workerSource.indexOf(
+  "const creditResult = await consumeCreditOnce(job)"
 );
+const manifestCandidateIndex = workerSource.indexOf(
+  "let manifestCandidate = reportData?.report_quality_manifest_candidate"
+);
+const manifestPersistenceIndex = workerSource.indexOf(
+  "type: 'report_quality_manifest'",
+  manifestCandidateIndex
+);
+const publicationCommitReadyIndex = workerSource.indexOf(
+  "publicationCommitReady: true",
+  manifestPersistenceIndex
+);
+const publishedTransitionIndex = workerSource.indexOf(
+  "const publishedUpdate = await transitionWorkerJob(job, 'publishing', 'published'",
+  publicationCommitReadyIndex
+);
+
+assert.notEqual(creditReconciliationIndex, -1, "Credit reconciliation must remain wired before publication finalization");
+assert.notEqual(manifestCandidateIndex, -1, "Publication path must resolve the Report Quality Manifest candidate");
+assert.notEqual(manifestPersistenceIndex, -1, "Publication path must persist the Report Quality Manifest");
+assert.notEqual(publicationCommitReadyIndex, -1, "Publication path must explicitly seal publicationCommitReady");
+assert.notEqual(publishedTransitionIndex, -1, "Publication path must use the governed publishing -> published transition");
 assert.ok(
-  workerSource.indexOf("const creditResult = await consumeCreditOnce(job)") <
-    workerSource.indexOf("const manifestCandidate = reportData?.report_quality_manifest_candidate"),
-  "Manifest finalization must record the reconciled credit result"
+  creditReconciliationIndex < manifestCandidateIndex &&
+    manifestCandidateIndex < manifestPersistenceIndex &&
+    manifestPersistenceIndex < publicationCommitReadyIndex &&
+    publicationCommitReadyIndex < publishedTransitionIndex,
+  "Publication atomicity requires credit reconciliation, Manifest persistence, publication-commit readiness, then governed published transition"
 );
 assert.doesNotMatch(manifestOwnerSource, /buildRefiStabilityModel|REFI_SENSITIVITY_MATRIX_BLOCK|DCF_TABLE_BLOCK/);
 assert.doesNotMatch(manifestOwnerSource, /report-template-runtime|generate-client-report-impl/);

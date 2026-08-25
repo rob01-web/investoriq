@@ -1053,10 +1053,87 @@ export default async function handler(req, res) {
       ]);
 
       if (artifactErr) {
-        return { error: artifactErr };
+        const { data: compensationRow, error: compensationErr } = await supabaseAdmin
+          .from('profiles')
+          .update({ report_credits: currentCredits })
+          .eq('id', job.user_id)
+          .eq('report_credits', currentCredits - 1)
+          .select('report_credits')
+          .maybeSingle();
+
+        if (!compensationErr && Number(compensationRow?.report_credits) === currentCredits) {
+          return { error: artifactErr, compensated: true };
+        }
+
+        const reconciliationError = new Error(
+          'Credit receipt persistence failed after decrement and compensating rollback was not confirmed'
+        );
+        reconciliationError.code = 'CREDIT_RECONCILIATION_REQUIRED';
+        reconciliationError.context = {
+          artifact_error: artifactErr?.message || String(artifactErr),
+          compensation_error: compensationErr?.message || null,
+          expected_before: currentCredits,
+          expected_after: currentCredits - 1,
+          observed_after_compensation: compensationRow?.report_credits ?? null,
+        };
+        return { error: reconciliationError, compensated: false, reconciliationRequired: true };
       }
 
       return { ok: true };
+    };
+
+    const requeuePublicationCommitFailure = async (job, reason, meta = {}) => {
+      const queuedUpdate = await transitionWorkerJob(job, 'publishing', 'queued', {
+        reason,
+        publication_state: 'recovery_required',
+        publication_retry_reason: reason,
+        recovery_context: 'publication_commit',
+        ...meta,
+      });
+
+      if (!queuedUpdate?.id) {
+        return null;
+      }
+
+      const transitionErr = await writeStatusTransitionArtifact(
+        job.id,
+        'publishing',
+        'queued',
+        {
+          user_id: job.user_id,
+          reason,
+          publication_state: 'recovery_required',
+          ...meta,
+        }
+      );
+      if (transitionErr) {
+        console.error(
+          `[worker] Failed to write publishing-to-queued recovery transition for job ${job.id}:`,
+          transitionErr.message
+        );
+      }
+
+      const retryEventErr = await writeWorkerEventArtifact(
+        job.id,
+        job.user_id,
+        'report_publication_retry_required',
+        {
+          publication_state: 'recovery_required',
+          publication_retry_reason: reason,
+          recovery_context: 'publication_commit',
+          report_id: meta?.report_id || null,
+          storage_path: meta?.storage_path || null,
+          timestamp: nowIso,
+        }
+      );
+      if (retryEventErr) {
+        console.error(
+          `[worker] Failed to write publication-commit retry event for job ${job.id}:`,
+          retryEventErr.message
+        );
+      }
+
+      return queuedUpdate;
     };
 
     const canUseColumn = async (columnName) => {
@@ -1297,6 +1374,7 @@ export default async function handler(req, res) {
 
     const preserveVerifiedPublicationAfterLateWorkerError = async (job, checkpoint, err) => {
       if (
+        checkpoint?.publicationCommitReady !== true ||
         checkpoint?.verifiedDownloadArtifact !== true ||
         !pdfBossAllowsCustomerDelivery(checkpoint?.publicationQualityBoss) ||
         !checkpoint?.reportId ||
@@ -1329,7 +1407,7 @@ export default async function handler(req, res) {
       }
 
       let creditReconciliationError = null;
-      if (!publishErr && publishRecord?.id) {
+      if (!publishErr && publishRecord?.id && checkpoint?.creditReconciliationAttempted !== true) {
         const creditResult = await consumeCreditOnce(job);
         creditReconciliationError = creditResult.error || null;
       }
@@ -3592,26 +3670,14 @@ export default async function handler(req, res) {
                       publicationResolution?.publicationSource ||
                       generatorSource;
                     const publicationQualityBoss = artifactResolution?.publicationQualityBoss || null;
-                    let revisionPromotionResolution = null;
                     try {
                       const persistedReportLink = await persistAnalysisJobReportLink(job, reportId);
                       if (!persistedReportLink?.id) {
                         throw new Error('Failed to persist canonical report linkage');
                       }
-                      revisionPromotionResolution = await promoteReportRevisionToCurrent({
-                        supabaseAdmin,
-                        reportId,
-                      });
-                      if (!revisionPromotionResolution?.promoted) {
-                        throw new Error(
-                          revisionPromotionResolution?.stale === true
-                            ? `Report revision promotion resolved stale for ${reportId}`
-                            : `Report revision promotion did not establish current authority for ${reportId}`
-                        );
-                      }
-                    } catch (promotionErr) {
+                    } catch (linkErr) {
                       generatorErrorCode = 'REPORT_PUBLICATION_FAILED';
-                      generatorError = promotionErr?.message || 'Report generation failed (report promotion failed)';
+                      generatorError = linkErr?.message || 'Report generation failed (report linkage failed)';
                       generatorFailurePayload = {
                         error: generatorError,
                         has_report_data: Boolean(reportData),
@@ -3635,6 +3701,8 @@ export default async function handler(req, res) {
                         storagePath,
                         verifiedDownloadArtifact: true,
                         publicationQualityBoss,
+                        publicationCommitReady: false,
+                        creditReconciliationAttempted: false,
                       });
                     }
                   }
@@ -3928,6 +3996,199 @@ export default async function handler(req, res) {
             throw new Error('Delivery gate blocked before published');
           }
 
+          const creditResult = await consumeCreditOnce(job);
+          if (creditResult.error) {
+            const creditEventErr = await writeWorkerEventArtifact(
+              job.id,
+              job.user_id,
+              'credit_reconciliation_required',
+              {
+                code: 'CREDIT_RECONCILIATION_REQUIRED',
+                internal_only: true,
+                customer_delivery_unchanged: true,
+                report_id: reportId,
+                storage_path: storagePath,
+                compensated: creditResult.compensated === true,
+                reconciliation_required: creditResult.reconciliationRequired === true,
+                error: creditResult.error?.message || String(creditResult.error),
+                context: creditResult.error?.context || null,
+                timestamp: nowIso,
+              }
+            );
+            if (creditEventErr) {
+              console.error(
+                `[worker] Failed to write credit reconciliation event for job ${job.id}:`,
+                creditEventErr.message
+              );
+            }
+          }
+
+          let manifestCandidate = reportData?.report_quality_manifest_candidate || null;
+          if (!manifestCandidate) {
+            try {
+              manifestCandidate = await loadLatestArtifactPayload(job.id, 'report_quality_manifest_candidate');
+            } catch (manifestLookupErr) {
+              console.error(
+                `[worker] Report Quality Manifest candidate lookup failed for job ${job.id}:`,
+                manifestLookupErr?.message || manifestLookupErr
+              );
+              const queuedUpdate = await requeuePublicationCommitFailure(
+                job,
+                'report_quality_manifest_candidate_lookup_failed',
+                {
+                  report_id: reportId,
+                  storage_path: storagePath,
+                  error: String(manifestLookupErr?.message || manifestLookupErr || ''),
+                }
+              );
+              if (queuedUpdate?.id) {
+                transitions.push({
+                  job_id: job.id,
+                  from_status: 'publishing',
+                  to_status: 'queued',
+                });
+                passTransitions += 1;
+                deferredJobIds.add(job.id);
+              }
+              continue;
+            }
+          }
+
+          if (!manifestCandidate) {
+            const manifestMissingEventErr = await writeWorkerEventArtifact(
+              job.id,
+              job.user_id,
+              'report_quality_manifest_candidate_missing',
+              {
+                code: 'REPORT_QUALITY_MANIFEST_CANDIDATE_MISSING',
+                internal_only: true,
+                customer_delivery_unchanged: true,
+                publication_state: 'recovery_required',
+                report_id: reportId,
+                storage_path: storagePath,
+                timestamp: nowIso,
+              }
+            );
+            if (manifestMissingEventErr) {
+              console.error(
+                `[worker] Failed to write missing Report Quality Manifest candidate event for job ${job.id}:`,
+                manifestMissingEventErr.message
+              );
+            }
+            const queuedUpdate = await requeuePublicationCommitFailure(
+              job,
+              'report_quality_manifest_candidate_missing',
+              { report_id: reportId, storage_path: storagePath }
+            );
+            if (queuedUpdate?.id) {
+              transitions.push({
+                job_id: job.id,
+                from_status: 'publishing',
+                to_status: 'queued',
+              });
+              passTransitions += 1;
+              deferredJobIds.add(job.id);
+            }
+            continue;
+          }
+
+          try {
+            const publicationQualityBoss =
+              artifactResolution?.publicationQualityBoss ||
+              reportData?.final_pdf_publication_quality_boss ||
+              null;
+            const reportQualityManifest = finalizeReportQualityManifest({
+              candidate: manifestCandidate,
+              reportId,
+              storagePath,
+              deliveryDecision: resolvedDeliveryDecision.deliveryDecisionState,
+              finalPdfPublicationQualityBoss: publicationQualityBoss,
+              publicationState: 'published',
+              creditState: {
+                state: creditResult.error ? 'secondary_reconciliation_required' : 'reconciled',
+                consumed: creditResult.ok === true,
+                previouslyConsumedOrPrepaid: creditResult.skipped === true,
+                compensated: creditResult.compensated === true,
+                reconciliationRequired: creditResult.reconciliationRequired === true,
+                error: creditResult.error?.message || null,
+              },
+              remedyState: { state: 'not_required' },
+              finalizedAt: nowIso,
+            });
+            const manifestArtifactPath = `analysis_jobs/${job.id}/report_quality_manifest/${safeTimestamp(
+              nowIso
+            )}.json`;
+            const { error: manifestArtifactErr } = await supabaseAdmin
+              .from('analysis_artifacts')
+              .insert([
+                {
+                  job_id: job.id,
+                  user_id: job.user_id,
+                  type: 'report_quality_manifest',
+                  bucket: 'internal',
+                  object_path: manifestArtifactPath,
+                  payload: reportQualityManifest,
+                },
+              ]);
+            if (manifestArtifactErr) {
+              throw new Error(`Failed to persist Report Quality Manifest: ${manifestArtifactErr.message}`);
+            }
+          } catch (manifestErr) {
+            console.error(
+              `[worker] Report Quality Manifest blocked publication finalization for job ${job.id}:`,
+              manifestErr?.context || manifestErr?.message || manifestErr
+            );
+            const manifestFailureEventErr = await writeWorkerEventArtifact(
+              job.id,
+              job.user_id,
+              'report_quality_manifest_finalize_failed',
+              {
+                code: 'REPORT_QUALITY_MANIFEST_FINALIZE_FAILED',
+                internal_only: true,
+                customer_delivery_unchanged: true,
+                publication_state: 'recovery_required',
+                report_id: reportId,
+                storage_path: storagePath,
+                error: String(manifestErr?.message || manifestErr || ''),
+                validation: manifestErr?.context?.validation || null,
+                timestamp: nowIso,
+              }
+            );
+            if (manifestFailureEventErr) {
+              console.error(
+                `[worker] Failed to write Report Quality Manifest recovery event for job ${job.id}:`,
+                manifestFailureEventErr.message
+              );
+            }
+            const queuedUpdate = await requeuePublicationCommitFailure(
+              job,
+              'report_quality_manifest_finalize_failed',
+              {
+                report_id: reportId,
+                storage_path: storagePath,
+                error: String(manifestErr?.message || manifestErr || ''),
+              }
+            );
+            if (queuedUpdate?.id) {
+              transitions.push({
+                job_id: job.id,
+                from_status: 'publishing',
+                to_status: 'queued',
+              });
+              passTransitions += 1;
+              deferredJobIds.add(job.id);
+            }
+            continue;
+          }
+
+          if (verifiedPublicationCheckpoint) {
+            verifiedPublicationCheckpoint = Object.freeze({
+              ...verifiedPublicationCheckpoint,
+              publicationCommitReady: true,
+              creditReconciliationAttempted: true,
+            });
+          }
+
           const publishedUpdate = await transitionWorkerJob(job, 'publishing', 'published', {
             user_id: job.user_id,
             report_id: reportId,
@@ -3967,96 +4228,51 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${completedTransitionErr.message}`);
           }
 
-          const creditResult = await consumeCreditOnce(job);
-          if (creditResult.error) {
-            throw new Error(`Credit deduction failed: ${creditResult.error.message}`);
-          }
-
-          const manifestCandidate = reportData?.report_quality_manifest_candidate || null;
-          if (manifestCandidate) {
+          let revisionPromotionResolution = null;
+          let revisionPromotionError = null;
+          for (let promotionAttempt = 1; promotionAttempt <= 2; promotionAttempt += 1) {
             try {
-              const publicationQualityBoss =
-                artifactResolution?.publicationQualityBoss ||
-                reportData?.final_pdf_publication_quality_boss ||
-                null;
-              const reportQualityManifest = finalizeReportQualityManifest({
-                candidate: manifestCandidate,
+              revisionPromotionResolution = await promoteReportRevisionToCurrent({
+                supabaseAdmin,
                 reportId,
-                storagePath,
-                deliveryDecision: resolvedDeliveryDecision.deliveryDecisionState,
-                finalPdfPublicationQualityBoss: publicationQualityBoss,
-                publicationState: 'published',
-                creditState: {
-                  state: 'reconciled',
-                  consumed: creditResult.ok === true,
-                  previouslyConsumedOrPrepaid: creditResult.skipped === true,
-                },
-                remedyState: { state: 'not_required' },
-                finalizedAt: nowIso,
               });
-              const manifestArtifactPath = `analysis_jobs/${job.id}/report_quality_manifest/${safeTimestamp(
-                nowIso
-              )}.json`;
-              const { error: manifestArtifactErr } = await supabaseAdmin
-                .from('analysis_artifacts')
-                .insert([
-                  {
-                    job_id: job.id,
-                    user_id: job.user_id,
-                    type: 'report_quality_manifest',
-                    bucket: 'internal',
-                    object_path: manifestArtifactPath,
-                    payload: reportQualityManifest,
-                  },
-                ]);
-              if (manifestArtifactErr) {
-                throw new Error(`Failed to persist Report Quality Manifest: ${manifestArtifactErr.message}`);
-              }
-            } catch (manifestErr) {
-              console.error(
-                `[worker] Report Quality Manifest finalization requires internal repair for job ${job.id}:`,
-                manifestErr?.context || manifestErr?.message || manifestErr
-              );
-              const manifestFailureEventErr = await writeWorkerEventArtifact(
-                job.id,
-                job.user_id,
-                'report_quality_manifest_finalize_failed',
-                {
-                  code: 'REPORT_QUALITY_MANIFEST_FINALIZE_FAILED',
-                  internal_only: true,
-                  customer_delivery_unchanged: true,
-                  report_id: reportId,
-                  storage_path: storagePath,
-                  error: String(manifestErr?.message || manifestErr || ''),
-                  validation: manifestErr?.context?.validation || null,
-                  timestamp: nowIso,
-                }
-              );
-              if (manifestFailureEventErr) {
-                console.error(
-                  `[worker] Failed to write Report Quality Manifest repair event for job ${job.id}:`,
-                  manifestFailureEventErr.message
+              if (!revisionPromotionResolution?.promoted) {
+                throw new Error(
+                  revisionPromotionResolution?.stale === true
+                    ? `Report revision promotion resolved stale for ${reportId}`
+                    : `Report revision promotion did not establish current authority for ${reportId}`
                 );
               }
+              revisionPromotionError = null;
+              break;
+            } catch (promotionErr) {
+              revisionPromotionError = promotionErr;
             }
-          } else if (generatorSource !== 'existing_report') {
-            const manifestMissingEventErr = await writeWorkerEventArtifact(
+          }
+
+          if (revisionPromotionError) {
+            console.error(
+              `[worker] Published report revision requires promotion repair for job ${job.id}:`,
+              revisionPromotionError?.message || revisionPromotionError
+            );
+            const promotionEventErr = await writeWorkerEventArtifact(
               job.id,
               job.user_id,
-              'report_quality_manifest_candidate_missing',
+              'report_revision_promotion_required',
               {
-                code: 'REPORT_QUALITY_MANIFEST_CANDIDATE_MISSING',
+                code: 'REPORT_REVISION_PROMOTION_REQUIRED',
                 internal_only: true,
                 customer_delivery_unchanged: true,
                 report_id: reportId,
                 storage_path: storagePath,
+                error: String(revisionPromotionError?.message || revisionPromotionError || ''),
                 timestamp: nowIso,
               }
             );
-            if (manifestMissingEventErr) {
+            if (promotionEventErr) {
               console.error(
-                `[worker] Failed to write missing Report Quality Manifest candidate event for job ${job.id}:`,
-                manifestMissingEventErr.message
+                `[worker] Failed to write report revision promotion repair event for job ${job.id}:`,
+                promotionEventErr.message
               );
             }
           }

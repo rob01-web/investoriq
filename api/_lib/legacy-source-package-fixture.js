@@ -724,7 +724,7 @@ function buildExtractedFacts(role, text, artifacts = []) {
     ]);
     if (totalRenovationBudget != null) facts.total_renovation_budget = totalRenovationBudget;
     facts.has_rent_lift = /(rent lift|expected rent lift|expected monthly rent lift|monthly rent lift)/i.test(text);
-    facts.has_phasing = /(phasing|implementation schedule|months?\s+\d+\s*[-–]\s*\d+)/i.test(text);
+    facts.has_phasing = /(phasing|implementation schedule|months?\s+\d+\s*[-\u2013]\s*\d+)/i.test(text);
     facts.context_only = true;
   } else if (role === "appraisal_context") {
     const appraisalValue = extractMoney(text, [
@@ -751,7 +751,7 @@ function hasStructuredRenovationEvidence(text) {
   if (!text) return false;
   const hasPlan = /(structured renovation \/ capex plan|structured forward-looking renovation|total renovation budget|renovation budget|capex plan)/i.test(text);
   const hasLift = /(rent lift|expected rent lift|expected monthly rent lift|monthly rent lift)/i.test(text);
-  const hasPhasing = /(phasing|implementation schedule|months?\s+\d+\s*[-–]\s*\d+|months?\b)/i.test(text);
+  const hasPhasing = /(phasing|implementation schedule|months?\s+\d+\s*[-\u2013]\s*\d+|months?\b)/i.test(text);
   return hasPlan && hasLift && hasPhasing;
 }
 
@@ -815,13 +815,13 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
     const extractedFacts = buildExtractedFacts("core_t12", text, artifacts);
     return {
       role: "core_t12",
-      roleLabel: "Core Quantitative Source — Trailing 12-Month Income Statement",
+      roleLabel: "Core Quantitative Source - Trailing 12-Month Income Statement",
       treatment: "Primary quantitative input",
       use: "Core quantitative source; drives EGI, OpEx, NOI, and all income/expense modeling.",
       category: "Core Quantitative Input",
       authorityBasis: hasT12Filename ? "filename_heuristic" : "parser_semantic",
       sourceKind: "core_t12",
-      canonicalLabel: "Core Quantitative Source — Trailing 12-Month Income Statement",
+      canonicalLabel: "Core Quantitative Source - Trailing 12-Month Income Statement",
       allowedUses: ["core_quantitative_input"],
       forbiddenUses: ["support_doc"],
       extractedFacts,
@@ -835,13 +835,13 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
     const extractedFacts = buildExtractedFacts("core_rent_roll", text, artifacts);
     return {
       role: "core_rent_roll",
-      roleLabel: "Core Quantitative Source — Rent Roll",
+      roleLabel: "Core Quantitative Source - Rent Roll",
       treatment: "Primary quantitative input",
       use: "Core quantitative source; drives unit count, occupancy, in-place rent, and market rent gap.",
       category: "Core Quantitative Input",
       authorityBasis: hasRentRollFilename ? "filename_heuristic" : "parser_semantic",
       sourceKind: "core_rent_roll",
-      canonicalLabel: "Core Quantitative Source — Rent Roll",
+      canonicalLabel: "Core Quantitative Source - Rent Roll",
       allowedUses: ["core_quantitative_input"],
       forbiddenUses: ["support_doc"],
       extractedFacts,
@@ -858,12 +858,12 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
     const extractedFacts = buildExtractedFacts("current_debt_context", text);
     return {
       role: "current_debt_context",
-      roleLabel: "Existing Debt Context — Current Mortgage / Debt Statement",
+      roleLabel: "Existing Debt Context - Current Mortgage / Debt Statement",
       treatment: "Debt support received / contextual",
       use: "Uploaded existing/current debt context only; not proposed acquisition financing.",
-      category: "Existing Debt — Contextual",
+      category: "Existing Debt - Contextual",
       sourceKind: "support_doc",
-      canonicalLabel: "Existing Debt Context — Current Mortgage / Debt Statement",
+      canonicalLabel: "Existing Debt Context - Current Mortgage / Debt Statement",
       allowedUses: ["current_debt_context"],
       forbiddenUses: ["purchase_assumptions", "proposed_acquisition_financing_context"],
       extractedFacts,
@@ -902,7 +902,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       roleLabel: "Purchase Assumptions / Proposed Acquisition Financing Context",
       treatment: "Acquisition context received",
       use: "Proposed acquisition financing terms and purchase assumptions; not existing/current debt.",
-      category: "Acquisition Assumptions — Contextual",
+      category: "Acquisition Assumptions - Contextual",
       sourceKind: "support_doc",
       canonicalLabel: "Purchase Assumptions / Proposed Acquisition Financing Context",
       allowedUses: ["purchase_assumptions", "proposed_acquisition_financing_context"],
@@ -932,7 +932,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       roleLabel: "Structured Renovation / CapEx Plan",
       treatment: "Renovation / CapEx context received",
       use: "Structured renovation scope, CapEx budget, rent-lift assumptions, and phasing acknowledged as source-transparent context.",
-      category: "Renovation / CapEx — Contextual",
+      category: "Renovation / CapEx - Contextual",
       sourceKind: "support_doc",
       canonicalLabel: "Structured Renovation / CapEx Plan",
       allowedUses: ["structured_renovation_capex_plan"],
@@ -957,7 +957,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       roleLabel: "Appraisal / Valuation Context",
       treatment: "Appraisal context received",
       use: "Third-party appraisal or valuation context; does not override T12 NOI, Rent Roll market rent, or cap-rate value framework.",
-      category: "Appraisal — Contextual",
+      category: "Appraisal - Contextual",
       sourceKind: "support_doc",
       canonicalLabel: "Appraisal / Valuation Context",
       allowedUses: ["appraisal_context"],
@@ -982,7 +982,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       roleLabel: "Market Rent Survey Context",
       treatment: "Market context received",
       use: "Market rent survey context; corroborates or informs rent gap analysis but does not override Rent Roll market rent inputs.",
-      category: "Market Survey — Contextual",
+      category: "Market Survey - Contextual",
       sourceKind: "support_doc",
       canonicalLabel: "Market Rent Survey Context",
       allowedUses: ["market_survey_context"],
@@ -1007,7 +1007,7 @@ function classifySupportDoc(file, artifacts, artifactsByFileId) {
       roleLabel: "Environmental Due Diligence / Phase I ESA Context",
       treatment: "Environmental context received",
       use: "Phase I Environmental Site Assessment or environmental due diligence context; not a property tax document.",
-      category: "Environmental — Contextual",
+      category: "Environmental - Contextual",
       sourceKind: "support_doc",
       canonicalLabel: "Environmental Due Diligence / Phase I ESA Context",
       allowedUses: ["environmental_context"],

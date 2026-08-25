@@ -38,7 +38,7 @@ assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.strictCertificationRecordedS
 assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.scope, "institutional_page_by_page_certification");
 assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.pageByPageCertificationRequired, true);
 assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.pageCountHardcoded, false);
-assert.equal(manifest.chapters.length, 6);
+assert.equal(manifest.chapters.length, 7);
 assert.ok(manifest.tables.length > 0);
 assert.equal(manifest.charts.length, 4);
 assert.ok(manifest.displayedNumbers.length > 0);
@@ -49,6 +49,7 @@ assert.ok(manifest.charts.every((chart) =>
 assert.deepEqual(manifest.chapters.map((chapter) => chapter.id), [
   "committee-overview",
   "operating-performance",
+  "scenario-underwriting-drivers",
   "transaction-context",
   "debt-capital-structure",
   "valuation-reconciliation",
@@ -70,10 +71,18 @@ assert.match(bossSource, /institutional_page_by_page_certification/i);
 assert.match(bossSource, /PDF_CONSTITUTION_TAMPERING_REJECTED/);
 assert.match(bossSource, /docraptor_test_watermark/);
 
-const renderIndex = generatorSource.indexOf("pdfResponse = await axios.post(");
-const bossIndex = generatorSource.indexOf("finalPdfPublicationQualityBossResult = await inspectFinalPdfPublicationQuality({");
+const initialRenderIndex = generatorSource.indexOf('pdfResponse = await renderDocRaptorPdf(docHtml, "initial");');
+const boundedRecoveryIndex = generatorSource.indexOf("const boundedRecovery = await runBoundedPdfCertificationRecovery({");
+const qualityBossIndex = generatorSource.indexOf("finalPdfPublicationQualityBossResult = boundedRecovery.publicationQualityBoss;");
+const publicationValidationIndex = generatorSource.indexOf("validatedStoragePath = assertValidReportPublicationInsert({");
 const uploadIndex = generatorSource.indexOf(".upload(validatedStoragePath, pdfResponse.data, {");
-assert.ok(renderIndex >= 0 && bossIndex > renderIndex && uploadIndex > bossIndex);
+assert.ok(
+  initialRenderIndex >= 0 &&
+  boundedRecoveryIndex > initialRenderIndex &&
+  qualityBossIndex > boundedRecoveryIndex &&
+  publicationValidationIndex > qualityBossIndex &&
+  uploadIndex > publicationValidationIndex
+);
 
 const visibleText = fixture.html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 assert.doesNotMatch(visibleText, /customer_document_failure|internal_system_failure|sourceAuthority|publishAllowed|delivery_gate|repair_plan/i);

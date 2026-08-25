@@ -1,6 +1,12 @@
 export function isNil(value) {
   return value === undefined || value === null;
 }
+function normalizeRoundedZero(value, decimals = 1) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return n;
+  const threshold = 0.5 * (10 ** -Math.max(0, decimals));
+  return Math.abs(n) < threshold ? 0 : n;
+}
 export function formatCurrency(value, options = {}) {
   const { decimals = 0, prefix = "$", suffix = "" } = options;
   if (isNil(value) || isNaN(Number(value))) return "";
@@ -13,7 +19,7 @@ export function formatCurrency(value, options = {}) {
 }
 export function formatPercent(value, decimals = 1) {
   if (isNil(value) || isNaN(Number(value))) return "";
-  const num = Number(value) * 100;
+  const num = normalizeRoundedZero(Number(value) * 100, decimals);
   return (
     num.toLocaleString("en-CA", {
       minimumFractionDigits: decimals,
@@ -24,24 +30,24 @@ export function formatPercent(value, decimals = 1) {
 export function formatPercent1(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
-  const pct = n > 1.5 ? n : n * 100;
+  const pct = normalizeRoundedZero(n > 1.5 ? n : n * 100, 1);
   return `${pct.toFixed(1)}%`;
 }
 export function formatPercentExactDisplay(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
-  return `${n.toFixed(1)}%`;
+  return `${normalizeRoundedZero(n, 1).toFixed(1)}%`;
 }
 export function formatCapPercentExact(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
-  const pct = n > 1.5 ? n : n * 100;
+  const pct = normalizeRoundedZero(n > 1.5 ? n : n * 100, 2);
   return `${pct.toFixed(2)}%`;
 }
 export function formatInterestRatePercent(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
-  const pct = n > 1.5 ? n : n * 100;
+  const pct = normalizeRoundedZero(n > 1.5 ? n : n * 100, 2);
   return `${pct.toFixed(2)}%`;
 }
 export function formatMultiple(value, decimals = 2) {

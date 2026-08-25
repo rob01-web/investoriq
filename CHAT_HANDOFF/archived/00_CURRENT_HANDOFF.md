@@ -1,139 +1,158 @@
 # INVESTORIQ — CURRENT CHAT HANDOFF
 
 **Date:** 2026-08-18
-**Status:** ACTIVE IMPLEMENTATION CHECKPOINT
-**Current program:** P0 Pipeline Repair
+**Status:** P1 REPOSITORY AUTHORITY CLEANUP + LAUNCH QA REBUILD COMPLETE LOCALLY — NOT PRODUCTION CERTIFIED
+**Current operating mode:** LOCAL ONLY / VERCEL PRESERVATION
 **Master plan:** `01_MASTER_PLAN.md`
+
+> **THE FULL INVESTORIQ REPOSITORY / PIPELINE AUDIT IS COMPLETE. DO NOT START ANOTHER BROAD AUDIT IN A FRESH CHAT. CONTINUE DIRECTLY FROM THE RECORDED IMPLEMENTATION CHECKPOINT. TARGETED INVESTIGATION IS ALLOWED ONLY WHEN NEW CONTRADICTORY EVIDENCE REQUIRES IT.**
 
 ## CURRENT POSITION
 
-InvestorIQ is in the controlled architectural repair program created after the full repository / production audit.
+P0 is complete and was production-verified before the temporary Vercel freeze.
 
-Dominant diagnosed root cause:
+P1 **Repository Authority Cleanup + Launch QA Rebuild** is now complete locally. This does **not** mean production or launch PASS.
 
-> **AUTHORITY ACCUMULATION** — newer authorities were layered over stale, duplicate, historical, or future-product authorities without retiring the old ones.
+Dominant architecture diagnosis remains resolved by design direction:
 
-## P0-A1 — CLOSED / PRODUCTION VERIFIED
+> **AUTHORITY ACCUMULATION** — newer authorities had been layered over stale, duplicate, historical, or future-product authorities without retiring the old ones.
 
-P0-A1 Security / Trust-Boundary Lockdown is CLOSED.
+## TEMPORARY HARD RULE — VERCEL PRESERVATION
 
-Production-verified effective state:
+Until explicitly lifted by the owner:
 
-- `analysis_artifacts`: customer INSERT removed; authenticated SELECT remains temporarily for Dashboard compatibility.
-- `analysis_job_files`: customer INSERT/UPDATE removed; customer SELECT remains.
-- `analysis_jobs`: direct customer INSERT removed; customer SELECT remains.
-- `report_purchases`: direct customer UPDATE/consumption removed; customer SELECT remains.
-- `generated_reports`: customer INSERT removed; owned customer SELECT remains.
-- `staged_uploads`: authenticated own-path INSERT intentionally preserved as the trusted source-byte intake foundation.
-- `reports`: direct customer DELETE remains temporarily pending coordinated P0-A2 cutover.
-- legacy `analysis-uploads`: new authenticated upload authority removed.
+- no GitHub push that triggers Vercel
+- no deploy
+- no production RETEST
+- no production worker invocation
+- no Vercel CLI / production log inspection
+- no Supabase Cron re-enable
+- batch local work and proofs first
 
-Privileged worker / recovery / revision RPCs are production-verified with:
+Supabase Cron `investoriq-admin-run-worker` remains intentionally **PAUSED** (`active = false`).
 
-- `anon = false`
-- `authenticated = false`
-- `service_role = true`
+## P1 LOCAL COMPLETION
 
-This includes claim, lease, transition, failure, requeue, entitlement restoration, legacy queue, and report-revision promotion authorities.
+### Canonical local QA authority
 
-The sanctioned customer admission RPC remains:
+`tests/qa/run-all.js` (or `npm run qa`) is the single canonical **local launch-regression runner**.
 
-`consume_purchase_and_create_job(text, jsonb, jsonb)`
+Latest local result after the final stale Full Underwriting expectation reconciliation:
 
-with authenticated + service-role execution and no anonymous execution.
+> **19 / 19 PASS**
 
-## EXACT NEXT PACKET — P0-A2
+This result is supporting regression evidence only. The suite has **zero constitutional authority** and cannot produce production/launch PASS.
 
-P0-A2 Customer-Safe Read / Report-Removal Boundary:
+Package-script taxonomy is now explicit:
 
-1. Replace Dashboard direct reads from internal `analysis_artifacts` with a governed customer-safe server endpoint.
-2. Return only customer-sanctioned status/failure/delivery/entitlement-restoration/limited-coverage information.
-3. Do not expose raw source-truth, QA, recovery, Premium, or operational artifact payloads.
-4. Replace direct customer report deletion with a governed server action / retention-aware policy.
-5. Migrate Dashboard to the governed paths.
-6. After the new UI/API path is active, remove authenticated `analysis_artifacts` SELECT.
-7. Remove the direct customer report DELETE RLS policy.
+- `qa` — canonical local launch-regression runner
+- `qa:component:*` — focused supporting component/regression suites
+- `qa:diagnostic:*` — historical, RETEST-specific, institutional/experimental, or future-product diagnostics; never launch authority
+- `qa:utility:*` — local QA utilities
 
-Do not revoke the remaining read/delete policies before their customer-facing replacements are deployed.
+### Full Underwriting authority cleanup
 
-## NON-NEGOTIABLE PUBLICATION DOCTRINE
+Current Full Underwriting construction is routed through `api/_lib/full-underwriting-pipeline.js`.
 
-- InvestorIQ is engineered toward a **99.999% publish objective** for properly admitted jobs: every report with a defensible surviving canonical core should publish.
-- Core-Gated Publish-or-Collapse is absolute after valid admission.
-- Canonical downstream source modes are `dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, and `insufficient_core`.
-- The first three are publish-capable states. Only genuinely insufficient/invalid canonical core may fail on source sufficiency grounds.
-- Weak, missing, contradictory, irrelevant, incomplete, or unusable optional/supporting evidence must not independently destroy a valid-core report.
-- Weak dependent sections should qualify, compact, collapse, omit, or publish with a quality incident instead of causing whole-report failure.
-- A valid survivor lane must survive failure of the other core lane when the canonical source truth still supports a defensible report.
-- Internal failures such as source-truth construction exceptions, contract failures, rendering failures, PDF failures, storage failures, persistence failures, manifest failures, recovery failures, and other platform defects remain InvestorIQ internal failures. They must never be converted into customer-document blame.
-- No legacy alias, stale field, historical product path, Premium path, smoke test, QA helper, compatibility layer, or archived doctrine may override current canonical source truth, publication obligation, delivery authority, or finalization authority.
-- Smoke tests are supporting evidence only and have zero constitutional authority over the current architecture.
-- Do not declare PASS, fixed, publication-ready, or launch-ready from code inspection or smoke tests alone when fresh production evidence is still required.
+Historical Acquisition-named implementation may remain only as reusable lower-level components or legacy fixtures. It does not own current Full Underwriting product identity or launch certification.
 
-## WORKING STYLE / CODEX USAGE
+The stale `hasCanonicalAcquisitionFinalDecision` runtime compatibility reference was repaired, and the final FU smoke expectation was reconciled to the current representation-compliance classification without weakening production behavior.
 
-- Conserve Codex usage aggressively.
-- Use Codex only when it materially advances implementation, targeted code investigation, or proof.
-- Prefer one tightly bounded Codex prompt over exploratory back-and-forth.
-- Avoid asking Codex to chase one tiny issue after another. First establish the relevant authority boundary and evidence.
-- Apply a stop-loss mindset to retries: do not burn repeated Codex attempts without materially new evidence.
-- ChatGPT should do as much reasoning, repo inspection, synthesis, and implementation planning as possible before delegating work to Codex.
-- ChatGPT replies should normally be short: brief verdict, only the key facts needed, and the exact next move.
-- Do not produce giant recaps unless explicitly requested or genuinely necessary for a handoff/audit artifact.
-- Maintain momentum: finish the current bounded packet, record the result, and move directly to the next dependency.
-- Evidence beats optimism. Never call something PASS because it looks likely to work.
+### Historical Acquisition / `ic`
 
-## HARD BOUNDARIES
+Historical Acquisition QA remains diagnostic/reference only. Legacy source-package and render-helper fixtures were renamed to make their role explicit:
 
-- No fresh RETEST yet.
-- RETEST 48 is a regression scenario, not the repair plan.
-- No manual worker kick.
-- No scheduler change.
-- No pricing changes.
-- Bundle pricing remains deferred.
-- Premium remains OFF.
-- Smoke tests have no constitutional authority over the target architecture.
-- Do not reopen previously closed constitutional gates absent contradictory production evidence.
+- `api/_lib/legacy-source-package-fixture.js`
+- `api/_lib/legacy-report-surface-render-helpers.js`
 
-## CURRENT PRODUCTION FACTS TO PRESERVE
+Acquisition/`ic` cannot override current source truth, publication obligation, delivery authority, revision authority, or launch QA.
 
-- Production automatic scheduler: Supabase Cron / pg_net.
-- Job: `investoriq-admin-run-worker`.
-- Schedule: `*/3 * * * *`.
-- Full Underwriting intake remains intentionally strict.
-- Downstream Core-Gated Publish-or-Collapse remains distinct from intake.
-- Canonical downstream source modes:
-  - `dual_source_core`
-  - `t12_minimum_core`
-  - `rent_roll_minimum_core`
-  - `insufficient_core`
+### Premium
 
-## PRODUCT CONSTITUTION
+Premium remains future-only and OFF.
 
-Current launch products:
+Premium package authority is diagnostic only. Premium documentation is physically isolated under `docs/future-premium/` and is explicitly non-launch authority.
 
-- Screening
-- Full Underwriting
+Premium cannot control or block Screening or Full Underwriting source truth, delivery, publication, worker lifecycle, billing/remedy, launch QA, or launch certification.
 
-Bundle is commerce only.
+### Dead / duplicate authority retired
 
-Premium is future-only and OFF.
+P1 retired or isolated stale active-looking paths including:
 
-Full Underwriting admission requires usable T12 + usable Rent Roll + at least one additional readable/adjudicable supporting document.
+- `api/_lib/canonical-source-package.js`
+- `api/_lib/report-surface-render-helpers.js`
+- `api/_lib/acquisition-memo-v2-final-assembly.js`
+- `api/report-template.html`
+- `api/data/riverbend_dataset.json`
+- `src/components/UploadModal.jsx`
+- `src/pages/CheckoutSuccess.jsx`
+- `src/pages/ReportHistory.jsx`
+- `src/pages/SampleReport.jsx`
+- stale local generated/output artifacts used during previous debugging
 
-After valid admission, weak optional/support surfaces should qualify, compact, collapse, omit, or create a quality incident rather than destroy an otherwise valid-core report.
+The current runtime template remains `api/report-template-runtime.html`.
 
-## FRESH-CHAT FILE RULE
+### Documentation authority cleanup
 
-For every normal fresh InvestorIQ chat, upload only:
+Current documentation hierarchy is now declared in `docs/README.md`:
 
-1. `00_CURRENT_HANDOFF.md`
-2. `01_MASTER_PLAN.md`
+1. Owner / Product Constitution
+2. Production Pipeline Architecture
+3. Operations / Recovery Runbook
+4. Launch Certification Checklist
 
-Update `00_CURRENT_HANDOFF.md` at the end of every session.
+Historical active-looking root plans/maps are archived. Future Premium documentation is separated from current launch authority.
 
-Update `01_MASTER_PLAN.md` only when the overall architecture materially changes.
+## EXACT P1 FILE SCOPE
 
-Historical STATUS / ROADMAP / CANONICAL_HANDOFF files are archive material and must not be treated as current authority.
+Primary production / authority files changed or added during this local P1 packet include:
 
-Permanent H0 / Product Doctrine files remain in the repository and are consulted only when a task directly requires them.
+- `api/_lib/acquisition-memo-v2-document.js`
+- `api/_lib/acquisition-memo-v2-final-decision.js`
+- `api/_lib/full-underwriting-pipeline.js`
+- `api/_lib/generate-client-report-impl.js`
+- `api/_lib/legacy-report-surface-render-helpers.js`
+- `api/_lib/legacy-source-package-fixture.js`
+- `api/_lib/report-delivery-output.js`
+- `api/_lib/report-request-context.js`
+- `api/_lib/source-report-coverage-qa.js`
+- `api/admin-run-worker.js`
+- `package.json`
+- `tests/qa/run-all.js`
+- `tests/qa/README.md`
+- targeted QA fixtures reconciled to current authority boundaries
+
+Repository cleanup also deletes/archives the dead/duplicate files listed above and removes temporary P1 helper/output files.
+
+## NON-NEGOTIABLE DOCTRINE
+
+- Current launch products: Screening + Full Underwriting.
+- Bundle is commerce only.
+- Premium is future-only and OFF.
+- Full Underwriting admission remains strict: usable T12 + usable Rent Roll + at least one additional readable/adjudicable support document.
+- Downstream Core-Gated Publish-or-Collapse remains separate from intake.
+- Canonical downstream modes: `dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, `insufficient_core`.
+- The first three are publish-capable states.
+- Optional/support weakness must qualify, compact, collapse, omit, or create a quality incident rather than independently destroy valid core.
+- Internal failures remain InvestorIQ internal failures and must not be converted into customer-document blame.
+- Smoke/QA tests are supporting evidence only and have zero constitutional authority.
+- Fresh production certification is mandatory before launch PASS.
+
+## NEXT IMPLEMENTATION PHASE
+
+**Next = ELITE Full Underwriting report upgrade, LOCAL ONLY.**
+
+Focus next on institutional-quality report information architecture, evidence-disciplined analysis, executive-grade visuals, section disposition/collapse behavior, polished Quality Manifest, and sharper Screening vs Full Underwriting differentiation.
+
+Do not change Stripe pricing yet. Commerce/Bundle pricing activation remains intentionally deferred until report quality reaches the ELITE target and the owner chooses final pricing.
+
+Do not deploy or begin fresh production certification until explicitly authorized.
+
+## FRESH-CHAT RULE
+
+For a normal fresh InvestorIQ chat upload only:
+
+1. `CHAT_HANDOFF/00_CURRENT_HANDOFF.md`
+2. `CHAT_HANDOFF/01_MASTER_PLAN.md`
+
+The receiving chat must **continue implementation directly**. It must not restart the already completed repository/pipeline audit.

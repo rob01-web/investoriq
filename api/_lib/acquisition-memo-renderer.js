@@ -78,10 +78,10 @@ function renderCoreSourceSummary(coreSourceSummary) {
   const rentRoll = coreSourceSummary?.rentRoll;
   const t12Line = t12
     ? `T12 confirmed as core quantitative source: ${escapeHtml(t12.originalFilename || "")}`
-    : "No T12 provided — income/expense modeling requires T12 upload.";
+    : "No T12 provided - income/expense modeling requires T12 upload.";
   const rentRollLine = rentRoll
     ? `Rent Roll confirmed as core quantitative source: ${escapeHtml(rentRoll.originalFilename || "")}`
-    : "No Rent Roll provided — occupancy and rent modeling requires Rent Roll upload.";
+    : "No Rent Roll provided - occupancy and rent modeling requires Rent Roll upload.";
   return `<div><p>${t12Line}</p><p>${rentRollLine}</p></div>`;
 }
 
@@ -89,10 +89,10 @@ function renderFinancingReadinessSummary(signals) {
   const lines = [
     signals?.hasPurchaseAssumptions
       ? "Purchase assumptions received."
-      : "No purchase assumptions uploaded — proposed acquisition financing terms not available.",
+      : "No purchase assumptions uploaded - proposed acquisition financing terms not available.",
     signals?.hasCurrentDebtContext
       ? "Existing debt context received."
-      : "No existing debt context uploaded — current mortgage/debt terms not available.",
+      : "No existing debt context uploaded - current mortgage/debt terms not available.",
     signals?.hasStructuredRenovation
       ? "Structured renovation / CapEx plan received."
       : "No renovation plan uploaded.",

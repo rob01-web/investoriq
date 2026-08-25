@@ -15,6 +15,7 @@ function visibleText(html) {
 
 const fixture = buildInstitutionalGate10ReportFixture('gate-10b-information-architecture');
 const { html, bossContract, customerSurfaceModel } = fixture;
+const htmlWithoutSoftBreaks = String(html || "").replace(/<wbr\s*\/?\s*>/gi, "");
 const text = visibleText(html);
 
 assert.equal(validateAcquisitionMemoRenderAgainstBossContract(bossContract, html).ok, true);
@@ -70,7 +71,7 @@ for (const filename of [
   'Institutional_Current_Debt_Statement_With_Long_Source_Name.pdf',
   'Institutional_Capital_Plan_With_Long_Source_Name.pdf',
 ]) {
-  assert.equal((html.match(new RegExp(filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length, 1);
+  assert.equal((htmlWithoutSoftBreaks.match(new RegExp(filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length, 1);
 }
 
 for (const requiredValue of [
