@@ -1,12 +1,43 @@
 # InvestorIQ Fresh-Chat Handoff — 2026-08-25
 
 ## Governing checkpoint
-Current phase: **ELITE Full Underwriting final surgical polish — LOCAL ONLY**
+Current phase: **ELITE Full Underwriting final surgical polish — INTERNAL GIT BRANCH / NO DEPLOY**
 
 Do **not** restart the repository/pipeline audit. The monster audit is complete.
 Do **not** reopen completed ELITE work absent contradictory evidence.
-Do **not** deploy, push, run production RETEST, invoke the production worker, re-enable Cron, or change pricing.
+Do **not** merge to `main`, deploy, run production RETEST, invoke the production worker, re-enable Cron, or change pricing.
 DocRaptor remains TEST mode where relevant.
+
+GitHub work on the dedicated internal branch is now authorized. Production remains locked.
+
+## Git workflow checkpoint
+- Repository: `rob01-web/investoriq`
+- Working branch: `internal-final-surgical-polish-20260825`
+- Remote checkpoint commit: `76d4da4979b0a4a9b310788f884efcefe0ceaf7d`
+- Checkpoint message: `chore: checkpoint accumulated ELITE underwriting work`
+- Base production commit: `3acec05fbdda66bd381b40adef4781a89cab7d2f`
+- Checkpoint scope: 104 files, 25,146 insertions, 458 deletions
+- Production `main`: unchanged
+- Vercel project setting: Ignored Build Step = `Only build production`
+- Non-production branch pushes: skipped by Vercel
+- Remaining local worktree entry: the deliberately excluded Blackstone reference PDF only
+
+The ZIP and patch-runner workflow is retired for this phase. Work now proceeds in consolidated commits on the internal branch. Rob should not run repeated patch commands. At a deliberate synchronization point, provide one PowerShell `git pull --ff-only` command to bring the reviewed branch changes into his local branch.
+
+Do not open or merge a pull request, update `main`, or trigger any Vercel deployment without Rob's explicit authorization.
+
+## Latest certification interruption record
+The first final-polish patch attempt failed the Debt Intelligence institutional regression and rolled itself back.
+
+The corrected V2 attempt then recorded the following before its diagnostic wrapper stopped:
+- all 22 targeted ELITE and final-polish test files passed,
+- Debt Intelligence institutional regression passed 39/39,
+- Valuation institutional regression passed 22/22,
+- full-report polish passed 56/56,
+- cumulative ELITE-02 through ELITE-09 pipeline regression passed,
+- the first 11 launch-critical QA gates passed.
+
+The launch-critical run was interrupted at Full Underwriting construction because a child-process stderr warning (`No storage option exists to persist the session`) was promoted to a terminating PowerShell `NativeCommandError` by the diagnostic wrapper. No test assertion failure was shown at that interruption point. This does **not** certify the remaining launch-critical suite. The exact post-interruption working-tree state is now preserved in Git checkpoint `76d4da4979b0a4a9b310788f884efcefe0ceaf7d` and must receive the required consolidated regression before closure.
 
 ## Page-count doctrine
 There is **no report page cap**. InvestorIQ reports are content-driven. A valid report may be about 17 pages, 28 pages, or longer depending on the uploaded evidence and authorized analysis. Do not add filler to hit a length target and do not delete legitimate analysis to shorten the report.
@@ -230,15 +261,16 @@ Do not derail final local report polish with it.
 After final Stonebridge local validation is clean, investigate coupon/credit behavior before final live end-to-end certification.
 
 ## NEXT
-1. Inspect exact current renderer/composition inputs for the punch list.
-2. Build ONE guarded final surgical polish patch.
-3. Avoid protected worker/publication/authority code unless evidence requires it.
-4. Run broad local regression/certification.
-5. Re-run Stonebridge exactly once.
-6. Perform final visual + math review.
-7. If clean, close final report-polish phase.
-8. Then address coupon/credits.
-9. Then plan one deliberate final live upload -> parser -> worker -> publication certification when explicitly authorized.
+1. Inspect the exact checkpointed renderer/composition inputs on `internal-final-surgical-polish-20260825`.
+2. Build ONE consolidated surgical-polish commit batch on that internal branch.
+3. Avoid protected worker/publication/authority code unless contradictory evidence requires a targeted repair.
+4. Run the targeted, cumulative, institutional, customer-surface, Source Truth, syntax, diff, worker-immutability, and DocRaptor TEST-mode regression stack.
+5. Synchronize the reviewed branch to Rob's local branch with one guarded `git pull --ff-only` command.
+6. Re-run Stonebridge exactly once.
+7. Perform the final page-by-page visual review and independent math/source review.
+8. If clean, close final report-polish phase.
+9. Then address coupon/credits.
+10. Then plan one deliberate final live upload -> parser -> worker -> publication certification when explicitly authorized.
 
 Do not call the report finished merely because tests pass.
 Visual PDF review remains mandatory.
