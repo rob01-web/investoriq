@@ -1,12 +1,12 @@
 # InvestorIQ - ELITE Full Underwriting Blueprint
 
-**Last checkpoint update:** 2026-08-24  
-**Status:** ACTIVE PRODUCT-QUALITY AUTHORITY - ELITE-02 THROUGH ELITE-10B1 CLOSED LOCALLY - ELITE-10B2 NEXT  
+**Last checkpoint update:** 2026-08-25  
+**Status:** ACTIVE PRODUCT-QUALITY AUTHORITY - STONEBRIDGE REAL-INPUT PASS - INTERNAL GIT CHECKPOINT - FINAL SURGICAL POLISH NEXT  
 **Scope:** Full Underwriting analytical depth, information architecture, decision usefulness, certification, and institutional visual quality
 
 > **DO NOT RESTART THE COMPLETED REPOSITORY / PIPELINE AUDIT.**
 >
-> The analytical report brain is closed locally through ELITE-09. ELITE-10A and ELITE-10B1 are closed locally. The cover is locked. Continue directly with ELITE-10B2.
+> The analytical report brain is closed locally through ELITE-09. ELITE-10A and ELITE-10B1 are closed locally. The cover is locked. The current report architecture has passed the Stonebridge real-input route-to-publish validation. Continue directly with the consolidated final surgical polish.
 
 ## 1. Product purpose
 
@@ -31,18 +31,31 @@ Guiding principle:
 
 ## 2. Operating and product locks
 
-- LOCAL ONLY.
+- INTERNAL GIT BRANCH ONLY; NO PRODUCTION DEPLOYMENT.
 - Full repository / pipeline audit complete.
 - ELITE-02 through ELITE-10B1 closed locally.
 - Supabase Cron paused.
-- No production RETEST, worker invocation, deploy, or push.
-- Preserve the accumulated working tree.
+- No production RETEST, worker invocation, `main` merge, deploy, or pull request without explicit authorization.
+- Consolidated Git commits are authorized only on `internal-final-surgical-polish-20260825`.
+- Vercel is configured to build production only; internal branch pushes are skipped.
+- Preserve checkpoint `76d4da4979b0a4a9b310788f884efcefe0ceaf7d` as the accumulated-work baseline.
 - Full Underwriting remains $499.
 - Premium remains OFF and future-only.
 - DocRaptor TEST mode only; no production provider and no `production_pdf`.
 - Visual work must not alter billing, entitlement, worker, Source Truth, scenario, publication, revision, or Manifest authority unless fresh contradictory evidence proves a defect at that exact authority seam.
 - Customer-facing prose should avoid em dashes and obvious AI-writing fingerprints.
 - Never guess at architecture, report structure, math, source truth, or test expectations. Establish exact local evidence first.
+
+### Git checkpoint
+
+- Repository: `rob01-web/investoriq`
+- Working branch: `internal-final-surgical-polish-20260825`
+- Checkpoint commit: `76d4da4979b0a4a9b310788f884efcefe0ceaf7d`
+- Production base: `3acec05fbdda66bd381b40adef4781a89cab7d2f`
+- Production `main`: unchanged
+- Synchronization doctrine: consolidated branch commits first; one guarded `git pull --ff-only` for Rob at the deliberate local synchronization point
+
+The V2 diagnostic reached 22 targeted passes and 11 launch-critical passes before the PowerShell wrapper terminated on a child-process stderr storage warning. The remaining launch-critical and broad certification work is still mandatory.
 
 ## 3. External benchmark doctrine
 
@@ -177,12 +190,12 @@ Use only for a material constraint, diligence item, valuation discrepancy, cover
 
 1. **ELITE-10A Global Institutional Design System - CLOSED LOCALLY**
 2. **ELITE-10B1 Light Institutional Cover - CLOSED LOCALLY**
-3. **ELITE-10B2 Investment Committee opening pages - NEXT**
-4. **ELITE-10C Operating / scenario / driver surfaces**
-5. **ELITE-10D Transaction / diligence / debt surfaces**
-6. **ELITE-10E Valuation / reconciliation surfaces**
-7. **ELITE-10F Source Appendix / Quality Manifest polish**
-8. **ELITE-10G Full-document visual certification**
+3. **ELITE-10B2 Investment Committee opening pages - IMPLEMENTED IN CURRENT STONEBRIDGE BASELINE; FINAL POLISH OPEN**
+4. **ELITE-10C Operating / scenario / driver surfaces - IMPLEMENTED; FINAL POLISH OPEN**
+5. **ELITE-10D Transaction / diligence / debt surfaces - IMPLEMENTED; DUPLICATE LEGACY SUPPRESSION OPEN**
+6. **ELITE-10E Valuation / reconciliation surfaces - IMPLEMENTED; CONTRADICTION REPAIR OPEN**
+7. **ELITE-10F Source Appendix / Quality Manifest polish - IMPLEMENTED; WORDING REPAIR OPEN**
+8. **ELITE-10G Full-document visual certification - FINAL SURGICAL POLISH / VISUAL + MATH REVIEW NEXT**
 
 Keep packets small. Review the report page by page and word by word. Do not redesign all chapters at once.
 
@@ -296,45 +309,36 @@ Never make production code conform to obsolete test assumptions. Never weaken a 
 - `tests/qa/institutional-pdf-elite-certification-smoke.js`  
   `5843c4e4995fcc357492237e7c363509bea44311f3cddda753cedfd6fc3fec9b`
 
-## 11. ELITE-10B2 immediate continuation
+## 11. Final surgical polish immediate continuation
 
-B2 has not started. Begin with read-only authority inspection only.
+Work from the exact checkpointed branch state. Do not restart B2 or any earlier ELITE packet.
 
-First inspect the exact current opening-page composition in `api/_lib/acquisition-memo-v2-document.js`:
+The consolidated patch must:
 
-```powershell
-Set-Location "C:\Users\robmc\Desktop\InvestorIQ\InvestorIQ-Empire-v1"
+1. eliminate all customer-facing em and en dash punctuation while preserving math, ISO dates, valid hyphens, and source-stated ranges,
+2. remove internal/governed engineering language from customer copy,
+3. fix the page 9 missing dollar sign,
+4. reduce repetitive scenario disclaimer labeling without weakening scenario/source boundaries,
+5. suppress duplicate legacy transaction and debt presentation when ELITE surfaces are active,
+6. fix the Capital Plan contradiction and maturity wording,
+7. normalize `-0.0%` to `0.0%` without hiding actual negatives,
+8. fix the valuation cap-rate-sensitivity contradiction,
+9. fix Quality Manifest coverage wording,
+10. retain Methodology & Data Transparency without forcing a dedicated page,
+11. preserve content-driven pagination with no report page cap.
 
-$file = "api/_lib/acquisition-memo-v2-document.js"
+After the consolidated implementation, run the required regression stack, synchronize Rob's local branch once, generate Stonebridge exactly once, and conduct the final page-by-page visual plus independent math/source review.
 
-Select-String `
-    -Path $file `
-    -Pattern 'Executive Summary|Committee Overview|committee-overview|render.*Executive|render.*Committee' `
-    -Context 4,6
-```
+The patch must not:
 
-Then establish:
-
-1. current rendered content and ordering,
-2. exact helper/model ownership,
-3. ELITE versus legacy sections,
-4. customer-surface authority,
-5. source paths for displayed metrics,
-6. current CSS/page-break ownership,
-7. any duplicated or competing opening-page surfaces.
-
-Only after that evidence exists should B2 design or implementation changes be proposed.
-
-B2 must improve decision hierarchy without:
-
-- touching the locked cover,
-- inventing recommendation authority,
-- changing canonical calculations,
-- changing Source Truth,
-- changing scenario authority,
-- changing publication or delivery authority,
-- changing worker lifecycle,
-- changing billing, pricing, or entitlement.
+- touch the locked cover,
+- invent recommendation authority,
+- change canonical calculations except the explicitly authorized negative-zero display normalization,
+- change Source Truth,
+- weaken scenario/source boundaries,
+- change publication or delivery authority,
+- change worker lifecycle,
+- change billing, pricing, or entitlement.
 
 ## 12. ELITE acceptance
 
