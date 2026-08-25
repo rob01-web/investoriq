@@ -15,6 +15,7 @@ import {
 } from "./acquisition-memo-v2-boss-repair.js";
 import { buildAcquisitionMemoV2FinalDeliveryDecision } from "./acquisition-memo-v2-final-decision.js";
 import { renderCompleteAcquisitionMemoV2Html } from "./acquisition-memo-v2-document.js";
+import { polishFullUnderwritingFinalHtml } from "./full-underwriting-final-surgical-polish.js";
 import { buildDeterministicReportContractQaSeal } from "./deterministic-report-contract-qa-seal.js";
 
 function stripHtmlForExcerpt(html = "") {
@@ -151,10 +152,13 @@ export function runAcquisitionMemoV2Orchestrator({
       reportMode: acquisitionMemoV2DocumentArgs?.reportMode || null,
     });
   const renderAndValidate = (customerSurfaceModel, bossContract = acquisitionMemoBossContract, htmlRepairPlan = null) => {
-    const baseHtml = renderCompleteAcquisitionMemoV2Html({
+    const renderedHtml = renderCompleteAcquisitionMemoV2Html({
       ...(acquisitionMemoV2DocumentArgs || {}),
       customerSurfaceModel,
       bossContract,
+    });
+    const baseHtml = polishFullUnderwritingFinalHtml(renderedHtml, {
+      reportMode: customerSurfaceModel?.reportMode || acquisitionMemoV2DocumentArgs?.reportMode || null,
     });
     const enforcement = enforceAcquisitionMemoBossContractOnHtml(bossContract, baseHtml);
     const repairedHtml = repairAcquisitionMemoV2HtmlForRepairPlan(
