@@ -19,7 +19,7 @@ exactlyOnce(/import \{ renderFullUnderwritingDriverAnalysisV1Html \} from "\.\/f
 exactlyOnce(/let eliteDriverAnalysisContract = null;/g, "driver contract declaration");
 exactlyOnce(/let eliteDriverAnalysisHtml = "";/g, "driver HTML declaration");
 exactlyOnce(/buildFullUnderwritingDriverAnalysisV1\(\{/g, "driver contract build call");
-exactlyOnce(/scenarioEngine: eliteScenarioEngineContract/g, "driver consumes ELITE-04 engine");
+exactlyOnce(/buildFullUnderwritingDriverAnalysisV1\(\{\s*scenarioEngine: eliteScenarioEngineContract,/g, "driver consumes ELITE-04 engine");
 exactlyOnce(/renderFullUnderwritingDriverAnalysisV1Html\(eliteDriverAnalysisContract\)/g, "driver renderer call");
 exactlyOnce(/\$\{eliteDriverAnalysisHtml\}/g, "driver chapter contribution");
 check(text.indexOf("${eliteScenarioEngineHtml}") < text.indexOf("${eliteDriverAnalysisHtml}"), "driver analysis follows scenario engine in chapter");
