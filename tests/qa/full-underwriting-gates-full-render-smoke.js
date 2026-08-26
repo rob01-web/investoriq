@@ -454,30 +454,31 @@ assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(fullPathHtml), false);
 assert.match(fullPathHtml, /Current debt context<\/td>\s*<td[^>]*>\s*Not provided\s*<\/td>/i);
 
 // Invariant 3: property-tax source binding/document treatment through full assembled HTML.
-assert.match(fullPathHtml, /Bound_Tax_Document\.pdf/i);
-assert.match(fullPathHtml, /Tax_Context_Note\.pdf/i);
-assert.match(fullPathHtml, /Phase_I_Environmental\.pdf/i);
-assert.match(fullPathHtml, /Zoning_Compliance_Memo\.pdf/i);
+const fullPathSourceHtml = fullPathHtml.replace(/<wbr\s*\/?>/gi, "");
+assert.match(fullPathSourceHtml, /Bound_Tax_Document\.pdf/i);
+assert.match(fullPathSourceHtml, /Tax_Context_Note\.pdf/i);
+assert.match(fullPathSourceHtml, /Phase_I_Environmental\.pdf/i);
+assert.match(fullPathSourceHtml, /Zoning_Compliance_Memo\.pdf/i);
 assert.equal(
-  /Tax_Context_Note\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathHtml),
+  /Tax_Context_Note\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathSourceHtml),
   false
 );
 assert.equal(
-  /Phase_I_Environmental\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathHtml),
+  /Phase_I_Environmental\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathSourceHtml),
   false
 );
 assert.equal(
-  /Zoning_Compliance_Memo\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathHtml),
+  /Zoning_Compliance_Memo\.pdf[\s\S]{0,260}Structured property tax input/i.test(fullPathSourceHtml),
   false
 );
-assert.match(fullPathHtml, /Bound_Tax_Document\.pdf[\s\S]{0,260}Property Tax Support/i);
+assert.match(fullPathSourceHtml, /Bound_Tax_Document\.pdf[\s\S]{0,260}Property Tax Support/i);
 assert.match(
-  fullPathHtml,
+  fullPathSourceHtml,
   /purchase_assumptions_source\.txt[\s\S]{0,260}Source-Present Support Document \/ Not Authority-Accepted/i
 );
 assert.equal(
   /<p class=\"subsection-title\">Listed but Not Quantitatively Modeled<\/p>[\s\S]{0,700}purchase_assumptions_source\.txt/i.test(
-    fullPathHtml
+    fullPathSourceHtml
   ),
   false
 );
@@ -522,18 +523,19 @@ const debtBoundTreatmentHtml = await renderUnderwritingHtml({
   ],
 });
 
+const debtBoundSourceHtml = debtBoundTreatmentHtml.replace(/<wbr\s*\/?>/gi, "");
 assert.match(
-  debtBoundTreatmentHtml,
+  debtBoundSourceHtml,
   /Current_Debt_Terms_Source\.txt[\s\S]{0,260}(Debt Context|Source-Present Support Document)/i
 );
 assert.equal(
   /Current_Debt_Terms_Source\.txt[\s\S]{0,260}Acquisition assumptions context only; used only for displayed purchase\/cap-rate context and not used to override T12, Rent Roll, or current debt\./i.test(
-    debtBoundTreatmentHtml
+    debtBoundSourceHtml
   ),
   false
 );
 assert.match(
-  debtBoundTreatmentHtml,
+  debtBoundSourceHtml,
   /Purchase_Assumptions_Context\.txt/i
 );
 assert.equal(/refinance stability was not assessed/i.test(debtBoundTreatmentHtml), false);
