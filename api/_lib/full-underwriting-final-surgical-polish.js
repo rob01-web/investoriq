@@ -1,6 +1,6 @@
 function isFullUnderwritingMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-  return normalized === "underwriting" || normalized === "full_underwriting" || normalized.startsWith("full_underwriting_");
+  return normalized === "v1_core" || normalized === "underwriting" || normalized === "full_underwriting" || normalized.startsWith("full_underwriting_");
 }
 
 function polishCustomerText(value = "") {

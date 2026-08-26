@@ -354,26 +354,85 @@ const comparisonPathHtml = await renderUnderwritingHtml({
 });
 assert.match(comparisonPathHtml, /InvestorIQ Underwriting Report/i);
 assert.match(comparisonPathHtml, /Revenue \/ Expense \/ NOI Bridge/i);
-const handlerComparisonSectionMatch = comparisonPathHtml.match(/<div class="subsection-block" data-iq-subsection="valuation-appraisal-comparison">[\s\S]*?Appraised value less InvestorIQ implied value<\/td><td>\(\$7,814,286\)<\/td>/i);
-assert.ok(handlerComparisonSectionMatch, "Missing handler-path Valuation / Appraisal Comparison subsection");
-assert.match(handlerComparisonSectionMatch[0], /InvestorIQ Deterministic T12-Based Indication/i);
-assert.match(handlerComparisonSectionMatch[0], /Purchase-Assumption Context/i);
-assert.match(handlerComparisonSectionMatch[0], /Uploaded Appraisal Context/i);
-assert.match(handlerComparisonSectionMatch[0], /T12 NOI basis<\/td><td>\$680,000<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /Accepted going-in cap rate<\/td><td>7\.0%<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /Implied whole-property value<\/td><td>\$9,714,286<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /Purchase price<\/td><td>\$2,100,000<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /Appraised value<\/td><td>\$1,900,000<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /Appraisal stabilized NOI<\/td><td>\$650,000<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /Appraisal stabilized cap rate<\/td><td>6\.5%<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /InvestorIQ implied value less purchase price<\/td><td>\$7,614,286<\/td>/i);
-assert.match(handlerComparisonSectionMatch[0], /Appraised value less purchase price<\/td><td>\(\$200,000\)<\/td>/i);
-assert.doesNotMatch(handlerComparisonSectionMatch[0], /correct|approved|recommended|final|\bBUY\b|\bSELL\b|\bHOLD\b|overvalued|undervalued|attractive|aggressive|conservative/i);
+const handlerValuationChapterMatch = comparisonPathHtml.match(
+  /<section class="institutional-chapter" data-iq-chapter="valuation-reconciliation">[\s\S]*?(?=<section class="institutional-chapter" data-iq-chapter="source-appendix">)/i
+);
+assert.ok(
+  handlerValuationChapterMatch,
+  "Missing handler-path canonical Valuation & Reconciliation chapter"
+);
+
+const handlerValuationHtml = handlerValuationChapterMatch[0];
+
+assert.match(
+  handlerValuationHtml,
+  /data-iq-section="eliteValuationReconciliation"/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Valuation Position &amp; Reconciliation/i
+);
+
+assert.match(
+  handlerValuationHtml,
+  /data-iq-subsection="accepted-value-indication"/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Accepted T12 NOI<\/td><td>\$680,000<\/td>/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Accepted Going-In Cap Rate<\/td><td>7\.00%<\/td>/i
+);
+assert.match(
+  handlerValuationHtml,
+  /InvestorIQ Implied Value<\/td>\s*<td[^>]*>\$9,714,286<\/td>/i
+);
+
+assert.match(
+  handlerValuationHtml,
+  /data-iq-subsection="valuation-bridge"/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Purchase Price<\/td>\s*<td[^>]*>\$2,100,000<\/td>/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Appraised Value<\/td>\s*<td[^>]*>\$1,900,000<\/td>/i
+);
+
+assert.match(
+  handlerValuationHtml,
+  /data-iq-subsection="appraisal-reconciliation"/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Appraisal Stabilized NOI<\/td><td>\$650,000<\/td>/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Appraisal Stabilized Cap Rate<\/td><td>6\.5%<\/td>/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Appraised Value Less InvestorIQ Implied Value<\/td><td>\(\$7,814,286\)<\/td>/i
+);
+assert.match(
+  handlerValuationHtml,
+  /Appraised Value Less Purchase Price<\/td><td>\(\$200,000\)<\/td>/i
+);
+
+assert.doesNotMatch(
+  handlerValuationHtml,
+  /correct|approved|recommended|final|\bBUY\b|\bSELL\b|\bHOLD\b|overvalued|undervalued|attractive|aggressive|conservative/i
+);
 
 // Invariant 1: refi/debt not-assessed gate through full assembled HTML.
 assert.match(
   fullPathHtml,
-  /Current debt context<\/td><td style="font-weight:600;">Not provided<\/td>/i
+  /Current debt context<\/td>\s*<td[^>]*>\s*Not provided\s*<\/td>/i
 );
 assert.equal(/Maximum Financing Envelope|Base Case Supportable Loan/i.test(fullPathHtml), false);
 assert.equal(/Current Debt DSCR|DSCR \(Current Debt\)/i.test(fullPathHtml), false);
@@ -396,7 +455,7 @@ assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$840,000/i.test(fullPat
 assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,120}\$/i.test(fullPathHtml), false);
 assert.equal(/Lender Fee[\s\S]{0,80}0\.0%/i.test(fullPathHtml), false);
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(fullPathHtml), false);
-assert.match(fullPathHtml, /Current debt context<\/td><td style="font-weight:600;">Not provided<\/td>/i);
+assert.match(fullPathHtml, /Current debt context<\/td>\s*<td[^>]*>\s*Not provided\s*<\/td>/i);
 
 // Invariant 3: property-tax source binding/document treatment through full assembled HTML.
 assert.match(fullPathHtml, /Bound_Tax_Document\.pdf/i);

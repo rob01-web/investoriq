@@ -1705,6 +1705,7 @@ function renderOperatingStatementSection({ sourcePackage = null, t12Payload = nu
       <tr><td>Rent Roll Evidence</td><td style="font-weight:600;">${rentRollSource ? "Accepted for analysis" : "Not provided"}</td></tr>
     </tbody></table>
     ${t12LineItems.length ? `<div class="subsection-block"><p class="subsection-title">T12 Income & Expense Line Items</p><table class="detail-table"><tbody>${t12LineItems.map((item) => `<tr><td>${escapeHtml(item.label)}</td><td style="font-weight:600;">${formatMoney(item.amount)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${revenueExpenseNoiBridge}
     ${renderPropertyTaxAnalysisSection(customerSurfaceModel)}
     ${t12Snippet ? `<div class="subsection-block"><p class="subsection-title">TTM Source Excerpt</p><p class="body-copy">${escapeHtml(t12Snippet.slice(0, 420))}</p></div>` : ""}
   </div>`;

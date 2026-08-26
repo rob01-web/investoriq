@@ -26,6 +26,9 @@ const customerOnly = output
 assert.doesNotMatch(customerOnly, /\s-\s/);
 assert.doesNotMatch(customerOnly, /[\u2013\u2014]|&(?:n|m)dash;|&#(?:8211|8212);|&#x(?:2013|2014);/i);
 
+const v1CoreOutput = polishFullUnderwritingFinalHtml(input, { reportMode: "v1_core" });
+assert.equal(v1CoreOutput, output);
+
 const acquisitionInput = "<p>Historical - acquisition memo</p>";
 assert.equal(
   polishFullUnderwritingFinalHtml(acquisitionInput, { reportMode: "acquisition_memo_v2" }),
