@@ -12,7 +12,10 @@ function check(condition, message) {
 check(source.includes('from "./full-underwriting-valuation-reconciliation-v1.js"'), "valuation engine import wired");
 check(source.includes('from "./full-underwriting-valuation-reconciliation-renderer.js"'), "valuation renderer import wired");
 check(source.includes("buildFullUnderwritingValuationReconciliationV1({"), "valuation engine invoked");
-check(source.includes("renderFullUnderwritingValuationReconciliation(eliteValuationReconciliationModel)"), "valuation renderer invoked");
+check(
+  /renderFullUnderwritingValuationReconciliation\(\s*eliteValuationReconciliationModel,\s*\{\s*reportCapRateSensitivityRendered:\s*eliteScenarioEngineContract\?\.capRateValueSensitivity\?\.displayReady\s*===\s*true,?\s*\}\s*\)/s.test(source),
+  "valuation renderer invoked with governed report-level cap-rate sensitivity coverage"
+);
 check(source.includes("const eliteValuationReconciliationModel"), "valuation model variable present");
 check(source.includes("const eliteValuationReconciliationSection"), "valuation section variable present");
 check(source.includes('data-iq-chapter="valuation-reconciliation"'), "valuation chapter preserved");
