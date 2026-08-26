@@ -444,14 +444,15 @@ assert.equal(
   false
 );
 
-// Invariant 2: acquisition triangle unsafe path collapses and avoids contradictory full-table rows.
-assert.match(
-  fullPathHtml,
-  /Acquisition Request Context/i
-);
-assert.equal(/<th>Input<\/th><th>Document-Derived Value<\/th>/i.test(fullPathHtml), false);
-assert.equal(/Purchase Price[\s\S]{0,80}\$2,100,000/i.test(fullPathHtml), false);
-assert.equal(/Stated Acquisition Loan Amount[\s\S]{0,80}\$840,000/i.test(fullPathHtml), false);
+// Invariant 2: inconsistent proposed leverage is disclosed and reconciled on the current ELITE transaction surface.
+assert.match(fullPathHtml, /data-iq-elite="transaction-diligence-v1"/i);
+assert.match(fullPathHtml, /data-iq-elite06-surface="transaction-snapshot"/i);
+assert.match(fullPathHtml, /Purchase Price<\/td><td>\$2,100,000<\/td>/i);
+assert.match(fullPathHtml, /Proposed Loan Amount<\/td><td>\$840,000<\/td>/i);
+assert.match(fullPathHtml, /Stated Proposed LTV<\/td><td>75\.00%<\/td>/i);
+assert.match(fullPathHtml, /Proposed Loan ÷ Purchase Price<\/td><td>40\.00%<\/td>/i);
+assert.match(fullPathHtml, /Stated LTV less Amount-Derived LTV<\/td><td>35\.00%<\/td>/i);
+assert.match(fullPathHtml, /data-iq-diligence-code="PROPOSED_LTV_RECONCILIATION_OPEN"/i);
 assert.equal(/Derived Acquisition Loan Amount[\s\S]{0,120}\$/i.test(fullPathHtml), false);
 assert.equal(/Lender Fee[\s\S]{0,80}0\.0%/i.test(fullPathHtml), false);
 assert.equal(/Closing Costs[\s\S]{0,80}0\.0%/i.test(fullPathHtml), false);
