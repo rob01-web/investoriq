@@ -500,7 +500,7 @@ const identityMismatch = await certifyPdf({
     reportMode: SCREENING_REPORT_IDENTITY.reportMode,
     reportType: SCREENING_REPORT_IDENTITY.reportType,
   }),
-  requiredTextAnchors: ["Preliminary Investment Screening Memorandum"],
+  requiredTextAnchors: ["Screening Report"],
 });
 assert.equal(identityMismatch.ok, false);
 assert.equal(

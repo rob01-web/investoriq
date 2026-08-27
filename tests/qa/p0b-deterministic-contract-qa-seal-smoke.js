@@ -38,7 +38,7 @@ const identity = {
 };
 const validAcquisitionHtml = `
   <html><body>
-    <h1>Acquisition Memo</h1>
+    <h1>Underwriting Report</h1>
     <table>
       <tr><td>T12 Gross Potential Rent</td><td>$1,612,800</td></tr>
       <tr><td>Rent Roll Annual In-Place Rent</td><td>$1,432,800</td></tr>
@@ -111,7 +111,7 @@ expectFailure(
   "UNAUTHORIZED_GROSS_RENT_CAPITALIZATION"
 );
 expectFailure(
-  validAcquisitionHtml.replace("Acquisition Memo", "Preliminary Investment Screening Memorandum"),
+  validAcquisitionHtml.replace("Underwriting Report", "Screening Report"),
   "ACQUISITION_VISIBLE_IDENTITY_MISMATCH"
 );
 expectFailure(
@@ -134,7 +134,7 @@ expectFailure(
   }
 );
 expectFailure(
-  validAcquisitionHtml.replace("Acquisition Memo", "Acquisition Memo — Confidential"),
+  validAcquisitionHtml.replace("Underwriting Report", "Underwriting Report — Confidential"),
   "CUSTOMER_VISIBLE_PROHIBITED_PUNCTUATION"
 );
 expectFailure(
@@ -189,7 +189,7 @@ const screeningNoiHtml = buildScreeningNoiStabilityHtml({
   rentRollPayload: screeningRentRoll,
   sourceReconciliationState: reconciliationState,
 });
-const screeningHtml = `<html><body><h1>Preliminary Investment Screening Memorandum</h1>${screeningCoverageHtml}${screeningNoiHtml}</body></html>`;
+const screeningHtml = `<html><body><h1>Screening Report</h1>${screeningCoverageHtml}${screeningNoiHtml}</body></html>`;
 const screeningSeal = buildDeterministicReportContractQaSeal({
   html: screeningHtml,
   reportIdentity: { reportMode: "screening_v1", reportType: "screening", reportTier: 1 },

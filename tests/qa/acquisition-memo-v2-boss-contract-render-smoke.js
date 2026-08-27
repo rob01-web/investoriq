@@ -199,7 +199,7 @@ assert.match(finalHtml, /<\/body>/i);
 assert.match(finalHtml, /<\/html>/i);
 
 assert.match(finalHtml, /INVESTORIQ/i);
-assert.match(finalHtml, /Investment Committee Memorandum/i);
+assert.match(finalHtml, /Underwriting Report/i);
 assert.match(finalHtml, /<span>Property Scale<\/span><strong>64 Units<\/strong>/i);
 assert.match(finalHtml, /Executive Summary/i);
 assert.match(finalHtml, /Committee Overview/i);

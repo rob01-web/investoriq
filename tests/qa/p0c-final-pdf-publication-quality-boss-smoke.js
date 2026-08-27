@@ -449,8 +449,8 @@ await ensureReportDownloadArtifact({
   runFinalPdfPublicationQualityBoss: async ({ reportIdentity }) => {
     order.push("boss");
     assert.equal(isCanonicalReportIdentityReceipt(reportIdentity), true);
-    assert.equal(reportIdentity.canonicalTitle, "Preliminary Investment Screening Memorandum");
-    assert.deepEqual(reportIdentity.requiredPdfTextAnchors, ["Preliminary Investment Screening Memorandum"]);
+    assert.equal(reportIdentity.canonicalTitle, "Screening Report");
+    assert.deepEqual(reportIdentity.requiredPdfTextAnchors, ["Screening Report"]);
     return { ok: true, status: "certified" };
   },
 });

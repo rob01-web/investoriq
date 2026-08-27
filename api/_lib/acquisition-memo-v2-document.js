@@ -776,7 +776,7 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
           <div class="cover-prop-name">${escapeHtml(propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle)}</div>
           ${coverLocation ? `<div class="cover-address">${escapeHtml(coverLocation)}</div>` : ""}
           <hr class="cover-divider" />
-          <div class="cover-prop-sub">Investment Committee Memorandum</div>
+          <div class="cover-prop-sub">${escapeHtml(UNDERWRITING_REPORT_IDENTITY.canonicalTitle)}</div>
           <div class="cover-classification">
             <span>Review Classification</span>
             <strong>${escapeHtml(visibleClassification)}</strong>

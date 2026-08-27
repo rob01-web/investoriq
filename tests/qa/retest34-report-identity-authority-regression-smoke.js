@@ -147,7 +147,7 @@ const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 const deliverySource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
 const documentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
-assert.equal((generatorSource.match(/reportIdentity:\s*finalPdfReportIdentity/g) || []).length, 2);
+assert.equal((generatorSource.match(/reportIdentity:\s*finalPdfReportIdentity/g) || []).length, 5);
 assert.doesNotMatch(generatorSource, /requiredTextAnchors\s*:\s*\[\s*["'`]Acquisition Memo/);
 assert.doesNotMatch(workerSource, /pdf_required_text_anchors|requiredPdfTextAnchors/);
 assert.match(deliverySource, /buildCanonicalReportIdentityReceipt/);

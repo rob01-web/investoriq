@@ -17,7 +17,7 @@ assert.match(coverFunction, /class="cover-prop-name"/i);
 assert.match(coverFunction, /class="cover-address"/i);
 assert.match(coverFunction, /normalizedPropertyName/i);
 assert.match(coverFunction, /\.filter\(\(value\) => value\.toLowerCase\(\) !== normalizedPropertyName\)/i);
-assert.match(coverFunction, /class="cover-prop-sub">Investment Committee Memorandum</i);
+assert.match(coverFunction, /class="cover-prop-sub">\$\{escapeHtml\(UNDERWRITING_REPORT_IDENTITY\.canonicalTitle\)\}/i);
 assert.match(coverFunction, /class="cover-classification"/i);
 assert.match(coverFunction, /Review Classification/i);
 assert.match(coverFunction, /class="cover-meta-grid"/i);

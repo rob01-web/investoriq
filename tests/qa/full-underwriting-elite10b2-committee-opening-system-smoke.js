@@ -114,7 +114,7 @@ const coverFunction = documentSource.match(
   /function renderBrandCoverSection\([\s\S]*?\n\}\n\nfunction renderExecutiveSummarySection/,
 )?.[0] || "";
 assert.match(coverFunction, /data-iq-cover-system="elite-10b1-light-institutional-v1"/);
-assert.match(coverFunction, /class="cover-prop-sub">Investment Committee Memorandum/);
+assert.match(coverFunction, /class="cover-prop-sub">\$\{escapeHtml\(UNDERWRITING_REPORT_IDENTITY\.canonicalTitle\)\}/);
 assert.doesNotMatch(coverFunction, /cover-kicker|>Full Underwriting/i);
 assert.equal(rendererSource.includes("cover-wrap"), false);
 checks += 1;
