@@ -54,11 +54,16 @@ jobs:
           text = text.replace('  "Rent Position / Whole-Property Value Context",\n', '', 1)
           text = text.replace('  "Cap-Rate Value Indication",\n', '  "Valuation Position & Reconciliation",\n', 1)
 
-          # These old operating per-unit rows are no longer part of the Underwriting
-          # surface. NOI per Unit is already asserted exactly in Key Metrics Snapshot.
           text = text.replace('assert.match(retest6FinalHtml, /EGI per Unit/i);\n', '', 1)
           text = text.replace('assert.match(retest6FinalHtml, /OpEx per Unit/i);\n', '', 1)
           text = text.replace('assert.match(retest6FinalHtml, /NOI per Unit/i);\n', '', 1)
+
+          # Current compact Methodology & Data Transparency surface replaced the older
+          # prose block while preserving the same no-gap-filling doctrine.
+          text = text.replace(
+              'assert.match(retest6FinalHtml, /InvestorIQ does not assume or gap-fill missing data/i);\nassert.match(retest6FinalHtml, /Methodology Notes/i);\nassert.match(retest6FinalHtml, /Data Limitations &amp; Missing Inputs/i);',
+              'assert.match(retest6FinalHtml, /No gap-filling/i);\nassert.match(retest6FinalHtml, /Unsupported assumptions and missing inputs remain visible rather than being inferred/i);\nassert.match(retest6FinalHtml, /Evidence-bound analysis/i);'
+          )
 
           text = text.replace('const sourceRegisterSectionMatch = retest6FinalHtml.match(/Source Register &amp; Document Treatment[\\s\\S]{0,8000}?<\\/section>/i);', 'const sourceRegisterSectionMatch = retest6FinalHtmlWithoutSoftWraps.match(/Source Register &amp; Document Treatment[\\s\\S]{0,8000}?<\\/section>/i);', 1)
           for old, new in [
