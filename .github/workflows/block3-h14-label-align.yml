@@ -1,0 +1,49 @@
+name: Block 3 H14 Label Align
+
+on:
+  push:
+    branches:
+      - internal-final-surgical-polish-20260825
+    paths:
+      - .github/workflows/block3-h14-label-align.yml
+
+permissions:
+  contents: write
+
+jobs:
+  align-test-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-final-surgical-polish-20260825
+          fetch-depth: 0
+      - name: Align current customer labels in H14 H15 test
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js')
+          s = p.read_text()
+          replacements = {
+              r'/Current Debt-Inclusive Break-Even Monthly Rent per Unit/': r'/Current Break-Even Rent \/ Unit \/ Month/',
+              r'/Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit/': r'/Proposed Break-Even Rent \/ Unit \/ Month/',
+              r'/Annual Rent Upside \\$285,600/': r'/Annual Gross Rent Upside \\$285,600/',
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'missing expected stale assertion: {old}')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+          git diff --check
+          git diff -- tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js
+      - name: Commit test-only alignment and remove workflow
+        shell: bash
+        run: |
+          git config user.name "InvestorIQ QA"
+          git config user.email "actions@users.noreply.github.com"
+          rm .github/workflows/block3-h14-label-align.yml
+          git add -- tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js .github/workflows/block3-h14-label-align.yml
+          git commit -m "align h14 h15 with current customer labels"
+          git push origin HEAD:internal-final-surgical-polish-20260825
