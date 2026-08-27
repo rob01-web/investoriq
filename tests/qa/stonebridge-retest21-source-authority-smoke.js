@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 
 import { inferSupportingDocTypeFromText } from "../../api/parse/parse-doc.js";
 import { buildCanonicalSourcePackage } from "../../api/_lib/legacy-source-package-fixture.js";
+import { buildConstitutionalDeliveryGateDecision } from "../../api/_lib/delivery-gate-constitution.js";
 import { buildSourceReportCoverageQa } from "../../api/_lib/source-report-coverage-qa.js";
 import {
   buildCanonicalSourceTruthPackage,
@@ -196,8 +197,35 @@ const catastrophicT12Package = buildCanonicalSourceTruthPackage({
   ),
 });
 assert.equal(catastrophicT12Package.core.t12, null);
-assert.equal(catastrophicT12Package.core_publishable, false);
-assert.equal(catastrophicT12Package.true_blockers.includes("CORE_T12_NOT_VALIDATED"), true);
+assert.equal(catastrophicT12Package.core.rent_roll?.artifact_id, fixture.artifacts.rent_roll.artifact_id);
+assert.equal(catastrophicT12Package.core.rent_roll?.status, "accepted_complete");
+assert.equal(catastrophicT12Package.core_publishable, true);
+assert.deepEqual(catastrophicT12Package.true_blockers, []);
+assert.equal(catastrophicT12Package.core_input_sufficiency_state?.status, "validated");
+assert.equal(catastrophicT12Package.core_input_sufficiency_state?.evidence?.core_source_mode, "rent_roll_minimum_core");
+assert.equal(catastrophicT12Package.core_publication_constitution?.core_publishable, true);
+assert.equal(catastrophicT12Package.core_publication_constitution?.minimum_truth_set?.satisfied, true);
+assert.equal(catastrophicT12Package.core_publication_constitution?.minimum_truth_set?.source_mode, "rent_roll_minimum_core");
+assert.equal(catastrophicT12Package.core_publication_constitution?.minimum_truth_set?.t12?.satisfied, false);
+assert.equal(catastrophicT12Package.core_publication_constitution?.minimum_truth_set?.rent_roll?.satisfied, true);
+assert.equal(catastrophicT12Package.section_policy.operating_statement, "collapse");
+assert.equal(catastrophicT12Package.section_policy.operating_profile, "collapse");
+assert.equal(catastrophicT12Package.section_policy.expense_structure, "collapse");
+assert.equal(catastrophicT12Package.section_policy.source_reconciliation, "collapse");
+assert.equal(
+  catastrophicT12Package.support.accepted.some(
+    (entry) => entry.file_id === misleadingRenovation.file_id && entry.canonical_role === "renovation_capex_context"
+  ),
+  true
+);
+const catastrophicT12Gate = buildConstitutionalDeliveryGateDecision({
+  sourceTruthPackage: catastrophicT12Package,
+  pipelineCompliancePassed: true,
+  htmlSafetyValidationPassed: true,
+  rendererCompleted: true,
+  customerBlockers: [],
+});
+assert.equal(catastrophicT12Gate.report_publishable, true);
 
 assert.equal(t12.core_t12_validation?.ok, true);
 assert.equal(t12.effective_gross_income, 1500000);
