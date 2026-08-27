@@ -1,0 +1,49 @@
+name: InvestorIQ Internal Block 2 Diagnostic
+
+on:
+  push:
+    branches:
+      - internal-final-surgical-polish-20260825
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  block2-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run final handoff with diagnostics
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src = Path('tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js')
+          tmp = Path('tests/qa/__diag-acquisition-memo-v2-final-pdf-handoff-smoke.js')
+          text = src.read_text(encoding='utf-8')
+          needle = 'assert.equal(handlerResponse.body?.customer_surface_html_validation?.ok, true);'
+          replacement = '''console.log("\\n=== BLOCK 2 CUSTOMER SURFACE HTML DIAGNOSTICS ===");
+          console.log(JSON.stringify(finalHandoffDiagnostics, null, 2));
+          assert.equal(
+            handlerResponse.body?.customer_surface_html_validation?.ok,
+            true,
+            JSON.stringify(finalHandoffDiagnostics, null, 2)
+          );'''
+          if needle not in text:
+              raise SystemExit('Expected Block 2 assertion not found')
+          tmp.write_text(text.replace(needle, replacement), encoding='utf-8')
+          PY
+          node tests/qa/__diag-acquisition-memo-v2-final-pdf-handoff-smoke.js
