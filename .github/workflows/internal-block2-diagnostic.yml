@@ -1,4 +1,4 @@
-name: InvestorIQ Internal Block 2 Source Label Repair
+name: InvestorIQ Internal Block 2 Identity Discovery
 
 on:
   push:
@@ -6,113 +6,24 @@ on:
       - internal-final-surgical-polish-20260825
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  block2-source-label-repair:
+  block2-identity-discovery:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Apply narrow source-label convergence repair
+      - name: Inspect current underwriting identity literals
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          model_path = Path('api/_lib/acquisition-memo-v2-customer-surface-model.js')
-          model = model_path.read_text(encoding='utf-8')
-
-          if 'function containsCoreSourceLabel' not in model:
-              marker = 'function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel'
-              insert_at = model.index(marker)
-              helper = '''function normalizeCoreSourceLabelForComparison(value) {
-            return normalizeText(value).replace(/\\bcore quantitative source\\s*[-:/]\\s*/g, "core quantitative source ");
-          }
-
-          function containsCoreSourceLabel(haystack, needle) {
-            return normalizeCoreSourceLabelForComparison(haystack).includes(
-              normalizeCoreSourceLabelForComparison(needle)
-            );
-          }
-
-          '''
-              model = model[:insert_at] + helper + model[insert_at:]
-
-          loop_start = model.index('  for (const { label, codeSuffix, shouldValidate } of labelChecks) {')
-          loop_end = model.index('\n\n  const currentDebtFacts', loop_start)
-          loop_block = model[loop_start:loop_end]
-          if 'const isCoreSourceLabel = codeSuffix === "core_t12_label"' not in loop_block:
-              old_condition = '    if (shouldValidate && label && !containsText(htmlText, label)) {'
-              if old_condition not in loop_block:
-                  raise SystemExit('label validation condition not found')
-              new_condition = '''    const isCoreSourceLabel = codeSuffix === "core_t12_label" || codeSuffix === "core_rent_roll_label";
-            const labelPresent = isCoreSourceLabel
-              ? containsCoreSourceLabel(htmlText, label)
-              : containsText(htmlText, label);
-            if (shouldValidate && label && !labelPresent) {'''
-              loop_block = loop_block.replace(old_condition, new_condition, 1)
-              model = model[:loop_start] + loop_block + model[loop_end:]
-
-          model_path.write_text(model, encoding='utf-8')
-
-          test_path = Path('tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js')
-          test = test_path.read_text(encoding='utf-8')
-          if 'customerPolishedCoreLabelValidation' not in test:
-              test_marker = 'assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));'
-              insert_at = test.index(test_marker) + len(test_marker)
-              regression = '''
-
-          const customerPolishedCoreLabelHtml = genericHtml
-            .replace(
-              genericModel.coreSources.coreT12.visibleLabel,
-              genericModel.coreSources.coreT12.visibleLabel.replace(/\\s[-/:]\\s/, ": ")
-            )
-            .replace(
-              genericModel.coreSources.coreRentRoll.visibleLabel,
-              genericModel.coreSources.coreRentRoll.visibleLabel.replace(/\\s[-/:]\\s/, ": ")
-            );
-          const customerPolishedCoreLabelValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(
-            customerPolishedCoreLabelHtml,
-            genericModel
-          );
-          assert.equal(
-            customerPolishedCoreLabelValidation.ok,
-            true,
-            JSON.stringify(customerPolishedCoreLabelValidation.issues, null, 2)
-          );'''
-              test = test[:insert_at] + regression + test[insert_at:]
-          test_path.write_text(test, encoding='utf-8')
-          PY
-
-      - name: Run targeted Block 2 proof
-        shell: bash
-        run: |
-          node tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js
-          node tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js
-
-      - name: Commit repair when changed
-        shell: bash
-        run: |
-          if git diff --quiet -- api/_lib/acquisition-memo-v2-customer-surface-model.js tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js; then
-            echo "No repair diff remains."
-            exit 0
-          fi
-          git config user.name "rob01-web"
-          git config user.email "robmccallum01@gmail.com"
-          git add -- api/_lib/acquisition-memo-v2-customer-surface-model.js tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js
-          git commit -m "align core source label validation with customer punctuation"
-          git push origin HEAD:internal-final-surgical-polish-20260825
+          echo "=== PRODUCTION UNDERWRITING REPORT LITERALS ==="
+          grep -RIn --include='*.js' --include='*.html' 'Underwriting Report' api || true
+          echo
+          echo "=== CURRENT QA UNDERWRITING REPORT LITERALS ==="
+          grep -RIn --include='*.js' 'Underwriting Report' tests/qa || true
+          echo
+          echo "=== INVESTMENT COMMITTEE MEMORANDUM LITERALS ==="
+          grep -RIn --include='*.js' --include='*.html' 'Investment Committee Memorandum' api tests/qa || true
