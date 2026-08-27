@@ -41,6 +41,7 @@ jobs:
               text = text.replace(marker, replacement, 1)
           text = text.replace('const assumptionsRowMatch = finalHtml.match(/<tr[^>]*>[\\s\\S]{0,1200}?Stonebridge_Assumptions\\.pdf[\\s\\S]*?<\\/tr>/i);', 'const assumptionsRowMatch = finalHtmlWithoutSoftWraps.match(/<tr[^>]*>[\\s\\S]{0,1200}?Stonebridge_Assumptions\\.pdf[\\s\\S]*?<\\/tr>/i);', 1)
           text = text.replace('assert.match(finalHtml, /Stonebridge_Reno_Plan\\.pdf/i);', 'assert.match(finalHtmlWithoutSoftWraps, /Stonebridge_Reno_Plan\\.pdf/i);', 1)
+          text = text.replace('assert.match(finalHtml, /Cap-Rate Value Indication/i);', 'assert.match(finalHtml, /Valuation &amp; Reconciliation/i);', 1)
           p.write_text(text, encoding='utf-8')
           PY
 
