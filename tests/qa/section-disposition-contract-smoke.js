@@ -746,23 +746,31 @@ await proveBehavior("initial rich render failure with sufficient core publishes 
   );
 });
 
-await proveBehavior("total renderer outage propagates without fabricated PDF bytes", async () => {
+await proveBehavior("total renderer outage enters recovery-required state without fabricated PDF bytes", async () => {
   const richError = new Error("rich PDF renderer unavailable");
   richError.code = "RICH_RENDER_FAILED";
   const emergencyError = new Error("emergency PDF renderer unavailable");
   emergencyError.code = "EMERGENCY_RENDER_FAILED";
   const fakes = buildDeliveryFakes({ renderPlan: [richError, emergencyError] });
-  await assert.rejects(
-    () => ensureReportDownloadArtifact(makeEnsureArgs(fakes, {
-      corePublishable: true,
-      emergencyCoreHtml: "<html><body><p>Emergency core facts</p></body></html>",
-    })),
-    (error) => error === emergencyError &&
-      error.context?.initial_render_error === "rich PDF renderer unavailable" &&
-      error.context?.emergency_core_render_error === "emergency PDF renderer unavailable"
-  );
+  const result = await ensureReportDownloadArtifact(makeEnsureArgs(fakes, {
+    corePublishable: true,
+    emergencyCoreHtml: "<html><body><p>Emergency core facts</p></body></html>",
+  }));
+  assert.equal(result.publicationState, "recovery_required");
+  assert.equal(result.publicationRetryRequired, true);
+  assert.equal(result.publicationRetryReason, "initial_emergency_core_render_failed");
+  assert.equal(result.artifactSource, "publication_retry_required");
+  assert.equal(result.verifiedDownloadArtifact, false);
+  assert.equal(result.createdDownloadArtifact, false);
+  assert.equal(result.publicationRecoveryError, emergencyError);
+  assert.equal(result.publicationRecoveryError?.context?.initial_render_error, "rich PDF renderer unavailable");
+  assert.equal(result.publicationRecoveryError?.context?.emergency_core_render_error, "emergency PDF renderer unavailable");
   assert.equal(fakes.calls.render.length, 2);
+  assert.equal(fakes.calls.pdfBoss.length, 0);
   assert.equal(fakes.calls.upload, 0);
+  assert.equal(fakes.calls.uploadedBuffers.length, 0);
+  assert.equal(fakes.calls.cleanupDelete, 0);
+  assert.equal(fakes.calls.cleanupEq, 0);
 });
 
 await proveBehavior("sufficient core publishes with a bounded quality incident after semantic recovery", async () => {
