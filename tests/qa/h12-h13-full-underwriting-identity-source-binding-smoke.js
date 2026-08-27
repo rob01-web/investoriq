@@ -35,6 +35,7 @@ const baseArgs = {
   acquisitionMemoProjection: fixture.acquisitionMemoProjection,
   renderedAcquisitionMemo: fixture.renderedAcquisitionMemo,
   sourcePackage: fixture.sourcePackage,
+  sourceTruthPackage: fixture.sourceTruthPackage,
   t12Payload: fixture.sourceTruthPackage.core.t12.accepted_facts,
   coreMetrics: fixture.coreMetrics,
   reportMeta: fixture.reportMeta,
