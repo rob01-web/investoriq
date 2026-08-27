@@ -79,9 +79,9 @@ assert.match(visibleText(fixture.html), /Debt Yield/);
 assert.match(visibleText(fixture.html), /LTV 70\.0%/);
 assert.match(visibleText(fixture.html), /Mortgage Constant/);
 assert.match(visibleText(fixture.html), /Break-Even Occupancy/);
-assert.match(visibleText(fixture.html), /Current Debt-Inclusive Break-Even Monthly Rent per Unit/);
-assert.match(visibleText(fixture.html), /Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit/);
-assert.match(visibleText(fixture.html), /Annual Rent Upside \$285,600/);
+assert.match(visibleText(fixture.html), /Current Break-Even Rent / Unit / Month/);
+assert.match(visibleText(fixture.html), /Proposed Break-Even Rent / Unit / Month/);
+assert.match(visibleText(fixture.html), /Annual Gross Rent Upside \$285,600/);
 assert.match(visibleText(fixture.html), /Going-In Cap Rate 7\.0%/);
 assert.match(visibleText(fixture.html), /Implied value at going-in cap rate \$13,500,000/);
 
