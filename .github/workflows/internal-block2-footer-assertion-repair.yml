@@ -65,12 +65,7 @@ jobs:
           )
 
           ordering_anchor = '  lastSectionIndex = sectionIndex;\n}\n'
-          ordering_replacement = '''  lastSectionIndex = sectionIndex;
-}
-const sourceRegisterOrderIndex = retest6FinalHtml.indexOf("Source Register &amp; Document Treatment");
-const methodologyOrderIndex = retest6FinalHtml.indexOf("Methodology &amp; Data Transparency");
-assert.ok(sourceRegisterOrderIndex >= 0 && methodologyOrderIndex > sourceRegisterOrderIndex, "Methodology & Data Transparency is out of order");
-'''
+          ordering_replacement = '  lastSectionIndex = sectionIndex;\n}\nconst sourceRegisterOrderIndex = retest6FinalHtml.indexOf("Source Register &amp; Document Treatment");\nconst methodologyOrderIndex = retest6FinalHtml.indexOf("Methodology &amp; Data Transparency");\nassert.ok(sourceRegisterOrderIndex >= 0 && methodologyOrderIndex > sourceRegisterOrderIndex, "Methodology & Data Transparency is out of order");\n'
           if 'methodologyOrderIndex' not in text and ordering_anchor in text:
               text = text.replace(ordering_anchor, ordering_replacement, 1)
 
