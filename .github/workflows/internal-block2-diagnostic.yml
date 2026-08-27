@@ -36,15 +36,10 @@ jobs:
           model_path = Path('api/_lib/acquisition-memo-v2-customer-surface-model.js')
           model = model_path.read_text(encoding='utf-8')
 
-          helper_anchor = '''function containsText(haystack, needle) {
-            return normalizeText(haystack).includes(normalizeText(needle));
-          }
-          '''
-          helper_replacement = '''function containsText(haystack, needle) {
-            return normalizeText(haystack).includes(normalizeText(needle));
-          }
-
-          function normalizeCoreSourceLabelForComparison(value) {
+          if 'function containsCoreSourceLabel' not in model:
+              marker = 'function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel'
+              insert_at = model.index(marker)
+              helper = '''function normalizeCoreSourceLabelForComparison(value) {
             return normalizeText(value).replace(/\\bcore quantitative source\\s*[-:/]\\s*/g, "core quantitative source ");
           }
 
@@ -53,46 +48,43 @@ jobs:
               normalizeCoreSourceLabelForComparison(needle)
             );
           }
-          '''
-          if 'function containsCoreSourceLabel' not in model:
-              if helper_anchor not in model:
-                  raise SystemExit('containsText anchor not found')
-              model = model.replace(helper_anchor, helper_replacement, 1)
 
-          loop_anchor = '''  for (const { label, codeSuffix, shouldValidate } of labelChecks) {
-            if (shouldValidate && label && !containsText(htmlText, label)) {
-              pushIssue(`HTML_${codeSuffix.toUpperCase()}_MISSING`, `${label} is missing from customer HTML.`, "critical", `html.${codeSuffix}`);
-            }
-          }
           '''
-          loop_replacement = '''  for (const { label, codeSuffix, shouldValidate } of labelChecks) {
-            const isCoreSourceLabel = codeSuffix === "core_t12_label" || codeSuffix === "core_rent_roll_label";
+              model = model[:insert_at] + helper + model[insert_at:]
+
+          loop_start = model.index('  for (const { label, codeSuffix, shouldValidate } of labelChecks) {')
+          loop_end = model.index('\n\n  const currentDebtFacts', loop_start)
+          loop_block = model[loop_start:loop_end]
+          if 'const isCoreSourceLabel = codeSuffix === "core_t12_label"' not in loop_block:
+              old_condition = '    if (shouldValidate && label && !containsText(htmlText, label)) {'
+              if old_condition not in loop_block:
+                  raise SystemExit('label validation condition not found')
+              new_condition = '''    const isCoreSourceLabel = codeSuffix === "core_t12_label" || codeSuffix === "core_rent_roll_label";
             const labelPresent = isCoreSourceLabel
               ? containsCoreSourceLabel(htmlText, label)
               : containsText(htmlText, label);
-            if (shouldValidate && label && !labelPresent) {
-              pushIssue(`HTML_${codeSuffix.toUpperCase()}_MISSING`, `${label} is missing from customer HTML.`, "critical", `html.${codeSuffix}`);
-            }
-          }
-          '''
-          if 'const isCoreSourceLabel = codeSuffix === "core_t12_label"' not in model:
-              if loop_anchor not in model:
-                  raise SystemExit('label validation loop anchor not found')
-              model = model.replace(loop_anchor, loop_replacement, 1)
+            if (shouldValidate && label && !labelPresent) {'''
+              loop_block = loop_block.replace(old_condition, new_condition, 1)
+              model = model[:loop_start] + loop_block + model[loop_end:]
 
           model_path.write_text(model, encoding='utf-8')
 
           test_path = Path('tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js')
           test = test_path.read_text(encoding='utf-8')
-          test_anchor = '''const genericHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericHtml, genericModel);
-          assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));
-          '''
-          test_replacement = '''const genericHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericHtml, genericModel);
-          assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));
+          if 'customerPolishedCoreLabelValidation' not in test:
+              test_marker = 'assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));'
+              insert_at = test.index(test_marker) + len(test_marker)
+              regression = '''
 
           const customerPolishedCoreLabelHtml = genericHtml
-            .replace(genericModel.coreSources.coreT12.visibleLabel, genericModel.coreSources.coreT12.visibleLabel.replace(/\\s[-/:]\\s/, ": "))
-            .replace(genericModel.coreSources.coreRentRoll.visibleLabel, genericModel.coreSources.coreRentRoll.visibleLabel.replace(/\\s[-/:]\\s/, ": "));
+            .replace(
+              genericModel.coreSources.coreT12.visibleLabel,
+              genericModel.coreSources.coreT12.visibleLabel.replace(/\\s[-/:]\\s/, ": ")
+            )
+            .replace(
+              genericModel.coreSources.coreRentRoll.visibleLabel,
+              genericModel.coreSources.coreRentRoll.visibleLabel.replace(/\\s[-/:]\\s/, ": ")
+            );
           const customerPolishedCoreLabelValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(
             customerPolishedCoreLabelHtml,
             genericModel
@@ -101,12 +93,8 @@ jobs:
             customerPolishedCoreLabelValidation.ok,
             true,
             JSON.stringify(customerPolishedCoreLabelValidation.issues, null, 2)
-          );
-          '''
-          if 'customerPolishedCoreLabelValidation' not in test:
-              if test_anchor not in test:
-                  raise SystemExit('customer surface smoke anchor not found')
-              test = test.replace(test_anchor, test_replacement, 1)
+          );'''
+              test = test[:insert_at] + regression + test[insert_at:]
           test_path.write_text(test, encoding='utf-8')
           PY
 
