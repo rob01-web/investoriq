@@ -53,17 +53,26 @@ jobs:
           text = text.replace('assert.match(retest6FinalHtml, /Cap-Rate Value Indication/i);', 'assert.match(retest6FinalHtml, /Accepted-Basis Value Indication/i);', 1)
           text = text.replace('  "Rent Position / Whole-Property Value Context",\n', '', 1)
           text = text.replace('  "Cap-Rate Value Indication",\n', '  "Valuation Position & Reconciliation",\n', 1)
+          text = text.replace('  "Methodology & Data Transparency",\n', '', 1)
 
           text = text.replace('assert.match(retest6FinalHtml, /EGI per Unit/i);\n', '', 1)
           text = text.replace('assert.match(retest6FinalHtml, /OpEx per Unit/i);\n', '', 1)
           text = text.replace('assert.match(retest6FinalHtml, /NOI per Unit/i);\n', '', 1)
 
-          # Current compact Methodology & Data Transparency surface replaced the older
-          # prose block while preserving the same no-gap-filling doctrine.
           text = text.replace(
               'assert.match(retest6FinalHtml, /InvestorIQ does not assume or gap-fill missing data/i);\nassert.match(retest6FinalHtml, /Methodology Notes/i);\nassert.match(retest6FinalHtml, /Data Limitations &amp; Missing Inputs/i);',
               'assert.match(retest6FinalHtml, /No gap-filling/i);\nassert.match(retest6FinalHtml, /Unsupported assumptions and missing inputs remain visible rather than being inferred/i);\nassert.match(retest6FinalHtml, /Evidence-bound analysis/i);'
           )
+
+          ordering_anchor = '  lastSectionIndex = sectionIndex;\n}\n'
+          ordering_replacement = '''  lastSectionIndex = sectionIndex;
+}
+const sourceRegisterOrderIndex = retest6FinalHtml.indexOf("Source Register &amp; Document Treatment");
+const methodologyOrderIndex = retest6FinalHtml.indexOf("Methodology &amp; Data Transparency");
+assert.ok(sourceRegisterOrderIndex >= 0 && methodologyOrderIndex > sourceRegisterOrderIndex, "Methodology & Data Transparency is out of order");
+'''
+          if 'methodologyOrderIndex' not in text and ordering_anchor in text:
+              text = text.replace(ordering_anchor, ordering_replacement, 1)
 
           text = text.replace('const sourceRegisterSectionMatch = retest6FinalHtml.match(/Source Register &amp; Document Treatment[\\s\\S]{0,8000}?<\\/section>/i);', 'const sourceRegisterSectionMatch = retest6FinalHtmlWithoutSoftWraps.match(/Source Register &amp; Document Treatment[\\s\\S]{0,8000}?<\\/section>/i);', 1)
           for old, new in [
