@@ -2254,6 +2254,16 @@ function containsText(haystack, needle) {
   return normalizeText(haystack).includes(normalizeText(needle));
 }
 
+function normalizeCoreSourceLabelForComparison(value) {
+  return normalizeText(value).replace(/\bcore quantitative source\s*[-:/]\s*/g, "core quantitative source ");
+}
+
+function containsCoreSourceLabel(haystack, needle) {
+  return normalizeCoreSourceLabelForComparison(haystack).includes(
+    normalizeCoreSourceLabelForComparison(needle)
+  );
+}
+
 function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
   const issues = [];
   const normalizedHtml = normalizeHtmlText(html);
@@ -2341,7 +2351,11 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
   ];
 
   for (const { label, codeSuffix, shouldValidate } of labelChecks) {
-    if (shouldValidate && label && !containsText(htmlText, label)) {
+    const isCoreSourceLabel = codeSuffix === "core_t12_label" || codeSuffix === "core_rent_roll_label";
+  const labelPresent = isCoreSourceLabel
+    ? containsCoreSourceLabel(htmlText, label)
+    : containsText(htmlText, label);
+  if (shouldValidate && label && !labelPresent) {
       pushIssue(`HTML_${codeSuffix.toUpperCase()}_MISSING`, `${label} is missing from customer HTML.`, "critical", `html.${codeSuffix}`);
     }
   }

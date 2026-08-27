@@ -646,6 +646,25 @@ const genericHtml = `
 const genericHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericHtml, genericModel);
 assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));
 
+const customerPolishedCoreLabelHtml = genericHtml
+  .replace(
+    genericModel.coreSources.coreT12.visibleLabel,
+    genericModel.coreSources.coreT12.visibleLabel.replace(/\s[-/:]\s/, ": ")
+  )
+  .replace(
+    genericModel.coreSources.coreRentRoll.visibleLabel,
+    genericModel.coreSources.coreRentRoll.visibleLabel.replace(/\s[-/:]\s/, ": ")
+  );
+const customerPolishedCoreLabelValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(
+  customerPolishedCoreLabelHtml,
+  genericModel
+);
+assert.equal(
+  customerPolishedCoreLabelValidation.ok,
+  true,
+  JSON.stringify(customerPolishedCoreLabelValidation.issues, null, 2)
+);
+
 const hardcodeMismatchHtml = syntheticHtml.replace(/Stonebridge Lofts/g, "Legacy Property");
 const hardcodeMismatchValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(hardcodeMismatchHtml, genericModel);
 assert.equal(hardcodeMismatchValidation.ok, false);
