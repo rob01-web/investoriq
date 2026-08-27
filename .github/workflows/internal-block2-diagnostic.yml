@@ -1,21 +1,22 @@
-name: InvestorIQ Internal Block 2 Diagnostic
+name: InvestorIQ Internal Block 2 Source Label Repair
 
 on:
   push:
     branches:
       - internal-final-surgical-polish-20260825
-  workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  block2-diagnostic:
+  block2-source-label-repair:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -26,24 +27,104 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run final handoff with diagnostics
+      - name: Apply narrow source-label convergence repair
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          src = Path('tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js')
-          tmp = Path('tests/qa/__diag-acquisition-memo-v2-final-pdf-handoff-smoke.js')
-          text = src.read_text(encoding='utf-8')
-          needle = 'assert.equal(handlerResponse.body?.customer_surface_html_validation?.ok, true);'
-          replacement = '''console.log("\\n=== BLOCK 2 CUSTOMER SURFACE HTML DIAGNOSTICS ===");
-          console.log(JSON.stringify(finalHandoffDiagnostics, null, 2));
+
+          model_path = Path('api/_lib/acquisition-memo-v2-customer-surface-model.js')
+          model = model_path.read_text(encoding='utf-8')
+
+          helper_anchor = '''function containsText(haystack, needle) {
+            return normalizeText(haystack).includes(normalizeText(needle));
+          }
+          '''
+          helper_replacement = '''function containsText(haystack, needle) {
+            return normalizeText(haystack).includes(normalizeText(needle));
+          }
+
+          function normalizeCoreSourceLabelForComparison(value) {
+            return normalizeText(value).replace(/\\bcore quantitative source\\s*[-:/]\\s*/g, "core quantitative source ");
+          }
+
+          function containsCoreSourceLabel(haystack, needle) {
+            return normalizeCoreSourceLabelForComparison(haystack).includes(
+              normalizeCoreSourceLabelForComparison(needle)
+            );
+          }
+          '''
+          if 'function containsCoreSourceLabel' not in model:
+              if helper_anchor not in model:
+                  raise SystemExit('containsText anchor not found')
+              model = model.replace(helper_anchor, helper_replacement, 1)
+
+          loop_anchor = '''  for (const { label, codeSuffix, shouldValidate } of labelChecks) {
+            if (shouldValidate && label && !containsText(htmlText, label)) {
+              pushIssue(`HTML_${codeSuffix.toUpperCase()}_MISSING`, `${label} is missing from customer HTML.`, "critical", `html.${codeSuffix}`);
+            }
+          }
+          '''
+          loop_replacement = '''  for (const { label, codeSuffix, shouldValidate } of labelChecks) {
+            const isCoreSourceLabel = codeSuffix === "core_t12_label" || codeSuffix === "core_rent_roll_label";
+            const labelPresent = isCoreSourceLabel
+              ? containsCoreSourceLabel(htmlText, label)
+              : containsText(htmlText, label);
+            if (shouldValidate && label && !labelPresent) {
+              pushIssue(`HTML_${codeSuffix.toUpperCase()}_MISSING`, `${label} is missing from customer HTML.`, "critical", `html.${codeSuffix}`);
+            }
+          }
+          '''
+          if 'const isCoreSourceLabel = codeSuffix === "core_t12_label"' not in model:
+              if loop_anchor not in model:
+                  raise SystemExit('label validation loop anchor not found')
+              model = model.replace(loop_anchor, loop_replacement, 1)
+
+          model_path.write_text(model, encoding='utf-8')
+
+          test_path = Path('tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js')
+          test = test_path.read_text(encoding='utf-8')
+          test_anchor = '''const genericHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericHtml, genericModel);
+          assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));
+          '''
+          test_replacement = '''const genericHtmlValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(genericHtml, genericModel);
+          assert.equal(genericHtmlValidation.ok, true, JSON.stringify(genericHtmlValidation.issues, null, 2));
+
+          const customerPolishedCoreLabelHtml = genericHtml
+            .replace(genericModel.coreSources.coreT12.visibleLabel, genericModel.coreSources.coreT12.visibleLabel.replace(/\\s[-/:]\\s/, ": "))
+            .replace(genericModel.coreSources.coreRentRoll.visibleLabel, genericModel.coreSources.coreRentRoll.visibleLabel.replace(/\\s[-/:]\\s/, ": "));
+          const customerPolishedCoreLabelValidation = validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(
+            customerPolishedCoreLabelHtml,
+            genericModel
+          );
           assert.equal(
-            handlerResponse.body?.customer_surface_html_validation?.ok,
+            customerPolishedCoreLabelValidation.ok,
             true,
-            JSON.stringify(finalHandoffDiagnostics, null, 2)
-          );'''
-          if needle not in text:
-              raise SystemExit('Expected Block 2 assertion not found')
-          tmp.write_text(text.replace(needle, replacement), encoding='utf-8')
+            JSON.stringify(customerPolishedCoreLabelValidation.issues, null, 2)
+          );
+          '''
+          if 'customerPolishedCoreLabelValidation' not in test:
+              if test_anchor not in test:
+                  raise SystemExit('customer surface smoke anchor not found')
+              test = test.replace(test_anchor, test_replacement, 1)
+          test_path.write_text(test, encoding='utf-8')
           PY
-          node tests/qa/__diag-acquisition-memo-v2-final-pdf-handoff-smoke.js
+
+      - name: Run targeted Block 2 proof
+        shell: bash
+        run: |
+          node tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js
+          node tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js
+
+      - name: Commit repair when changed
+        shell: bash
+        run: |
+          if git diff --quiet -- api/_lib/acquisition-memo-v2-customer-surface-model.js tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js; then
+            echo "No repair diff remains."
+            exit 0
+          fi
+          git config user.name "rob01-web"
+          git config user.email "robmccallum01@gmail.com"
+          git add -- api/_lib/acquisition-memo-v2-customer-surface-model.js tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js
+          git commit -m "align core source label validation with customer punctuation"
+          git push origin HEAD:internal-final-surgical-polish-20260825
