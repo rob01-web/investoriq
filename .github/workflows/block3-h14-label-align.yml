@@ -25,12 +25,12 @@ jobs:
           from pathlib import Path
           p = Path('tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js')
           s = p.read_text()
-          replacements = {
-              r'/Current Debt-Inclusive Break-Even Monthly Rent per Unit/': r'/Current Break-Even Rent \/ Unit \/ Month/',
-              r'/Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit/': r'/Proposed Break-Even Rent \/ Unit \/ Month/',
-              r'/Annual Rent Upside \\$285,600/': r'/Annual Gross Rent Upside \\$285,600/',
-          }
-          for old, new in replacements.items():
+          replacements = [
+              ('Current Debt-Inclusive Break-Even Monthly Rent per Unit', 'Current Break-Even Rent / Unit / Month'),
+              ('Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit', 'Proposed Break-Even Rent / Unit / Month'),
+              ('Annual Rent Upside', 'Annual Gross Rent Upside'),
+          ]
+          for old, new in replacements:
               if old not in s:
                   raise SystemExit(f'missing expected stale assertion: {old}')
               s = s.replace(old, new, 1)
