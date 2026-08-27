@@ -79,11 +79,11 @@ assert.match(visibleText(fixture.html), /Debt Yield/);
 assert.match(visibleText(fixture.html), /LTV 70\.0%/);
 assert.match(visibleText(fixture.html), /Mortgage Constant/);
 assert.match(visibleText(fixture.html), /Break-Even Occupancy/);
-assert.match(visibleText(fixture.html), /Current Break-Even Rent / Unit / Month/);
-assert.match(visibleText(fixture.html), /Proposed Break-Even Rent / Unit / Month/);
+assert.match(visibleText(fixture.html), /Current Debt-Inclusive Break-Even Monthly Rent \/ Unit/);
+assert.match(visibleText(fixture.html), /Proposed Debt-Inclusive Break-Even Monthly Rent \/ Unit/);
 assert.match(visibleText(fixture.html), /Annual Gross Rent Upside \$285,600/);
 assert.match(visibleText(fixture.html), /Going-In Cap Rate 7\.0%/);
-assert.match(visibleText(fixture.html), /Implied value at going-in cap rate \$13,500,000/);
+assert.match(visibleText(fixture.html), /InvestorIQ Implied Value \$13,500,000/);
 
 const debtCapacitySection = fixture.customerSurfaceModel.sections.debtCapacityAndCoverage;
 assert.equal(debtCapacitySection.status, "required");
@@ -387,9 +387,8 @@ const unsupportedAnalyses = ["rateSensitivity", "noiSensitivity", "capRateValueS
 for (const key of unsupportedAnalyses) {
   assert.equal(fixture.customerSurfaceModel.sections[key], undefined, `unexpected unsupported section ${key}`);
 }
-assert.doesNotMatch(visibleText(fixture.html), /rate sensitivity/i);
+assert.match(visibleText(fixture.html), /Scenario Analysis - Not Source Evidence/i);
 assert.doesNotMatch(visibleText(fixture.html), /noi sensitivity/i);
-assert.doesNotMatch(visibleText(fixture.html), /cap rate sensitivity/i);
 assert.doesNotMatch(visibleText(fixture.html), /rollover concentration/i);
 assert.doesNotMatch(visibleText(fixture.html), /expiry concentration/i);
 
@@ -398,9 +397,13 @@ collapsedDebtCapacityModel.sections.debtCapacityAndCoverage = {
   ...collapsedDebtCapacityModel.sections.debtCapacityAndCoverage,
   status: "collapsed",
   displayReady: false,
+  sourceBacked: false,
+  factAccepted: false,
+  availableFacts: [],
   factAvailability: {
     ...collapsedDebtCapacityModel.sections.debtCapacityAndCoverage.factAvailability,
     sectionDisplayReady: false,
+    available: [],
     sourceBacked: false,
   },
 };
@@ -408,8 +411,17 @@ const collapsedHtml = renderCompleteAcquisitionMemoV2Html({
   ...baseArgs,
   customerSurfaceModel: collapsedDebtCapacityModel,
 });
-assert.match(visibleText(collapsedHtml), /section was omitted because the uploaded support context did not provide display-ready detail/i);
-assert.doesNotMatch(visibleText(collapsedHtml), /Proposed Acquisition Debt Yield/i);
+assert.match(collapsedHtml, /data-iq-elite07-surface="capacity-interpretation"/i);
+assert.match(visibleText(collapsedHtml), /Decision-Relevant Debt Observations/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="proposedDebtYield"/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="proposedMortgageConstant"/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="currentDebtInclusiveBreakEvenOccupancy"/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="proposedDebtInclusiveBreakEvenOccupancy"/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="currentDebtInclusiveBreakEvenMonthlyRentPerUnit"/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="proposedDebtInclusiveBreakEvenMonthlyRentPerUnit"/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="governedCapacityResult"/i);
+assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="governedBindingConstraint"/i);
+assert.doesNotMatch(visibleText(collapsedHtml), /Proposed Debt Yield/i);
 
 const invalidDenominatorModel = structuredClone(fixture.customerSurfaceModel);
 invalidDenominatorModel.financialTruth.breakEvenOccupancy = {
