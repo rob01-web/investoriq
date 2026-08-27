@@ -25,9 +25,12 @@ const screeningIdentity = buildCanonicalReportIdentityReceipt({
 assert.equal(isCanonicalReportIdentityReceipt(underwritingIdentity), true);
 assert.equal(isCanonicalReportIdentityReceipt(screeningIdentity), true);
 assert.deepEqual(underwritingIdentity.requiredPdfTextAnchors, ["Underwriting Report"]);
-assert.deepEqual(screeningIdentity.requiredPdfTextAnchors, ["Preliminary Investment Screening Memorandum"]);
+assert.deepEqual(screeningIdentity.requiredPdfTextAnchors, ["Screening Report"]);
 assert.equal(UNDERWRITING_REPORT_IDENTITY.canonicalTitle, "Underwriting Report");
-assert.equal(SCREENING_REPORT_IDENTITY.canonicalTitle, "Preliminary Investment Screening Memorandum");
+assert.equal(UNDERWRITING_REPORT_IDENTITY.fullTitle, "InvestorIQ Underwriting Report");
+assert.equal(SCREENING_REPORT_IDENTITY.canonicalTitle, "Screening Report");
+assert.equal(SCREENING_REPORT_IDENTITY.fullTitle, "InvestorIQ Screening Report");
+assert.equal(SCREENING_REPORT_IDENTITY.prohibitedVisibleTitles.includes("Preliminary Investment Screening Memorandum"), true);
 
 const approvedHtml = `<!doctype html><html><body>
   <h1>InvestorIQ Underwriting Report</h1>
