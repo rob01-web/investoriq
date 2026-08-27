@@ -1,4 +1,4 @@
-export const REPORT_IDENTITY_AUTHORITY_VERSION = "canonical_report_identity_v2";
+export const REPORT_IDENTITY_AUTHORITY_VERSION = "canonical_report_identity_v3";
 
 function freezeIdentity(identity) {
   return Object.freeze({
@@ -16,17 +16,17 @@ export const SCREENING_REPORT_IDENTITY = freezeIdentity({
   reportMode: "screening_v1",
   reportType: "screening",
   reportTier: 1,
-  canonicalTitle: "Preliminary Investment Screening Memorandum",
-  fullTitle: "InvestorIQ Preliminary Investment Screening Memorandum",
+  canonicalTitle: "Screening Report",
+  fullTitle: "InvestorIQ Screening Report",
   acceptedReportTypes: ["screening", "screening_report"],
-  acceptedVisibleTitles: [
+  acceptedVisibleTitles: ["Screening Report"],
+  requiredPdfTextAnchors: ["Screening Report"],
+  prohibitedVisibleTitles: [
     "Preliminary Investment Screening Memorandum",
-    "Screening Signal",
-    "Preliminary Screening",
-    "Screening Report",
+    "Underwriting Report",
+    "Acquisition Memo",
+    "Acquisition Memorandum",
   ],
-  requiredPdfTextAnchors: ["Preliminary Investment Screening Memorandum"],
-  prohibitedVisibleTitles: ["Underwriting Report", "Acquisition Memo", "Acquisition Memorandum"],
 });
 
 export const UNDERWRITING_REPORT_IDENTITY = freezeIdentity({
