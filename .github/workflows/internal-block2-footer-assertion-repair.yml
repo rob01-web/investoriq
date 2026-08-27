@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Apply temporary migration script when present
+      - name: Apply temporary migration scripts when present
         id: migrate
         shell: bash
         run: |
@@ -37,6 +37,9 @@ jobs:
             exit 0
           fi
           python .github/internal-block2-legacy-smoke-repair.py
+          if [ -f .github/internal-block2-legacy-smoke-repair-post.py ]; then
+            python .github/internal-block2-legacy-smoke-repair-post.py
+          fi
           echo "script_present=1" >> "$GITHUB_OUTPUT"
 
       - name: Run complete legacy document smoke
