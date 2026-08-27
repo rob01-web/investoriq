@@ -294,7 +294,7 @@ assert.match(finalHtml, /class="cover-brand-name"/i);
 assert.match(finalHtml, /class="cover-brand-sub"/i);
 assert.match(finalHtml, /INVESTORIQ/i);
 assert.match(finalHtml, /Institutional Real Estate Analysis/i);
-assert.match(finalHtml, /CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC\./i);
+assert.match(finalHtml, /CONFIDENTIAL \| INVESTORIQ TECHNOLOGIES INC\./i);
 assert.match(finalHtml, /InvestorIQ Underwriting Report/i);
 assert.equal(/UNDERWRITING\s*\|\s*V1_CORE/i.test(finalHtml), false);
 assert.equal(/V2 Canonical Package/i.test(finalHtml), false);
@@ -309,13 +309,14 @@ assert.match(finalHtml, /Key Metrics Snapshot/i);
 assert.match(finalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(finalHtml, /Lender Diligence Checklist/i);
 assert.match(finalHtml, /Current debt context<\/td><td[^>]*>Received; detailed use limited<\/td>/i);
-assert.match(finalHtml, /Current_Debt_Stonebridge\.pdf/i);
-const assumptionsRowMatch = finalHtml.match(/<tr[^>]*>[\s\S]{0,1200}?Stonebridge_Assumptions\.pdf[\s\S]*?<\/tr>/i);
+const finalHtmlWithoutSoftWraps = finalHtml.replace(/<wbr\s*\/?>/gi, "");
+assert.match(finalHtmlWithoutSoftWraps, /Current_Debt_Stonebridge\.pdf/i);
+const assumptionsRowMatch = finalHtmlWithoutSoftWraps.match(/<tr[^>]*>[\s\S]{0,1200}?Stonebridge_Assumptions\.pdf[\s\S]*?<\/tr>/i);
 assert.ok(assumptionsRowMatch, "Missing Stonebridge_Assumptions.pdf row");
 assert.match(assumptionsRowMatch[0], /Acquisition Assumptions/i);
 assert.match(assumptionsRowMatch[0], /Accepted for related analysis|Retained as context/i);
 assert.equal(/Debt Support Received \/ Contextual/i.test(assumptionsRowMatch[0]), false);
-assert.match(finalHtml, /Stonebridge_Reno_Plan\.pdf/i);
+assert.match(finalHtmlWithoutSoftWraps, /Stonebridge_Reno_Plan\.pdf/i);
 
 const bodyStart = finalHtml.toLowerCase().indexOf("<body");
 const bodyEnd = finalHtml.toLowerCase().indexOf("</body>");
@@ -339,7 +340,7 @@ assert.equal(/>v2</i.test(finalHtml), false);
 assert.equal(/authorityVersion/i.test(finalHtml), false);
 assert.equal(/canonical source package/i.test(finalHtml), false);
 assert.equal(/V2 projection/i.test(finalHtml), false);
-assert.match(finalHtml, /Cap-Rate Value Indication/i);
+assert.match(finalHtml, /Valuation &amp; Reconciliation/i);
 assert.equal(/\$135,000\b/i.test(finalHtml), false);
 assert.match(finalHtml, /8 uploaded files/i);
 assert.doesNotMatch(finalHtml, /Revenue \/ Expense \/ NOI Bridge/i);
@@ -413,6 +414,7 @@ const retest6FinalHtml = renderCompleteAcquisitionMemoV2Html({
     propertyTitle: "Stonebridge",
   },
 });
+const retest6FinalHtmlWithoutSoftWraps = retest6FinalHtml.replace(/<wbr\s*\/?>/gi, "");
 assert.match(retest6FinalHtml, /class="report-container"/i);
 assert.match(retest6FinalHtml, /class="header-strip"/i);
 assert.match(retest6FinalHtml, /class="report-footer-inner"/i);
@@ -420,7 +422,7 @@ assert.match(retest6FinalHtml, /class="cover-brand-name"/i);
 assert.match(retest6FinalHtml, /class="cover-brand-sub"/i);
 assert.match(retest6FinalHtml, /INVESTORIQ/i);
 assert.match(retest6FinalHtml, /Institutional Real Estate Analysis/i);
-assert.match(retest6FinalHtml, /CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC\./i);
+assert.match(retest6FinalHtml, /CONFIDENTIAL \| INVESTORIQ TECHNOLOGIES INC\./i);
 assert.match(retest6FinalHtml, /InvestorIQ Underwriting Report/i);
 assert.equal(/UNDERWRITING\s*\|\s*V1_CORE/i.test(retest6FinalHtml), false);
 assert.equal(/V2 Canonical Package/i.test(retest6FinalHtml), false);
@@ -458,10 +460,10 @@ assert.match(retest6FinalHtml, /Unit Mix and Rent Positioning/i);
 assert.match(retest6FinalHtml, /Rent Positioning Summary/i);
 assert.match(retest6FinalHtml, /1BR[\s\S]{0,200}32[\s\S]{0,200}\$1,850[\s\S]{0,200}\$2,050[\s\S]{0,200}\$200/i);
 assert.match(retest6FinalHtml, /2BR[\s\S]{0,200}32[\s\S]{0,200}\$1,881[\s\S]{0,200}\$2,425[\s\S]{0,200}\$544/i);
-assert.match(retest6FinalHtml, /Rent Position \/ Whole-Property Value Context/i);
+assert.match(retest6FinalHtml, /Valuation Position &amp; Reconciliation/i);
 assert.match(retest6FinalHtml, /Annual gross rent difference/i);
 assert.equal(/Implied Value Sensitivity at Stabilization/i.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /Cap-Rate Value Indication/i);
+assert.match(retest6FinalHtml, /Accepted-Basis Value Indication/i);
 assert.equal(/\$5,712,000|\$4,760,000|\$4,080,000/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Preliminary Financing Readiness Summary/i);
 assert.match(retest6FinalHtml, /Acquisition Request Context/i);
@@ -475,19 +477,16 @@ assert.match(retest6FinalHtml, /Repairs &amp; Maintenance<\/td><td style="font-w
 assert.match(retest6FinalHtml, /Utilities<\/td><td style="font-weight:600;">\$86,000<\/td>/i);
 assert.match(retest6FinalHtml, /Property Management<\/td><td style="font-weight:600;">\$60,000<\/td>/i);
 assert.match(retest6FinalHtml, /Payroll \/ Admin<\/td><td style="font-weight:600;">\$28,000<\/td>/i);
-assert.match(retest6FinalHtml, /EGI per Unit/i);
-assert.match(retest6FinalHtml, /OpEx per Unit/i);
-assert.match(retest6FinalHtml, /NOI per Unit/i);
 assert.match(retest6FinalHtml, /Data Coverage &amp; Source Limitations/i);
 assert.match(retest6FinalHtml, /Source Register &amp; Document Treatment/i);
 assert.match(retest6FinalHtml, /Methodology &amp; Data Transparency/i);
 assert.match(retest6FinalHtml, /overflow-wrap:anywhere;/i);
 assert.match(retest6FinalHtml, /word-break:break-word;/i);
 assert.equal(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /InvestorIQ does not assume or gap-fill missing data/i);
-assert.match(retest6FinalHtml, /Methodology Notes/i);
-assert.match(retest6FinalHtml, /Data Limitations &amp; Missing Inputs/i);
-const sourceRegisterSectionMatch = retest6FinalHtml.match(/Source Register &amp; Document Treatment[\s\S]{0,8000}?<\/section>/i);
+assert.match(retest6FinalHtml, /No gap-filling/i);
+assert.match(retest6FinalHtml, /Unsupported assumptions and missing inputs remain visible rather than being inferred/i);
+assert.match(retest6FinalHtml, /Evidence-bound analysis/i);
+const sourceRegisterSectionMatch = retest6FinalHtmlWithoutSoftWraps.match(/Source Register &amp; Document Treatment[\s\S]{0,8000}?<\/section>/i);
 assert.ok(sourceRegisterSectionMatch, "Missing source register section");
 assert.match(sourceRegisterSectionMatch[0], /T12_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
 assert.match(sourceRegisterSectionMatch[0], /Rent_Roll_Stonebridge_Lofts_Attack_Test_8\.xlsx/i);
@@ -498,14 +497,12 @@ const requiredSectionOrder = [
   "Underwriting Observations",
   "Unit Mix and Rent Positioning",
   "Operating Statement / TTM Summary",
-  "Rent Position / Whole-Property Value Context",
   "Acquisition Request Context",
   "Preliminary Financing Readiness Summary",
   "Debt / Financing Context",
-  "Cap-Rate Value Indication",
+  "Valuation Position & Reconciliation",
   "Data Coverage & Source Limitations",
   "Source Register & Document Treatment",
-  "Methodology & Data Transparency",
 ];
 let lastSectionIndex = -1;
 for (const sectionTitle of requiredSectionOrder) {
@@ -517,6 +514,9 @@ for (const sectionTitle of requiredSectionOrder) {
   assert.ok(sectionIndex > lastSectionIndex, `${sectionTitle} is out of order`);
   lastSectionIndex = sectionIndex;
 }
+const sourceRegisterOrderIndex = retest6FinalHtml.indexOf("Source Register &amp; Document Treatment");
+const methodologyOrderIndex = retest6FinalHtml.indexOf("Methodology &amp; Data Transparency");
+assert.ok(sourceRegisterOrderIndex >= 0 && methodologyOrderIndex > sourceRegisterOrderIndex, "Methodology & Data Transparency is out of order");
 assert.equal(/Acquisition Memo Summary/i.test(retest6FinalHtml), false);
 assert.match(retest6FinalHtml, /Occupancy[\s\S]{0,80}93\.8%/i);
 assert.match(retest6FinalHtml, /Current debt context<\/td><td[^>]*>Received; detailed use limited<\/td>/i);
@@ -542,9 +542,9 @@ assert.match(assumptionsSectionMatch[0], /LTV<\/td><td style="font-weight:600;">
 assert.match(assumptionsSectionMatch[0], /Interest Rate<\/td><td style="font-weight:600;">5\.95%<\/td>/i);
 assert.match(assumptionsSectionMatch[0], /Amortization<\/td><td style="font-weight:600;">30 years<\/td>/i);
 assert.match(assumptionsSectionMatch[0], /Lender \/ Origination Fee<\/td><td style="font-weight:600;">0\.85%<\/td>/i);
-assert.match(retest6FinalHtml, /Stonebridge_Appraisal_Summary\.pdf[\s\S]{0,2000}Appraisal Context/i);
-assert.match(retest6FinalHtml, /Stonebridge_Market_Survey\.pdf[\s\S]{0,2000}Market Survey Context/i);
-assert.match(retest6FinalHtml, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,2000}Environmental Context/i);
+assert.match(retest6FinalHtmlWithoutSoftWraps, /Stonebridge_Appraisal_Summary\.pdf[\s\S]{0,2000}Appraisal Context/i);
+assert.match(retest6FinalHtmlWithoutSoftWraps, /Stonebridge_Market_Survey\.pdf[\s\S]{0,2000}Market Survey Context/i);
+assert.match(retest6FinalHtmlWithoutSoftWraps, /Stonebridge_Phase_I_ESA\.pdf[\s\S]{0,2000}Environmental Context/i);
 assert.match(retest6FinalHtml, /Source Register &amp; Document Treatment/i);
 assert.ok(retest6FinalHtml.indexOf("Source Register &amp; Document Treatment") < retest6FinalHtml.toLowerCase().indexOf("</body>"));
 assert.ok(retest6FinalHtml.toLowerCase().indexOf("</body>") < retest6FinalHtml.toLowerCase().indexOf("</html>"));
@@ -559,11 +559,13 @@ assert.equal(/>v2</i.test(retest6FinalHtml), false);
 assert.equal(/authorityVersion/i.test(retest6FinalHtml), false);
 assert.equal(/canonical source package/i.test(retest6FinalHtml), false);
 assert.equal(/V2 projection/i.test(retest6FinalHtml), false);
-assert.match(retest6FinalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
-assert.doesNotMatch(retest6FinalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
-assert.match(retest6FinalHtml, /Value delta vs purchase price<\/td><td style="font-weight:600;">\$0<\/td>/i);
+assert.match(retest6FinalHtml, /Accepted Going-In Cap Rate<\/td><td>7\.00%<\/td>/i);
+assert.match(retest6FinalHtml, /InvestorIQ Implied Value<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
+assert.match(retest6FinalHtml, /Implied Value Per Unit<\/td><td>\$210,938<\/td>/i);
+assert.doesNotMatch(retest6FinalHtml, /data-iq-valuation-sensitivity-row="scenario"/i);
+assert.match(retest6FinalHtml, /InvestorIQ Implied Value Less Purchase Price<\/td><td>\$0<\/td>/i);
 assert.equal(/\$135,000\b/i.test(retest6FinalHtml), false);
-assert.equal(/Cap-Rate Value Indication[\s\S]{0,700}>-<\/td>/i.test(retest6FinalHtml), false);
+assert.equal(/Accepted-Basis Value Indication[\s\S]{0,700}>-<\/td>/i.test(retest6FinalHtml), false);
 
 const structuredSourcePackage = buildStructuredStonebridgeSourcePackage();
 const structuredProjection = buildAcquisitionMemoProjection(structuredSourcePackage);
@@ -637,25 +639,27 @@ assert.match(governedFinalHtml, /Equals: Net Operating Income<\/td><td style="fo
 const governedBridgeSectionMatch = governedFinalHtml.match(/<div class="subsection-block" data-iq-subsection="revenue-expense-noi-bridge">[\s\S]*?<\/div>/i);
 assert.ok(governedBridgeSectionMatch, "Missing Revenue / Expense / NOI Bridge subsection");
 assert.doesNotMatch(governedBridgeSectionMatch[0], /pro forma|projection|adjustment|financing assumption|market assumption|\bBUY\b|\bSELL\b|\bHOLD\b/i);
-const governedComparisonSectionMatch = governedFinalHtml.match(/<div class="subsection-block" data-iq-subsection="valuation-appraisal-comparison">[\s\S]*?Appraised value less InvestorIQ implied value<\/td><td>\(\$1,500,000\)<\/td>/i);
-assert.ok(governedComparisonSectionMatch, "Missing Valuation / Appraisal Comparison subsection");
-assert.match(governedComparisonSectionMatch[0], /InvestorIQ Deterministic T12-Based Indication/i);
-assert.match(governedComparisonSectionMatch[0], /Purchase-Assumption Context/i);
-assert.match(governedComparisonSectionMatch[0], /Uploaded Appraisal Context/i);
-assert.match(governedComparisonSectionMatch[0], /T12 NOI basis<\/td><td>\$945,000<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Accepted going-in cap rate<\/td><td>7\.0%<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Implied whole-property value<\/td><td>\$13,500,000<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Purchase price<\/td><td>\$13,500,000<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Appraised value<\/td><td>\$12,000,000<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Appraisal stabilized NOI<\/td><td>\$622,000<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Appraisal stabilized cap rate<\/td><td>6\.3%<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Implied value per unit<\/td><td>\$210,938<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Purchase price per unit<\/td><td>\$210,938<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Appraisal value per unit<\/td><td>\$187,500<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /InvestorIQ implied value less purchase price<\/td><td>\$0<\/td>/i);
-assert.match(governedComparisonSectionMatch[0], /Appraised value less purchase price<\/td><td>\(\$1,500,000\)<\/td>/i);
-assert.doesNotMatch(governedComparisonSectionMatch[0], /correct|approved|recommended|final|\bBUY\b|\bSELL\b|\bHOLD\b|overvalued|undervalued|attractive|aggressive|conservative/i);
-assert.doesNotMatch(governedComparisonSectionMatch[0], /Appraised value<\/td><td>\$13,500,000<\/td>/i);
+const governedValuationSectionMatch = governedFinalHtml.match(/<section class="section" data-iq-section="eliteValuationReconciliation"[\s\S]*?<\/section>/i);
+assert.ok(governedValuationSectionMatch, "Missing ELITE Valuation Position & Reconciliation section");
+assert.match(governedValuationSectionMatch[0], /Valuation Position &amp; Reconciliation/i);
+assert.match(governedValuationSectionMatch[0], /Accepted-Basis Value Indication/i);
+assert.match(governedValuationSectionMatch[0], /Accepted T12 NOI<\/td><td>\$945,000<\/td>/i);
+assert.match(governedValuationSectionMatch[0], /Accepted Going-In Cap Rate<\/td><td>7\.00%<\/td>/i);
+assert.match(governedValuationSectionMatch[0], /InvestorIQ Implied Value<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
+assert.match(governedValuationSectionMatch[0], /Implied Value Per Unit<\/td><td>\$210,938<\/td>/i);
+assert.match(governedValuationSectionMatch[0], /Valuation Bridge/i);
+assert.match(governedValuationSectionMatch[0], /Purchase Price Reconciliation/i);
+const governedAppraisalReconciliationMatch = governedFinalHtml.match(/<div class="subsection-block" data-iq-subsection="appraisal-reconciliation">[\s\S]*?<\/div>/i);
+assert.ok(governedAppraisalReconciliationMatch, "Missing ELITE Appraisal Reconciliation subsection");
+assert.match(governedAppraisalReconciliationMatch[0], /Appraisal \/ Valuation Context/i);
+assert.match(governedAppraisalReconciliationMatch[0], /Appraisal Reconciliation/i);
+assert.match(governedAppraisalReconciliationMatch[0], /Appraised Value<\/td><td>\$12,000,000<\/td>/i);
+assert.match(governedAppraisalReconciliationMatch[0], /Appraisal Stabilized NOI<\/td><td>\$622,000<\/td>/i);
+assert.match(governedAppraisalReconciliationMatch[0], /Appraisal Stabilized Cap Rate<\/td><td>6\.25%<\/td>/i);
+assert.match(governedAppraisalReconciliationMatch[0], /Appraised Value Less InvestorIQ Implied Value<\/td><td>\(\$1,500,000\)<\/td>/i);
+assert.match(governedAppraisalReconciliationMatch[0], /Appraised Value Less Purchase Price<\/td><td>\(\$1,500,000\)<\/td>/i);
+assert.doesNotMatch(governedAppraisalReconciliationMatch[0], /correct|approved|recommended|final|\bBUY\b|\bSELL\b|\bHOLD\b|overvalued|undervalued|attractive|aggressive|conservative/i);
+assert.doesNotMatch(governedFinalHtml, /data-iq-subsection="valuation-appraisal-comparison"/i);
 
 const propertyTaxSupport = {
   canonicalRole: "property_tax_support",
@@ -698,7 +702,7 @@ assert.equal((propertyTaxAnalysisMatch[0].match(/<tr>/g) || []).length, 3);
 assert.doesNotMatch(propertyTaxAnalysisMatch[0], /forecast|reassess|mill[- ]rate|normalized|stabilized|escrow|legal|tax advice|high|low|favorable|unfavorable|aggressive|conservative|excessive|understated|overstated|recommend|approve|clearance|conclusion|\bBUY\b|\bSELL\b|\bHOLD\b/i);
 assert.match(propertyTaxPresentHtml, /Operating Statement \/ TTM Summary/i);
 assert.match(propertyTaxPresentHtml, /Revenue \/ Expense \/ NOI Bridge/i);
-assert.match(propertyTaxPresentHtml, /Cap-Rate Value Indication/i);
+assert.match(propertyTaxPresentHtml, /Accepted-Basis Value Indication/i);
 assert.match(propertyTaxPresentHtml, /Property Taxes<\/td><td style="font-weight:600;">\$185,000<\/td>/i);
 assert.equal(governedCustomerSurfaceModel.supportSourcesByRole?.property_tax_support, undefined);
 
@@ -722,7 +726,7 @@ for (const [label, support, operatingSectionPatch, expectBridge] of propertyTaxO
   assert.doesNotMatch(omissionHtml, /data-iq-subsection="property-tax-analysis"/i, `Unexpected Property Tax Analysis for ${label}`);
   assert.match(omissionHtml, /Operating Statement \/ TTM Summary/i, `Missing parent section for ${label}`);
   if (expectBridge) assert.match(omissionHtml, /Revenue \/ Expense \/ NOI Bridge/i, `Missing NOI bridge for ${label}`);
-  assert.match(omissionHtml, /Cap-Rate Value Indication/i, `Missing cap-rate section for ${label}`);
+  assert.match(omissionHtml, /Accepted-Basis Value Indication/i, `Missing accepted-basis valuation section for ${label}`);
 }
 const missingNoiSourcePackage = {
   ...structuredSourcePackage,
@@ -783,10 +787,14 @@ const partialAppraisalFinalHtml = renderCompleteAcquisitionMemoV2Html({
   reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
   propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
 });
-assert.match(partialAppraisalFinalHtml, /Appraisal \/ Valuation Context/i);
-assert.match(partialAppraisalFinalHtml, /Appraised Value/i);
-assert.doesNotMatch(partialAppraisalFinalHtml, /Valuation \/ Appraisal Comparison/i);
-assert.match(partialAppraisalFinalHtml, /Cap-Rate Value Indication/i);
+assert.match(partialAppraisalFinalHtml, /Valuation Position &amp; Reconciliation/i);
+assert.match(partialAppraisalFinalHtml, /Accepted-Basis Value Indication/i);
+const partialAppraisalReconciliationMatch = partialAppraisalFinalHtml.match(/<div class="subsection-block" data-iq-subsection="appraisal-reconciliation">[\s\S]*?<\/div>/i);
+assert.ok(partialAppraisalReconciliationMatch, "Missing partial ELITE Appraisal Reconciliation subsection");
+assert.match(partialAppraisalReconciliationMatch[0], /Appraisal \/ Valuation Context/i);
+assert.match(partialAppraisalReconciliationMatch[0], /Appraisal Reconciliation/i);
+assert.match(partialAppraisalReconciliationMatch[0], /Appraised Value/i);
+assert.doesNotMatch(partialAppraisalReconciliationMatch[0], /Appraisal Stabilized NOI/i);
 const unsupportedAppraisalCustomerSurfaceModel = {
   ...governedCustomerSurfaceModel,
   sections: {
@@ -810,7 +818,7 @@ const unsupportedAppraisalFinalHtml = renderCompleteAcquisitionMemoV2Html({
   reportMeta: { reportType: "underwriting", reportTier: 2, propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
   propertyProfile: { propertyName: "Stonebridge", propertyAddress: "Stonebridge", propertyTitle: "Stonebridge" },
 });
-assert.doesNotMatch(unsupportedAppraisalFinalHtml, /Valuation \/ Appraisal Comparison/i);
+assert.doesNotMatch(unsupportedAppraisalFinalHtml, /data-iq-subsection="appraisal-reconciliation"/i);
 const structuredFinalHtml = renderCompleteAcquisitionMemoV2Html({
   acquisitionMemoProjection: structuredProjection,
   renderedAcquisitionMemo: structuredRenderedAcquisitionMemo,
@@ -842,9 +850,11 @@ assert.match(structuredFinalHtml, /Repairs &amp; Maintenance<\/td><td style="fon
 assert.match(structuredFinalHtml, /Utilities<\/td><td style="font-weight:600;">\$86,000<\/td>/i);
 assert.match(structuredFinalHtml, /Property Management<\/td><td style="font-weight:600;">\$60,000<\/td>/i);
 assert.match(structuredFinalHtml, /Payroll \/ Admin<\/td><td style="font-weight:600;">\$28,000<\/td>/i);
-assert.match(structuredFinalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
-assert.doesNotMatch(structuredFinalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
-assert.equal(/Cap-Rate Value Indication[\s\S]{0,700}>-<\/td>/i.test(structuredFinalHtml), false);
+assert.match(structuredFinalHtml, /Accepted Going-In Cap Rate<\/td><td>7\.00%<\/td>/i);
+assert.match(structuredFinalHtml, /InvestorIQ Implied Value<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
+assert.match(structuredFinalHtml, /Implied Value Per Unit<\/td><td>\$210,938<\/td>/i);
+assert.doesNotMatch(structuredFinalHtml, /data-iq-valuation-sensitivity-row="scenario"/i);
+assert.equal(/Accepted-Basis Value Indication[\s\S]{0,700}>-<\/td>/i.test(structuredFinalHtml), false);
 assert.equal(/Going-In Cap Rate<\/td><td style="font-weight:600;">0\.0%<\/td>/i.test(retest6FinalHtml), false);
 assert.equal(/Going-In Cap Rate 0\.0%/i.test(retest6FinalHtml), false);
 assert.equal(/Implied value at going-in cap rate<\/td><td style="font-weight:600;">Not available<\/td>/i.test(retest6FinalHtml), false);
@@ -885,10 +895,11 @@ const capRateSevenFinalHtml = renderCompleteAcquisitionMemoV2Html({
     propertyTitle: "Stonebridge",
   },
 });
-assert.match(capRateSevenFinalHtml, /Implied value at going-in cap rate<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
-assert.match(capRateSevenFinalHtml, /<tr data-iq-cap-rate-row="accepted" data-iq-cap-rate="0\.07"><td>7\.0%<\/td><td style="font-weight:600;">\$13,500,000<\/td><td style="font-weight:600;">\$210,938<\/td><\/tr>/i);
-assert.doesNotMatch(capRateSevenFinalHtml, /<tr[^>]*><td>[56]\.0%<\/td>/i);
-assert.match(capRateSevenFinalHtml, /Value delta vs purchase price<\/td><td style="font-weight:600;">\$0<\/td>/i);
+assert.match(capRateSevenFinalHtml, /Accepted Going-In Cap Rate<\/td><td>7\.00%<\/td>/i);
+assert.match(capRateSevenFinalHtml, /InvestorIQ Implied Value<\/td><td style="font-weight:600;">\$13,500,000<\/td>/i);
+assert.match(capRateSevenFinalHtml, /Implied Value Per Unit<\/td><td>\$210,938<\/td>/i);
+assert.doesNotMatch(capRateSevenFinalHtml, /data-iq-valuation-sensitivity-row="scenario"/i);
+assert.match(capRateSevenFinalHtml, /InvestorIQ Implied Value Less Purchase Price<\/td><td>\$0<\/td>/i);
 assert.equal(/Occupancy<\/td><td style="font-weight:600;">0\.9%<\/td>/i.test(capRateSevenFinalHtml), false);
 assert.equal(/\$-0\b/.test(capRateSevenFinalHtml), false);
 assert.equal(/\$135,000\b/i.test(capRateSevenFinalHtml), false);
