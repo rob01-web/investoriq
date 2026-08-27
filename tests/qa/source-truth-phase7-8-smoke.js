@@ -79,16 +79,40 @@ const customerBlocked = buildConstitutionalDeliveryGateDecision({
 });
 assert.equal(customerBlocked.report_publishable, false);
 
+const preConstitutionCodes = new Set([
+  TERMINAL_FAILURE_CODES.ADMISSION_PROVENANCE_INVALID,
+  TERMINAL_FAILURE_CODES.UNSUPPORTED_PRODUCT,
+  TERMINAL_FAILURE_CODES.JOB_INTEGRITY_INVALID,
+  TERMINAL_FAILURE_CODES.WORKER_RETRY_BUDGET_EXHAUSTED,
+  TERMINAL_FAILURE_CODES.RECOVERY_EPISODE_EXHAUSTED,
+]);
+const documentReplacementCodes = new Set([
+  TERMINAL_FAILURE_CODES.CORE_T12_CATASTROPHICALLY_UNUSABLE,
+  TERMINAL_FAILURE_CODES.CORE_RENT_ROLL_CATASTROPHICALLY_UNUSABLE,
+  TERMINAL_FAILURE_CODES.CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY,
+]);
+
 for (const code of Object.values(TERMINAL_FAILURE_CODES)) {
   const classification = classifyTerminalFailureCode(code);
-  const isDocumentFailure = code.startsWith("CORE_");
+  const isPreConstitutionFailure = preConstitutionCodes.has(code);
+  const isDocumentFailure = documentReplacementCodes.has(code);
+  const expectedFailureClass = isPreConstitutionFailure
+    ? "job_integrity_failure"
+    : isDocumentFailure
+      ? "customer_document_failure"
+      : "internal_system_failure";
+  assert.equal(classification.failure_class, expectedFailureClass, `${code} terminal taxonomy mismatch`);
   assert.equal(classification.customer_document_replacement_required, isDocumentFailure);
+
   const customerClassification = classifyFailure({ error_code: code });
-  assert.equal(
-    customerClassification.kind === "system_failure",
-    !isDocumentFailure,
-    `${code} terminal customer classification mismatch`
-  );
+  const expectedCustomerKind = isPreConstitutionFailure
+    ? "unknown_failure"
+    : code === TERMINAL_FAILURE_CODES.CORE_PACKAGE_FUNDAMENTALLY_CONTRADICTORY
+      ? "document_mismatch"
+      : isDocumentFailure
+        ? "missing_documents"
+        : "system_failure";
+  assert.equal(customerClassification.kind, expectedCustomerKind, `${code} terminal customer classification mismatch`);
 }
 
 console.log("source-truth Phase 7 and 8 smoke PASS");
