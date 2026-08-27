@@ -1,1 +1,0 @@
-Temporary internal-only trigger for the Block 2 source-label convergence proof. Remove after proof completes.
