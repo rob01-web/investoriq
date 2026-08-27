@@ -1,4 +1,4 @@
-name: InvestorIQ Internal Block 2 Identity Discovery
+name: InvestorIQ Internal Block 2 Identity Convergence
 
 on:
   push:
@@ -6,24 +6,183 @@ on:
       - internal-final-surgical-polish-20260825
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  block2-identity-discovery:
+  block2-identity-convergence:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Inspect current underwriting identity literals
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply report identity convergence repair
         shell: bash
         run: |
-          echo "=== PRODUCTION UNDERWRITING REPORT LITERALS ==="
-          grep -RIn --include='*.js' --include='*.html' 'Underwriting Report' api || true
-          echo
-          echo "=== CURRENT QA UNDERWRITING REPORT LITERALS ==="
-          grep -RIn --include='*.js' 'Underwriting Report' tests/qa || true
-          echo
-          echo "=== INVESTMENT COMMITTEE MEMORANDUM LITERALS ==="
-          grep -RIn --include='*.js' --include='*.html' 'Investment Committee Memorandum' api tests/qa || true
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_required(path, old, new, count=None):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'{path}: required text not found: {old!r}')
+              if count is None:
+                  text = text.replace(old, new)
+              else:
+                  text = text.replace(old, new, count)
+              p.write_text(text, encoding='utf-8')
+
+          identity_path = Path('api/_lib/report-identity-authority.js')
+          identity = identity_path.read_text(encoding='utf-8')
+          replacements = [
+              ('canonical_report_identity_v2', 'canonical_report_identity_v3'),
+              ('prohibitedVisibleTitles: ["Underwriting Report", "Acquisition Memo", "Acquisition Memorandum"],',
+               'prohibitedVisibleTitles: ["Investment Committee Memorandum", "Underwriting Report", "Acquisition Memo", "Acquisition Memorandum"],'),
+              ('canonicalTitle: "Underwriting Report",', 'canonicalTitle: "Investment Committee Memorandum",'),
+              ('fullTitle: "InvestorIQ Underwriting Report",', 'fullTitle: "InvestorIQ Investment Committee Memorandum",'),
+              ('acceptedVisibleTitles: ["Underwriting Report"],', 'acceptedVisibleTitles: ["Investment Committee Memorandum"],'),
+              ('requiredPdfTextAnchors: ["Underwriting Report"],', 'requiredPdfTextAnchors: ["Investment Committee Memorandum"],'),
+          ]
+          for old, new in replacements:
+              if old not in identity:
+                  raise SystemExit(f'report identity anchor not found: {old}')
+              identity = identity.replace(old, new, 1)
+          underwriting_prohibited_anchor = '''  prohibitedVisibleTitles: [
+            "Preliminary Investment Screening Memorandum",
+            "Screening Signal",
+            "Acquisition Memo",
+            "Acquisition Memorandum",
+          ],'''
+          underwriting_prohibited_replacement = '''  prohibitedVisibleTitles: [
+            "Preliminary Investment Screening Memorandum",
+            "Screening Signal",
+            "Underwriting Report",
+            "Acquisition Memo",
+            "Acquisition Memorandum",
+          ],'''
+          if underwriting_prohibited_anchor not in identity:
+              raise SystemExit('underwriting prohibited-title anchor not found')
+          identity = identity.replace(underwriting_prohibited_anchor, underwriting_prohibited_replacement, 1)
+          identity_path.write_text(identity, encoding='utf-8')
+
+          replace_required(
+              'api/_lib/full-underwriting-quality-manifest-v1.js',
+              '"InvestorIQ Underwriting Report"',
+              '"InvestorIQ Investment Committee Memorandum"'
+          )
+          renderer_path = Path('api/_lib/full-underwriting-quality-manifest-renderer.js')
+          renderer = renderer_path.read_text(encoding='utf-8')
+          if '"InvestorIQ Underwriting Report"' not in renderer:
+              raise SystemExit('quality manifest renderer identity fallback not found')
+          renderer = renderer.replace('"InvestorIQ Underwriting Report"', '"InvestorIQ Investment Committee Memorandum"')
+          if 'for this underwriting report.' not in renderer:
+              raise SystemExit('quality manifest reader-facing identity sentence not found')
+          renderer = renderer.replace('for this underwriting report.', 'for this investment committee memorandum.', 1)
+          renderer_path.write_text(renderer, encoding='utf-8')
+
+          premium_path = Path('api/_lib/premium-acquisition-underwriting-v1-validated-model.js')
+          premium = premium_path.read_text(encoding='utf-8')
+          if "model.identity?.canonicalTitle !== 'Underwriting Report'" not in premium:
+              raise SystemExit('premium shared identity validation anchor not found')
+          premium = premium.replace(
+              "model.identity?.canonicalTitle !== 'Underwriting Report'",
+              "model.identity?.canonicalTitle !== 'Investment Committee Memorandum'",
+              1
+          )
+          premium = premium.replace(
+              'Canonical Underwriting Report identity is required.',
+              'Canonical Investment Committee Memorandum identity is required.',
+              1
+          )
+          premium_path.write_text(premium, encoding='utf-8')
+
+          qa_files = [
+              'tests/qa/p0d-retest24-permanent-regression-replay-smoke.js',
+              'tests/qa/institutional-financial-intelligence-integration-smoke.js',
+              'tests/qa/premium-acquisition-underwriting-v1-validated-model-smoke.js',
+              'tests/qa/full-underwriting-quality-manifest-renderer-smoke.js',
+              'tests/qa/institutional-pdf-information-architecture-smoke.js',
+              'tests/qa/retest34-report-identity-authority-regression-smoke.js',
+              'tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js',
+              'tests/qa/full-underwriting-quality-manifest-v1-smoke.js',
+              'tests/qa/h16-h17-manifest-pdf-certification-controlled-replay-smoke.js',
+              'tests/qa/full-underwriting-gates-full-render-smoke.js',
+              'tests/qa/premium-acquisition-underwriting-v1-pdf-composition-smoke.js',
+              'tests/qa/premium-acquisition-underwriting-v1-model-skeleton-smoke.js',
+              'tests/qa/full-underwriting-quality-manifest-machine-regression.js',
+              'tests/qa/acquisition-memo-v2-document-smoke.js',
+          ]
+          for file_name in qa_files:
+              p = Path(file_name)
+              text = p.read_text(encoding='utf-8')
+              text = text.replace('InvestorIQ Underwriting Report', 'InvestorIQ Investment Committee Memorandum')
+              text = text.replace('Underwriting Report', 'Investment Committee Memorandum')
+              p.write_text(text, encoding='utf-8')
+
+          retest34_path = Path('tests/qa/retest34-report-identity-authority-regression-smoke.js')
+          retest34 = retest34_path.read_text(encoding='utf-8')
+          marker = 'assert.equal(UNDERWRITING_REPORT_IDENTITY.canonicalTitle, "Investment Committee Memorandum");'
+          if marker not in retest34:
+              raise SystemExit('retest34 canonical title assertion not found after convergence update')
+          regression = '''
+          assert.equal(UNDERWRITING_REPORT_IDENTITY.fullTitle, "InvestorIQ Investment Committee Memorandum");
+          assert.equal(UNDERWRITING_REPORT_IDENTITY.prohibitedVisibleTitles.includes("Underwriting Report"), true);
+          '''
+          if 'UNDERWRITING_REPORT_IDENTITY.prohibitedVisibleTitles.includes("Underwriting Report")' not in retest34:
+              retest34 = retest34.replace(marker, marker + regression, 1)
+          retest34_path.write_text(retest34, encoding='utf-8')
+          PY
+
+      - name: Prove current report identity convergence
+        shell: bash
+        run: |
+          node tests/qa/retest34-report-identity-authority-regression-smoke.js
+          node tests/qa/acquisition-memo-v2-document-smoke.js
+          node tests/qa/full-underwriting-quality-manifest-v1-smoke.js
+          node tests/qa/full-underwriting-quality-manifest-renderer-smoke.js
+          node tests/qa/full-underwriting-quality-manifest-machine-regression.js
+          node tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js
+          node tests/qa/p0d-retest24-permanent-regression-replay-smoke.js
+          node tests/qa/h16-h17-manifest-pdf-certification-controlled-replay-smoke.js
+          node tests/qa/full-underwriting-gates-full-render-smoke.js
+          node tests/qa/institutional-pdf-information-architecture-smoke.js
+          node tests/qa/institutional-financial-intelligence-integration-smoke.js
+          node tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js
+          node tests/qa/premium-acquisition-underwriting-v1-validated-model-smoke.js
+          node tests/qa/premium-acquisition-underwriting-v1-pdf-composition-smoke.js
+          node tests/qa/premium-acquisition-underwriting-v1-model-skeleton-smoke.js
+
+      - name: Reject stale current Full Underwriting customer identity
+        shell: bash
+        run: |
+          grep -q 'canonicalTitle: "Investment Committee Memorandum"' api/_lib/report-identity-authority.js
+          grep -q 'fullTitle: "InvestorIQ Investment Committee Memorandum"' api/_lib/report-identity-authority.js
+          grep -q 'requiredPdfTextAnchors: \["Investment Committee Memorandum"\]' api/_lib/report-identity-authority.js
+          ! grep -q 'InvestorIQ Underwriting Report' api/_lib/report-identity-authority.js
+          ! grep -q 'InvestorIQ Underwriting Report' api/_lib/full-underwriting-quality-manifest-v1.js
+          ! grep -q 'InvestorIQ Underwriting Report' api/_lib/full-underwriting-quality-manifest-renderer.js
+
+      - name: Commit identity convergence repair when green
+        shell: bash
+        run: |
+          if git diff --quiet -- api/_lib/report-identity-authority.js api/_lib/full-underwriting-quality-manifest-v1.js api/_lib/full-underwriting-quality-manifest-renderer.js api/_lib/premium-acquisition-underwriting-v1-validated-model.js tests/qa; then
+            echo "No identity convergence diff remains."
+            exit 0
+          fi
+          git config user.name "rob01-web"
+          git config user.email "robmccallum01@gmail.com"
+          git add -- api/_lib/report-identity-authority.js api/_lib/full-underwriting-quality-manifest-v1.js api/_lib/full-underwriting-quality-manifest-renderer.js api/_lib/premium-acquisition-underwriting-v1-validated-model.js tests/qa
+          git commit -m "align Full Underwriting report identity with committee memorandum"
+          git push origin HEAD:internal-final-surgical-polish-20260825
