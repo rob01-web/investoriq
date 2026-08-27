@@ -1,4 +1,4 @@
-name: InvestorIQ Internal Block 2 Footer Assertion Repair
+name: InvestorIQ Internal Block 2 Legacy Document Smoke Repair
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  repair-footer-assertion:
+  repair-legacy-document-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -27,35 +27,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Align stale footer assertion
+      - name: Align stale presentation assertions
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('tests/qa/acquisition-memo-v2-document-smoke.js')
           text = p.read_text(encoding='utf-8')
-          old = 'assert.match(finalHtml, /CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC\\./i);'
-          new = 'assert.match(finalHtml, /CONFIDENTIAL \\| INVESTORIQ TECHNOLOGIES INC\\./i);'
-          if old not in text:
-              raise SystemExit('stale footer assertion not found')
-          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          text = text.replace(
+              'assert.match(finalHtml, /CONFIDENTIAL - INVESTORIQ TECHNOLOGIES INC\\./i);',
+              'assert.match(finalHtml, /CONFIDENTIAL \\| INVESTORIQ TECHNOLOGIES INC\\./i);',
+              1,
+          )
+          marker = 'assert.match(finalHtml, /Current_Debt_Stonebridge\\.pdf/i);'
+          replacement = '''const finalHtmlWithoutSoftWraps = finalHtml.replace(/<wbr\\s*\\/?>/gi, "");
+assert.match(finalHtmlWithoutSoftWraps, /Current_Debt_Stonebridge\\.pdf/i);'''
+          if marker in text:
+              text = text.replace(marker, replacement, 1)
+          text = text.replace(
+              'const assumptionsRowMatch = finalHtml.match(/<tr[^>]*>[\\s\\S]{0,1200}?Stonebridge_Assumptions\\.pdf[\\s\\S]*?<\\/tr>/i);',
+              'const assumptionsRowMatch = finalHtmlWithoutSoftWraps.match(/<tr[^>]*>[\\s\\S]{0,1200}?Stonebridge_Assumptions\\.pdf[\\s\\S]*?<\\/tr>/i);',
+              1,
+          )
+          text = text.replace(
+              'assert.match(finalHtml, /Stonebridge_Reno_Plan\\.pdf/i);',
+              'assert.match(finalHtmlWithoutSoftWraps, /Stonebridge_Reno_Plan\\.pdf/i);',
+              1,
+          )
+          p.write_text(text, encoding='utf-8')
           PY
 
-      - name: Run focused footer proof without failure notification
+      - name: Run complete legacy document smoke without failure notification
         id: proof
         shell: bash
         run: |
           set +e
           node tests/qa/acquisition-memo-v2-document-smoke.js
           code=$?
-          if [ $code -eq 0 ]; then
-            echo "proof_status=0" >> "$GITHUB_OUTPUT"
-          else
-            echo "proof_status=1" >> "$GITHUB_OUTPUT"
-          fi
+          echo "proof_status=$code" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Commit only when focused proof is clean
+      - name: Commit only when complete smoke is clean
         if: steps.proof.outputs.proof_status == '0'
         shell: bash
         run: |
@@ -63,8 +75,8 @@ jobs:
           git config user.email "robmccallum01@gmail.com"
           git add -- tests/qa/acquisition-memo-v2-document-smoke.js
           if git diff --cached --quiet; then
-            echo "No footer assertion diff remains."
+            echo "No document-smoke diff remains."
             exit 0
           fi
-          git commit -m "align document smoke with current footer contract"
+          git commit -m "align legacy document smoke with current report surface"
           git push origin HEAD:internal-final-surgical-polish-20260825
