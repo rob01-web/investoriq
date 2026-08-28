@@ -14,29 +14,55 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../..');
 
 const row = (docType, name) => ({ docType, original_name: name });
+const coreCases = [
+  {
+    reportType: 'screening',
+    expectedMode: 'dual_source_core',
+    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx'), row('t12', 'T12.xlsx')],
+  },
+  {
+    reportType: 'screening',
+    expectedMode: 't12_minimum_core',
+    uploadedFiles: [row('t12', 'T12.xlsx')],
+  },
+  {
+    reportType: 'screening',
+    expectedMode: 'rent_roll_minimum_core',
+    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx')],
+  },
+  {
+    reportType: 'underwriting',
+    expectedMode: 'dual_source_core',
+    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx'), row('t12', 'T12.xlsx')],
+  },
+  {
+    reportType: 'underwriting',
+    expectedMode: 't12_minimum_core',
+    uploadedFiles: [row('t12', 'T12.xlsx')],
+  },
+  {
+    reportType: 'underwriting',
+    expectedMode: 'rent_roll_minimum_core',
+    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx')],
+  },
+];
 
-const dual = resolveReportUploadGate({
+for (const testCase of coreCases) {
+  const gate = resolveReportUploadGate(testCase);
+  assert.equal(gate.canGenerate, true, `${testCase.reportType} ${testCase.expectedMode} should admit`);
+  assert.equal(gate.coreMode, testCase.expectedMode);
+  assert.equal(gate.isMissingSupportDocs, false);
+  assert.equal(gate.underwritingRequiresSupport, false);
+}
+
+const underwritingWithOptionalSupport = resolveReportUploadGate({
   reportType: 'underwriting',
-  uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx'), row('t12', 'T12.xlsx')],
+  uploadedFiles: [row('t12', 'T12.xlsx'), row('supporting_documents', 'Appraisal.pdf')],
 });
-assert.equal(dual.canGenerate, true);
-assert.equal(dual.coreMode, 'dual_source_core');
-
-const t12Only = resolveReportUploadGate({
-  reportType: 'underwriting',
-  uploadedFiles: [row('t12', 'T12.xlsx')],
-});
-assert.equal(t12Only.canGenerate, true);
-assert.equal(t12Only.coreMode, 't12_minimum_core');
-assert.equal(t12Only.isMissingSupportDocs, false);
-assert.equal(t12Only.underwritingRequiresSupport, false);
-
-const rentRollOnly = resolveReportUploadGate({
-  reportType: 'screening',
-  uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx')],
-});
-assert.equal(rentRollOnly.canGenerate, true);
-assert.equal(rentRollOnly.coreMode, 'rent_roll_minimum_core');
+assert.equal(underwritingWithOptionalSupport.canGenerate, true);
+assert.equal(underwritingWithOptionalSupport.coreMode, 't12_minimum_core');
+assert.equal(underwritingWithOptionalSupport.hasSupportDocs, true);
+assert.equal(underwritingWithOptionalSupport.underwritingRequiresSupport, false);
 
 const insufficient = resolveReportUploadGate({
   reportType: 'underwriting',
