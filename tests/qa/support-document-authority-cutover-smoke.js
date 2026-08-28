@@ -170,13 +170,13 @@ const html = renderCompleteAcquisitionMemoV2Html({
   bossContract: boss,
   customerSurfaceModel: customerModel,
 });
-assert.match(html, /Purchase Price<\/td><td style="font-weight:600;">\$13,500,000/i);
-assert.match(html, /Proposed Loan Amount<\/td><td style="font-weight:600;">\$9,450,000/i);
-assert.match(html, /LTV<\/td><td style="font-weight:600;">70\.0%/i);
-assert.match(html, /Interest Rate<\/td><td style="font-weight:600;">5\.95%/i);
-assert.match(html, /Amortization<\/td><td style="font-weight:600;">30 years/i);
-assert.match(html, /Lender \/ Origination Fee<\/td><td style="font-weight:600;">0\.85%/i);
+assert.match(html, /data-iq-elite06-metric="purchase_price"[^>]*><td>Purchase Price<\/td><td>\$13,500,000<\/td>/i);
+assert.match(html, /data-iq-elite06-metric="proposed_loan_amount"[^>]*><td>Proposed Loan Amount<\/td><td>\$9,450,000<\/td>/i);
+assert.match(html, /data-iq-elite06-metric="stated_ltv"[^>]*><td>Stated Proposed LTV<\/td><td>70\.00%<\/td>/i);
+assert.match(html, /data-iq-elite06-metric="proposed_interest_rate"[^>]*><td>Proposed Interest Rate<\/td><td>5\.95%<\/td>/i);
+assert.match(html, /data-iq-elite06-metric="proposed_amortization_years"[^>]*><td>Proposed Amortization<\/td><td>30 years<\/td>/i);
+assert.match(html, /data-iq-elite06-metric="proposed_lender_fee_percent"[^>]*><td>Proposed Lender Fee<\/td><td>0\.85%<\/td>/i);
 assert.equal(/Closing Costs<\/td><td[^>]*>2\.00%/i.test(html), false);
-assert.equal(/<tr><td>Purchase Price<\/td><td style="font-weight:600;">\$0<\/td>/i.test(html), false);
+assert.equal(/data-iq-elite06-metric="purchase_price"[^>]*><td>Purchase Price<\/td><td>\$0<\/td>/i.test(html), false);
 
 console.log("support-document authority cutover smoke PASS");
