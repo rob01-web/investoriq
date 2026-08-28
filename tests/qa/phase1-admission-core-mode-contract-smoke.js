@@ -71,6 +71,7 @@ assert.match(migration, /allowed_mime_types/i);
 const removed = [];
 const uploaded = [];
 let uploadProviderCalls = 0;
+let rpcMode = 'confirmed-rejection';
 
 const baseSupabase = {
   auth: {
@@ -98,17 +99,18 @@ const baseSupabase = {
     throw new Error('Unexpected table access in phase1 smoke');
   },
   async rpc(functionName) {
-    if (functionName === 'consume_purchase_and_create_job') {
-      return {
-        data: null,
-        error: {
-          message: 'column r.created_at does not exist',
-          code: '42703',
-          details: 'internal schema detail',
-        },
-      };
+    if (functionName !== 'consume_purchase_and_create_job') return { data: null, error: null };
+    if (rpcMode === 'ambiguous-network') {
+      return { data: null, error: { message: 'Failed to fetch' } };
     }
-    return { data: null, error: null };
+    return {
+      data: null,
+      error: {
+        message: 'column r.created_at does not exist',
+        code: '42703',
+        details: 'internal schema detail',
+      },
+    };
   },
 };
 
@@ -131,6 +133,20 @@ assert.deepEqual(removed, [
     paths: ['staged/user/test/t12/a.xlsx', 'staged/user/test/supporting/b.pdf'],
   },
 ]);
+
+rpcMode = 'ambiguous-network';
+const unconfirmedAdmission = await customerSupabase.rpc('consume_purchase_and_create_job', {
+  p_report_type: 'screening',
+  p_job_payload: { property_name: 'Ambiguous Network Test' },
+  p_staged_files: [
+    { storage_path: 'staged/user/test/rent-roll/ambiguous.xlsx', doc_type: 'rent_roll' },
+  ],
+});
+assert.equal(unconfirmedAdmission.data, null);
+assert.equal(unconfirmedAdmission.error.code, 'REPORT_ADMISSION_UNCONFIRMED');
+assert.match(unconfirmedAdmission.error.message, /refresh your dashboard/i);
+assert.doesNotMatch(unconfirmedAdmission.error.message, /credit was not consumed/i);
+assert.equal(removed.length, 1, 'Ambiguous network failures must not delete staged source objects.');
 
 const invalidPdfBytes = new Blob(['NOT-A-PDF'], { type: 'application/pdf' });
 const invalidPdf = {
