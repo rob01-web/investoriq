@@ -22,11 +22,6 @@ function inferCoreDocTypeFromFilename(value) {
   return '';
 }
 
-function isCoreDocType(docType) {
-  const normalized = normalizeUploadedDocType(docType);
-  return CORE_DOC_TYPES.has(normalized);
-}
-
 function isSupportDocType(docType) {
   const normalized = normalizeUploadedDocType(docType);
   return Boolean(normalized) && !CORE_DOC_TYPES.has(normalized);
@@ -42,15 +37,16 @@ export function resolveCoreUploadDocType(row = {}) {
   return '';
 }
 
-function buildCoreUploadMessage({ hasRentRoll, hasT12 }) {
-  if (hasRentRoll && hasT12) return '';
-  if (hasRentRoll && !hasT12) return 'Upload a T12 to generate.';
-  if (!hasRentRoll && hasT12) return 'Upload a Rent Roll to generate.';
-  return 'Upload a Rent Roll and T12 to generate.';
+function resolveCoreMode({ hasRentRoll, hasT12 }) {
+  if (hasRentRoll && hasT12) return 'dual_source_core';
+  if (hasT12) return 't12_minimum_core';
+  if (hasRentRoll) return 'rent_roll_minimum_core';
+  return 'insufficient_core';
 }
 
-function buildUnderwritingSupportMessage() {
-  return 'Underwriting also requires at least one supporting document.';
+function buildCoreUploadMessage(coreMode) {
+  if (coreMode !== 'insufficient_core') return '';
+  return 'Upload a Rent Roll or a T12 to generate.';
 }
 
 export function resolveReportUploadGate({ reportType = 'screening', uploadedFiles = [] } = {}) {
@@ -61,45 +57,51 @@ export function resolveReportUploadGate({ reportType = 'screening', uploadedFile
   }));
   const hasRentRoll = normalizedRows.some((row) => row.coreDocType === 'rent_roll');
   const hasT12 = normalizedRows.some((row) => row.coreDocType === 't12');
-  const hasCoreDocs = hasRentRoll && hasT12;
   const hasSupportDocs = normalizedRows.some((row) => isSupportDocType(row.docType));
-  const selectedReportType = String(reportType || '').toLowerCase().trim();
-  const underwritingRequiresSupport = selectedReportType === 'underwriting';
-  const missingCoreMessage = buildCoreUploadMessage({ hasRentRoll, hasT12 });
-  const missingSupportMessage = underwritingRequiresSupport && !hasSupportDocs ? buildUnderwritingSupportMessage() : '';
-  const blockedMessage = [missingCoreMessage, missingSupportMessage].filter(Boolean).join(' ');
+  const coreMode = resolveCoreMode({ hasRentRoll, hasT12 });
+  const hasCoreDocs = coreMode !== 'insufficient_core';
+  const blockedMessage = buildCoreUploadMessage(coreMode);
+
+  void reportType;
 
   return {
     hasRentRoll,
     hasT12,
     hasCoreDocs,
     hasSupportDocs,
-    underwritingRequiresSupport,
-    canGenerate: hasCoreDocs && (!underwritingRequiresSupport || hasSupportDocs),
+    coreMode,
+    underwritingRequiresSupport: false,
+    canGenerate: hasCoreDocs,
     isMissingCoreDocs: !hasCoreDocs,
-    isMissingSupportDocs: underwritingRequiresSupport && !hasSupportDocs,
+    isMissingSupportDocs: false,
     blockedMessage,
-    blockedReasonCode: !hasCoreDocs
-      ? 'MISSING_REQUIRED_CORE_DOCUMENTS'
-      : underwritingRequiresSupport && !hasSupportDocs
-        ? 'MISSING_REQUIRED_SUPPORTING_DOCUMENT'
-        : null,
+    blockedReasonCode: !hasCoreDocs ? 'MISSING_REQUIRED_CORE_DOCUMENTS' : null,
   };
 }
 
-export function formatReportUploadGateErrorMessage(errorMessage, reportType = 'screening') {
+export function formatReportUploadGateErrorMessage(errorMessage) {
   const raw = String(errorMessage || '').toUpperCase();
-  const selectedReportType = String(reportType || '').toLowerCase().trim();
-  if (raw.includes('MISSING_REQUIRED_SUPPORTING_DOCUMENT')) {
-    return 'Underwriting also requires at least one supporting document.';
+  if (
+    raw.includes('MISSING_REQUIRED_CORE_DOCUMENTS') ||
+    raw.includes('BOTH RENT ROLL AND T12 ARE REQUIRED') ||
+    raw.includes('BOTH A RENT ROLL AND A T12 ARE REQUIRED')
+  ) {
+    return 'Upload a Rent Roll or a T12 to generate.';
   }
-  if (raw.includes('MISSING_REQUIRED_CORE_DOCUMENTS')) {
-    return selectedReportType === 'underwriting'
-      ? 'Upload a Rent Roll, T12, and at least one supporting document to generate.'
-      : 'Upload a Rent Roll and T12 to generate.';
+  if (
+    raw.includes('MISSING_REQUIRED_SUPPORTING_DOCUMENT') ||
+    raw.includes('AT LEAST ONE SUPPORTING DOCUMENT IS REQUIRED FOR UNDERWRITING')
+  ) {
+    return 'We could not start this report. Please try again.';
   }
-  if (raw.includes('INVALID_STAGED_FILES')) {
-    return 'Uploaded files could not be validated.';
+  if (raw.includes('INVALID_STAGED_FILES') || raw.includes('ADMISSION_STAGED_OBJECT_METADATA_MISMATCH')) {
+    return 'Uploaded files could not be validated. Please review the files and try again.';
+  }
+  if (raw.includes('PURCHASE_NOT_AVAILABLE')) {
+    return 'No available report credit was found for this report.';
+  }
+  if (raw.includes('ADMISSION_CURRENT_DISCLOSURE_SESSION_REQUIRED')) {
+    return 'Please review and accept the analysis disclosure before starting the report.';
   }
   return '';
 }
