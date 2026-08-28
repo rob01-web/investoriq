@@ -1106,7 +1106,7 @@ useEffect(() => {
       if (!reportUploadGate.canGenerate) {
         toast({
           title: 'Upload requirements not met',
-          description: reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.',
+          description: reportUploadGate.blockedMessage || 'Upload a Rent Roll or a T12 to generate.',
           variant: 'destructive',
         });
         setLoading(false);
@@ -1299,7 +1299,7 @@ useEffect(() => {
 
               <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12, marginBottom:16 }}>
                 <div style={{ padding:'16px', border:`1px solid ${hasRentRoll ? T.okBorder : T.hairline}`, background:hasRentRoll ? T.okBg : T.white }}>
-                  <div style={{ ...labelMono, marginBottom:6 }}>Required</div>
+                  <div style={{ ...labelMono, marginBottom:6 }}>Core source</div>
                   <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink, marginBottom:12 }}>Rent Roll</div>
                   <PrimaryBtn
                     onClick={() => { document.getElementById('diagRentRollInput')?.click(); }}
@@ -1316,7 +1316,7 @@ useEffect(() => {
                 </div>
 
                 <div style={{ padding:'16px', border:`1px solid ${hasT12 ? T.okBorder : T.hairline}`, background:hasT12 ? T.okBg : T.white }}>
-                  <div style={{ ...labelMono, marginBottom:6 }}>Required</div>
+                  <div style={{ ...labelMono, marginBottom:6 }}>Core source</div>
                   <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink, marginBottom:12 }}>T12 (Operating Statement)</div>
                   <PrimaryBtn
                     onClick={() => { document.getElementById('diagT12Input')?.click(); }}
@@ -1711,7 +1711,7 @@ useEffect(() => {
           >
             <p style={stepEyebrow}>Step 02</p>
             <span style={stepTitle}>Property and documents</span>
-            <span style={stepSub}>Enter the property name and upload required documents.</span>
+            <span style={stepSub}>Enter the property name and upload at least one core document. Supporting documents are optional.</span>
 
             <div style={hairlineRule} />
 
@@ -1795,7 +1795,7 @@ useEffect(() => {
 
               {/* Rent Roll */}
               <div style={{ padding:'16px', border:`1px solid ${hasRentRoll ? T.okBorder : T.hairline}`, background:hasRentRoll ? T.okBg : T.white }}>
-                <div style={{ ...labelMono, marginBottom:6 }}>Required</div>
+                <div style={{ ...labelMono, marginBottom:6 }}>Core source</div>
                 <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink, marginBottom:12 }}>Rent Roll</div>
                 <PrimaryBtn
                   disabled={!hasAvailableReport}
@@ -1818,7 +1818,7 @@ useEffect(() => {
 
               {/* T12 */}
               <div style={{ padding:'16px', border:`1px solid ${hasT12 ? T.okBorder : T.hairline}`, background:hasT12 ? T.okBg : T.white }}>
-                <div style={{ ...labelMono, marginBottom:6 }}>Required</div>
+                <div style={{ ...labelMono, marginBottom:6 }}>Core source</div>
                 <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink, marginBottom:12 }}>T12 (Operating Statement)</div>
                 <PrimaryBtn
                   disabled={!hasAvailableReport}
@@ -1845,7 +1845,7 @@ useEffect(() => {
             {selectedReportType === 'underwriting' && (
               <div style={{ marginBottom:16 }}>
                 {!requiredDocsReady && (
-                  <div style={{ ...bodySmall, fontSize:11, marginBottom:8, color:T.ink4 }}>Upload Rent Roll and T12 to unlock supporting documents.</div>
+                  <div style={{ ...bodySmall, fontSize:11, marginBottom:8, color:T.ink4 }}>Upload a Rent Roll or a T12 to unlock supporting documents.</div>
                 )}
                 <div style={{ padding:'16px', border:`1px solid ${hasUnderwritingSupportDocs ? T.okBorder : T.hairline}`, background:T.white }}>
                   <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:12, flexWrap:'wrap' }}>
@@ -1880,13 +1880,13 @@ useEffect(() => {
                 <div style={{ padding:'14px 16px', background:T.warm, border:`1px solid ${T.hairline}`, marginTop:10 }}>
                   <div style={{ ...labelMono, marginBottom:10 }}>Document preflight</div>
                   {[
-                    { label:'Rent Roll', val: hasRentRoll ? 'Present' : 'Missing', ok: hasRentRoll, required: true },
-                    { label:'T12 (Operating Statement)', val: hasT12 ? 'Present' : 'Missing', ok: hasT12, required: true },
+                    { label:'Rent Roll', val: hasRentRoll ? 'Present' : (hasT12 ? 'Optional' : 'Missing'), ok: hasRentRoll || hasT12, required: !hasT12 },
+                    { label:'T12 (Operating Statement)', val: hasT12 ? 'Present' : (hasRentRoll ? 'Optional' : 'Missing'), ok: hasRentRoll || hasT12, required: !hasRentRoll },
                     {
                       label:'Supporting Docs',
-                      val: hasUnderwritingSupportDocs ? 'Present' : (selectedReportType === 'underwriting' ? 'Missing' : 'Optional'),
-                      ok: selectedReportType === 'underwriting' ? hasUnderwritingSupportDocs : true,
-                      required: selectedReportType === 'underwriting',
+                      val: hasUnderwritingSupportDocs ? 'Present' : 'Optional',
+                      ok: true,
+                      required: false,
                     },
                     { label:'Debt Terms', val: preflightDebtTerms ? 'Found' : 'Recommended', ok: preflightDebtTerms, required: false },
                     { label:'Property Tax', val: preflightPropertyTax ? 'Found' : 'Optional', ok: preflightPropertyTax, required: false },
@@ -1899,7 +1899,7 @@ useEffect(() => {
                   ))}
                   {preflightHardMissing && (
                     <div style={{ ...bodySmall, fontSize:12, color:T.errorRed, fontWeight:500, marginTop:10 }}>
-                      {reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.'}
+                      {reportUploadGate.blockedMessage || 'Upload a Rent Roll or a T12 to generate.'}
                     </div>
                   )}
                   {!preflightHardMissing && !preflightDebtTerms && (
@@ -1940,7 +1940,7 @@ useEffect(() => {
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
                     : !reportUploadGate.canGenerate
-                    ? (reportUploadGate.blockedMessage || 'Upload a Rent Roll and T12 to generate.')
+                    ? (reportUploadGate.blockedMessage || 'Upload a Rent Roll or a T12 to generate.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
                 {activeJobForRuns?.status === 'failed' && !activeDeliveryDecision?.customer_message && activeFailureCopy?.nextStep && (
