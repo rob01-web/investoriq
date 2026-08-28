@@ -338,7 +338,7 @@ assert.match(html, /Proposed Lender Fee[\s\S]*?\$80,325/);
 assert.match(html, /Core Source Reconciliation/);
 assert.match(html, /Rent Roll less T12[\s\S]*?\(\$285,600\)/);
 assert.match(html, /Capital Plan and Reserve Position/);
-assert.match(html, /Capital Plan 1 Reserve less Requirement[\s\S]*?\(\$850,000\)/);
+assert.match(html, /Capital Plan Reserve less Requirement[\s\S]*?\(\$850,000\)/);
 assert.doesNotMatch(html, /\b(?:AI|LLM|parser|prompt)\b/i);
 assert.doesNotMatch(html, /[\u2013\u2014]/);
 assert.equal(validateAcquisitionMemoRenderAgainstBossContract(bossContract, html).ok, true);

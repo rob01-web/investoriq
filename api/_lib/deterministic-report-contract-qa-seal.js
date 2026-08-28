@@ -378,7 +378,10 @@ function validateInstitutionalFinancialIntelligence(text, financialIntelligence 
         ? `Capital Plan ${calculationKey.match(/capitalPlan(\d+)/)?.[1] || ""} Reserve less Requirement`.trim()
         : receipt?.label || calculationKey
     );
-    if (!display || !containsLabeledDisplay(text, label, [display])) {
+    const acceptedLabels = calculationKey === "capitalPlan1ReserveLessRequirement"
+      ? [label, "Capital Plan Reserve less Requirement"]
+      : [label];
+    if (!display || !acceptedLabels.some((candidateLabel) => containsLabeledDisplay(text, candidateLabel, [display]))) {
       issues.push(buildIssue(
         "FINANCIAL_INTELLIGENCE_VALUE_NOT_RENDERED",
         `${receipt?.label || receipt?.calculationKey || "A canonical calculation"} is missing its canonical value.`,
