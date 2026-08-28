@@ -8,7 +8,7 @@ import {
   buildCurrentDebtAssessmentState,
 } from "../../api/_lib/report-surface-contracts.js";
 
-// Explicit non-acquisition current debt evidence should be routed for loan-term parsing.
+// Explicit non-acquisition current debt evidence should route as a mortgage statement.
 assert.equal(
   inferSupportingDocTypeFromText(
     [
@@ -20,7 +20,7 @@ assert.equal(
       "Existing debt support provided for current operations.",
     ].join("\n")
   ),
-  "loan_term_sheet"
+  "mortgage_statement"
 );
 const nonAcquisitionPromotion = resolveLoanTermCurrentDebtPromotion({
   rawText: [
