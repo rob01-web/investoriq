@@ -63,7 +63,24 @@ async function validateStagedUploadFile(file) {
   }
 }
 
-function safeAdmissionError(rawError) {
+function isConfirmedAdmissionRejection(rawError) {
+  const code = String(rawError?.code || '').trim().toUpperCase();
+  const raw = `${rawError?.message || ''} ${rawError?.details || ''}`.toUpperCase();
+
+  if (/^[0-9A-Z]{5}$/.test(code)) return true;
+  if (/^PGRST[0-9A-Z]+$/.test(code)) return true;
+  return (
+    raw.includes('MISSING_REQUIRED_CORE_DOCUMENTS') ||
+    raw.includes('PURCHASE_NOT_AVAILABLE') ||
+    raw.includes('INVALID_STAGED_FILES') ||
+    raw.includes('ADMISSION_') ||
+    raw.includes('BOTH RENT ROLL AND T12 ARE REQUIRED') ||
+    raw.includes('BOTH A RENT ROLL AND A T12 ARE REQUIRED') ||
+    raw.includes('AT LEAST ONE SUPPORTING DOCUMENT IS REQUIRED FOR UNDERWRITING')
+  );
+}
+
+function safeAdmissionError(rawError, { confirmedRejection = false } = {}) {
   const raw = `${rawError?.code || ''} ${rawError?.message || ''} ${rawError?.details || ''}`.toUpperCase();
   if (
     raw.includes('MISSING_REQUIRED_CORE_DOCUMENTS') ||
@@ -80,6 +97,12 @@ function safeAdmissionError(rawError) {
   }
   if (raw.includes('INVALID_STAGED_FILES') || raw.includes('ADMISSION_STAGED_OBJECT_METADATA_MISMATCH')) {
     return { message: 'Uploaded files could not be validated. Please review the files and try again.', code: 'UPLOAD_VALIDATION_FAILED' };
+  }
+  if (!confirmedRejection) {
+    return {
+      message: 'We could not confirm that this report started. Please refresh your dashboard before trying again.',
+      code: 'REPORT_ADMISSION_UNCONFIRMED',
+    };
   }
   return {
     message: 'We could not start this report. Your report credit was not consumed. Please try again.',
@@ -316,8 +339,11 @@ function wrapRpc(baseSupabase) {
       if (!result?.error) return result;
 
       console.error('[InvestorIQ] Governed admission error:', result.error);
-      await removeAdmissionStagedObjects(baseSupabase, args?.p_staged_files);
-      const safe = safeAdmissionError(result.error);
+      const confirmedRejection = isConfirmedAdmissionRejection(result.error);
+      if (confirmedRejection) {
+        await removeAdmissionStagedObjects(baseSupabase, args?.p_staged_files);
+      }
+      const safe = safeAdmissionError(result.error, { confirmedRejection });
       return {
         data: null,
         error: {
