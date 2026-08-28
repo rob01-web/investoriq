@@ -233,7 +233,17 @@ export function evaluateFinancingSemanticEvidence(value) {
 
 export function resolveFinancingParserRoute(value) {
   const evidence = evaluateFinancingSemanticEvidence(value);
-  if (evidence.acquisitionScore > evidence.currentDebtScore) return "loan_term_sheet";
-  if (evidence.currentDebtScore > evidence.acquisitionScore) return "mortgage_statement";
+  if (
+    evidence.hasAffirmativeAcquisitionEvidence &&
+    evidence.acquisitionScore > evidence.currentDebtScore
+  ) {
+    return "loan_term_sheet";
+  }
+  if (
+    evidence.hasAffirmativeCurrentDebtEvidence &&
+    evidence.currentDebtScore > evidence.acquisitionScore
+  ) {
+    return "mortgage_statement";
+  }
   return null;
 }
