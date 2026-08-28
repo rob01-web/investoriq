@@ -664,16 +664,16 @@ export function inferSupportingDocTypeFromText(text, options = {}) {
   if ((propertyTaxSignals >= 2 || propertyTaxDocumentSignals) && !nonPropertyTaxSupportSignals) return 'property_tax';
   if (has(['APPRAISAL', 'OPINION OF VALUE', 'AS-IS VALUE', 'CAP RATE', 'VALUATION'])) return 'appraisal';
 
-  if (financingRoute.ambiguousFinancingRoute) {
+  if (evaluatedFinancingRoute.ambiguousFinancingRoute) {
     return 'supporting_documents_unclassified';
   }
 
   const acquisitionSignals = countMatches(SUPPORTING_DOC_ALIASES.loan_term_sheet);
-  if (financingRoute.hasAcquisitionOrProposedFinancingText || acquisitionSignals >= 2) {
+  if (evaluatedFinancingRoute.hasAcquisitionOrProposedFinancingText || acquisitionSignals >= 2) {
     return 'loan_term_sheet';
   }
 
-  if (!financingRoute.hasAcquisitionOrProposedFinancingText && currentDebtSignals >= 2 && has(['MORTGAGE', 'PRINCIPAL', 'LENDER', 'MORTGAGEE', 'PAYMENT', 'MATURITY'])) {
+  if (!evaluatedFinancingRoute.hasAcquisitionOrProposedFinancingText && currentDebtSignals >= 2 && has(['MORTGAGE', 'PRINCIPAL', 'LENDER', 'MORTGAGEE', 'PAYMENT', 'MATURITY'])) {
     return 'mortgage_statement';
   }
 
