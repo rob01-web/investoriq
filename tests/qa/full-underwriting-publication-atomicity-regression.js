@@ -88,20 +88,20 @@ includes(
   "'report_quality_manifest_finalize_failed'",
   'Manifest finalization recovery route'
 );
-includes(
+excludes(
   worker,
   'update({ report_credits: currentCredits })',
-  'secondary credit compare-and-set update'
+  'secondary profile-credit mutation'
 );
-includes(
+excludes(
   worker,
   ".eq('report_credits', currentCredits - 1)",
-  'secondary credit compare-and-set predicate'
+  'secondary profile-credit predicate'
 );
 includes(
   worker,
-  "state: creditResult.error ? 'secondary_reconciliation_required' : 'reconciled'",
-  'Manifest secondary credit reconciliation state'
+  "authority: 'report_purchases'",
+  'Manifest authoritative admission entitlement state'
 );
 
 // Phase 2 SQL is the sole atomic publication authority.

@@ -1,11 +1,13 @@
 # InvestorIQ Operations / Recovery Runbook
 
 **Status:** Current operations authority
-**Date:** 2026-08-18
+**Date:** 2026-08-30
 
 ## Scheduler
 
 Production automatic scheduler: Supabase Cron / `pg_net` job `investoriq-admin-run-worker`, normally scheduled `*/3 * * * *`.
+
+`worker_scheduler_authority` is the repository-owned singleton registry. Its only valid authority is `supabase_cron_pg_net`; `vercel.json` contains no cron and `.github/workflows/worker-kick.yml` remains manual emergency fallback only. The registry is deliberately written with `enabled = false` until the owner authorizes the production activation and certification window.
 
 ### Temporary Vercel-preservation doctrine
 
@@ -23,6 +25,8 @@ Until the owner explicitly lifts the freeze:
 ## Worker lifecycle
 
 Worker lifecycle/recovery must remain bounded and lineage-aware. No recovery path may recreate the historical unbounded retry loop.
+
+The lifetime ceiling is three base attempts plus at most three explicitly authorized recovery attempts. An exhausted requeue becomes `dead_letter` immediately and restores the exact consumed `report_purchases` row once when no publication receipt exists.
 
 Operational failure jurisdictions:
 

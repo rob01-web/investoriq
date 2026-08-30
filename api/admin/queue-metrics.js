@@ -847,7 +847,8 @@ function buildFixQueueDetails({
       original_filename: file?.original_filename || null,
       parse_status: file?.parse_status || null,
       parse_error: file?.parse_error || null,
-      created_at: file?.created_at || null,
+      uploaded_at: file?.uploaded_at || null,
+      created_at: file?.uploaded_at || null,
     })),
     qa: {
       delivery_gate_status: deliveryGate?.delivery_gate_status || fixQueueRow?.delivery_gate_status || null,
@@ -1168,9 +1169,9 @@ export default async function handler(req, res) {
         } else {
           const { data: detailFiles } = await supabaseAdmin
             .from('analysis_job_files')
-            .select('id, doc_type, original_filename, parse_status, parse_error, created_at')
+            .select('id, doc_type, original_filename, parse_status, parse_error, uploaded_at')
             .eq('job_id', fixQueueJobId)
-            .order('created_at', { ascending: false })
+            .order('uploaded_at', { ascending: false })
             .limit(20);
 
           const { data: detailArtifacts } = await supabaseAdmin

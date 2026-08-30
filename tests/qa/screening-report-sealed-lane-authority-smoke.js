@@ -13,7 +13,8 @@ assert.equal(reportSource.includes("runScreeningReportPipeline"), false, "Public
 assert.equal(reportSource.includes("screeningReportRenderer"), false, "Public route must not own Screening rendering authority");
 assert.equal(reportSource.includes("__test__"), false, "Public route must not expose __test__");
 
-assert.match(handlerSource, /import implHandler from "\.\/generate-client-report-impl\.js";/);
+assert.match(handlerSource, /import\("\.\/generate-client-report-impl\.js"\)/);
+assert.match(handlerSource, /runCanonicalReportRenderer/);
 assert.match(handlerSource, /export default async function handler\(req, res\)/);
 assert.equal(handlerSource.includes("runScreeningReportPipeline"), false, "Handler wrapper must not own Screening pipeline authority");
 assert.equal(handlerSource.includes("screeningReportRenderer"), false, "Handler wrapper must not own Screening rendering authority");

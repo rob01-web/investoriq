@@ -20,13 +20,25 @@ const allowedFiles = new Set([
   'supabase/migrations/20260729000200_h6_worker_claim_lease_fencing.sql',
   'supabase/migrations/20260814000100_transition_worker_job_release_queued_ownership.sql',
   'api/_lib/generate-client-report-impl.js',
+  'api/_lib/generate-client-report-handler.js',
   'api/admin-run-worker.js',
+  'api/admin/queue-metrics.js',
   'api/admin/run-eligible-jobs-once.js',
   'src/pages/AdminDashboard.jsx',
   'tests/qa/core-publication-recovery-smoke.js',
+  'tests/qa/delivery-decision-state-smoke.js',
   'tests/qa/docraptor-provider-error-observability-smoke.js',
+  'tests/qa/full-underwriting-publication-atomicity-regression.js',
   'tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js',
   'tests/qa/h6-worker-claim-lease-fencing-smoke.js',
+  'tests/qa/h8-entitlement-restoration-event-smoke.js',
+  'tests/qa/phase3-worker-render-recovery-contract-smoke.js',
+  'tests/qa/report-publication-authority-boundary-smoke.js',
+  'tests/qa/report-quality-manifest-smoke.js',
+  'tests/qa/screening-report-sealed-lane-authority-smoke.js',
+  'supabase/migrations/20260830183000_phase3_worker_runtime_recovery_authority.sql',
+  'docs/PHASE3_WORKER_RENDER_RUNTIME_RECOVERY_AUTHORITY_2026-08-30.md',
+  'docs/OPERATIONS_RECOVERY_RUNBOOK.md',
   'docs/STATUS.md',
   'docs/ROADMAP.md',
   '!INVESTORIQ_CURRENT_GAMEPLAN_HANDOFF_UPDATED_2026-07-28.md',
@@ -54,7 +66,7 @@ assert.match(migrationSource, /failure_reason = case[\s\S]*when p_next_status = 
 
 assert.match(workerSource, /assertCurrentWorkerInvocationOwnership/);
 assert.match(workerSource, /rpc\('claim_worker_job'/);
-assert.match(workerSource, /rpc\('claim_next_worker_job'/);
+assert.doesNotMatch(workerSource, /rpc\('claim_next_worker_job'/);
 assert.match(workerSource, /rpc\('renew_worker_lease'/);
 assert.match(workerSource, /rpc\('transition_worker_job'/);
 assert.match(workerSource, /rpc\('fail_expired_worker_job'/);
@@ -68,17 +80,17 @@ assert.match(workerSource, /\.lte\('worker_lease_expires_at', nowIso\)/);
 assert.match(workerSource, /p_claimed_by: job\.worker_claimed_by \|\| null/);
 assert.match(workerSource, /transitionWorkerJob\(job, 'rendering', 'pdf_generating'/);
 assert.match(workerSource, /transitionWorkerJob\(job, 'pdf_generating', 'publishing'/);
-assert.match(workerSource, /transitionWorkerJob\(job, 'publishing', 'published'/);
-assert.match(workerSource, /\/\/ const completeUpdate = \{ status: 'published' \};/);
+assert.doesNotMatch(workerSource, /transitionWorkerJob\(job, 'publishing', 'published'/);
+assert.match(workerSource, /finalize_worker_publication_v2/);
 assert.equal(/claim_and_consume_job/.test(workerSource), false);
 
 assert.match(migrationSource, /and j\.worker_claimed_by = v_claimed_by/i);
 assert.equal(/worker_claimed_by\s*=\s*coalesce\(/i.test(migrationSource), false);
 
-assert.match(runnerSource, /rpc\('claim_next_worker_job'/);
-assert.match(runnerSource, /rpc\('requeue_worker_job'/);
-assert.match(runnerSource, /worker_attempt_id/);
-assert.match(runnerSource, /worker_lease_expires_at/);
+assert.doesNotMatch(runnerSource, /rpc\('claim_next_worker_job'/);
+assert.doesNotMatch(runnerSource, /rpc\('requeue_worker_job'/);
+assert.match(runnerSource, /begin_worker_recovery_episode/);
+assert.match(runnerSource, /claimant: false/);
 
 assert.match(dashboardSource, /dead_letter/);
 assert.match(dashboardSource, /Requeue dead-letter job/);

@@ -515,9 +515,9 @@ const phase2PublicationMigrationSource = fs.readFileSync(
 assert.match(generatorSource, /buildReportQualityManifestCandidate/);
 assert.match(generatorSource, /type:\s*"report_quality_manifest_candidate"/);
 assert.equal(
-  (generatorSource.match(/report_quality_manifest_candidate:\s*reportQualityManifestCandidate/g) || []).length,
+  (generatorSource.match(/report_quality_manifest_candidate:\s*(?:reportQualityManifestCandidate|rendererManifestCandidate)/g) || []).length,
   3,
-  "Screening, blocked Acquisition, and published Acquisition responses must carry the Manifest candidate"
+  "Screening, blocked Acquisition, and worker-owned Acquisition renderer responses must carry the Manifest candidate"
 );
 assert.match(workerSource, /finalizeReportQualityManifest/);
 assert.match(workerSource, /finalizeBlockedReportQualityManifest/);
@@ -528,9 +528,7 @@ assert.doesNotMatch(
   /transitionWorkerJob\(job,\s*['"]publishing['"],\s*['"]published['"]/
 );
 
-const creditReconciliationIndex = workerSource.indexOf(
-  "const creditResult = await consumeCreditOnce(job)"
-);
+const entitlementLineageIndex = workerSource.indexOf(".from('report_purchases')");
 const manifestCandidateIndex = workerSource.indexOf(
   "let manifestCandidate = reportData?.report_quality_manifest_candidate"
 );
@@ -547,17 +545,17 @@ const publicationCommitReadyIndex = workerSource.indexOf(
   atomicPublicationIndex
 );
 
-assert.notEqual(creditReconciliationIndex, -1, "Credit reconciliation must remain wired before publication finalization");
+assert.notEqual(entitlementLineageIndex, -1, "Admission-consumed entitlement lineage must be verified before publication finalization");
 assert.notEqual(manifestCandidateIndex, -1, "Publication path must resolve the Report Quality Manifest candidate");
 assert.notEqual(manifestFinalizeIndex, -1, "Worker must finalize the Report Quality Manifest payload before atomic publication");
 assert.notEqual(atomicPublicationIndex, -1, "Worker must delegate publication to finalize_worker_publication_v2");
 assert.notEqual(publicationCommitReadyIndex, -1, "Publication path must seal publicationCommitReady only after the atomic commit returns");
 assert.ok(
-  creditReconciliationIndex < manifestCandidateIndex &&
+  entitlementLineageIndex < manifestCandidateIndex &&
     manifestCandidateIndex < manifestFinalizeIndex &&
     manifestFinalizeIndex < atomicPublicationIndex &&
     atomicPublicationIndex < publicationCommitReadyIndex,
-  "Phase 2 publication ordering requires credit reconciliation, Manifest finalization, atomic publication, then commit readiness"
+  "Publication ordering requires entitlement verification, Manifest finalization, atomic publication, then commit readiness"
 );
 
 const manifestPersistenceIndex = phase2PublicationMigrationSource.indexOf(

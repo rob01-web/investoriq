@@ -309,6 +309,7 @@ const generatorWrapperSource = fs.readFileSync("api/generate-client-report.js", 
 const generatorHandlerSource = fs.readFileSync("api/_lib/generate-client-report-handler.js", "utf8");
 const generatorImplSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const deliveryOutputSource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
+const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 
 // Public route remains a thin wrapper; implementation authority lives behind it.
 assert.match(generatorWrapperSource, /generate-client-report-handler\.js/);
@@ -320,7 +321,7 @@ assert.match(generatorImplSource, /payload:\s*\{[\s\S]*deliveryDecisionState:/);
 assert.match(generatorImplSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(blockedDecisionState\)/);
 assert.match(generatorImplSource, /const deliveryAliases = buildDeliveryResponseCompatibilityAliases\(canonicalDeliveryDecisionState\)/);
 assert.match(generatorImplSource, /deliveryGateDecisionResult\?\.delivery_gate_status === "user_needs_documents" &&[\s\S]{0,180}deliveryDecisionStateResult\?\.core_valid_required_coverage !== true/);
-assert.match(generatorImplSource, /coreValidRequiredCoverage: Boolean\(canonicalDeliveryDecisionState\?\.core_valid_required_coverage\)/);
+assert.match(workerSource, /coreValidRequiredCoverage = hasCanonical[\s\S]*core_valid_required_coverage === true/);
 
 // Compatibility aliases are centralized in report-delivery-output.js.
 assert.match(deliveryOutputSource, /export function buildDeliveryResponseCompatibilityAliases\(/);

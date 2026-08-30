@@ -8,6 +8,7 @@ import { resolveReportSurfaceState } from "../../src/lib/reportSurfaceState.js";
 const candidateRow = {
   id: "report-candidate",
   status: "rendering",
+  publication_state: "unpublished",
   storage_path: "user-1/report-candidate.pdf",
   revision_kind: "original",
   revision_number: 1,
@@ -20,6 +21,7 @@ const candidateRow = {
 const currentPublishedRow = {
   id: "report-current",
   status: "published",
+  publication_state: "published",
   storage_path: "user-1/report-current.pdf",
   revision_kind: "original",
   revision_number: 1,
@@ -33,6 +35,7 @@ const currentPublishedRow = {
 const historicalPublishedRow = {
   id: "report-historical",
   status: "published",
+  publication_state: "historical_published",
   storage_path: "user-1/report-historical.pdf",
   revision_kind: "corrected",
   revision_number: 2,
@@ -47,6 +50,7 @@ const historicalPublishedRow = {
 const failedRestoredRow = {
   id: "report-failed",
   status: "failed",
+  publication_state: "unpublished",
   storage_path: "user-1/report-failed.pdf",
   revision_kind: "replacement",
   revision_number: 3,

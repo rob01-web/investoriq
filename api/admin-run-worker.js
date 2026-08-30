@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'node:crypto';
 import { sendEmailResend } from '../lib/email-resend.js';
 import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
 import { classifyTerminalFailureCode } from '../lib/terminal-failure-taxonomy.js';
@@ -16,10 +17,26 @@ import {
 import {
   createConstitutionalWorkerLifecycle,
 } from './_lib/worker-constitutional-lifecycle.js';
+import { runCanonicalReportRenderer } from './_lib/generate-client-report-handler.js';
 
 const safeTimestamp = (iso) => (iso || '').replace(/:/g, '-');
 const normalizeAuditText = (value) => String(value || '').toLowerCase();
 const hasPattern = (text, pattern) => pattern.test(text);
+const WORKER_RUNTIME_BUDGET_SECONDS = 270;
+const WORKER_RENDER_TIMEOUT_MS = 210_000;
+const WORKER_FETCH_TIMEOUT_MS = 50_000;
+const WORKER_LEASE_HEARTBEAT_MS = 45_000;
+const WORKER_MIN_RENDER_WINDOW_SECONDS = 225;
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = WORKER_FETCH_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 export const analyzeCoreParserRejectionTextSignals = ({ docType, text, parseError, providerUnavailable = false }) => {
   const source = normalizeAuditText(text);
@@ -301,8 +318,9 @@ export default async function handler(req, res) {
 
     const now = new Date();
     let nowIso = now.toISOString();
-    const workerInvocationId = safeTimestamp(nowIso);
-    const jobLimit = Math.max(1, Number(req.headers['x-job-limit'] || req.query?.limit || 25));
+    const workerInvocationId = `worker-${safeTimestamp(nowIso)}-${crypto.randomUUID()}`;
+    const requestedJobLimit = Number(req.headers['x-job-limit'] || req.query?.limit || 1);
+    const jobLimit = Math.max(1, Math.min(Number.isFinite(requestedJobLimit) ? requestedJobLimit : 1, 3));
     const timeoutCutoff = new Date(now.getTime() - 60 * 60 * 1000);
     const inProgressStatuses = [
       'queued',
@@ -538,33 +556,14 @@ export default async function handler(req, res) {
 
     const handoffTimedOutWorkerJob = async (job, meta = {}) => {
       const currentAttemptId = job?.worker_attempt_id || null;
-      const { data: handoffRows, error: handoffErr } = await supabaseAdmin
-        .from('analysis_jobs')
-        .update({
-          status: 'queued',
-          started_at: null,
-          worker_attempt_id: null,
-          worker_lease_expires_at: null,
-          worker_claimed_at: null,
-          worker_last_heartbeat_at: null,
-          worker_claimed_by: null,
-          dead_lettered_at: null,
-          error_code: null,
-          error_message: null,
-          failure_reason: null,
-        })
-        .eq('id', job.id)
-        .eq('worker_attempt_id', currentAttemptId)
-        .eq('worker_claimed_by', workerInvocationId)
-        .select('id, status, worker_attempt_id, worker_claimed_by, worker_lease_expires_at')
-        .maybeSingle();
-
-      if (handoffErr) {
-        throw new Error(`Failed to yield worker lease for timebox handoff: ${handoffErr.message}`);
-      }
+      const currentStatus = String(job?.status || 'extracting');
+      const handoffRows = await transitionWorkerJob(job, currentStatus, 'queued', {
+        reason: 'worker_timebox_defer',
+        ...meta,
+      });
 
       if (!handoffRows?.id) {
-        await writeStaleWorkerAttemptEvent(job, currentAttemptId, job?.status || 'unknown', {
+        await writeStaleWorkerAttemptEvent(job, currentAttemptId, currentStatus, {
           reason: 'timebox_handoff_rejected',
           ...meta,
         });
@@ -573,7 +572,7 @@ export default async function handler(req, res) {
 
       const transitionErr = await writeStatusTransitionArtifact(
         job.id,
-        'extracting',
+        currentStatus,
         'queued',
         {
           user_id: job.user_id,
@@ -598,7 +597,7 @@ export default async function handler(req, res) {
         },
         eventType: 'worker_timebox_defer',
         attemptId: currentAttemptId,
-        fromStatus: 'extracting',
+          fromStatus: currentStatus,
         toStatus: 'queued',
         meta: {
           ...meta,
@@ -663,6 +662,41 @@ export default async function handler(req, res) {
       }
 
       return renewedRow;
+    };
+
+    const runWithWorkerLeaseHeartbeat = async (job, operation) => {
+      await renewWorkerLeaseForJob(job);
+      let heartbeatInFlight = false;
+      let heartbeatError = null;
+      const heartbeatTimer = setInterval(async () => {
+        if (heartbeatInFlight || heartbeatError) return;
+        heartbeatInFlight = true;
+        try {
+          await renewWorkerLeaseForJob(job);
+        } catch (error) {
+          heartbeatError = error;
+        } finally {
+          heartbeatInFlight = false;
+        }
+      }, WORKER_LEASE_HEARTBEAT_MS);
+
+      let timeoutTimer = null;
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutTimer = setTimeout(() => {
+            const error = new Error('Canonical report renderer exceeded the worker render budget');
+            error.code = 'REPORT_RENDER_TIMEOUT';
+            reject(error);
+          }, WORKER_RENDER_TIMEOUT_MS);
+        });
+        const result = await Promise.race([operation(), timeoutPromise]);
+        if (heartbeatError) throw heartbeatError;
+        await renewWorkerLeaseForJob(job);
+        return result;
+      } finally {
+        clearInterval(heartbeatTimer);
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+      }
     };
 
     const transitionWorkerJob = async (job, fromStatus, toStatus, meta = {}) => {
@@ -980,107 +1014,6 @@ export default async function handler(req, res) {
       return terminalFailureResult;
     };
 
-    const hasCreditConsumed = async (jobId) => {
-      const { data, error } = await supabaseAdmin
-        .from('analysis_artifacts')
-        .select('id')
-        .eq('job_id', jobId)
-        .eq('type', 'credit_consumed')
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        return { error };
-      }
-
-      return { consumed: !!data?.id };
-    };
-
-    const consumeCreditOnce = async (job) => {
-      const { consumed, error: consumedErr } = await hasCreditConsumed(job.id);
-      if (consumedErr) {
-        return { error: consumedErr };
-      }
-      if (consumed) {
-        return { skipped: true };
-      }
-
-      const { data: profileRow, error: profileErr } = await supabaseAdmin
-        .from('profiles')
-        .select('report_credits')
-        .eq('id', job.user_id)
-        .single();
-
-      if (profileErr || !profileRow) {
-        return { error: profileErr || new Error('Missing profile') };
-      }
-
-      const currentCredits = Number(profileRow.report_credits ?? 0);
-      if (currentCredits < 1) {
-        // Entitlement is already consumed via report_purchases.consumed_at at job creation.
-        // profiles.report_credits is a secondary counter that is never auto-incremented;
-        // failing a successfully-published job here is wrong. Skip silently.
-        console.warn(`[worker] report_credits=0 for user ${job.user_id} on job ${job.id}; entitlement pre-consumed via purchase. Skipping decrement.`);
-        return { skipped: true };
-      }
-
-      const { data: creditRow, error: creditErr } = await supabaseAdmin
-        .from('profiles')
-        .update({ report_credits: currentCredits - 1 })
-        .eq('id', job.user_id)
-        .eq('report_credits', currentCredits)
-        .select('report_credits')
-        .single();
-
-      if (creditErr || !creditRow) {
-        return { error: creditErr || new Error('Credit decrement failed') };
-      }
-
-      const { error: artifactErr } = await supabaseAdmin.from('analysis_artifacts').insert([
-        {
-          job_id: job.id,
-          user_id: job.user_id,
-          type: 'credit_consumed',
-          bucket: 'system',
-          object_path: `analysis_jobs/${job.id}/credit/consumed/${safeTimestamp(nowIso)}.json`,
-          payload: {
-            before: currentCredits,
-            after: currentCredits - 1,
-            timestamp: nowIso,
-          },
-        },
-      ]);
-
-      if (artifactErr) {
-        const { data: compensationRow, error: compensationErr } = await supabaseAdmin
-          .from('profiles')
-          .update({ report_credits: currentCredits })
-          .eq('id', job.user_id)
-          .eq('report_credits', currentCredits - 1)
-          .select('report_credits')
-          .maybeSingle();
-
-        if (!compensationErr && Number(compensationRow?.report_credits) === currentCredits) {
-          return { error: artifactErr, compensated: true };
-        }
-
-        const reconciliationError = new Error(
-          'Credit receipt persistence failed after decrement and compensating rollback was not confirmed'
-        );
-        reconciliationError.code = 'CREDIT_RECONCILIATION_REQUIRED';
-        reconciliationError.context = {
-          artifact_error: artifactErr?.message || String(artifactErr),
-          compensation_error: compensationErr?.message || null,
-          expected_before: currentCredits,
-          expected_after: currentCredits - 1,
-          observed_after_compensation: compensationRow?.report_credits ?? null,
-        };
-        return { error: reconciliationError, compensated: false, reconciliationRequired: true };
-      }
-
-      return { ok: true };
-    };
-
     const requeuePublicationCommitFailure = async (job, reason, meta = {}) => {
       const queuedUpdate = await transitionWorkerJob(job, 'publishing', 'queued', {
         reason,
@@ -1090,7 +1023,7 @@ export default async function handler(req, res) {
         ...meta,
       });
 
-      if (!queuedUpdate?.id) {
+      if (!queuedUpdate?.id || String(queuedUpdate.status || '').toLowerCase() !== 'queued') {
         return null;
       }
 
@@ -2181,7 +2114,7 @@ export default async function handler(req, res) {
     const rollupWrittenJobIds = new Set();
     let passesRun = 0;
     const maxPasses = 10;
-    const maxSeconds = 55;
+    const maxSeconds = WORKER_RUNTIME_BUDGET_SECONDS;
     const startTime = Date.now();
     const baseUrl = (process.env.PUBLIC_SITE_URL || 'https://investoriq.tech').replace(/\/$/, '');
 
@@ -2212,8 +2145,7 @@ export default async function handler(req, res) {
             const { data: claimRows, error: claimErr } = await supabaseAdmin
               .rpc('claim_worker_job', { p_job_id: job.id, p_claimed_by: workerInvocationId });
 
-            // claim_next_worker_job is the eligible-job runner authority.
-            // rpc('claim_next_worker_job') remains the repository-defined eligible-job claim RPC.
+            // Every queue candidate is fenced through the exact-job claim authority.
             claimedJob = Array.isArray(claimRows) ? claimRows[0] : claimRows;
 
             if (claimErr || !claimedJob?.id) {
@@ -2445,7 +2377,7 @@ export default async function handler(req, res) {
             return (dt === 'rent_roll' || dt === 't12') && isCoreReparableStatus(file.parse_status);
           });
           const extractionAlreadySatisfied =
-            hasRentRollParsedPrecheck && hasT12ParsedPrecheck && !hasPendingStructuredPrecheck;
+            (hasRentRollParsedPrecheck || hasT12ParsedPrecheck) && !hasPendingStructuredPrecheck;
 
           const startedCheck = await hasWorkerEvent(job.id, 'extracting_started');
           if (startedCheck?.error) {
@@ -2467,7 +2399,7 @@ export default async function handler(req, res) {
             : forwardedKey || process.env.ADMIN_RUN_KEY || '';
 
           if (!extractionAlreadySatisfied) {
-            const extractTextRes = await fetch(`${baseUrl}/api/parse/extract-job-text`, {
+            const extractTextRes = await fetchWithTimeout(`${baseUrl}/api/parse/extract-job-text`, {
               method: 'POST',
               headers: parserHeaders,
               body: JSON.stringify({ jobId: job.id }),
@@ -2524,7 +2456,7 @@ export default async function handler(req, res) {
                     : ['supporting', 'supporting_documents_ui'].includes(String(file.doc_type || '').toLowerCase())
                     ? 'supporting_documents'
                     : file.doc_type;
-                const supportingRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                const supportingRes = await fetchWithTimeout(`${baseUrl}/api/parse/parse-doc`, {
                   method: 'POST',
                   headers: parserHeaders,
                   body: JSON.stringify({ job_id: job.id, file_id: file.id, doc_type: dispatchDocType }),
@@ -2714,7 +2646,7 @@ export default async function handler(req, res) {
                         .update({ parse_status: 'pending', parse_error: null })
                         .eq('id', pendingFile.id);
                     }
-                    const rentRollRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                    const rentRollRes = await fetchWithTimeout(`${baseUrl}/api/parse/parse-doc`, {
                       method: 'POST',
                       headers: parserHeaders,
                       body: JSON.stringify({
@@ -2764,7 +2696,7 @@ export default async function handler(req, res) {
                         .update({ parse_status: 'pending', parse_error: null })
                         .eq('id', pendingFile.id);
                     }
-                    const t12Res = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                    const t12Res = await fetchWithTimeout(`${baseUrl}/api/parse/parse-doc`, {
                       method: 'POST',
                       headers: parserHeaders,
                       body: JSON.stringify({
@@ -2812,7 +2744,7 @@ export default async function handler(req, res) {
                     return dt === supportingDocType && isPending;
                   });
                   for (const pendingFile of pendingSupportingFiles) {
-                    const supportRes = await fetch(`${baseUrl}/api/parse/parse-doc`, {
+                    const supportRes = await fetchWithTimeout(`${baseUrl}/api/parse/parse-doc`, {
                       method: 'POST',
                       headers: parserHeaders,
                       body: JSON.stringify({
@@ -3154,6 +3086,20 @@ export default async function handler(req, res) {
             throw new Error(`Failed to write status transition artifact: ${scoringTransitionErr.message}`);
           }
 
+          const renderWindowRemainingSeconds = maxSeconds - (Date.now() - startTime) / 1000;
+          if (renderWindowRemainingSeconds < WORKER_MIN_RENDER_WINDOW_SECONDS) {
+            await handoffTimedOutWorkerJob({ ...job, status: 'rendering' }, {
+              invocation_id: workerInvocationId,
+              stage: 'rendering',
+              prior_status: 'rendering',
+              reason: 'insufficient_render_window',
+              remaining_seconds: renderWindowRemainingSeconds,
+              timestamp: nowIso,
+            });
+            deferredJobIds.add(job.id);
+            continue;
+          }
+
           const { data: parsedFiles, error: parsedFilesErr } = await supabaseAdmin
             .from('analysis_job_files')
             .select('doc_type')
@@ -3390,7 +3336,7 @@ export default async function handler(req, res) {
           let reportId = null;
           let storagePath = null;
           let reportData = null;
-          let generatorSource = 'generate-client-report';
+          let generatorSource = 'internal_canonical_renderer';
           let generatorError = null;
           let generatorErrorCode = 'REPORT_RENDER_FAILED';
           let generatorFailurePayload = null;
@@ -3400,43 +3346,6 @@ export default async function handler(req, res) {
           if (!job.user_id) {
             generatorError = 'Missing user_id for report generation.';
           }
-
-          if (job.user_id) {
-  const reportQuery = supabaseAdmin
-    .from('reports')
-    .select('id, storage_path, created_at, report_type')
-    .eq('user_id', job.user_id);
-
-  if (job.property_name) {
-    reportQuery.eq('property_name', job.property_name);
-  }
-
-  if (job.report_type) {
-    reportQuery.eq('report_type', job.report_type);
-  }
-
-  if (job.created_at) {
-    reportQuery.gte('created_at', job.created_at);
-  }
-
-  const { data: existingReports, error: reportErr } = await reportQuery
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (reportErr) {
-    throw new Error(`Failed to check existing reports: ${reportErr.message}`);
-  }
-
-  if (existingReports && existingReports.length > 0) {
-    reportId = existingReports[0].id || null;
-    storagePath =
-      existingReports[0].storage_path ||
-      (reportId ? buildReportStoragePath({ effectiveUserId: job.user_id, reportSeed: reportId }) : null);
-    if (reportId || storagePath) {
-      generatorSource = 'existing_report';
-    }
-  }
-}
 
           if (!reportData) {
             if (!baseUrl) {
@@ -3461,27 +3370,23 @@ export default async function handler(req, res) {
                 ? forwardedKey[0]
                 : forwardedKey || process.env.ADMIN_RUN_KEY || '';
 
-              const fetchUrl = `${baseUrl}/api/generate-client-report`;
-              const reportRes = await fetch(fetchUrl, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
+              const fetchUrl = 'internal:canonical-report-renderer';
+              const reportRes = await runWithWorkerLeaseHeartbeat(job, () =>
+                runCanonicalReportRenderer({
+                  headers,
+                  body: {
                   userId: job.user_id,
                   property_name: job.property_name,
                   jobId: job.id,
                   supporting_documents: renderSupportingDocs,
-                }),
-              });
+                  },
+                })
+              );
 
               if (!reportRes.ok) {
-                const rawText = await reportRes.text();
-                let failureBody = null;
-                try {
-                  failureBody = JSON.parse(rawText);
-                  generatorErrorCode = String(failureBody?.error_code || generatorErrorCode);
-                } catch {
-                  generatorErrorCode = 'REPORT_RENDER_FAILED';
-                }
+                const failureBody = reportRes.payload || null;
+                const rawText = JSON.stringify(failureBody || {});
+                generatorErrorCode = String(failureBody?.error_code || generatorErrorCode);
                 const providerDiagnostics = failureBody?.diagnostics?.provider_diagnostics || null;
                 const providerDiagnosticsByAttempt =
                   failureBody?.diagnostics?.provider_diagnostics_by_attempt || null;
@@ -3504,7 +3409,7 @@ export default async function handler(req, res) {
                   generatorError = `Report generation failed (${reportRes.status})`;
                 }
               } else {
-                reportData = await reportRes.json().catch(() => ({}));
+                reportData = reportRes.payload || {};
                 const resolvedDeliveryDecision = resolveWorkerDeliveryDecision(reportData);
                 const publicationRetryRequired =
                   reportData?.publication_state === 'recovery_required' ||
@@ -3957,33 +3862,6 @@ export default async function handler(req, res) {
             throw new Error('Delivery gate blocked before published');
           }
 
-          const creditResult = await consumeCreditOnce(job);
-          if (creditResult.error) {
-            const creditEventErr = await writeWorkerEventArtifact(
-              job.id,
-              job.user_id,
-              'credit_reconciliation_required',
-              {
-                code: 'CREDIT_RECONCILIATION_REQUIRED',
-                internal_only: true,
-                customer_delivery_unchanged: true,
-                report_id: reportId,
-                storage_path: storagePath,
-                compensated: creditResult.compensated === true,
-                reconciliation_required: creditResult.reconciliationRequired === true,
-                error: creditResult.error?.message || String(creditResult.error),
-                context: creditResult.error?.context || null,
-                timestamp: nowIso,
-              }
-            );
-            if (creditEventErr) {
-              console.error(
-                `[worker] Failed to write credit reconciliation event for job ${job.id}:`,
-                creditEventErr.message
-              );
-            }
-          }
-
           let manifestCandidate = reportData?.report_quality_manifest_candidate || null;
           if (!manifestCandidate) {
             try {
@@ -4002,7 +3880,7 @@ export default async function handler(req, res) {
                   error: String(manifestLookupErr?.message || manifestLookupErr || ''),
                 }
               );
-              if (queuedUpdate?.id) {
+              if (String(queuedUpdate?.status || '').toLowerCase() === 'queued') {
                 transitions.push({
                   job_id: job.id,
                   from_status: 'publishing',
@@ -4041,7 +3919,7 @@ export default async function handler(req, res) {
               'report_quality_manifest_candidate_missing',
               { report_id: reportId, storage_path: storagePath }
             );
-            if (queuedUpdate?.id) {
+            if (String(queuedUpdate?.status || '').toLowerCase() === 'queued') {
               transitions.push({
                 job_id: job.id,
                 from_status: 'publishing',
@@ -4068,12 +3946,13 @@ export default async function handler(req, res) {
               finalPdfPublicationQualityBoss: publicationQualityBoss,
               publicationState: 'published',
               creditState: {
-                state: creditResult.error ? 'secondary_reconciliation_required' : 'reconciled',
-                consumed: creditResult.ok === true,
-                previouslyConsumedOrPrepaid: creditResult.skipped === true,
-                compensated: creditResult.compensated === true,
-                reconciliationRequired: creditResult.reconciliationRequired === true,
-                error: creditResult.error?.message || null,
+                state: 'consumed_at_admission',
+                authority: 'report_purchases',
+                consumed: true,
+                previouslyConsumedOrPrepaid: true,
+                compensated: false,
+                reconciliationRequired: false,
+                error: null,
               },
               remedyState: { state: 'not_required' },
               finalizedAt: nowIso,
@@ -4117,7 +3996,7 @@ export default async function handler(req, res) {
                 error: String(manifestErr?.message || manifestErr || ''),
               }
             );
-            if (queuedUpdate?.id) {
+            if (String(queuedUpdate?.status || '').toLowerCase() === 'queued') {
               transitions.push({
                 job_id: job.id,
                 from_status: 'publishing',

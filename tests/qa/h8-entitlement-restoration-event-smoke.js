@@ -9,7 +9,7 @@ const workerUrl = pathToFileURL(workerPath).href;
 
 const fixedNowIso = '2026-07-30T12:00:00.000Z';
 const fixedNowMs = Date.parse(fixedNowIso);
-const fixedWorkerInvocationId = fixedNowIso.replace(/:/g, '-');
+const fixedWorkerInvocationId = `worker-${fixedNowIso.replace(/:/g, '-')}-h8-test-invocation`;
 
 const realDate = Date;
 class FixedDate extends realDate {
@@ -37,6 +37,10 @@ function patchWorkerSource(source, { exposeRestoreHelper = false, throwAfterExpo
       "import { createClient } from '@supabase/supabase-js';",
       "const createClient = globalThis.__h8CreateClient;"
     )
+    .replace(
+      "import crypto from 'node:crypto';",
+      "const crypto = { randomUUID: () => 'h8-test-invocation' };"
+    )
     .replaceAll("../lib/email-resend.js", toFileUrl('lib/email-resend.js'))
     .replaceAll("./_lib/validator-diagnostics-rollup.js", toFileUrl('api/_lib/validator-diagnostics-rollup.js'))
     .replaceAll("../lib/terminal-failure-taxonomy.js", toFileUrl('lib/terminal-failure-taxonomy.js'))
@@ -44,7 +48,8 @@ function patchWorkerSource(source, { exposeRestoreHelper = false, throwAfterExpo
     .replaceAll("./_lib/report-quality-manifest.js", toFileUrl('api/_lib/report-quality-manifest.js'))
     .replaceAll("./_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js'))
     .replaceAll("./_lib/premium-acquisition-underwriting-v1-external-certification.js", toFileUrl('api/_lib/premium-acquisition-underwriting-v1-external-certification.js'))
-    .replaceAll("./_lib/worker-constitutional-lifecycle.js", toFileUrl('api/_lib/worker-constitutional-lifecycle.js'));
+    .replaceAll("./_lib/worker-constitutional-lifecycle.js", toFileUrl('api/_lib/worker-constitutional-lifecycle.js'))
+    .replaceAll("./_lib/generate-client-report-handler.js", toFileUrl('api/_lib/generate-client-report-handler.js'));
 
   if (exposeRestoreHelper) {
     patched = patched.replace(

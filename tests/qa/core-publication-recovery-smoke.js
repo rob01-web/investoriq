@@ -973,6 +973,7 @@ assert.ok(callerGuardIdx > 0, "recordJobFailure caller must inspect terminalAppl
 assert.ok(callerFinalizeIdx > callerGuardIdx, "blocked-manifest bookkeeping must remain after the guard");
 
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
+const deliveryOutputSource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
 const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 const shouldRetryPublicationRecovery = (publicationState, publicationQualityBoss) =>
   publicationState === "recovery_required" &&
@@ -996,9 +997,11 @@ assert.equal(
   }),
   true
 );
-assert.match(generatorSource, /publication_state: "recovery_required"/);
-assert.match(generatorSource, /report_record_creation_failed/);
-assert.match(generatorSource, /const boundedRecoveryRequiresRetry =[\s\S]*!isFinalPdfCustomerDeliveryAllowed\(finalPdfPublicationQualityBossResult\)/);
+assert.match(generatorSource, /renderer_ownership: "worker_artifact_authority"/);
+assert.doesNotMatch(generatorSource, /requestDocRaptorPdf/);
+assert.match(deliveryOutputSource, /publicationState = "recovery_required"/);
+assert.match(deliveryOutputSource, /storage_upload_failed/);
+assert.match(deliveryOutputSource, /runBoundedPdfCertificationRecovery/);
 assert.match(workerSource, /recoverExpiredPublishableJob\(\{\s*job: controlJob/);
 assert.match(workerSource, /recoverExpiredPublishableJob\(\{\s*job,\s*currentStatus: job\.status/);
 const renderingSourceTruthLoadIdx = workerSource.indexOf("const sourceTruthPackage = await loadLatestArtifactPayload(job.id, 'source_truth_package');");
