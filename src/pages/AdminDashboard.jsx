@@ -384,11 +384,17 @@ export default function AdminDashboard() {
         return s + (p.product_type === 'underwriting' ? 149900 : 49900);
       }, 0);
 
-      // Reports today
+      // Reports today from the governed admin projection.
       const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-      const { count: rptToday } = await supabase
-        .from('reports').select('id', { count:'exact', head:true })
-        .gte('created_at', startOfDay.toISOString());
+      let rptToday = 0;
+      if (adminRunKey.trim()) {
+        const reportStatsResponse = await fetch(`/api/admin/report-projection?limit=1&offset=0&include_today_count=true&start_of_day=${encodeURIComponent(startOfDay.toISOString())}`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminRunKey.trim()}` },
+        });
+        const reportStatsPayload = await reportStatsResponse.json().catch(() => ({}));
+        if (reportStatsResponse.ok) rptToday = Number(reportStatsPayload?.today_count || 0);
+      }
 
       // Total users
       const { count: totalUsers } = await supabase
@@ -412,30 +418,35 @@ export default function AdminDashboard() {
     } catch (e) {
       console.error('cmdStats error', e);
     }
-  }, []);
+  }, [adminRunKey]);
 
   // REPORTS
   const fetchReports = useCallback(async (page = 0, search = '', filter = 'all') => {
     setRptLoading(true);
     try {
-      // reports table: id, user_id, property_name, storage_path, created_at, report_type, status, revision state
-      let q = supabase
-        .from('reports')
-        .select('id, user_id, property_name, storage_path, created_at, report_type, status, revision_kind, revision_number, revision_family_key, revision_root_report_id, revision_parent_report_id, revision_request_key, revision_source_job_id, is_current_revision, revision_published_at', { count:'exact' });
-
-      if (search.trim()) q = q.ilike('property_name', `%${search.trim()}%`);
-
-      const { data, count, error } = await q
-        .order('created_at', { ascending:false })
-        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-
-      if (error) throw error;
-      setReports(sortReportRevisions(data || []));
-      setRptTotal(count || 0);
+      if (!adminRunKey.trim()) {
+        setReports([]);
+        setRptTotal(0);
+        return;
+      }
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(page * PAGE_SIZE),
+      });
+      if (search.trim()) params.set('search', search.trim());
+      if (filter !== 'all') params.set('report_type', filter);
+      const response = await fetch(`/api/admin/report-projection?${params.toString()}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminRunKey.trim()}` },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Failed to load reports');
+      setReports(sortReportRevisions(Array.isArray(payload?.rows) ? payload.rows : []));
+      setRptTotal(Number(payload?.count || 0));
     } catch (e) {
       toast({ title:'Failed to load reports', variant:'destructive' });
     } finally { setRptLoading(false); }
-  }, [toast]);
+  }, [adminRunKey, toast]);
 
   // USERS
   const fetchUsers = useCallback(async (search = '') => {
@@ -941,7 +952,7 @@ export default function AdminDashboard() {
                               <TblTd mono style={{ fontSize:9 }}>{new Date(r.created_at).toLocaleDateString()}</TblTd>
                               <TblTd>
                                 <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                                  <StatusBadge status={r.status || (revisionState.isCurrent ? 'published' : 'historical')} />
+                                  <StatusBadge status={r.publication_state || (revisionState.isCurrent ? 'published' : 'historical_published')} />
                                   <span style={{ fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.12em', textTransform:'uppercase', color: revisionState.isCurrent ? T.okGreen : T.goldDark }}>
                                     {surfaceState.adminStatusLabel}
                                   </span>

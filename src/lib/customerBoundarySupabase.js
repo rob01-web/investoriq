@@ -234,15 +234,46 @@ class CustomerReportDeleteBuilder {
   then(resolve, reject) { return this.execute().then(resolve, reject); }
 }
 
+class CustomerReportQueryBuilder {
+  constructor(baseSupabase) {
+    this.baseSupabase = baseSupabase;
+    this.limitValue = 25;
+    this.invalidFilter = false;
+  }
+  select() { return this; }
+  eq(column) {
+    if (column !== 'user_id' && column !== 'publication_state') this.invalidFilter = true;
+    return this;
+  }
+  order() { return this; }
+  limit(value) {
+    const parsed = Number(value);
+    this.limitValue = Number.isFinite(parsed) && parsed > 0 ? Math.min(Math.floor(parsed), 100) : 25;
+    return this;
+  }
+  async execute({ maybeSingle = false } = {}) {
+    if (this.invalidFilter) {
+      return { data: maybeSingle ? null : [], error: { message: 'Unsupported governed report filter', code: 'INVALID_REPORT_FILTER' } };
+    }
+    const { data, error } = await requestJson(
+      this.baseSupabase,
+      `/api/customer-reports?limit=${this.limitValue}`,
+      { method: 'GET' },
+    );
+    if (error) return { data: null, error };
+    const rows = Array.isArray(data?.rows) ? data.rows : [];
+    if (maybeSingle) return { data: rows[0] || null, error: null };
+    return { data: rows, count: rows.length, error: null };
+  }
+  maybeSingle() { return this.execute({ maybeSingle: true }); }
+  then(resolve, reject) { return this.execute().then(resolve, reject); }
+}
+
 function wrapReportsTable(baseSupabase) {
-  const table = baseSupabase.from('reports');
-  return new Proxy(table, {
-    get(target, property) {
-      if (property === 'delete') return () => new CustomerReportDeleteBuilder(baseSupabase);
-      const value = Reflect.get(target, property, target);
-      return typeof value === 'function' ? value.bind(target) : value;
-    },
-  });
+  return {
+    select: () => new CustomerReportQueryBuilder(baseSupabase),
+    delete: () => new CustomerReportDeleteBuilder(baseSupabase),
+  };
 }
 
 function wrapStagedUploadBucket(baseSupabase, bucket) {

@@ -46,7 +46,8 @@ function resolveSurfaceStateKey({
   hasRestoration = false,
   now = new Date(),
 }) {
-  const normalizedReportStatus = normalizeStatus(report?.status);
+  const normalizedReportStatus = normalizeStatus(report?.publication_state);
+  const reportHasPublishedLineage = ["published", "historical_published"].includes(normalizedReportStatus);
   const normalizedJobStatus = normalizeStatus(jobStatus);
   const normalizedRevisionKind = normalizeStatus(report?.revision_kind);
   const expiredLease = isExpiredLease(job || {}, now);
@@ -54,8 +55,8 @@ function resolveSurfaceStateKey({
   const isRevisionInProgress = ["corrected", "replacement"].includes(normalizedRevisionKind) && hasProcessingContext;
 
   if (revisionState?.isCurrent && normalizedReportStatus === "published") return "published_current_revision";
-  if (revisionState?.isHistoricalPublished && normalizedReportStatus === "published") return "published_historical_revision";
-  if (normalizedReportStatus === "published") return "superseded_revision";
+  if (revisionState?.isHistoricalPublished && reportHasPublishedLineage) return "published_historical_revision";
+  if (reportHasPublishedLineage) return "superseded_revision";
   if (normalizedJobStatus === "dead_letter" || normalizedReportStatus === "dead_letter") return "dead_letter";
   if (["user_needs_documents", "needs_documents"].includes(deliveryGateStatus) || /MISSING_REQUIRED|MISSING_STRUCTURED|RECONCILIATION/i.test(customerStatusReasonCode)) {
     return "customer_needs_documents";
@@ -195,7 +196,7 @@ export function resolveReportSurfaceState({
     report,
     job,
     revisionState,
-    jobStatus: job?.status || report?.status || "",
+    jobStatus: job?.status || report?.publication_state || "",
     deliveryGateStatus: normalizedDeliveryDecision?.delivery_gate_status || "",
     customerStatusReasonCode: normalizedDeliveryDecision?.customer_status_reason_code || "",
     hasRestoration,

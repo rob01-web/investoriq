@@ -455,21 +455,25 @@ const DASHBOARD_DIAG_MINIMAL = false;
     if (!profile?.id) return;
     try {
       setReportsLoading(true);
-      const { data, error } = await supabase
-        .from('reports')
-        .select('id, property_name, report_type, created_at, storage_path, status, revision_kind, revision_number, revision_family_key, revision_root_report_id, revision_parent_report_id, revision_request_key, revision_source_job_id, is_current_revision, revision_published_at')
-        .eq('user_id', profile?.id)
-        .order('created_at', { ascending: false })
-        .limit(25);
-      if (error) throw error;
-      const rows = sortReportRevisions(data || []);
+      const accessToken = session?.access_token || '';
+      if (!accessToken) throw new Error('Session expired');
+      const response = await fetch('/api/customer-reports?limit=25', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Report lookup failed');
+      const rows = sortReportRevisions(Array.isArray(payload?.rows) ? payload.rows : []);
       setReports((prev) => {
-        const serialize = (items) => items.map((report) => `${report.id}|${report.property_name || ''}|${report.report_type || ''}|${report.created_at || ''}|${report.storage_path || ''}|${report.revision_kind || ''}|${report.revision_number || ''}|${report.revision_family_key || ''}|${report.revision_request_key || ''}|${report.is_current_revision ? '1' : '0'}`).join('||');
+        const serialize = (items) => items.map((report) => `${report.id}|${report.property_name || ''}|${report.report_type || ''}|${report.created_at || ''}|${report.storage_path || ''}|${report.publication_state || ''}|${report.publication_receipt_id || ''}|${report.revision_kind || ''}|${report.revision_number || ''}|${report.revision_family_key || ''}|${report.revision_request_key || ''}|${report.is_current_revision ? '1' : '0'}`).join('||');
         return serialize(prev) === serialize(rows) ? prev : rows;
       });
-    } catch (err) { console.error('Error fetching reports FULL:', JSON.stringify(err, null, 2)); }
-    finally { setReportsLoading(false); }
-  }, [profile?.id]);
+    } catch (err) {
+      console.error('Error fetching governed reports:', err?.message || err);
+    } finally {
+      setReportsLoading(false);
+    }
+  }, [profile?.id, session?.access_token]);
 
   const orderedReports = useMemo(() => sortReportRevisions(reports), [reports]);
   const visibleReports = useMemo(
@@ -501,7 +505,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
               </span>
             </div>
           </div>
-          <StatusBadge status={report.status || (isCurrentRevision ? 'published' : 'historical')} />
+          <StatusBadge status={report.publication_state || (isCurrentRevision ? 'published' : 'historical_published')} />
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
           {surfaceState.isDownloadable && (

@@ -171,8 +171,11 @@ begin
     raise exception 'PUBLICATION_FINAL_MANIFEST_REQUIRED';
   end if;
   if v_manifest_path is null then raise exception 'PUBLICATION_FINAL_MANIFEST_PATH_REQUIRED'; end if;
-  if coalesce(p_manifest_payload->>'publicationState', p_manifest_payload->>'publication_state', '') <> 'published' then
+  if coalesce(p_manifest_payload #>> '{publication,state}', '') <> 'published' then
     raise exception 'PUBLICATION_FINAL_MANIFEST_STATE_INVALID';
+  end if;
+  if coalesce(p_manifest_payload #>> '{publication,storagePath}', '') <> v_report.storage_path then
+    raise exception 'PUBLICATION_FINAL_MANIFEST_STORAGE_MISMATCH';
   end if;
 
   insert into public.analysis_artifacts(
@@ -181,12 +184,14 @@ begin
     v_job.id, v_job.user_id, 'report_quality_manifest', 'internal', v_manifest_path, p_manifest_payload
   ) returning * into v_manifest;
 
-  v_action := case
-    when lower(coalesce(v_decision->>'delivery_gate_status','')) like '%quality%'
-      or lower(coalesce(p_manifest_payload->>'publication_state', p_manifest_payload->>'publicationState', '')) like '%quality%'
-      then 'DELIVER_WITH_QUALITY_INCIDENT'
-    else 'DELIVER'
-  end;
+  v_action := upper(coalesce(v_decision->>'canonical_delivery_action',''));
+  if v_action not in ('DELIVER','DELIVER_WITH_QUALITY_INCIDENT') then
+    v_action := case
+      when coalesce(p_manifest_payload #>> '{qualityState,confidence}', '') = 'verified_publication_with_quality_incident'
+        then 'DELIVER_WITH_QUALITY_INCIDENT'
+      else 'DELIVER'
+    end;
+  end if;
 
   select * into v_receipt
   from public.report_publication_receipts r
@@ -441,8 +446,9 @@ left join public.customer_report_removals crm on crm.report_id = r.id;
 revoke all on table public.admin_report_projection from public, anon, authenticated;
 grant select on table public.admin_report_projection to service_role;
 
--- Remove direct authenticated/public generated-report read policies while preserving
--- unrelated Storage policies. Service-role governed download remains available.
+-- Remove direct authenticated generated-report policies while preserving unrelated
+-- Storage policies, then add restrictive bucket guards. Signed downloads are created only
+-- by the service-role customer endpoint after publication lineage is proven.
 do $$
 declare
   v_policy record;
@@ -452,16 +458,41 @@ begin
     from pg_policies
     where schemaname = 'storage'
       and tablename = 'objects'
-      and cmd in ('SELECT','ALL')
+      and cmd in ('SELECT','INSERT','UPDATE','DELETE','ALL')
+      and roles::text ilike '%authenticated%'
       and (
-        roles::text ilike '%authenticated%' or
-        roles::text ilike '%public%'
+        coalesce(qual, '') ilike '%generated_reports%' or
+        coalesce(with_check, '') ilike '%generated_reports%'
       )
-      and coalesce(qual, '') ilike '%generated_reports%'
   loop
     execute format('drop policy if exists %I on storage.objects', v_policy.policyname);
   end loop;
 end $$;
+
+drop policy if exists generated_reports_authenticated_select_denied on storage.objects;
+create policy generated_reports_authenticated_select_denied
+on storage.objects as restrictive
+for select to authenticated
+using (bucket_id <> 'generated_reports');
+
+drop policy if exists generated_reports_authenticated_insert_denied on storage.objects;
+create policy generated_reports_authenticated_insert_denied
+on storage.objects as restrictive
+for insert to authenticated
+with check (bucket_id <> 'generated_reports');
+
+drop policy if exists generated_reports_authenticated_update_denied on storage.objects;
+create policy generated_reports_authenticated_update_denied
+on storage.objects as restrictive
+for update to authenticated
+using (bucket_id <> 'generated_reports')
+with check (bucket_id <> 'generated_reports');
+
+drop policy if exists generated_reports_authenticated_delete_denied on storage.objects;
+create policy generated_reports_authenticated_delete_denied
+on storage.objects as restrictive
+for delete to authenticated
+using (bucket_id <> 'generated_reports');
 
 -- Legacy policy: reports without governed publication lineage are retained, not deleted or
 -- auto-backfilled, and are excluded from the customer projection. Their state remains visible

@@ -1214,11 +1214,17 @@ export async function ensureReportDownloadArtifact({
     semanticRecompositionReceipt,
   });
   const cleanupCreatedReportRecord = async (logContext) => {
-    if (!createdReportRecord || !reportId) return;
+    if (!createdReportRecord || !reportId) return { removed: false, skipped: true, error: null };
     try {
-      await supabaseAdmin.from("reports").delete().eq("id", reportId);
+      const { error: cleanupError } = await supabaseAdmin.from("reports").delete().eq("id", reportId);
+      if (cleanupError) {
+        console.error(`Failed to cleanup report record after ${logContext}:`, cleanupError);
+        return { removed: false, skipped: false, error: cleanupError };
+      }
+      return { removed: true, skipped: false, error: null };
     } catch (cleanupErr) {
       console.error(`Failed to cleanup report record after ${logContext}:`, cleanupErr);
+      return { removed: false, skipped: false, error: cleanupErr };
     }
   };
 
@@ -1408,13 +1414,7 @@ export async function ensureReportDownloadArtifact({
   });
 
   if (uploadError) {
-    if (createdReportRecord && reportId) {
-      try {
-        await supabaseAdmin.from("reports").delete().eq("id", reportId);
-      } catch (cleanupErr) {
-        console.error("Failed to cleanup report record after storage upload failure:", cleanupErr);
-      }
-    }
+    const reportCleanup = await cleanupCreatedReportRecord("storage upload failure");
     const err = new Error(`Failed to upload report to storage: ${uploadError.message}`);
     err.code = "REPORT_GENERATION_FAILED";
     err.context = {
@@ -1422,6 +1422,7 @@ export async function ensureReportDownloadArtifact({
       storagePath: normalizedStoragePath,
       bucketName,
       createdReportRecord: Boolean(createdReportRecord),
+      reportCleanup,
     };
     if (resolvedCorePublishable === true) {
       return buildRecoverableArtifactResult({
@@ -1438,13 +1439,22 @@ export async function ensureReportDownloadArtifact({
 
   const verifyResult = await storageBucket.download(normalizedStoragePath);
   if (verifyResult?.error || !verifyResult?.data) {
-    if (createdReportRecord && reportId) {
-      try {
-        await supabaseAdmin.from("reports").delete().eq("id", reportId);
-      } catch (cleanupErr) {
-        console.error("Failed to cleanup report record after storage verification failure:", cleanupErr);
+    let storageCleanup = { removed: false, error: null };
+    try {
+      const { error: storageCleanupError } = await storageBucket.remove([normalizedStoragePath]);
+      storageCleanup = { removed: !storageCleanupError, error: storageCleanupError || null };
+      if (storageCleanupError) {
+        console.error("Failed to cleanup fresh report object after storage verification failure:", storageCleanupError);
       }
+    } catch (storageCleanupErr) {
+      storageCleanup = { removed: false, error: storageCleanupErr };
+      console.error("Failed to cleanup fresh report object after storage verification failure:", storageCleanupErr);
     }
+
+    const reportCleanup = storageCleanup.removed
+      ? await cleanupCreatedReportRecord("storage verification failure")
+      : { removed: false, skipped: true, retainedToPreserveObjectReference: true, error: null };
+
     const err = new Error("Failed to verify report download artifact");
     err.code = "REPORT_GENERATION_FAILED";
     err.context = {
@@ -1452,6 +1462,13 @@ export async function ensureReportDownloadArtifact({
       storagePath: normalizedStoragePath,
       bucketName,
       createdReportRecord: Boolean(createdReportRecord),
+      storageCleanup: { removed: storageCleanup.removed, error: storageCleanup.error?.message || null },
+      reportCleanup: {
+        removed: reportCleanup.removed === true,
+        skipped: reportCleanup.skipped === true,
+        retainedToPreserveObjectReference: reportCleanup.retainedToPreserveObjectReference === true,
+        error: reportCleanup.error?.message || null,
+      },
     };
     if (resolvedCorePublishable === true) {
       return buildRecoverableArtifactResult({

@@ -507,6 +507,10 @@ const manifestOwnerSource = fs.readFileSync(
   path.join(repoRoot, "api/_lib/report-quality-manifest.js"),
   "utf8"
 );
+const phase2PublicationMigrationSource = fs.readFileSync(
+  path.join(repoRoot, "supabase/migrations/20260830121500_phase2_atomic_publication_delivery_authority.sql"),
+  "utf8"
+);
 
 assert.match(generatorSource, /buildReportQualityManifestCandidate/);
 assert.match(generatorSource, /type:\s*"report_quality_manifest_candidate"/);
@@ -517,38 +521,75 @@ assert.equal(
 );
 assert.match(workerSource, /finalizeReportQualityManifest/);
 assert.match(workerSource, /finalizeBlockedReportQualityManifest/);
-assert.match(workerSource, /type:\s*'report_quality_manifest'/);
+assert.match(workerSource, /finalize_worker_publication_v2/);
 assert.match(workerSource, /customer_delivery_unchanged:\s*true/);
+assert.doesNotMatch(
+  workerSource,
+  /transitionWorkerJob\(job,\s*['"]publishing['"],\s*['"]published['"]/
+);
+
 const creditReconciliationIndex = workerSource.indexOf(
   "const creditResult = await consumeCreditOnce(job)"
 );
 const manifestCandidateIndex = workerSource.indexOf(
   "let manifestCandidate = reportData?.report_quality_manifest_candidate"
 );
-const manifestPersistenceIndex = workerSource.indexOf(
-  "type: 'report_quality_manifest'",
+const manifestFinalizeIndex = workerSource.indexOf(
+  "reportQualityManifest = finalizeReportQualityManifest(",
   manifestCandidateIndex
+);
+const atomicPublicationIndex = workerSource.indexOf(
+  "'finalize_worker_publication_v2'",
+  manifestFinalizeIndex
 );
 const publicationCommitReadyIndex = workerSource.indexOf(
   "publicationCommitReady: true",
-  manifestPersistenceIndex
-);
-const publishedTransitionIndex = workerSource.indexOf(
-  "const publishedUpdate = await transitionWorkerJob(job, 'publishing', 'published'",
-  publicationCommitReadyIndex
+  atomicPublicationIndex
 );
 
 assert.notEqual(creditReconciliationIndex, -1, "Credit reconciliation must remain wired before publication finalization");
 assert.notEqual(manifestCandidateIndex, -1, "Publication path must resolve the Report Quality Manifest candidate");
-assert.notEqual(manifestPersistenceIndex, -1, "Publication path must persist the Report Quality Manifest");
-assert.notEqual(publicationCommitReadyIndex, -1, "Publication path must explicitly seal publicationCommitReady");
-assert.notEqual(publishedTransitionIndex, -1, "Publication path must use the governed publishing -> published transition");
+assert.notEqual(manifestFinalizeIndex, -1, "Worker must finalize the Report Quality Manifest payload before atomic publication");
+assert.notEqual(atomicPublicationIndex, -1, "Worker must delegate publication to finalize_worker_publication_v2");
+assert.notEqual(publicationCommitReadyIndex, -1, "Publication path must seal publicationCommitReady only after the atomic commit returns");
 assert.ok(
   creditReconciliationIndex < manifestCandidateIndex &&
-    manifestCandidateIndex < manifestPersistenceIndex &&
-    manifestPersistenceIndex < publicationCommitReadyIndex &&
-    publicationCommitReadyIndex < publishedTransitionIndex,
-  "Publication atomicity requires credit reconciliation, Manifest persistence, publication-commit readiness, then governed published transition"
+    manifestCandidateIndex < manifestFinalizeIndex &&
+    manifestFinalizeIndex < atomicPublicationIndex &&
+    atomicPublicationIndex < publicationCommitReadyIndex,
+  "Phase 2 publication ordering requires credit reconciliation, Manifest finalization, atomic publication, then commit readiness"
+);
+
+const manifestPersistenceIndex = phase2PublicationMigrationSource.indexOf(
+  "insert into public.analysis_artifacts"
+);
+const manifestTypeIndex = phase2PublicationMigrationSource.indexOf(
+  "'report_quality_manifest'",
+  manifestPersistenceIndex
+);
+const receiptPersistenceIndex = phase2PublicationMigrationSource.indexOf(
+  "insert into public.report_publication_receipts",
+  manifestTypeIndex
+);
+const publishedCommitIndex = phase2PublicationMigrationSource.indexOf(
+  "set status = 'published'",
+  receiptPersistenceIndex
+);
+const currentRevisionIndex = phase2PublicationMigrationSource.indexOf(
+  "set is_current_revision = true",
+  publishedCommitIndex
+);
+
+assert.notEqual(manifestPersistenceIndex, -1, "Atomic finalizer must persist the Report Quality Manifest artifact");
+assert.notEqual(manifestTypeIndex, -1, "Atomic finalizer must persist the report_quality_manifest artifact type");
+assert.notEqual(receiptPersistenceIndex, -1, "Atomic finalizer must persist the publication receipt");
+assert.notEqual(publishedCommitIndex, -1, "Atomic finalizer must commit the job as published");
+assert.notEqual(currentRevisionIndex, -1, "Atomic finalizer must establish the current revision");
+assert.ok(
+  manifestPersistenceIndex < receiptPersistenceIndex &&
+    receiptPersistenceIndex < publishedCommitIndex &&
+    publishedCommitIndex < currentRevisionIndex,
+  "Manifest artifact, publication receipt, published job, and current revision must be established by one atomic finalizer in governed order"
 );
 assert.doesNotMatch(manifestOwnerSource, /buildRefiStabilityModel|REFI_SENSITIVITY_MATRIX_BLOCK|DCF_TABLE_BLOCK/);
 assert.doesNotMatch(manifestOwnerSource, /report-template-runtime|generate-client-report-impl/);

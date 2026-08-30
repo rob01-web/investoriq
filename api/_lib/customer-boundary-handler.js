@@ -189,53 +189,14 @@ async function handleCustomerReportDownload({ req, res, auth, supabase }) {
   if (!storagePath) return res.status(400).json({ error: 'STORAGE_PATH_REQUIRED' });
 
   const { data: report, error: reportError } = await supabase
-    .from('reports')
-    .select('id, user_id, status, storage_path, revision_request_key, revision_source_job_id, is_current_revision')
+    .from('customer_published_report_projection')
+    .select('id, user_id, storage_path, publication_receipt_id, publication_job_id, publication_state')
     .eq('user_id', auth.actor.id)
     .eq('storage_path', storagePath)
-    .eq('status', 'published')
-    .eq('is_current_revision', true)
+    .eq('publication_state', 'published')
     .maybeSingle();
   if (reportError) return res.status(500).json({ error: 'DOWNLOAD_REPORT_LOOKUP_FAILED' });
   if (!report) return res.status(404).json({ error: 'CURRENT_REPORT_NOT_FOUND' });
-
-  const { data: removed } = await supabase
-    .from('customer_report_removals').select('report_id').eq('report_id', report.id).maybeSingle();
-  if (removed?.report_id) return res.status(404).json({ error: 'CURRENT_REPORT_NOT_FOUND' });
-
-  const { data: receipt, error: receiptError } = await supabase
-    .from('report_publication_receipts')
-    .select('id, job_id, report_id, user_id, revision_request_key, storage_path, manifest_artifact_id, publication_status, canonical_delivery_action')
-    .eq('report_id', report.id)
-    .eq('user_id', auth.actor.id)
-    .eq('publication_status', 'complete')
-    .maybeSingle();
-  if (receiptError) return res.status(500).json({ error: 'DOWNLOAD_RECEIPT_LOOKUP_FAILED' });
-  if (!receipt || receipt.job_id !== report.revision_source_job_id
-      || receipt.revision_request_key !== report.revision_request_key
-      || receipt.storage_path !== report.storage_path
-      || !['DELIVER', 'DELIVER_WITH_QUALITY_INCIDENT'].includes(receipt.canonical_delivery_action)) {
-    return res.status(409).json({ error: 'DOWNLOAD_PUBLICATION_LINEAGE_INCOMPLETE' });
-  }
-
-  const { data: job, error: jobError } = await supabase
-    .from('analysis_jobs')
-    .select('id, user_id, report_id, status')
-    .eq('id', receipt.job_id).eq('user_id', auth.actor.id).maybeSingle();
-  if (jobError) return res.status(500).json({ error: 'DOWNLOAD_JOB_LOOKUP_FAILED' });
-  if (!job || job.status !== 'published' || job.report_id !== report.id) {
-    return res.status(409).json({ error: 'DOWNLOAD_JOB_LINEAGE_INCOMPLETE' });
-  }
-
-  const { data: manifest, error: manifestError } = await supabase
-    .from('analysis_artifacts')
-    .select('id, job_id, type')
-    .eq('id', receipt.manifest_artifact_id)
-    .eq('job_id', job.id)
-    .eq('type', 'report_quality_manifest')
-    .maybeSingle();
-  if (manifestError) return res.status(500).json({ error: 'DOWNLOAD_MANIFEST_LOOKUP_FAILED' });
-  if (!manifest) return res.status(409).json({ error: 'DOWNLOAD_MANIFEST_REQUIRED' });
 
   const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(storagePath, 300);
   if (error || !data?.signedUrl) return res.status(409).json({ error: 'DOWNLOAD_ARTIFACT_UNAVAILABLE' });
@@ -245,7 +206,8 @@ async function handleCustomerReportDownload({ req, res, auth, supabase }) {
     signedUrl: data.signedUrl,
     expiresIn: 300,
     report_id: report.id,
-    publication_receipt_id: receipt.id,
+    publication_receipt_id: report.publication_receipt_id,
+    publication_job_id: report.publication_job_id,
   });
 }
 

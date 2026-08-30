@@ -5,7 +5,6 @@ import { classifyTerminalFailureCode } from '../lib/terminal-failure-taxonomy.js
 import {
   buildReportStoragePath,
   ensureReportDownloadArtifact,
-  promoteReportRevisionToCurrent,
   resolveOrCreateReportPublicationRecord,
 } from './_lib/report-delivery-output.js';
 import {
@@ -1374,7 +1373,6 @@ export default async function handler(req, res) {
 
     const preserveVerifiedPublicationAfterLateWorkerError = async (job, checkpoint, err) => {
       if (
-        checkpoint?.publicationCommitReady !== true ||
         checkpoint?.verifiedDownloadArtifact !== true ||
         !pdfBossAllowsCustomerDelivery(checkpoint?.publicationQualityBoss) ||
         !checkpoint?.reportId ||
@@ -1383,81 +1381,44 @@ export default async function handler(req, res) {
         return { preserved: false };
       }
 
-      const workerAttemptId = job.worker_attempt_id || null;
-      if (!workerAttemptId) {
-        await writeStaleWorkerAttemptEvent(job, workerAttemptId, job.status || 'publishing', {
-          reason: 'missing_worker_attempt_id_for_preservation',
-        });
+      const { data: governedPublishedReport, error: governedLookupError } = await supabaseAdmin
+        .from('customer_published_report_projection')
+        .select('id, publication_job_id, publication_receipt_id, storage_path, publication_state')
+        .eq('id', checkpoint.reportId)
+        .eq('user_id', job.user_id)
+        .eq('publication_job_id', job.id)
+        .eq('storage_path', checkpoint.storagePath)
+        .eq('publication_state', 'published')
+        .maybeSingle();
+
+      if (governedLookupError || !governedPublishedReport?.id) {
         return { preserved: false };
       }
 
-      const publishExpectedStatus = job.status || 'publishing';
-      // const completeUpdate = { status: 'published' };
-      const { data: publishedRows, error: publishErr } = await supabaseAdmin.rpc('transition_worker_job', {
-        p_job_id: job.id,
-        p_worker_attempt_id: workerAttemptId,
-        p_expected_current_status: publishExpectedStatus,
-        p_next_status: 'published',
-        p_claimed_by: workerInvocationId,
-      });
-
-      let publishRecord = Array.isArray(publishedRows) ? publishedRows[0] : publishedRows;
-      if (!publishErr && !publishRecord?.id) {
-        publishRecord = null;
-      }
-
-      let creditReconciliationError = null;
-      if (!publishErr && publishRecord?.id && checkpoint?.creditReconciliationAttempted !== true) {
-        const creditResult = await consumeCreditOnce(job);
-        creditReconciliationError = creditResult.error || null;
-      }
-
-      if (publishErr || !publishRecord?.id) {
-        await writeStaleWorkerAttemptEvent(job, workerAttemptId, publishExpectedStatus, {
-          reason: 'publish_preservation_rejected',
+      const preservationEventErr = await writeWorkerEventArtifact(
+        job.id,
+        job.user_id,
+        'atomic_publication_preserved_after_late_worker_error',
+        {
+          code: 'POST_ATOMIC_PUBLICATION_WORKER_ERROR',
           report_id: checkpoint.reportId,
           storage_path: checkpoint.storagePath,
-        });
-        return { preserved: false };
-      }
-
-      const preservationEventErr = await writeWorkerAttemptEvent({
-        job: publishRecord,
-        eventType: 'verified_publication_preserved_after_late_worker_error',
-        attemptId: workerAttemptId,
-        fromStatus: publishExpectedStatus,
-        toStatus: 'published',
-        meta: {
-          code: 'POST_VERIFIED_PUBLICATION_WORKER_ERROR',
-          report_id: checkpoint.reportId,
-          storage_path: checkpoint.storagePath,
-          verified_download_artifact: true,
-          final_pdf_publication_quality_boss: checkpoint.publicationQualityBoss,
-          job_status_updated: true,
-          status_update_error: null,
-          credit_reconciliation_required: Boolean(creditReconciliationError),
-          credit_reconciliation_error: creditReconciliationError?.message || null,
+          publication_receipt_id: governedPublishedReport.publication_receipt_id || null,
           internal_error: String(err?.stack || err?.message || err || ''),
-        },
-      });
-
-      if (creditReconciliationError) {
-        console.error(
-          `[worker] Published job ${job.id} requires credit reconciliation:`,
-          creditReconciliationError.message
-        );
-      }
+          timestamp: nowIso,
+        }
+      );
       if (preservationEventErr) {
         console.error(
-          `[worker] Failed to write verified-publication preservation event for job ${job.id}:`,
+          `[worker] Failed to write atomic-publication preservation event for job ${job.id}:`,
           preservationEventErr.message
         );
       }
 
       return {
         preserved: true,
-        jobStatusUpdated: true,
-        creditReconciliationRequired: Boolean(creditReconciliationError),
+        jobStatusUpdated: false,
+        creditReconciliationRequired: false,
       };
     };
 
@@ -4092,12 +4053,14 @@ export default async function handler(req, res) {
             continue;
           }
 
+          let reportQualityManifest = null;
+          let manifestArtifactPath = null;
           try {
             const publicationQualityBoss =
               artifactResolution?.publicationQualityBoss ||
               reportData?.final_pdf_publication_quality_boss ||
               null;
-            const reportQualityManifest = finalizeReportQualityManifest({
+            reportQualityManifest = finalizeReportQualityManifest({
               candidate: manifestCandidate,
               reportId,
               storagePath,
@@ -4115,24 +4078,9 @@ export default async function handler(req, res) {
               remedyState: { state: 'not_required' },
               finalizedAt: nowIso,
             });
-            const manifestArtifactPath = `analysis_jobs/${job.id}/report_quality_manifest/${safeTimestamp(
+            manifestArtifactPath = `analysis_jobs/${job.id}/report_quality_manifest/${safeTimestamp(
               nowIso
             )}.json`;
-            const { error: manifestArtifactErr } = await supabaseAdmin
-              .from('analysis_artifacts')
-              .insert([
-                {
-                  job_id: job.id,
-                  user_id: job.user_id,
-                  type: 'report_quality_manifest',
-                  bucket: 'internal',
-                  object_path: manifestArtifactPath,
-                  payload: reportQualityManifest,
-                },
-              ]);
-            if (manifestArtifactErr) {
-              throw new Error(`Failed to persist Report Quality Manifest: ${manifestArtifactErr.message}`);
-            }
           } catch (manifestErr) {
             console.error(
               `[worker] Report Quality Manifest blocked publication finalization for job ${job.id}:`,
@@ -4181,6 +4129,32 @@ export default async function handler(req, res) {
             continue;
           }
 
+          const { data: atomicPublishedRows, error: atomicPublicationErr } = await supabaseAdmin.rpc(
+            'finalize_worker_publication_v2',
+            {
+              p_job_id: job.id,
+              p_worker_attempt_id: job.worker_attempt_id || null,
+              p_expected_current_status: 'publishing',
+              p_claimed_by: workerInvocationId,
+              p_manifest_payload: reportQualityManifest,
+              p_manifest_object_path: manifestArtifactPath,
+            }
+          );
+          if (atomicPublicationErr) {
+            const publicationError = new Error(
+              `Atomic publication commit failed: ${atomicPublicationErr.message}`
+            );
+            publicationError.code = 'PUBLICATION_ATOMIC_COMMIT_FAILED';
+            throw publicationError;
+          }
+
+          const publishedUpdate = Array.isArray(atomicPublishedRows)
+            ? atomicPublishedRows[0]
+            : atomicPublishedRows;
+          if (!publishedUpdate?.id || String(publishedUpdate.status || '') !== 'published') {
+            throw new Error('Atomic publication commit did not return a published job');
+          }
+
           if (verifiedPublicationCheckpoint) {
             verifiedPublicationCheckpoint = Object.freeze({
               ...verifiedPublicationCheckpoint,
@@ -4189,25 +4163,15 @@ export default async function handler(req, res) {
             });
           }
 
-          const publishedUpdate = await transitionWorkerJob(job, 'publishing', 'published', {
-            user_id: job.user_id,
-            report_id: reportId,
-          });
-
-          if (!publishedUpdate?.id) {
-            continue;
-          }
-
           if (supportsCompletedAt) {
             const { error: completedErr } = await supabaseAdmin
               .from('analysis_jobs')
               .update({ completed_at: nowIso })
               .eq('id', job.id)
-              .eq('worker_attempt_id', job.worker_attempt_id || null)
               .eq('status', 'published');
 
             if (completedErr) {
-              throw new Error(`Failed to mark job published: ${completedErr.message}`);
+              throw new Error(`Failed to record publication completion timestamp: ${completedErr.message}`);
             }
           }
 
@@ -4221,60 +4185,11 @@ export default async function handler(req, res) {
             job.id,
             'publishing',
             'published',
-            { user_id: job.user_id, report_id: reportId }
+            { user_id: job.user_id, report_id: reportId, publication_authority: 'atomic_v2' }
           );
 
           if (completedTransitionErr) {
             throw new Error(`Failed to write status transition artifact: ${completedTransitionErr.message}`);
-          }
-
-          let revisionPromotionResolution = null;
-          let revisionPromotionError = null;
-          for (let promotionAttempt = 1; promotionAttempt <= 2; promotionAttempt += 1) {
-            try {
-              revisionPromotionResolution = await promoteReportRevisionToCurrent({
-                supabaseAdmin,
-                reportId,
-              });
-              if (!revisionPromotionResolution?.promoted) {
-                throw new Error(
-                  revisionPromotionResolution?.stale === true
-                    ? `Report revision promotion resolved stale for ${reportId}`
-                    : `Report revision promotion did not establish current authority for ${reportId}`
-                );
-              }
-              revisionPromotionError = null;
-              break;
-            } catch (promotionErr) {
-              revisionPromotionError = promotionErr;
-            }
-          }
-
-          if (revisionPromotionError) {
-            console.error(
-              `[worker] Published report revision requires promotion repair for job ${job.id}:`,
-              revisionPromotionError?.message || revisionPromotionError
-            );
-            const promotionEventErr = await writeWorkerEventArtifact(
-              job.id,
-              job.user_id,
-              'report_revision_promotion_required',
-              {
-                code: 'REPORT_REVISION_PROMOTION_REQUIRED',
-                internal_only: true,
-                customer_delivery_unchanged: true,
-                report_id: reportId,
-                storage_path: storagePath,
-                error: String(revisionPromotionError?.message || revisionPromotionError || ''),
-                timestamp: nowIso,
-              }
-            );
-            if (promotionEventErr) {
-              console.error(
-                `[worker] Failed to write report revision promotion repair event for job ${job.id}:`,
-                promotionEventErr.message
-              );
-            }
           }
 
           const { data: publishedEmail } = await supabaseAdmin
