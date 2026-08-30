@@ -28,6 +28,13 @@ assert.match(migration, /publication_status = 'complete'/i);
 assert.match(migration, /j\.status = 'published'/i);
 assert.match(migration, /r\.is_current_revision = true/i);
 assert.match(migration, /legacy_archive_only/i);
+assert.match(migration, /#>> '\{publication,state\}'/i);
+assert.match(migration, /PUBLICATION_FINAL_MANIFEST_STORAGE_MISMATCH/i);
+assert.match(migration, /generated_reports_authenticated_select_denied/i);
+assert.match(migration, /generated_reports_authenticated_insert_denied/i);
+assert.match(migration, /generated_reports_authenticated_update_denied/i);
+assert.match(migration, /generated_reports_authenticated_delete_denied/i);
+assert.match(migration, /as restrictive[\s\S]*for select to authenticated[\s\S]*bucket_id <> 'generated_reports'/i);
 assert.doesNotMatch(migration, /v_report\.status/i);
 
 const manifestInsert = migration.indexOf('insert into public.analysis_artifacts');
@@ -51,6 +58,7 @@ assert.doesNotMatch(downloadApi, /reports\.status|\.eq\(['"]status['"],\s*['"]pu
 
 const adminApi = read('api/admin/report-projection.js');
 assert.match(adminApi, /admin_report_projection/);
+assert.match(adminApi, /report_type/);
 assert.doesNotMatch(adminApi, /\.from\(['"]reports['"]\)/);
 
 const current = {
@@ -59,6 +67,13 @@ const current = {
   is_current_revision: true,
   revision_number: 2,
   storage_path: 'user/current.pdf',
+};
+const historical = {
+  id: 'historical',
+  publication_state: 'historical_published',
+  is_current_revision: false,
+  revision_number: 1,
+  storage_path: 'user/historical.pdf',
 };
 const legacy = {
   id: 'legacy',
@@ -69,10 +84,9 @@ const legacy = {
 };
 assert.equal(isCurrentPublishedReportRevision(current), true);
 assert.equal(isCurrentPublishedReportRevision({ ...current, publication_state: 'unpublished' }), false);
-assert.deepEqual(selectCustomerVisiblePublishedReportRevisions([legacy, current]).map((row) => row.id), ['current']);
+assert.equal(isCurrentPublishedReportRevision(historical), false);
+assert.deepEqual(selectCustomerVisiblePublishedReportRevisions([historical, legacy, current]).map((row) => row.id), ['current']);
 
-// These customer/worker surfaces are intentionally patched during the guarded local handoff.
-// Their final state is part of the Phase 2 exit gate, not an optional follow-up.
 const dashboard = read('src/pages/Dashboard.jsx');
 assert.match(dashboard, /\/api\/customer-reports/);
 assert.doesNotMatch(dashboard, /storage_path, status, revision_kind/);
@@ -86,13 +100,22 @@ const surfaceState = read('src/lib/reportSurfaceState.js');
 assert.doesNotMatch(surfaceState, /report\?\.status/);
 assert.match(surfaceState, /report\?\.publication_state/);
 
+const revisionAuthority = read('src/lib/reportRevisionAuthority.js');
+assert.match(revisionAuthority, /publication_state/);
+assert.match(revisionAuthority, /historical_published/);
+
 const boundary = read('src/lib/customerBoundarySupabase.js');
 assert.match(boundary, /CustomerReportQueryBuilder/);
 assert.match(boundary, /\/api\/customer-reports/);
 
 const worker = read('api/admin-run-worker.js');
 assert.match(worker, /finalize_worker_publication_v2/);
+assert.match(worker, /customer_published_report_projection/);
 assert.doesNotMatch(worker, /promoteReportRevisionToCurrent/);
 assert.doesNotMatch(worker, /transitionWorkerJob\(job, 'publishing', 'published'/);
+
+const deliveryOutput = read('api/_lib/report-delivery-output.js');
+assert.match(deliveryOutput, /storageBucket\.remove\(\[normalizedStoragePath\]\)/);
+assert.match(deliveryOutput, /retainedToPreserveObjectReference/);
 
 console.log('phase2-atomic-publication-delivery-contract-smoke: PASS');
