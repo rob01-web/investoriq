@@ -38,7 +38,8 @@ export default async function handler(req, res) {
   const limit = clampInteger(req.query?.limit, 20, 1, 100);
   const offset = clampInteger(req.query?.offset, 0, 0, 1000000);
   const search = String(req.query?.search || '').trim();
-  const publicationState = String(req.query?.publication_state || '').trim();
+  const publicationState = String(req.query?.publication_state || '').trim().toLowerCase();
+  const reportType = String(req.query?.report_type || '').trim().toLowerCase();
 
   let query = supabase
     .from('admin_report_projection')
@@ -49,6 +50,7 @@ export default async function handler(req, res) {
 
   if (search) query = query.ilike('property_name', `%${search.replace(/[%_]/g, '')}%`);
   if (publicationState && publicationState !== 'all') query = query.eq('publication_state', publicationState);
+  if (['screening', 'underwriting'].includes(reportType)) query = query.eq('report_type', reportType);
 
   const { data, count, error } = await query
     .order('created_at', { ascending: false })
