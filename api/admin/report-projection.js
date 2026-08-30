@@ -68,7 +68,8 @@ export default async function handler(req, res) {
       const { count: resolvedTodayCount, error: todayError } = await supabase
         .from('admin_report_projection')
         .select('id', { count: 'exact', head: true })
-        .gte('created_at', startOfDay);
+        .eq('publication_state', 'published')
+        .gte('publication_completed_at', startOfDay);
       if (todayError) {
         console.error('[InvestorIQ] Admin report today-count failed:', todayError);
       } else {
