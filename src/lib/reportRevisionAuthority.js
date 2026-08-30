@@ -8,6 +8,10 @@ function normalizeRevisionText(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+function normalizePublicationState(row = {}) {
+  return String(row?.publication_state ?? "").trim().toLowerCase();
+}
+
 export function normalizeReportRevisionKind(value, fallback = "original") {
   const normalized = normalizeRevisionText(value);
   if (REPORT_REVISION_KIND_ORDER.has(normalized)) {
@@ -55,7 +59,7 @@ export function deriveReportRevisionFamilyKey(row = {}) {
 }
 
 export function isCurrentPublishedReportRevision(row = {}) {
-  return String(row?.status ?? "") === "published" && row?.is_current_revision === true;
+  return normalizePublicationState(row) === "published" && row?.is_current_revision === true;
 }
 
 export function isCustomerVisiblePublishedReportRevision(row = {}) {
@@ -67,16 +71,16 @@ function compareRevisionRows(left, right) {
   const rightCurrent = isCurrentPublishedReportRevision(right) ? 1 : 0;
   if (leftCurrent !== rightCurrent) return rightCurrent - leftCurrent;
 
-  const leftPublished = String(left?.status ?? "") === "published" ? 1 : 0;
-  const rightPublished = String(right?.status ?? "") === "published" ? 1 : 0;
+  const leftPublished = ["published", "historical_published"].includes(normalizePublicationState(left)) ? 1 : 0;
+  const rightPublished = ["published", "historical_published"].includes(normalizePublicationState(right)) ? 1 : 0;
   if (leftPublished !== rightPublished) return rightPublished - leftPublished;
 
   const leftRevision = normalizeReportRevisionNumber(left?.revision_number, 0);
   const rightRevision = normalizeReportRevisionNumber(right?.revision_number, 0);
   if (leftRevision !== rightRevision) return rightRevision - leftRevision;
 
-  const leftPublishedAt = Date.parse(left?.revision_published_at || left?.created_at || 0) || 0;
-  const rightPublishedAt = Date.parse(right?.revision_published_at || right?.created_at || 0) || 0;
+  const leftPublishedAt = Date.parse(left?.revision_published_at || left?.publication_completed_at || left?.created_at || 0) || 0;
+  const rightPublishedAt = Date.parse(right?.revision_published_at || right?.publication_completed_at || right?.created_at || 0) || 0;
   if (leftPublishedAt !== rightPublishedAt) return rightPublishedAt - leftPublishedAt;
 
   return String(right?.id ?? "").localeCompare(String(left?.id ?? ""));
@@ -88,7 +92,7 @@ export function sortReportRevisions(rows = []) {
 
 export function selectCurrentPublishedReportRevision(rows = []) {
   const revisions = sortReportRevisions(rows);
-  return revisions.find(isCurrentPublishedReportRevision) || revisions.find((row) => String(row?.status ?? "") === "published") || null;
+  return revisions.find(isCurrentPublishedReportRevision) || null;
 }
 
 export function selectCustomerVisiblePublishedReportRevisions(rows = []) {
@@ -98,8 +102,9 @@ export function selectCustomerVisiblePublishedReportRevisions(rows = []) {
 export function getReportRevisionDisplayState(row = {}, currentRevision = null) {
   const revisionKind = normalizeReportRevisionKind(row?.revision_kind, "original");
   const revisionNumber = normalizeReportRevisionNumber(row?.revision_number, 1);
-  const isPublished = String(row?.status ?? "") === "published";
-  const isCurrent = Boolean(row?.is_current_revision) && isPublished;
+  const publicationState = normalizePublicationState(row);
+  const isPublished = ["published", "historical_published"].includes(publicationState);
+  const isCurrent = Boolean(row?.is_current_revision) && publicationState === "published";
   const matchesCurrentRevision = currentRevision ? String(row?.id ?? "") === String(currentRevision?.id ?? "") : isCurrent;
   const isHistoricalPublished = isPublished && !matchesCurrentRevision;
   const isVisibleRevision = isPublished || Boolean(row?.storage_path);
@@ -116,6 +121,7 @@ export function getReportRevisionDisplayState(row = {}, currentRevision = null) 
   return {
     revisionKind,
     revisionNumber,
+    publicationState,
     isPublished,
     isCurrent: matchesCurrentRevision,
     isHistoricalPublished,
