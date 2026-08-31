@@ -1,6 +1,16 @@
 // api/create-checkout-session.js
 import Stripe from "stripe";
 import { resolveAuthenticatedActor } from "./_lib/authenticated-actor.js";
+import {
+  COMMERCE_CATALOG_VERSION,
+  COMMERCE_PRODUCT_TYPES,
+  buildExpectedEntitlementAllocation,
+  buildPublicCommerceCatalog,
+  getConfiguredStripePrice,
+  normalizeCommerceProductType,
+  normalizeCommerceQuantity,
+  validateStripePriceAgainstCatalog,
+} from "./_lib/commerce-catalog.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
@@ -9,26 +19,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 // Canonical productType contract (LOCKED):
 // screening, underwriting, bundle
 export function normalizeProductType({ productType, planKey }) {
-  const raw = productType || planKey || "";
-  if (!raw) return "";
-
-  const map = {
-    // Canonical
-    screening: "screening",
-    underwriting: "underwriting",
-    bundle: "bundle",
-  };
-
-  return map[raw] || "";
+  return normalizeCommerceProductType(productType || planKey || "");
 }
 
-export const PRICE_CONFIG = {
-  screening: { priceId: process.env.STRIPE_PRICE_SCREENING, mode: "payment" },
-  underwriting: { priceId: process.env.STRIPE_PRICE_UNDERWRITING, mode: "payment" },
-  bundle: { priceId: process.env.STRIPE_PRICE_BUNDLE, mode: "payment" },
-};
+export const PRICE_CONFIG = Object.fromEntries(
+  COMMERCE_PRODUCT_TYPES.map((productType) => {
+    const resolution = getConfiguredStripePrice(productType);
+    return [productType, { priceId: resolution.priceId, mode: "payment" }];
+  })
+);
 
-export const ALLOWED_PRODUCT_TYPES = ["screening", "underwriting", "bundle"];
+export const ALLOWED_PRODUCT_TYPES = [...COMMERCE_PRODUCT_TYPES];
 
 function requiredEnvFor(productType) {
   switch (productType) {
@@ -83,8 +84,7 @@ export function getValidatedPriceConfigForProduct(productType, priceConfig = PRI
 }
 
 function normalizeStandaloneQuantity(quantity) {
-  const parsed = Number.parseInt(quantity, 10);
-  return Math.max(1, Math.min(5, Number.isFinite(parsed) ? parsed : 1));
+  return normalizeCommerceQuantity("screening", quantity);
 }
 
 function normalizeBundleQuantity(quantity) {
@@ -101,44 +101,65 @@ function normalizeBundleQuantity(quantity) {
 }
 
 export function normalizeCheckoutQuantity({ productType, quantity }) {
-  if (productType === "bundle") {
-    return normalizeBundleQuantity(quantity);
+  if (productType === "bundle") return normalizeBundleQuantity(quantity);
+  if (productType === "screening" || productType === "underwriting") {
+    return normalizeStandaloneQuantity(quantity);
   }
-  return normalizeStandaloneQuantity(quantity);
+  return null;
 }
 
 export function buildCheckoutLineItem({ normalizedProductType, normalizedQuantity, priceId }) {
   const lineItem = { price: priceId };
-  if (normalizedProductType === "bundle") {
-    return {
-      ...lineItem,
-      quantity: 1,
-    };
-  }
-
   return {
     ...lineItem,
-    quantity: normalizedQuantity,
-    adjustable_quantity: {
-      enabled: true,
-      minimum: 1,
-      maximum: 5,
-    },
+    quantity: normalizedProductType === "bundle" ? 1 : normalizedQuantity,
   };
 }
 
 export function buildCheckoutMetadata({ actorId, normalizedProductType, normalizedQuantity }) {
+  const allocation = buildExpectedEntitlementAllocation(normalizedProductType, normalizedQuantity);
   return {
     userId: actorId,
     productType: normalizedProductType || "",
     quantity: String(normalizedQuantity),
+    catalogVersion: COMMERCE_CATALOG_VERSION,
+    screeningEntitlements: String(allocation?.screening ?? 0),
+    underwritingEntitlements: String(allocation?.underwriting ?? 0),
   };
 }
 
 export default async function handler(req, res) {
   try {
+    if (req.method === "GET") {
+      const availabilityEntries = await Promise.all(
+        COMMERCE_PRODUCT_TYPES.map(async (productType) => {
+          const configuredPrice = getConfiguredStripePrice(productType);
+          if (!configuredPrice.ok) return [productType, false];
+          try {
+            const price = await stripe.prices.retrieve(configuredPrice.priceId, { expand: ["product"] });
+            const validation = validateStripePriceAgainstCatalog({
+              price,
+              productType,
+              configuredPriceId: configuredPrice.priceId,
+            });
+            return [productType, validation.ok];
+          } catch (error) {
+            console.error("Commerce catalog availability check failed", {
+              productType,
+              message: error?.message || null,
+            });
+            return [productType, false];
+          }
+        })
+      );
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+      return res.status(200).json(
+        buildPublicCommerceCatalog(Object.fromEntries(availabilityEntries))
+      );
+    }
+
     if (req.method !== "POST") {
-      res.setHeader("Allow", "POST");
+      res.setHeader("Allow", "GET, POST");
       return res.status(405).json({ error: "Method not allowed" });
     }
 
@@ -164,15 +185,30 @@ export default async function handler(req, res) {
 
     const { ok: configOk, missing, config } = getValidatedPriceConfigForProduct(normalizedProductType);
     if (!configOk) {
-      return res.status(500).json({
-        error: `Missing Stripe Price ID env var for "${normalizedProductType}".`,
+      console.error("Canonical Stripe price configuration is incomplete", {
+        productType: normalizedProductType,
         missing,
       });
+      return res.status(503).json({ error: "Pricing is temporarily unavailable" });
     }
 
-    const baseUrl = process.env.PUBLIC_SITE_URL || "https://investoriq.tech";
+    const price = await stripe.prices.retrieve(config.priceId, { expand: ["product"] });
+    const priceValidation = validateStripePriceAgainstCatalog({
+      price,
+      productType: normalizedProductType,
+      configuredPriceId: config.priceId,
+    });
+    if (!priceValidation.ok) {
+      console.error("Configured Stripe price failed the canonical commerce contract:", {
+        productType: normalizedProductType,
+        issues: priceValidation.issues,
+      });
+      return res.status(503).json({ error: "Pricing is temporarily unavailable" });
+    }
 
-    const finalSuccessUrl = `${baseUrl}/dashboard?checkout=success`;
+    const baseUrl = String(process.env.PUBLIC_SITE_URL || "https://investoriq.tech").replace(/\/$/, "");
+
+    const finalSuccessUrl = `${baseUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
     const finalCancelUrl = `${baseUrl}/dashboard?checkout=cancelled`;
 
     const session = await stripe.checkout.sessions.create({
@@ -195,11 +231,15 @@ export default async function handler(req, res) {
           normalizedProductType,
           normalizedQuantity,
         }),
-        userId: auth.actor.id,
       },
     });
 
-    return res.status(200).json({ url: session.url });
+    return res.status(200).json({
+      url: session.url,
+      catalogVersion: COMMERCE_CATALOG_VERSION,
+      productType: normalizedProductType,
+      quantity: normalizedQuantity,
+    });
   } catch (err) {
     console.error("Error creating checkout session:", err);
     return res.status(500).json({ error: "Failed to create checkout session" });

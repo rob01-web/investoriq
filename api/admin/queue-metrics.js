@@ -951,6 +951,41 @@ export default async function handler(req, res) {
     const fixQueueJobId = String(req.query?.fix_queue_job_id || req.query?.job_id || "").trim();
     const includeUsers = String(req.query?.include_users || "").toLowerCase() === "true";
     const includeDiagnosticsRollup = String(req.query?.include_diagnostics_rollup || "").toLowerCase() === "true";
+    const includeCommerceSummary = String(req.query?.include_commerce_summary || "").toLowerCase() === "true";
+
+    if (includeCommerceSummary) {
+      const monthStartRaw = String(req.query?.month_start || "").trim();
+      const monthStart = new Date(monthStartRaw);
+      if (!monthStartRaw || Number.isNaN(monthStart.getTime())) {
+        return res.status(400).json({ error: 'Invalid month_start' });
+      }
+
+      const { data: receipts, error: receiptsError } = await supabaseAdmin
+        .from('commerce_checkout_receipts')
+        .select('amount_total, currency')
+        .eq('currency', 'usd')
+        .gte('created_at', monthStart.toISOString())
+        .limit(5000);
+
+      if (receiptsError) {
+        return res.status(503).json({
+          ok: false,
+          commerce_summary_error: true,
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        commerce_summary: {
+          currency: 'usd',
+          settled_revenue_minor: (receipts || []).reduce(
+            (sum, receipt) => sum + Number(receipt?.amount_total || 0),
+            0
+          ),
+          settled_checkout_count: (receipts || []).length,
+        },
+      });
+    }
 
     // Slice 1 — Diagnostics Intelligence Rollup. Read-only, additive.
     // Short-circuits the rest of queue-metrics: this branch returns just

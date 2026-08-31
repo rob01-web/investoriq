@@ -30,6 +30,7 @@ import {
   readSessionDisclosureAck,
   writeSessionDisclosureAck,
 } from '@/lib/sessionDisclosureAck';
+import { EMPTY_PRICING_CATALOG, loadCommerceCatalog } from '@/lib/pricingConfig';
 
 // DESIGN TOKENS
 const T = {
@@ -140,6 +141,17 @@ function formatSessionDisclosureAck(value) {
     minute: '2-digit',
     second: '2-digit',
   });
+}
+
+function formatCheckoutEntitlementSummary(entitlements = {}) {
+  const parts = [];
+  const screening = Number(entitlements?.screening || 0);
+  const underwriting = Number(entitlements?.underwriting || 0);
+  if (screening > 0) parts.push(`${screening} Screening report${screening === 1 ? '' : 's'}`);
+  if (underwriting > 0) parts.push(`${underwriting} Underwriting report${underwriting === 1 ? '' : 's'}`);
+  if (parts.length === 0) return 'Your purchased reports are available.';
+  const total = screening + underwriting;
+  return `${parts.join(' and ')} ${total === 1 ? 'is' : 'are'} available.`;
 }
 
 // Primary button - Forest Green / Gold hover
@@ -396,6 +408,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const inProgressFetchRef = useRef(false);
   const recentJobsFetchRef = useRef(false);
   const latestFailedFetchRef = useRef(false);
+  const checkoutVerificationStartedRef = useRef(false);
   const [jobId, setJobId] = useState(null);
   const [inProgressJobs, setInProgressJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -424,8 +437,9 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueReport, setIssueReport] = useState(null);
   const [entitlements, setEntitlements] = useState({ screening: null, underwriting: null, error: false });
-  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [checkoutVerification, setCheckoutVerification] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [commerceCatalog, setCommerceCatalog] = useState(EMPTY_PRICING_CATALOG);
 
   const visibleInProgressJobs = useMemo(() => (
     inProgressJobs.filter((job) => {
@@ -791,12 +805,94 @@ useEffect(() => {
 }, [recentJobs, jobId]);
 
   useEffect(() => {
+    let mounted = true;
+    loadCommerceCatalog()
+      .then((catalog) => {
+        if (mounted) setCommerceCatalog(catalog);
+      })
+      .catch((error) => {
+        console.error('Commerce catalog unavailable:', error);
+        if (mounted) setCommerceCatalog(EMPTY_PRICING_CATALOG);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
     const url = new URL(window.location.href);
     const checkout = url.searchParams.get('checkout');
-    if (checkout === 'success') { toast({ title: 'Payment received', description: 'Your report credit has been added. Upload documents below to begin.' }); setCheckoutSuccess(true); }
-    else if (checkout === 'cancelled') { toast({ title: 'Payment cancelled', description: 'No charge was made.' }); }
-    if (checkout) { url.searchParams.delete('checkout'); window.history.replaceState({}, document.title, url.toString()); }
-  }, []);
+    const checkoutSessionId = url.searchParams.get('session_id');
+
+    if (checkout === 'cancelled') {
+      toast({ title: 'Payment cancelled', description: 'No charge was made.' });
+      url.searchParams.delete('checkout');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, document.title, url.toString());
+      return undefined;
+    }
+
+    if (checkout !== 'success' || checkoutVerificationStartedRef.current) return undefined;
+    const accessToken = session?.access_token || '';
+    if (!accessToken) return undefined;
+
+    checkoutVerificationStartedRef.current = true;
+    url.searchParams.delete('checkout');
+    url.searchParams.delete('session_id');
+    window.history.replaceState({}, document.title, url.toString());
+
+    if (!checkoutSessionId) {
+      setCheckoutVerification({ state: 'failed' });
+      return undefined;
+    }
+
+    let cancelled = false;
+    const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+    const verifyEntitlement = async () => {
+      setCheckoutVerification({ state: 'verifying' });
+      for (let attempt = 0; attempt < 12 && !cancelled; attempt += 1) {
+        try {
+          const response = await fetch(
+            `/api/checkout-session?session_id=${encodeURIComponent(checkoutSessionId)}`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          const result = await response.json().catch(() => ({}));
+
+          if (response.ok && result?.entitlement_status === 'granted') {
+            setCheckoutVerification({
+              state: 'granted',
+              productType: result.productType,
+              entitlements: result.entitlements,
+            });
+            await fetchEntitlements();
+            toast({
+              title: 'Payment verified',
+              description: 'Your purchased reports are now available.',
+            });
+            return;
+          }
+
+          if (
+            result?.entitlement_status === 'payment_incomplete' ||
+            result?.entitlement_status === 'verification_failed'
+          ) {
+            setCheckoutVerification({ state: 'failed' });
+            return;
+          }
+
+          setCheckoutVerification({ state: 'processing' });
+        } catch (error) {
+          console.error('Checkout entitlement verification failed:', error);
+          setCheckoutVerification({ state: 'processing' });
+        }
+
+        if (attempt < 11) await wait(1500);
+      }
+
+      if (!cancelled) setCheckoutVerification({ state: 'processing' });
+    };
+
+    verifyEntitlement();
+    return () => { cancelled = true; };
+  }, [session?.access_token, toast]);
 
 useEffect(() => {
   if (!profile?.id) return;
@@ -1572,10 +1668,11 @@ useEffect(() => {
 
           <div data-dashboard-zone="top-operational">
           <div data-dashboard-section="start-new-report">
-          {/* Checkout success */}
-          {checkoutSuccess && (
+          {/* Server-verified checkout result */}
+          {checkoutVerification?.state === 'granted' && (
             <NoticeBox type="success">
-              <strong style={{ fontWeight: 500 }}>Payment received.</strong> Report credits added to your account. Upload documents below to begin.
+              <strong style={{ fontWeight: 500 }}>Payment verified.</strong>{' '}
+              {formatCheckoutEntitlementSummary(checkoutVerification?.entitlements)}
               <br />
               <button
                 type="button"
@@ -1584,6 +1681,16 @@ useEffect(() => {
               >
                 Jump to upload →
               </button>
+            </NoticeBox>
+          )}
+          {['verifying', 'processing'].includes(checkoutVerification?.state) && (
+            <NoticeBox type="warning">
+              <strong style={{ fontWeight: 500 }}>Confirming your purchase.</strong> Your reports will appear here as soon as payment and entitlement verification finishes.
+            </NoticeBox>
+          )}
+          {checkoutVerification?.state === 'failed' && (
+            <NoticeBox type="error">
+              <strong style={{ fontWeight: 500 }}>Purchase verification is incomplete.</strong> No report availability is being claimed. Refresh the dashboard or contact support if this message continues.
             </NoticeBox>
           )}
 
@@ -1666,7 +1773,9 @@ useEffect(() => {
                 <div style={{ display:'flex', flexDirection:'column', gap:3, marginTop:12 }}>
                   <span style={{ ...bodySmall, fontSize:12 }}>2 Screening reports</span>
                   <span style={{ ...bodySmall, fontSize:12 }}>1 Full Underwriting report</span>
-                  <span style={{ ...bodySmall, fontSize:12 }}>$699 flat fee bundle.</span>
+                  <span style={{ ...bodySmall, fontSize:12 }}>
+                    {commerceCatalog?.products?.bundle?.displayPrice || 'Pricing unavailable'} flat fee bundle.
+                  </span>
                 </div>
               )}
             </div>
@@ -1682,10 +1791,14 @@ useEffect(() => {
                     2 Screening + 1 Underwriting
                   </div>
                   <div style={{ ...bodySmall, fontSize:12, color:T.okGreen, marginTop:4 }}>
-                    $699 flat fee bundle.
+                    {commerceCatalog?.products?.bundle?.displayPrice || 'Pricing unavailable'} flat fee bundle.
                   </div>
                 </div>
-                <PrimaryBtn onClick={() => handleCheckout('bundle')} loading={checkoutLoading}>
+                <PrimaryBtn
+                  onClick={() => handleCheckout('bundle')}
+                  loading={checkoutLoading}
+                  disabled={!commerceCatalog?.products?.bundle}
+                >
                   Purchase Bundle
                 </PrimaryBtn>
               </div>
@@ -1701,7 +1814,11 @@ useEffect(() => {
                     {selectedPurchaseType === 'screening' ? (entitlements.screening ?? 0) : (entitlements.underwriting ?? 0)}
                   </div>
                 </div>
-                <PrimaryBtn onClick={() => handleCheckout(selectedPurchaseType)} loading={checkoutLoading}>
+                <PrimaryBtn
+                  onClick={() => handleCheckout(selectedPurchaseType)}
+                  loading={checkoutLoading}
+                  disabled={!commerceCatalog?.products?.[selectedPurchaseType]}
+                >
                   Purchase Report
                 </PrimaryBtn>
               </div>
@@ -2257,7 +2374,3 @@ useEffect(() => {
     </>
   );
 }
-
-
-
-

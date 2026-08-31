@@ -5,7 +5,11 @@ import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { getPricingAvailabilityMap } from '@/lib/pricingConfig';
+import {
+  EMPTY_PRICING_CATALOG,
+  getPricingAvailabilityMap,
+  loadCommerceCatalog,
+} from '@/lib/pricingConfig';
 import { supabase } from '@/lib/customSupabaseClient';
 
 //  DESIGN TOKENS 
@@ -55,7 +59,6 @@ const stagger = {
 const tiers = [
   {
     title:       'Screening Report',
-    price:       '$199',
     productType: 'screening',
     eyebrow:     'Acquisition Screening',
     valueLine:   'Rapid risk screening from document-backed inputs with missing inputs disclosed.',
@@ -72,7 +75,6 @@ const tiers = [
   },
   {
     title:       'Underwriting Report',
-    price:       '$499',
     productType: 'underwriting',
     eyebrow:     'Investment Committee Underwriting',
     valueLine:   'Full institutional-grade refinance and downside risk modeling.',
@@ -89,7 +91,6 @@ const tiers = [
   },
   {
     title:       'Launch Bundle',
-    price:       '$699',
     productType: 'bundle',
     eyebrow:     'Frozen Launch Bundle',
     valueLine:   'Two Screening reports plus one Full Underwriting report in one fixed-price package.',
@@ -320,7 +321,8 @@ export default function PricingPage() {
   const { session } = useAuth();
   const [loadingKey, setLoadingKey]   = useState(null);
   const [isAuthed, setIsAuthed]       = useState(false);
-  const pricingAvailability            = getPricingAvailabilityMap();
+  const [commerceCatalog, setCommerceCatalog] = useState(EMPTY_PRICING_CATALOG);
+  const pricingAvailability            = getPricingAvailabilityMap(commerceCatalog);
   const hasAnyPricingAvailable         = Object.values(pricingAvailability).some((entry) => entry.ok);
 
   useEffect(() => {
@@ -341,6 +343,19 @@ export default function PricingPage() {
       mounted = false;
       authListener?.subscription?.unsubscribe();
     };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    loadCommerceCatalog()
+      .then((catalog) => {
+        if (mounted) setCommerceCatalog(catalog);
+      })
+      .catch((error) => {
+        console.error('Commerce catalog unavailable:', error);
+        if (mounted) setCommerceCatalog(EMPTY_PRICING_CATALOG);
+      });
+    return () => { mounted = false; };
   }, []);
 
   const handleCheckout = async (productType, quantity = 1) => {
@@ -539,7 +554,10 @@ export default function PricingPage() {
               {tiers.map((tier) => (
                 <PricingTile
                   key={tier.title}
-                  tier={tier}
+                  tier={{
+                    ...tier,
+                    price: pricingAvailability[tier.productType]?.product?.displayPrice || 'Unavailable',
+                  }}
                   onCheckout={handleCheckout}
                   loadingKey={loadingKey}
                   isAuthenticated={isAuthed}

@@ -105,7 +105,8 @@ assert.equal(reportGenerationAdmin.ownershipSource, 'admin_authorized_body_user_
 
 const checkoutCreate = fs.readFileSync('api/create-checkout-session.js', 'utf8');
 assert.match(checkoutCreate, /resolveAuthenticatedActor\(req\)/);
-assert.match(checkoutCreate, /userId: auth\.actor\.id/);
+assert.match(checkoutCreate, /actorId: auth\.actor\.id/);
+assert.match(checkoutCreate, /buildCheckoutMetadata\(/);
 assert.match(checkoutCreate, /client_reference_id: auth\.actor\.id/);
 assert.doesNotMatch(checkoutCreate, /const \{[^}]*userId[^}]*\} = req\.body/);
 assert.doesNotMatch(checkoutCreate, /const \{[^}]*userEmail[^}]*\} = req\.body/);

@@ -372,17 +372,18 @@ export default function AdminDashboard() {
   // COMMAND STRIP
   const fetchCmdStats = useCallback(async () => {
     try {
-      // Revenue MTD from report_purchases
       const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
-      // Revenue: count consumed purchases MTD  product price
-      const { data: purchases } = await supabase
-        .from('report_purchases')
-        .select('product_type, consumed_at, created_at')
-        .not('consumed_at', 'is', null)
-        .gte('created_at', startOfMonth.toISOString());
-      const revMTD = (purchases || []).reduce((s, p) => {
-        return s + (p.product_type === 'underwriting' ? 149900 : 49900);
-      }, 0);
+      let revMTD = null;
+      if (adminRunKey.trim()) {
+        const commerceResponse = await fetch(
+          `/api/admin/queue-metrics?include_commerce_summary=true&month_start=${encodeURIComponent(startOfMonth.toISOString())}`,
+          { headers: { Authorization: `Bearer ${adminRunKey.trim()}` } }
+        );
+        const commercePayload = await commerceResponse.json().catch(() => ({}));
+        if (commerceResponse.ok && commercePayload?.commerce_summary?.currency === 'usd') {
+          revMTD = Number(commercePayload.commerce_summary.settled_revenue_minor || 0);
+        }
+      }
 
       // Reports today from the governed admin projection.
       const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
@@ -829,7 +830,7 @@ export default function AdminDashboard() {
 
           {/*  ZONE 1: COMMAND STRIP  */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, marginBottom:16 }}>
-            <StatCard icon={DollarSign} label="Revenue MTD" value={cmdStats ? `$${(cmdStats.revMTD/100).toLocaleString('en-CA', { minimumFractionDigits:0 })}` : '-'} sub="Canadian dollars" accent={T.goldDark} />
+            <StatCard icon={DollarSign} label="Revenue MTD" value={Number.isFinite(cmdStats?.revMTD) ? `$${(cmdStats.revMTD/100).toLocaleString('en-US', { minimumFractionDigits:0 })}` : '-'} sub="US dollars, settled checkout receipts" accent={T.goldDark} />
             <StatCard icon={FileText} label="Reports Today" value={cmdStats?.rptToday ?? '-'} sub="generated today" accent='#1A4A22' />
             <StatCard icon={Users} label="Total Users" value={cmdStats?.totalUsers ?? '-'} sub="registered accounts" accent={T.infoBlue} />
             <StatCard icon={AlertTriangle} label="Open Issues" value={cmdStats?.openIssues ?? '-'} sub="pending support" accent={cmdStats?.openIssues > 0 ? T.errRed : T.ink4} />

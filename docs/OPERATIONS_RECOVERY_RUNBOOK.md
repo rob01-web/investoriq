@@ -1,7 +1,7 @@
 # InvestorIQ Operations / Recovery Runbook
 
 **Status:** Current operations authority
-**Date:** 2026-08-30
+**Date:** 2026-08-31
 
 ## Scheduler
 
@@ -45,3 +45,31 @@ Do not manually force historical stranded jobs through modern state transitions.
 ## Production proof rule
 
 Local QA, local build, code inspection, and historical RETESTs cannot produce launch PASS. Fresh production evidence is mandatory after the owner authorizes the consolidated deployment/certification window.
+
+## Phase 4 commerce activation
+
+The locked server catalog is Screening $199 USD, Underwriting $499 USD, and Launch Bundle $699 USD. The bundle always creates two Screening entitlements and one Underwriting entitlement. Standalone quantity is an integer from one through five.
+
+Before deploying the Phase 4 branch, bind the production Vercel server environment exactly:
+
+```text
+STRIPE_PRICE_SCREENING=price_1UAUEAPlUvcaYNKZ6NZQZdhR
+STRIPE_PRICE_UNDERWRITING=price_1UAUEFPlUvcaYNKZ0e3HUSTM
+STRIPE_PRICE_BUNDLE=price_1UAUEjPlUvcaYNKZy8R3JkgS
+```
+
+Do not restore `VITE_STRIPE_PRICE_ID_*` as an authority. The browser must load display prices and availability from the server catalog projection.
+
+Activation order:
+
+1. Confirm the three Vercel Production values above without deploying.
+2. Preflight for duplicate non-null `report_purchases.stripe_session_id` values. Investigate any duplicate; do not bypass the Phase 4 migration guard.
+3. Apply `20260828233000_phase1_admission_core_modes_and_upload_policy.sql`, `20260830121500_phase2_atomic_publication_delivery_authority.sql`, `20260830183000_phase3_worker_runtime_recovery_authority.sql`, and `20260831100000_phase4_atomic_commerce_entitlement_authority.sql` in timestamp order.
+4. Deploy the consolidated authorized branch while leaving the worker scheduler disabled.
+5. Verify that the server catalog reports all three products available and that Pricing/Dashboard display exactly $199, $499 and $699.
+6. Execute authenticated Checkout certification for Screening and Underwriting quantities one through five, the fixed bundle, a normal paid purchase, a valid 100% promotion, a discounted partner promotion, repeated webhook delivery, and an immediate success-page return before webhook completion.
+7. For every Checkout, verify exactly one immutable commerce receipt, the exact `report_purchases` allocation, correct owner/product/session lineage, and no duplicate grant on replay.
+8. Confirm the customer sees only `processing` before atomic grant and sees `Payment verified` only after the receipt and all exact entitlements exist.
+9. Archive prior non-canonical Prices only after the governed deployment and commerce certification pass. Product objects and historic purchase records must remain intact.
+
+Any price, currency, product identity, quantity, payment-state, receipt or entitlement mismatch is a hard commerce failure. Do not manually add credits to make the certification appear green.
