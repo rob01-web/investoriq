@@ -2,31 +2,21 @@
 
 This directory contains deterministic local regression helpers. Despite the historical `e2e` directory name, these checks are **not production end-to-end certification** and must never be presented as proof that a real customer purchase, upload, worker run, publication, listing, or download succeeded.
 
-The default harness is intentionally secret-free and avoids live Supabase, Stripe, DocRaptor, email, Storage mutations, credit consumption, and customer-visible report creation.
+The default lifecycle certification is intentionally secret-free and avoids live Supabase, Stripe, DocRaptor, email, Storage mutations, credit consumption, and customer-visible report creation.
 
-## Run the legacy local regression harness
+## Forward Phase 6 lifecycle certification
+
+Run either command:
 
 ```bash
 npm run test:e2e
 ```
 
-The historical runner prints:
-
-```text
-Test Name | Mode | Expected | Actual | Result | Notes
+```bash
+npm run qa:phase6:lifecycle
 ```
 
-It also writes:
-
-```text
-tests/e2e/results/latest-e2e-results.json
-```
-
-That JSON is local regression evidence only. It is not a production lifecycle receipt.
-
-## Phase 6 lifecycle certification authority
-
-The forward lifecycle contract is certified by:
+Both execute:
 
 ```bash
 node tests/qa/phase6-lifecycle-certification-contract-smoke.js
@@ -47,6 +37,28 @@ The Phase 6 smoke binds the local simulator to the governing Phase 1 through Pha
 
 The simulator is still a simulator. Passing Phase 6 local certification proves contract alignment, not live infrastructure behavior. Production certification remains a separate gated operation after migrations and deployment are explicitly authorized.
 
+## Historical broad local regression runner
+
+The old broad runner remains available only as an explicitly named legacy diagnostic:
+
+```bash
+npm run test:e2e:legacy
+```
+
+It prints:
+
+```text
+Test Name | Mode | Expected | Actual | Result | Notes
+```
+
+and writes:
+
+```text
+tests/e2e/results/latest-e2e-results.json
+```
+
+That output is historical/local regression evidence only. It is not the Phase 6 lifecycle authority and is not a production lifecycle receipt.
+
 ## Report/PDF text checks
 
 After regenerating a report locally, pass one or more HTML/TXT/PDF paths:
@@ -58,7 +70,7 @@ node tests/e2e/run-e2e.js --report "path/to/report.pdf"
 For constrained underwriting reports:
 
 ```bash
-node tests/e2e/run-e2e.js --profile underwriting-dscr-constrained --report "path/to/report.pdf"
+npm run test:e2e:report -- --report "path/to/report.pdf"
 ```
 
 Multiple reports can also be provided with `E2E_REPORT_PATHS`, using the platform path delimiter.
@@ -83,7 +95,7 @@ The simulator now models publication as:
 usable core -> report revision metadata -> generated object -> canonical delivery decision -> publishing -> finalize_worker_publication_v2 simulation -> complete publication receipt -> current revision -> published job
 ```
 
-Run all Wave 3 scenarios:
+Run all Wave 3 scenarios through the historical runner:
 
 ```bash
 node tests/e2e/run-e2e.js --profile wave3-worker-state
@@ -104,15 +116,14 @@ Wave 4 uses local parser fixtures and test-only parser contract checks. It valid
 node tests/e2e/run-e2e.js --profile wave4-parser-adversarial
 ```
 
-## What these local checks cover
+## What Phase 6 local certification covers
 
-- Static source and template regressions.
-- Seeded lifecycle fixture behavior.
+- Current minimum-core admission doctrine.
 - Corrected local worker-state simulation.
-- Parser adversarial fixtures.
-- Report text assertions for regenerated local artifacts.
-- Fixture package inventory.
-- Contract-level publication lineage through the dedicated Phase 6 smoke.
+- Atomic publication receipt and current-revision lineage.
+- Publication replay idempotency.
+- Governed customer listing and signed-download source boundaries.
+- Static binding to the Phase 1, Phase 2, and Phase 3 authority files.
 
 ## What is intentionally not certified here
 
