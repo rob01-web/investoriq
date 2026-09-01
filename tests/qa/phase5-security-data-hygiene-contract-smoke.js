@@ -99,7 +99,8 @@ assert.doesNotMatch(migration, /storage\.emptyBucket|remove\s*\(/i);
 
 // Phase 2 legacy report quarantine remains the authority; Phase 5 does not backfill/delete it.
 assert.match(phase2, /legacy_archive_only/);
-assert.match(phase2, /Legacy rows are retained/);
+assert.match(phase2, /Legacy policy: reports without governed publication lineage are retained/i);
+assert.match(phase2, /not deleted or\s*\n-- auto-backfilled/i);
 
 // Phase 5 adds no new deployable API function; it reuses the existing job-status route.
 assert.match(vercel, /customer-job-status/);
