@@ -124,10 +124,15 @@ async function removeAdmissionStagedObjects(baseSupabase, stagedFiles) {
   return result;
 }
 
-async function getAccessToken(baseSupabase) {
+async function getSession(baseSupabase) {
   const { data, error } = await baseSupabase.auth.getSession();
   if (error) throw error;
-  return data?.session?.access_token || '';
+  return data?.session || null;
+}
+
+async function getAccessToken(baseSupabase) {
+  const session = await getSession(baseSupabase);
+  return session?.access_token || '';
 }
 
 async function requestJson(baseSupabase, url, options = {}) {
@@ -196,6 +201,193 @@ class CustomerArtifactQueryBuilder {
   }
   maybeSingle() { return this.execute({ maybeSingle: true }); }
   then(resolve, reject) { return this.execute().then(resolve, reject); }
+}
+
+class CustomerJobQueryBuilder {
+  constructor(baseSupabase) {
+    this.baseSupabase = baseSupabase;
+    this.filters = { userId: null, statuses: [], createdBefore: null, limit: 25, invalid: false };
+  }
+  select() { return this; }
+  eq(column, value) {
+    if (column === 'user_id') this.filters.userId = String(value || '').trim();
+    else if (column === 'status') this.filters.statuses = [String(value || '').trim()].filter(Boolean);
+    else this.filters.invalid = true;
+    return this;
+  }
+  in(column, values) {
+    if (column === 'status') this.filters.statuses = normalizeJobIds(values);
+    else this.filters.invalid = true;
+    return this;
+  }
+  lt(column, value) {
+    if (column === 'created_at') this.filters.createdBefore = String(value || '').trim();
+    else this.filters.invalid = true;
+    return this;
+  }
+  order() { return this; }
+  limit(value) {
+    const parsed = Number(value);
+    this.filters.limit = Number.isFinite(parsed) && parsed > 0 ? Math.min(Math.floor(parsed), 50) : 25;
+    return this;
+  }
+  async execute({ maybeSingle = false } = {}) {
+    if (this.filters.invalid) {
+      return { data: maybeSingle ? null : [], error: { message: 'Unsupported job filter', code: 'INVALID_JOB_FILTER' } };
+    }
+
+    // The owner dashboard always scopes to the current user. A legacy admin
+    // browser query without user ownership is deliberately not allowed to
+    // fall back to raw analysis_jobs access.
+    if (!this.filters.userId) return { data: maybeSingle ? null : [], error: null };
+
+    const params = new URLSearchParams({ surface: 'jobs', limit: String(this.filters.limit) });
+    if (this.filters.statuses.length) params.set('statuses', this.filters.statuses.join(','));
+    const { data, error } = await requestJson(
+      this.baseSupabase,
+      `/api/customer-job-status?${params.toString()}`,
+      { method: 'GET' },
+    );
+    if (error) return { data: null, error };
+    let rows = Array.isArray(data?.rows) ? data.rows : [];
+    if (this.filters.createdBefore) {
+      const cutoff = Date.parse(this.filters.createdBefore);
+      if (Number.isFinite(cutoff)) rows = rows.filter((row) => Date.parse(row?.created_at || '') < cutoff);
+    }
+    if (maybeSingle) return { data: rows[0] || null, error: null };
+    return { data: rows, error: null };
+  }
+  maybeSingle() { return this.execute({ maybeSingle: true }); }
+  then(resolve, reject) { return this.execute().then(resolve, reject); }
+}
+
+class CustomerEntitlementQueryBuilder {
+  constructor(baseSupabase) {
+    this.baseSupabase = baseSupabase;
+    this.filters = { userId: null, productType: null, consumedNull: null, limit: null, invalid: false };
+    this.selected = '';
+  }
+  select(columns = '') { this.selected = String(columns || ''); return this; }
+  eq(column, value) {
+    if (column === 'user_id') this.filters.userId = String(value || '').trim();
+    else if (column === 'product_type') this.filters.productType = String(value || '').trim().toLowerCase();
+    else this.filters.invalid = true;
+    return this;
+  }
+  is(column, value) {
+    if (column === 'consumed_at' && value === null) this.filters.consumedNull = true;
+    else this.filters.invalid = true;
+    return this;
+  }
+  order() { return this; }
+  limit(value) {
+    const parsed = Number(value);
+    this.filters.limit = Number.isFinite(parsed) && parsed > 0 ? Math.min(Math.floor(parsed), 100) : null;
+    return this;
+  }
+  async execute({ maybeSingle = false } = {}) {
+    if (this.filters.invalid || this.filters.consumedNull !== true) {
+      return { data: maybeSingle ? null : [], error: { message: 'Unsupported entitlement filter', code: 'INVALID_ENTITLEMENT_FILTER' } };
+    }
+
+    const session = await getSession(this.baseSupabase);
+    const currentUserId = String(session?.user?.id || '').trim();
+    const targetUserId = this.filters.userId || currentUserId;
+    if (!targetUserId || !currentUserId) {
+      return { data: maybeSingle ? null : [], error: { message: 'Session expired', code: 'UNAUTHORIZED' } };
+    }
+
+    const adminSelection = Boolean(
+      this.filters.productType &&
+      this.filters.limit &&
+      this.selected.includes('id')
+    );
+
+    const params = new URLSearchParams();
+    if (adminSelection || targetUserId !== currentUserId) {
+      params.set('surface', 'admin_entitlements');
+      params.set('user_id', targetUserId);
+      params.set('product_type', this.filters.productType || 'screening');
+      params.set('limit', String(this.filters.limit || 25));
+    } else {
+      params.set('surface', 'entitlements');
+      if (this.filters.productType) params.set('product_type', this.filters.productType);
+    }
+
+    const { data, error } = await requestJson(
+      this.baseSupabase,
+      `/api/customer-job-status?${params.toString()}`,
+      { method: 'GET' },
+    );
+    if (error) return { data: null, error };
+    let rows = Array.isArray(data?.rows) ? data.rows : [];
+    if (this.filters.limit) rows = rows.slice(0, this.filters.limit);
+    if (maybeSingle) return { data: rows[0] || null, error: null };
+    return { data: rows, count: rows.length, error: null };
+  }
+  maybeSingle() { return this.execute({ maybeSingle: true }); }
+  then(resolve, reject) { return this.execute().then(resolve, reject); }
+}
+
+class AdminEntitlementDeleteBuilder {
+  constructor(baseSupabase) {
+    this.baseSupabase = baseSupabase;
+    this.ids = [];
+    this.invalid = false;
+  }
+  in(column, values) {
+    if (column === 'id') this.ids = normalizeJobIds(values).slice(0, 25);
+    else this.invalid = true;
+    return this;
+  }
+  async execute() {
+    if (this.invalid || !this.ids.length) {
+      return { data: null, error: { message: 'Invalid entitlement removal', code: 'INVALID_ENTITLEMENT_REMOVAL' } };
+    }
+    const { data, error } = await requestJson(
+      this.baseSupabase,
+      '/api/customer-job-status?surface=admin_entitlements',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke_ids', ids: this.ids }),
+      },
+    );
+    if (error) return { data: null, error };
+    return { data, error: null };
+  }
+  then(resolve, reject) { return this.execute().then(resolve, reject); }
+}
+
+function wrapReportPurchasesTable(baseSupabase) {
+  return {
+    select: (columns = '') => new CustomerEntitlementQueryBuilder(baseSupabase).select(columns),
+    insert: async (rows) => {
+      const values = Array.isArray(rows) ? rows : [rows];
+      const first = values[0] || {};
+      const userId = String(first?.user_id || '').trim();
+      const productType = String(first?.product_type || '').trim().toLowerCase();
+      const uniform = values.length > 0 && values.every((row) => (
+        String(row?.user_id || '').trim() === userId &&
+        String(row?.product_type || '').trim().toLowerCase() === productType &&
+        (row?.consumed_at === null || row?.consumed_at === undefined)
+      ));
+      if (!uniform || !userId || !productType || values.length > 25) {
+        return { data: null, error: { message: 'Invalid entitlement grant', code: 'INVALID_ENTITLEMENT_GRANT' } };
+      }
+      const { data, error } = await requestJson(
+        baseSupabase,
+        '/api/customer-job-status?surface=admin_entitlements',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'grant', user_id: userId, product_type: productType, count: values.length }),
+        },
+      );
+      return { data, error };
+    },
+    delete: () => new AdminEntitlementDeleteBuilder(baseSupabase),
+  };
 }
 
 function governedRemovalError(error) {
@@ -396,6 +588,8 @@ export function wrapSupabaseWithCustomerBoundaries(baseSupabase) {
       if (property === 'from') {
         return (tableName) => {
           if (tableName === 'analysis_artifacts') return new CustomerArtifactQueryBuilder(baseSupabase);
+          if (tableName === 'analysis_jobs') return new CustomerJobQueryBuilder(baseSupabase);
+          if (tableName === 'report_purchases') return wrapReportPurchasesTable(baseSupabase);
           if (tableName === 'reports') return wrapReportsTable(baseSupabase);
           return baseSupabase.from(tableName);
         };
