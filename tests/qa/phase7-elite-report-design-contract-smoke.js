@@ -92,6 +92,8 @@ assert.match(presentationSource, /\.iq-phase7-screening \.grid-2-balanced > :onl
 assert.match(presentationSource, /\.iq-phase7-screening section\.section\.no-break\s*\{[\s\S]*?break-inside:\s*auto;/);
 assert.match(presentationSource, /data-iq-elite-section="investorQuestions"/);
 assert.match(presentationSource, /data-iq-elite-driver-section="underwriting-driver-analysis"/);
+assert.match(presentationSource, /data-iq-chapter="scenario-underwriting-drivers"[\s\S]*?break-before:\s*auto;/);
+assert.match(presentationSource, /\.iq-phase7-underwriting #quality-manifest-title\s*\{[\s\S]*?break-before:\s*auto !important;[\s\S]*?page-break-before:\s*auto !important;/);
 
 for (const forbiddenImplementation of [
   /maxPages/i,
