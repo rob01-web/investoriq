@@ -79,13 +79,27 @@ const screeningWithEmptySupport = runScreeningReportPipeline({
 assert.doesNotMatch(screeningWithEmptySupport.html, /Source Context \/ Support Document Treatment/);
 assert.match(screeningWithEmptySupport.html, /Operating Evidence/);
 
+const legacyScreeningIdentityHtml = '<!doctype html><html><head><title>InvestorIQ Capital Intelligence Memorandum - Harbourstone</title></head><body><span>Confidential &mdash; InvestorIQ Technologies Inc.</span><div>InvestorIQ Capital Intelligence Memorandum | Confidential</div></body></html>';
+const screeningWithCanonicalIdentity = runScreeningReportPipeline({
+  finalHtml: legacyScreeningIdentityHtml,
+  reportMode: "screening_v1",
+  sourceTruthRequired: false,
+  deterministicContractQaSeal: { ok: true, issues: [] },
+});
+assert.match(screeningWithCanonicalIdentity.html, /InvestorIQ Screening Report - Harbourstone/);
+assert.match(screeningWithCanonicalIdentity.html, /InvestorIQ Screening Report \| Confidential/);
+assert.match(screeningWithCanonicalIdentity.html, /Confidential \| InvestorIQ Technologies Inc\./);
+assert.doesNotMatch(screeningWithCanonicalIdentity.html, /Capital Intelligence Memorandum/i);
+assert.doesNotMatch(screeningWithCanonicalIdentity.html, /&mdash;|\u2014/i);
+
 const underwritingHtml = polishFullUnderwritingFinalHtml(baseHtml, { reportMode: "full_underwriting" });
 assert.match(underwritingHtml, /iq-phase7-underwriting/);
 assert.ok(underwritingHtml.includes(governedSectionMarkup));
 assert.equal(visibleText(underwritingHtml), visibleText(baseHtml));
 
 assert.match(screeningPipelineSource, /removeEmptyScreeningSupportContextSection\(html\)/);
-assert.match(screeningPipelineSource, /applyPhase7EliteReportPresentation\(compactedHtml, \{ reportMode \}\)/);
+assert.match(screeningPipelineSource, /normalizeScreeningCustomerIdentity\(compactedHtml\)/);
+assert.match(screeningPipelineSource, /applyPhase7EliteReportPresentation\(identityHtml, \{ reportMode \}\)/);
 assert.match(screeningPipelineSource, /applyPhase7DecisionSupport\(presentationHtml, \{ reportMode \}\)/);
 assert.match(underwritingPolishSource, /applyPhase7EliteReportPresentation\(paginationReleased, \{ reportMode \}\)/);
 assert.match(presentationSource, /\.iq-phase7-screening \.grid-2-balanced > :only-child\s*\{[\s\S]*?grid-column:\s*1 \/ -1;/);
