@@ -6,9 +6,11 @@ on:
       - internal-phase7-elite-report-redesign-20260901
     paths:
       - 'api/_lib/phase7-elite-report-presentation.js'
+      - 'api/_lib/phase7-decision-support.js'
       - 'api/_lib/screening-report-pipeline.js'
       - 'api/_lib/full-underwriting-final-surgical-polish.js'
       - 'tests/qa/phase7-elite-report-design-contract-smoke.js'
+      - 'tests/qa/phase7-decision-support-smoke.js'
       - 'docs/PHASE7_ELITE_REPORT_DESIGN_AUTHORITY_2026-09-01.md'
       - '.github/workflows/phase7-elite-report-certification.yml'
   workflow_dispatch: {}
@@ -39,6 +41,9 @@ jobs:
 
       - name: Run Phase 7 design authority
         run: node tests/qa/phase7-elite-report-design-contract-smoke.js
+
+      - name: Run Phase 7 decision-support authority
+        run: node tests/qa/phase7-decision-support-smoke.js
 
       - name: Run Screening sealed-lane regression
         run: node tests/qa/screening-report-sealed-lane-authority-smoke.js
