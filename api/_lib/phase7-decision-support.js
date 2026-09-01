@@ -123,17 +123,25 @@ function insertEvidenceMatrixAtExecutiveClose(html = "", matrixHtml = "") {
   return `${source.slice(0, closeIndex)}${matrixHtml}\n${source.slice(closeIndex)}`;
 }
 
+function wrapDecisionDriverMarkup(markup = "") {
+  return `<div class="phase7-what-changes-decision no-break" data-iq-phase7-decision-drivers="${PHASE7_DECISION_SUPPORT_MARKER}" style="margin-top:12px;border-top:1px solid #ddd9cf;padding-top:10px;"><p class="subsection-title">What Changes the Decision</p><p class="small" style="margin:0 0 8px 0;color:#667168;">Source-backed upside drivers and primary constraints already identified by the report.</p>${markup}</div>`;
+}
+
 function frameExistingDecisionDrivers(html = "") {
   const source = String(html || "");
   if (source.includes('data-iq-phase7-decision-drivers="')) return source;
 
   const pairedMarkedBlocks = /(<!--\s*BEGIN EXEC_UPSIDE_BULLETS\s*-->[\s\S]*?<!--\s*END EXEC_UPSIDE_BULLETS\s*-->\s*<!--\s*BEGIN EXEC_RISK_BULLETS\s*-->[\s\S]*?<!--\s*END EXEC_RISK_BULLETS\s*-->)/i;
-  if (!pairedMarkedBlocks.test(source)) return source;
+  if (pairedMarkedBlocks.test(source)) {
+    return source.replace(pairedMarkedBlocks, (_match, markup) => wrapDecisionDriverMarkup(markup));
+  }
 
-  return source.replace(
-    pairedMarkedBlocks,
-    `<div class="phase7-what-changes-decision no-break" data-iq-phase7-decision-drivers="${PHASE7_DECISION_SUPPORT_MARKER}" style="margin-top:12px;border-top:1px solid #ddd9cf;padding-top:10px;"><p class="subsection-title">What Changes the Decision</p><p class="small" style="margin:0 0 8px 0;color:#667168;">Source-backed upside drivers and primary constraints already identified by the report.</p>$1</div>`
-  );
+  const renderedBulletPair = /(<div\b[^>]*class\s*=\s*(["'])[^"']*\bexec-bullet-block\b[^"']*\2[^>]*>[\s\S]*?<p\b[^>]*class\s*=\s*(["'])[^"']*\bexec-major-heading\b[^"']*\3[^>]*>\s*Key Upside Drivers\s*<\/p>[\s\S]*?<\/div>\s*<div\b[^>]*class\s*=\s*(["'])[^"']*\bexec-bullet-block\b[^"']*\4[^>]*>[\s\S]*?<p\b[^>]*class\s*=\s*(["'])[^"']*\bexec-major-heading\b[^"']*\5[^>]*>\s*Primary Constraints\s*<\/p>[\s\S]*?<\/div>)/i;
+  if (renderedBulletPair.test(source)) {
+    return source.replace(renderedBulletPair, (_match, markup) => wrapDecisionDriverMarkup(markup));
+  }
+
+  return source;
 }
 
 export function applyPhase7DecisionSupport(html, { reportMode = null } = {}) {
