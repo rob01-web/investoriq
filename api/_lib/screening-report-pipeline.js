@@ -10,6 +10,15 @@ function removeEmptyScreeningSupportContextSection(html = "") {
   );
 }
 
+function normalizeScreeningCustomerIdentity(html = "") {
+  return String(html || "")
+    .replace(/InvestorIQ Capital Intelligence Memorandum/gi, "InvestorIQ Screening Report")
+    .replace(
+      /Confidential\s*(?:&mdash;|&#8212;|&#x2014;|\u2014)\s*InvestorIQ Technologies Inc\./gi,
+      "Confidential | InvestorIQ Technologies Inc."
+    );
+}
+
 export function runScreeningReportPipeline({
   finalHtml = "",
   qaHtml = "",
@@ -61,7 +70,8 @@ export function runScreeningReportPipeline({
         ? qaHtml
         : "";
   const compactedHtml = removeEmptyScreeningSupportContextSection(html);
-  const presentationHtml = applyPhase7EliteReportPresentation(compactedHtml, { reportMode });
+  const identityHtml = normalizeScreeningCustomerIdentity(compactedHtml);
+  const presentationHtml = applyPhase7EliteReportPresentation(identityHtml, { reportMode });
   const decisionSupportHtml = applyPhase7DecisionSupport(presentationHtml, { reportMode });
   return {
     html: decisionSupportHtml,
