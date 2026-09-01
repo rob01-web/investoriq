@@ -124,8 +124,19 @@ for (const [label, outputPath] of Object.entries(authoritativeOutputs)) {
     throw new Error(`PHASE7_DECISION_DRIVERS_UNSUPPORTED:${label}`);
   }
 
-  if (/\u2013|\u2014/.test(html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ""))) {
+  const customerHtml = html
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  if (/(?:\u2013|\u2014|&(?:ndash|mdash);|&#(?:8211|8212);|&#x(?:2013|2014);)/i.test(customerHtml)) {
     throw new Error(`PHASE7_CUSTOMER_DASH_PUNCTUATION_FOUND:${label}`);
+  }
+  if (label === "screeningHarbourstone") {
+    if (!/InvestorIQ Screening Report/i.test(customerHtml)) {
+      throw new Error("PHASE7_SCREENING_IDENTITY_MISSING");
+    }
+    if (/Capital Intelligence Memorandum/i.test(customerHtml)) {
+      throw new Error("PHASE7_LEGACY_SCREENING_IDENTITY_FOUND");
+    }
   }
 
   authoritativeValidation[label] = {
@@ -158,7 +169,8 @@ const manifest = {
     "Evidence Conviction Matrix when section evidence supports it",
     "What Changes the Decision only when both governed driver blocks are present",
     "no unsupported What Changes the Decision frame",
-    "no customer-visible em/en dash punctuation",
+    "canonical Screening report identity",
+    "no customer-visible literal or encoded em/en dash punctuation",
   ],
   authoritative_validation: authoritativeValidation,
   authoritative_artifacts: Object.fromEntries(
