@@ -69,13 +69,29 @@ assert.match(sealedScreening.html, /iq-phase7-screening/);
 assert.ok(sealedScreening.html.includes(governedSectionMarkup));
 assert.equal(visibleText(sealedScreening.html), visibleText(baseHtml));
 
+const emptySupportSection = '<section class="section page-break"><div class="section-header"><span class="section-header-title">Source Context / Support Document Treatment</span></div></section>';
+const screeningWithEmptySupport = runScreeningReportPipeline({
+  finalHtml: `<!doctype html><html><head></head><body>${governedSectionMarkup}${emptySupportSection}</body></html>`,
+  reportMode: "screening_v1",
+  sourceTruthRequired: false,
+  deterministicContractQaSeal: { ok: true, issues: [] },
+});
+assert.doesNotMatch(screeningWithEmptySupport.html, /Source Context \/ Support Document Treatment/);
+assert.match(screeningWithEmptySupport.html, /Operating Evidence/);
+
 const underwritingHtml = polishFullUnderwritingFinalHtml(baseHtml, { reportMode: "full_underwriting" });
 assert.match(underwritingHtml, /iq-phase7-underwriting/);
 assert.ok(underwritingHtml.includes(governedSectionMarkup));
 assert.equal(visibleText(underwritingHtml), visibleText(baseHtml));
 
-assert.match(screeningPipelineSource, /applyPhase7EliteReportPresentation\(html, \{ reportMode \}\)/);
+assert.match(screeningPipelineSource, /removeEmptyScreeningSupportContextSection\(html\)/);
+assert.match(screeningPipelineSource, /applyPhase7EliteReportPresentation\(compactedHtml, \{ reportMode \}\)/);
+assert.match(screeningPipelineSource, /applyPhase7DecisionSupport\(presentationHtml, \{ reportMode \}\)/);
 assert.match(underwritingPolishSource, /applyPhase7EliteReportPresentation\(paginationReleased, \{ reportMode \}\)/);
+assert.match(presentationSource, /\.iq-phase7-screening \.grid-2-balanced > :only-child\s*\{[\s\S]*?grid-column:\s*1 \/ -1;/);
+assert.match(presentationSource, /\.iq-phase7-screening section\.section\.no-break\s*\{[\s\S]*?break-inside:\s*auto;/);
+assert.match(presentationSource, /data-iq-elite-section="investorQuestions"/);
+assert.match(presentationSource, /data-iq-elite-driver-section="underwriting-driver-analysis"/);
 
 for (const forbiddenImplementation of [
   /maxPages/i,
