@@ -3,9 +3,9 @@
 Date: 2026-09-01
 Branch: `internal-phase7-elite-report-redesign-20260901`
 Base authority: Phase 6 closure checkpoint `cebc8f4ea256ca067bf271797a3d266ceb46c37d`
-Certified implementation checkpoint: `42721cc422bf4186235063e9ae48c89505b8293a`
-Certification workflow run: `33569172978` (run 25)
-Certification artifact: `phase7-visual-certification-42721cc422bf4186235063e9ae48c89505b8293a`
+Certified implementation checkpoint: `fc0c82279e5dd4a48f68a259eebe5486acb03227`
+Certification workflow run: `33569561301` (run 28)
+Certification artifact: `phase7-visual-certification-fc0c82279e5dd4a48f68a259eebe5486acb03227`
 Status: CLOSED / CERTIFIED
 
 ## 1. Purpose
@@ -113,7 +113,9 @@ It may:
 - improve hierarchy, spacing, table treatment, chart framing, cover styling, metric density, and print readability;
 - label an already-existing executive decision block visually through styling;
 - collapse an empty optional presentation shell;
-- release or protect page breaks to prevent blank, near-empty, or orphaned customer pages without deleting evidence.
+- release or protect page breaks to prevent blank, near-empty, or orphaned customer pages without deleting evidence;
+- normalize obsolete Screening identity strings to the canonical `InvestorIQ Screening Report` identity;
+- normalize customer-facing dash punctuation without changing meaning.
 
 It may not:
 
@@ -159,17 +161,17 @@ DocRaptor remains test-only unless a separate explicit authority changes that st
 
 ## 11. Closure certification
 
-Phase 7 earned closure on the isolated branch after the real-artifact wall and page-by-page visual certification.
+Phase 7 earned closure on the isolated branch after the real-artifact wall and direct page-by-page visual certification of the final authoritative PDFs.
 
 Certified implementation checkpoint:
 
-`42721cc422bf4186235063e9ae48c89505b8293a`
+`fc0c82279e5dd4a48f68a259eebe5486acb03227`
 
 GitHub Actions certification:
 
 - workflow: `InvestorIQ Phase 7 ELITE Report Certification`;
-- run number: `25`;
-- run ID: `33569172978`;
+- run number: `28`;
+- run ID: `33569561301`;
 - result: PASS;
 - design authority: PASS;
 - decision-support authority: PASS;
@@ -183,7 +185,7 @@ GitHub Actions certification:
 
 Authoritative artifact set:
 
-`phase7-visual-certification-42721cc422bf4186235063e9ae48c89505b8293a`
+`phase7-visual-certification-fc0c82279e5dd4a48f68a259eebe5486acb03227`
 
 Authoritative visual lanes:
 
@@ -205,10 +207,13 @@ Final visual certification confirmed:
 - no clipped content;
 - no overflowing tables or charts;
 - Evidence Conviction Matrix present where source-domain evidence supports it;
-- decision-driver framing remains evidence-gated;
+- Matrix evidence gating remains strict and unchanged;
+- What Changes the Decision remains absent when both governed driver inputs are not present;
 - Screening and Underwriting remain visually and analytically distinct;
-- no unsupported Phase 7 analytical outputs introduced;
-- no customer-visible em dash or en dash punctuation detected by the artifact wall;
+- canonical `InvestorIQ Screening Report` identity is used on the Screening customer surface;
+- obsolete `Capital Intelligence Memorandum` Screening identity is absent from the authoritative Screening artifact;
+- no unsupported Phase 7 analytical outputs were introduced;
+- no customer-visible literal or encoded em dash or en dash punctuation is present in the authoritative artifacts;
 - source transparency and Quality Manifest surfaces remain present;
 - production remained untouched.
 
@@ -218,6 +223,8 @@ Visual inspection found and repaired real PDF defects that static tests did not 
 
 A final independent visual pass after the earlier run 22 closure note identified two residual Stonebridge whitespace defects: a sparse page created by the Scenario chapter boundary after the whole-property value context, and a sparse source-appendix ending caused by a forced Quality Manifest page break. The final Phase 7 presentation guards now allow the Scenario chapter to flow after a short operating tail and allow Quality Manifest to use available source-appendix space. Both changes are presentation-only. The authoritative Stonebridge report naturally compacted from 20 pages to 18 pages with all supported evidence retained.
 
+The final Screening pass identified a customer-facing identity and punctuation defect that the prior HTML gate did not catch: the browser/footer surface still used the obsolete `Capital Intelligence Memorandum` label and the cover footer rendered an HTML-encoded em dash. The Screening sealed lane now normalizes those strings to the canonical `InvestorIQ Screening Report` identity and ASCII-safe punctuation. The real-artifact wall was strengthened to reject both literal and HTML-encoded em dash/en dash punctuation and to require the canonical Screening identity while rejecting the obsolete label.
+
 ## 12. Exit criteria result
 
 Phase 7 closure criteria are satisfied:
@@ -226,7 +233,7 @@ Phase 7 closure criteria are satisfied:
 2. inherited source/publication/customer-surface regression remains green within this wall;
 3. production build passes;
 4. real report artifacts were generated in non-production/test mode across the authoritative Screening and Underwriting lanes;
-5. both PDFs were visually inspected page by page for hierarchy, readability, natural pagination, evidence gating, blank pages, overflow, unsupported content, and report-family distinction;
+5. both final PDFs were visually inspected page by page for hierarchy, readability, natural pagination, evidence gating, blank pages, overflow, unsupported content, punctuation, identity, and report-family distinction;
 6. no forbidden analytical outputs were introduced;
 7. production remained untouched.
 
