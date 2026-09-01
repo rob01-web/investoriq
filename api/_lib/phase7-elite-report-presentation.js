@@ -51,17 +51,6 @@ function addBodyPresentationClass(html = "", lane = null) {
   });
 }
 
-function annotateExistingSurfaces(html = "") {
-  return String(html || "")
-    .replace(/class="section-header"/g, 'class="section-header iq-phase7-section-header"')
-    .replace(/class="verdict-block"/g, 'class="verdict-block iq-phase7-decision-cockpit"')
-    .replace(/class="metric-grid"/g, 'class="metric-grid iq-phase7-metric-grid"')
-    .replace(/class="grid-2-balanced"/g, 'class="grid-2-balanced iq-phase7-balanced-grid"')
-    .replace(/class="card no-break"/g, 'class="card no-break iq-phase7-card"')
-    .replace(/class="card"/g, 'class="card iq-phase7-card"')
-    .replace(/class="chart-block/g, 'class="chart-block iq-phase7-chart-block');
-}
-
 const PHASE7_STYLE = `
 <style id="investoriq-phase7-elite-report-design">
   :root {
@@ -125,7 +114,7 @@ const PHASE7_STYLE = `
     padding-bottom: 20px;
   }
 
-  .iq-phase7 .iq-phase7-section-header {
+  .iq-phase7 .section-header {
     margin-bottom: 18px;
     padding-bottom: 10px;
     display: grid;
@@ -135,7 +124,7 @@ const PHASE7_STYLE = `
     border-bottom: 1px solid var(--iq7-rule);
   }
 
-  .iq-phase7 .iq-phase7-section-header::after {
+  .iq-phase7 .section-header::after {
     width: .42in;
     height: 2px;
     background: var(--iq7-gold);
@@ -156,7 +145,7 @@ const PHASE7_STYLE = `
     line-height: 1.35;
   }
 
-  .iq-phase7 .iq-phase7-card {
+  .iq-phase7 .card {
     border: 1px solid var(--iq7-rule);
     border-top: 2px solid var(--iq7-forest-soft);
     border-radius: 2px;
@@ -164,7 +153,7 @@ const PHASE7_STYLE = `
     background: #fff;
   }
 
-  .iq-phase7 .iq-phase7-card + .iq-phase7-card {
+  .iq-phase7 .card + .card {
     margin-top: 10px;
   }
 
@@ -174,7 +163,7 @@ const PHASE7_STYLE = `
     font-size: 7.5px;
   }
 
-  .iq-phase7 .iq-phase7-decision-cockpit {
+  .iq-phase7 .verdict-block {
     position: relative;
     padding: 16px 18px;
     border: 1px solid #d7d3c8;
@@ -182,7 +171,7 @@ const PHASE7_STYLE = `
     background: linear-gradient(135deg, #fff 0%, var(--iq7-paper) 100%);
   }
 
-  .iq-phase7 .iq-phase7-decision-cockpit::before {
+  .iq-phase7 .verdict-block::before {
     content: "DECISION COCKPIT";
     display: block;
     margin-bottom: 8px;
@@ -192,7 +181,6 @@ const PHASE7_STYLE = `
     letter-spacing: .16em;
   }
 
-  .iq-phase7 .iq-phase7-metric-grid,
   .iq-phase7 .metric-grid {
     gap: 8px;
   }
@@ -235,7 +223,7 @@ const PHASE7_STYLE = `
     background: #fbfaf7;
   }
 
-  .iq-phase7 .iq-phase7-chart-block,
+  .iq-phase7 .chart-block,
   .iq-phase7 .evidence-chart,
   .iq-phase7 .institutional-chart {
     border: 1px solid var(--iq7-rule);
@@ -245,7 +233,7 @@ const PHASE7_STYLE = `
   }
 
   .iq-phase7 .institutional-visual-grid,
-  .iq-phase7 .iq-phase7-balanced-grid {
+  .iq-phase7 .grid-2-balanced {
     gap: 12px;
   }
 
@@ -265,7 +253,7 @@ const PHASE7_STYLE = `
     font-size: 17.5pt;
   }
 
-  .iq-phase7-screening .iq-phase7-decision-cockpit {
+  .iq-phase7-screening .verdict-block {
     margin-top: 4px;
   }
 
@@ -282,9 +270,9 @@ const PHASE7_STYLE = `
   }
 
   @media print {
-    .iq-phase7 .iq-phase7-card,
-    .iq-phase7 .iq-phase7-decision-cockpit,
-    .iq-phase7 .iq-phase7-chart-block {
+    .iq-phase7 .card.no-break,
+    .iq-phase7 .verdict-block,
+    .iq-phase7 .chart-block {
       break-inside: avoid;
       page-break-inside: avoid;
     }
@@ -308,8 +296,7 @@ export function applyPhase7EliteReportPresentation(html, { reportMode = null } =
   const lane = resolveLane(reportMode);
   const source = String(html || "");
   if (!lane || !source) return source;
-  const annotated = annotateExistingSurfaces(addBodyPresentationClass(source, lane));
-  return injectPresentationStyle(annotated);
+  return injectPresentationStyle(addBodyPresentationClass(source, lane));
 }
 
 export function phase7EliteReportPresentationMetadata(reportMode = null) {
