@@ -10,18 +10,21 @@ const artifactDir = path.resolve(process.env.PHASE7_ARTIFACT_DIR || path.join(ro
 
 fs.mkdirSync(artifactDir, { recursive: true });
 
-const outputs = {
-  underwritingHarbourstone: path.join(artifactDir, "phase7-underwriting-harbourstone.html"),
+const authoritativeOutputs = {
   screeningHarbourstone: path.join(artifactDir, "phase7-screening-harbourstone.html"),
   underwritingStonebridge: path.join(artifactDir, "phase7-underwriting-stonebridge.html"),
 };
+const diagnosticOutputs = {
+  underwritingHarbourstoneLegacy: path.join(artifactDir, "phase7-underwriting-harbourstone-legacy-diagnostic.html"),
+};
+const outputs = { ...authoritativeOutputs, ...diagnosticOutputs };
 
 let source = fs.readFileSync(sourcePath, "utf8");
 
 // The historical giant smoke contains static source-shape assertions that are not
 // part of Phase 7 visual artifact authority and may legitimately age as upstream
 // architecture evolves. The temporary copy reuses its proven render fixtures only.
-// Generated artifacts receive fresh Phase 7 assertions below.
+// Generated authoritative artifacts receive fresh Phase 7 assertions below.
 const historicalAssertImport = 'import assert from "assert";';
 if (!source.includes(historicalAssertImport)) {
   throw new Error("PHASE7_ARTIFACT_ASSERT_SEAM_MISSING");
@@ -40,7 +43,7 @@ function injectCapture(variableName, responseName, envName) {
   source = source.replace(exact, capture);
 }
 
-injectCapture("fullRenderHtml", "fullRenderHarnessResponse", "PHASE7_UNDERWRITING_HARBOURSTONE_HTML");
+injectCapture("fullRenderHtml", "fullRenderHarnessResponse", "PHASE7_UNDERWRITING_HARBOURSTONE_LEGACY_HTML");
 injectCapture("screeningHtml", "screeningHarnessResponse", "PHASE7_SCREENING_HARBOURSTONE_HTML");
 injectCapture("attackRenderHtml", "attackRenderHarnessResponse", "PHASE7_UNDERWRITING_STONEBRIDGE_HTML");
 
@@ -59,9 +62,9 @@ try {
       ADMIN_RUN_KEY: process.env.ADMIN_RUN_KEY || "test-admin-run-key",
       DOCRAPTOR_API_KEY: process.env.DOCRAPTOR_API_KEY || "test-docraptor-key",
       QA_REVIEW_ENABLED: "false",
-      PHASE7_UNDERWRITING_HARBOURSTONE_HTML: outputs.underwritingHarbourstone,
-      PHASE7_SCREENING_HARBOURSTONE_HTML: outputs.screeningHarbourstone,
-      PHASE7_UNDERWRITING_STONEBRIDGE_HTML: outputs.underwritingStonebridge,
+      PHASE7_UNDERWRITING_HARBOURSTONE_LEGACY_HTML: diagnosticOutputs.underwritingHarbourstoneLegacy,
+      PHASE7_SCREENING_HARBOURSTONE_HTML: authoritativeOutputs.screeningHarbourstone,
+      PHASE7_UNDERWRITING_STONEBRIDGE_HTML: authoritativeOutputs.underwritingStonebridge,
     },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -77,7 +80,7 @@ try {
   fs.rmSync(tempRunnerPath, { force: true });
 }
 
-for (const [label, outputPath] of Object.entries(outputs)) {
+for (const [label, outputPath] of Object.entries(authoritativeOutputs)) {
   if (!fs.existsSync(outputPath)) throw new Error(`PHASE7_ARTIFACT_MISSING:${label}`);
   const html = fs.readFileSync(outputPath, "utf8");
   if (!/<!DOCTYPE html>/i.test(html)) throw new Error(`PHASE7_ARTIFACT_NOT_HTML:${label}`);
@@ -89,11 +92,22 @@ for (const [label, outputPath] of Object.entries(outputs)) {
   }
 }
 
+for (const [label, outputPath] of Object.entries(diagnosticOutputs)) {
+  if (!fs.existsSync(outputPath)) throw new Error(`PHASE7_DIAGNOSTIC_ARTIFACT_MISSING:${label}`);
+  const html = fs.readFileSync(outputPath, "utf8");
+  if (!/<!DOCTYPE html>/i.test(html)) throw new Error(`PHASE7_DIAGNOSTIC_NOT_HTML:${label}`);
+}
+
 const manifest = {
   generated_at: new Date().toISOString(),
   source_harness: "tests/qa/generate-client-report-rent-roll-smoke.js",
   production_services_used: false,
   historical_static_assertions_used_as_authority: false,
+  visual_authority: {
+    screening: "Harbourstone handler-driven Screening render",
+    underwriting: "Stonebridge source-authority handler-driven Underwriting render",
+  },
+  legacy_underwriting_fixture_is_visual_authority: false,
   fresh_phase7_artifact_checks: [
     "complete HTML document",
     "Phase 7 presentation marker",
@@ -101,8 +115,14 @@ const manifest = {
     "What Changes the Decision",
     "no customer-visible em/en dash punctuation",
   ],
-  artifacts: Object.fromEntries(
-    Object.entries(outputs).map(([label, outputPath]) => [label, {
+  authoritative_artifacts: Object.fromEntries(
+    Object.entries(authoritativeOutputs).map(([label, outputPath]) => [label, {
+      file: path.basename(outputPath),
+      bytes: fs.statSync(outputPath).size,
+    }])
+  ),
+  diagnostic_artifacts: Object.fromEntries(
+    Object.entries(diagnosticOutputs).map(([label, outputPath]) => [label, {
       file: path.basename(outputPath),
       bytes: fs.statSync(outputPath).size,
     }])
