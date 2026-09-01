@@ -299,7 +299,8 @@ const PHASE7_STYLE = `
       page-break-inside: avoid;
     }
 
-    .iq-phase7-underwriting .institutional-chapter[data-iq-chapter="transaction-context"] {
+    .iq-phase7-underwriting .institutional-chapter[data-iq-chapter="transaction-context"],
+    .iq-phase7-underwriting .institutional-chapter[data-iq-chapter="debt-capital-structure"] {
       break-before: auto;
       page-break-before: auto;
     }
