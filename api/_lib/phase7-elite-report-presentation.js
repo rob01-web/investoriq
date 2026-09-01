@@ -299,10 +299,16 @@ const PHASE7_STYLE = `
       page-break-inside: avoid;
     }
 
+    .iq-phase7-underwriting .institutional-chapter[data-iq-chapter="scenario-underwriting-drivers"],
     .iq-phase7-underwriting .institutional-chapter[data-iq-chapter="transaction-context"],
     .iq-phase7-underwriting .institutional-chapter[data-iq-chapter="debt-capital-structure"] {
       break-before: auto;
       page-break-before: auto;
+    }
+
+    .iq-phase7-underwriting #quality-manifest-title {
+      break-before: auto !important;
+      page-break-before: auto !important;
     }
   }
 </style>`;
