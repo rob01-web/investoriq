@@ -9,6 +9,7 @@ on:
       - 'api/_lib/phase7-decision-support.js'
       - 'api/_lib/screening-report-pipeline.js'
       - 'api/_lib/full-underwriting-final-surgical-polish.js'
+      - 'scripts/phase7-generate-visual-artifacts.js'
       - 'tests/qa/phase7-elite-report-design-contract-smoke.js'
       - 'tests/qa/phase7-decision-support-smoke.js'
       - 'docs/PHASE7_ELITE_REPORT_DESIGN_AUTHORITY_2026-09-01.md'
@@ -25,7 +26,7 @@ concurrency:
 jobs:
   phase7-elite-report-certification:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout Phase 7 branch
         uses: actions/checkout@v4
@@ -56,3 +57,40 @@ jobs:
 
       - name: Run production build
         run: npm run build
+
+      - name: Generate current-branch real-render HTML artifacts
+        env:
+          PHASE7_ARTIFACT_DIR: phase7-artifacts
+        run: node scripts/phase7-generate-visual-artifacts.js
+
+      - name: Render current-branch PDFs in headless Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME" ]; then
+            echo "Chrome/Chromium is unavailable on the certification runner." >&2
+            exit 1
+          fi
+          echo "Using browser: $CHROME"
+          for html in phase7-artifacts/*.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" \
+              --headless \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --no-pdf-header-footer \
+              --print-to-pdf="$pdf" \
+              "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+          ls -lh phase7-artifacts
+
+      - name: Upload Phase 7 visual certification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase7-visual-certification-${{ github.sha }}
+          path: phase7-artifacts/
+          if-no-files-found: error
+          retention-days: 7
