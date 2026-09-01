@@ -80,16 +80,35 @@ try {
   fs.rmSync(tempRunnerPath, { force: true });
 }
 
+const authoritativeValidation = {};
 for (const [label, outputPath] of Object.entries(authoritativeOutputs)) {
   if (!fs.existsSync(outputPath)) throw new Error(`PHASE7_ARTIFACT_MISSING:${label}`);
   const html = fs.readFileSync(outputPath, "utf8");
   if (!/<!DOCTYPE html>/i.test(html)) throw new Error(`PHASE7_ARTIFACT_NOT_HTML:${label}`);
   if (!/data-iq-phase7="elite-report-redesign-v1"/i.test(html)) throw new Error(`PHASE7_PRESENTATION_MARKER_MISSING:${label}`);
   if (!/Evidence Conviction Matrix/i.test(html)) throw new Error(`PHASE7_EVIDENCE_MATRIX_MISSING:${label}`);
-  if (!/What Changes the Decision/i.test(html)) throw new Error(`PHASE7_DECISION_DRIVERS_MISSING:${label}`);
+
+  const hasUpsideDrivers = /Key Upside Drivers/i.test(html);
+  const hasPrimaryConstraints = /Primary Constraints/i.test(html);
+  const decisionDriverInputsPresent = hasUpsideDrivers && hasPrimaryConstraints;
+  const decisionDriverFramePresent = /What Changes the Decision/i.test(html);
+  if (decisionDriverInputsPresent && !decisionDriverFramePresent) {
+    throw new Error(`PHASE7_DECISION_DRIVERS_MISSING:${label}`);
+  }
+  if (!decisionDriverInputsPresent && decisionDriverFramePresent) {
+    throw new Error(`PHASE7_DECISION_DRIVERS_UNSUPPORTED:${label}`);
+  }
+
   if (/\u2013|\u2014/.test(html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ""))) {
     throw new Error(`PHASE7_CUSTOMER_DASH_PUNCTUATION_FOUND:${label}`);
   }
+
+  authoritativeValidation[label] = {
+    evidence_conviction_matrix: true,
+    decision_driver_inputs_present: decisionDriverInputsPresent,
+    what_changes_the_decision_present: decisionDriverFramePresent,
+    evidence_gating_consistent: decisionDriverInputsPresent === decisionDriverFramePresent,
+  };
 }
 
 for (const [label, outputPath] of Object.entries(diagnosticOutputs)) {
@@ -111,10 +130,12 @@ const manifest = {
   fresh_phase7_artifact_checks: [
     "complete HTML document",
     "Phase 7 presentation marker",
-    "Evidence Conviction Matrix",
-    "What Changes the Decision",
+    "Evidence Conviction Matrix when section evidence supports it",
+    "What Changes the Decision only when both governed driver blocks are present",
+    "no unsupported What Changes the Decision frame",
     "no customer-visible em/en dash punctuation",
   ],
+  authoritative_validation: authoritativeValidation,
   authoritative_artifacts: Object.fromEntries(
     Object.entries(authoritativeOutputs).map(([label, outputPath]) => [label, {
       file: path.basename(outputPath),
