@@ -19,12 +19,35 @@ function resolveLane(reportMode = "") {
 
 function addBodyPresentationClass(html = "", lane = null) {
   if (!lane) return String(html || "");
-  return String(html || "").replace(/<body\b([^>]*)>/i, (match, attrs = "") => {
-    const laneClass = `iq-phase7 iq-phase7-${lane}`;
-    if (/\bclass\s*=\s*["'][^"']*["']/i.test(attrs)) {
-      return `<body${attrs.replace(/\bclass\s*=\s*(["'])([^"']*)\1/i, (_full, quote, existing) => `class=${quote}${existing} ${laneClass}${quote}`)} data-iq-phase7="${PHASE7_MARKER}">`;
+  return String(html || "").replace(/<body\b([^>]*)>/i, (_match, attrs = "") => {
+    const wantedClasses = ["iq-phase7", `iq-phase7-${lane}`];
+    let nextAttrs = String(attrs || "");
+    const classMatch = nextAttrs.match(/\bclass\s*=\s*(["'])([^"']*)\1/i);
+
+    if (classMatch) {
+      const retainedClasses = classMatch[2]
+        .split(/\s+/)
+        .filter(Boolean)
+        .filter((className) => !/^iq-phase7-(?:screening|underwriting)$/.test(className));
+      const mergedClasses = [...new Set([...retainedClasses, ...wantedClasses])].join(" ");
+      nextAttrs = nextAttrs.replace(
+        classMatch[0],
+        `class=${classMatch[1]}${mergedClasses}${classMatch[1]}`
+      );
+    } else {
+      nextAttrs += ` class="${wantedClasses.join(" ")}"`;
     }
-    return `<body${attrs} class="${laneClass}" data-iq-phase7="${PHASE7_MARKER}">`;
+
+    if (/\bdata-iq-phase7\s*=/i.test(nextAttrs)) {
+      nextAttrs = nextAttrs.replace(
+        /\bdata-iq-phase7\s*=\s*(["'])[^"']*\1/i,
+        `data-iq-phase7="${PHASE7_MARKER}"`
+      );
+    } else {
+      nextAttrs += ` data-iq-phase7="${PHASE7_MARKER}"`;
+    }
+
+    return `<body${nextAttrs}>`;
   });
 }
 
