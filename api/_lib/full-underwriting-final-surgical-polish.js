@@ -19,6 +19,13 @@ function polishCustomerText(value = "") {
     .replace(/;\s*;/g, ";");
 }
 
+function collapseDuplicateCapRateWrapper(html = "") {
+  return String(html || "").replace(
+    /<section\s+class="section">\s*<div\s+class="section-header">\s*<span\s+class="section-header-title">Cap-Rate Value Indication<\/span>\s*<\/div>\s*(<section\s+class="section section-break">\s*<div\s+class="section-header">\s*<span\s+class="section-header-title">Cap-Rate Value Indication<\/span>[\s\S]*?<\/section>)\s*<\/section>/i,
+    "$1"
+  );
+}
+
 function releaseMethodologyPagination(html = "") {
   return String(html || "").replace(
     /<section class="section section-break">(\s*<div class="section-header"><span[^>]*class="section-header-title">Methodology &amp; Data Transparency<\/span>)/i,
@@ -37,7 +44,8 @@ export function polishFullUnderwritingFinalHtml(html, { reportMode = null } = {}
   const source = String(html || "");
   if (!isFullUnderwritingMode(reportMode)) return source;
 
-  const paginationReleased = releaseMethodologyPagination(source);
+  const duplicateWrapperCollapsed = collapseDuplicateCapRateWrapper(source);
+  const paginationReleased = releaseMethodologyPagination(duplicateWrapperCollapsed);
   const elitePresented = applyPhase7EliteReportPresentation(paginationReleased, { reportMode });
   const decisionSupported = applyPhase7DecisionSupport(elitePresented, { reportMode });
   return decisionSupported
