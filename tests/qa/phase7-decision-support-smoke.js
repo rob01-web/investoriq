@@ -20,6 +20,9 @@ function section(title) {
   return `<section class="section"><div class="section-header"><span class="section-header-title">${title}</span></div></section>`;
 }
 
+const renderedDecisionDrivers = `<div class="exec-bullet-block"><p class="exec-major-heading">Key Upside Drivers</p><ul><li>Existing source-backed upside</li></ul></div>
+<div class="exec-bullet-block"><p class="exec-major-heading">Primary Constraints</p><ul><li>Existing source-backed constraint</li></ul></div>`;
+
 const decisionDrivers = `
 <!-- BEGIN EXEC_UPSIDE_BULLETS -->
 <div class="exec-bullet-block"><p class="exec-major-heading">Key Upside Drivers</p><ul><li>Existing source-backed upside</li></ul></div>
@@ -51,6 +54,17 @@ assert.match(screening, /Rent Roll Analysis/);
 assert.match(screening, /Source Reconciliation/);
 assert.doesNotMatch(screening, /Not provided/i);
 assert.equal(applyPhase7DecisionSupport(screening, { reportMode: "screening_v1" }), screening, "decision support must be idempotent");
+
+const commentlessScreeningHtml = `<!doctype html><html><head></head><body><div class="report-container">
+<section class="section"><div class="section-header"><span class="section-header-title">Executive Summary</span></div>${renderedDecisionDrivers}</section>
+${section("Operating Evidence")}
+${section("Rent Roll Analysis")}
+</div></body></html>`;
+const commentlessScreening = applyPhase7DecisionSupport(commentlessScreeningHtml, { reportMode: "screening_v1" });
+assert.match(commentlessScreening, /data-iq-phase7-decision-drivers="elite-decision-support-v1"/);
+assert.match(commentlessScreening, />What Changes the Decision</);
+assert.match(commentlessScreening, /Existing source-backed upside/);
+assert.match(commentlessScreening, /Existing source-backed constraint/);
 
 const underwritingHtml = `<!doctype html><html><head></head><body><div class="report-container">
 <section class="section"><div class="section-header"><span class="section-header-title">Executive Summary</span></div>${decisionDrivers}</section>
