@@ -293,9 +293,15 @@ const PHASE7_STYLE = `
     }
 
     .iq-phase7-underwriting section.section[data-iq-elite-section="investorQuestions"],
-    .iq-phase7-underwriting section.section[data-iq-elite-driver-section="underwriting-driver-analysis"] {
+    .iq-phase7-underwriting section.section[data-iq-elite-driver-section="underwriting-driver-analysis"],
+    .iq-phase7-underwriting [data-iq-elite-driver-boundaries="true"] {
       break-inside: avoid-page;
       page-break-inside: avoid;
+    }
+
+    .iq-phase7-underwriting .institutional-chapter[data-iq-chapter="transaction-context"] {
+      break-before: auto;
+      page-break-before: auto;
     }
   }
 </style>`;
