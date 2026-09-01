@@ -95,6 +95,37 @@ for (const expected of [
 }
 assert.match(underwriting, /Methodology &amp; Data Transparency/);
 
+const v2UnderwritingHtml = `<!doctype html><html><head></head><body><div class="report-container">
+<section class="section"><div class="section-header"><span class="section-header-title">Executive Investment Summary</span></div></section>
+${section("Operating Performance Overview")}
+${section("Unit Mix and Rent Positioning")}
+${section("Transaction &amp; Diligence Intelligence")}
+${section("Debt Intelligence")}
+${section("Scenario Basis")}
+${section("Capital Plan and Reserve Position")}
+${section("Cap-Rate Value Indication")}
+${section("Core Source Reconciliation")}
+${section("Quality Manifest")}
+</div></body></html>`;
+const v2Underwriting = applyPhase7DecisionSupport(v2UnderwritingHtml, { reportMode: "underwriting_report" });
+assert.match(v2Underwriting, /data-iq-phase7-evidence-matrix="elite-decision-support-v1"/);
+assert.match(v2Underwriting, />Evidence Conviction Matrix</);
+assert.match(v2Underwriting, /Executive Investment Summary/);
+assert.match(v2Underwriting, />Operating evidence</);
+assert.match(v2Underwriting, />Rent roll evidence</);
+assert.match(v2Underwriting, />Debt context</);
+assert.match(v2Underwriting, />Scenario evidence</);
+assert.match(v2Underwriting, />Capital context</);
+assert.match(v2Underwriting, />Valuation context</);
+assert.match(v2Underwriting, />Diligence and source trust</);
+
+const insufficientDomainHtml = `<!doctype html><html><head></head><body><div class="report-container">
+<section class="section"><div class="section-header"><span class="section-header-title">Executive Investment Summary</span></div></section>
+</div></body></html>`;
+const insufficientDomainOutput = applyPhase7DecisionSupport(insufficientDomainHtml, { reportMode: "underwriting_report" });
+assert.doesNotMatch(insufficientDomainOutput, /Evidence Conviction Matrix/);
+assert.doesNotMatch(insufficientDomainOutput, /data-iq-phase7-evidence-matrix=/);
+
 assert.deepEqual(phase7DecisionSupportMetadata("screening_v1"), {
   marker: "elite-decision-support-v1",
   lane: "screening",
