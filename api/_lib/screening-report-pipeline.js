@@ -2,6 +2,14 @@ import { isCanonicalSourceTruthPackage } from "./source-truth-package.js";
 import { applyPhase7EliteReportPresentation } from "./phase7-elite-report-presentation.js";
 import { applyPhase7DecisionSupport } from "./phase7-decision-support.js";
 
+function removeEmptyScreeningSupportContextSection(html = "") {
+  const source = String(html || "");
+  return source.replace(
+    /<section\b[^>]*class\s*=\s*(["'])[^"']*\bsection\b[^"']*\bpage-break\b[^"']*\1[^>]*>\s*<div\b[^>]*class\s*=\s*(["'])[^"']*\bsection-header\b[^"']*\2[^>]*>[\s\S]*?<span\b[^>]*class\s*=\s*(["'])[^"']*\bsection-header-title\b[^"']*\3[^>]*>\s*Source Context\s*\/\s*Support Document Treatment\s*<\/span>[\s\S]*?<\/div>\s*<\/section>/i,
+    ""
+  );
+}
+
 export function runScreeningReportPipeline({
   finalHtml = "",
   qaHtml = "",
@@ -52,7 +60,8 @@ export function runScreeningReportPipeline({
       : typeof qaHtml === "string"
         ? qaHtml
         : "";
-  const presentationHtml = applyPhase7EliteReportPresentation(html, { reportMode });
+  const compactedHtml = removeEmptyScreeningSupportContextSection(html);
+  const presentationHtml = applyPhase7EliteReportPresentation(compactedHtml, { reportMode });
   const decisionSupportHtml = applyPhase7DecisionSupport(presentationHtml, { reportMode });
   return {
     html: decisionSupportHtml,
