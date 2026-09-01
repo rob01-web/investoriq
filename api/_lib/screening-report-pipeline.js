@@ -1,5 +1,6 @@
 import { isCanonicalSourceTruthPackage } from "./source-truth-package.js";
 import { applyPhase7EliteReportPresentation } from "./phase7-elite-report-presentation.js";
+import { applyPhase7DecisionSupport } from "./phase7-decision-support.js";
 
 export function runScreeningReportPipeline({
   finalHtml = "",
@@ -52,8 +53,9 @@ export function runScreeningReportPipeline({
         ? qaHtml
         : "";
   const presentationHtml = applyPhase7EliteReportPresentation(html, { reportMode });
+  const decisionSupportHtml = applyPhase7DecisionSupport(presentationHtml, { reportMode });
   return {
-    html: presentationHtml,
+    html: decisionSupportHtml,
     reportMode,
     sealedLane: "screening_lane",
     sealedCustomerOutput: true,
