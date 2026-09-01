@@ -26,6 +26,15 @@ const customerOnly = output
 assert.doesNotMatch(customerOnly, /\s-\s/);
 assert.doesNotMatch(customerOnly, /[\u2013\u2014]|&(?:n|m)dash;|&#(?:8211|8212);|&#x(?:2013|2014);/i);
 
+const nestedCapRateInput = `<!doctype html><html><head></head><body>
+<section class="section"><div class="section-header"><span class="section-header-title">Cap-Rate Value Indication</span></div>
+<section class="section section-break"><div class="section-header"><span class="section-header-title">Cap-Rate Value Indication</span></div><div class="card">Accepted cap-rate evidence</div></section>
+</section>
+</body></html>`;
+const nestedCapRateOutput = polishFullUnderwritingFinalHtml(nestedCapRateInput, { reportMode: "full_underwriting" });
+assert.equal((nestedCapRateOutput.match(/>Cap-Rate Value Indication<\/span>/g) || []).length, 1);
+assert.match(nestedCapRateOutput, /Accepted cap-rate evidence/);
+
 const v1CoreOutput = polishFullUnderwritingFinalHtml(input, { reportMode: "v1_core" });
 assert.equal(v1CoreOutput, output);
 
