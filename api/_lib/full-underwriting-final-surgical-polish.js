@@ -1,4 +1,5 @@
 import { applyPhase7EliteReportPresentation } from "./phase7-elite-report-presentation.js";
+import { applyPhase7DecisionSupport } from "./phase7-decision-support.js";
 
 function isFullUnderwritingMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -38,7 +39,8 @@ export function polishFullUnderwritingFinalHtml(html, { reportMode = null } = {}
 
   const paginationReleased = releaseMethodologyPagination(source);
   const elitePresented = applyPhase7EliteReportPresentation(paginationReleased, { reportMode });
-  return elitePresented
+  const decisionSupported = applyPhase7DecisionSupport(elitePresented, { reportMode });
+  return decisionSupported
     .split(/(<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>)/gi)
     .map((part) => (/^<(?:style|script)\b/i.test(part) ? part : sanitizeMarkupText(part)))
     .join("");
