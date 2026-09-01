@@ -257,6 +257,10 @@ const PHASE7_STYLE = `
     margin-top: 4px;
   }
 
+  .iq-phase7-screening .grid-2-balanced > :only-child {
+    grid-column: 1 / -1;
+  }
+
   .iq-phase7-underwriting .section-header-title {
     font-size: 19.5pt;
   }
@@ -281,6 +285,17 @@ const PHASE7_STYLE = `
     .iq-phase7 .subsection-title {
       break-after: avoid;
       page-break-after: avoid;
+    }
+
+    .iq-phase7-screening section.section.no-break {
+      break-inside: auto;
+      page-break-inside: auto;
+    }
+
+    .iq-phase7-underwriting section.section[data-iq-elite-section="investorQuestions"],
+    .iq-phase7-underwriting section.section[data-iq-elite-driver-section="underwriting-driver-analysis"] {
+      break-inside: avoid-page;
+      page-break-inside: avoid;
     }
   }
 </style>`;
