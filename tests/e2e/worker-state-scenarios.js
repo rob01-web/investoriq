@@ -1,7 +1,7 @@
 import { FakeSupabaseState } from "./fake-supabase.js";
 
 const requiredDocsMessage =
-  "Required source documents were uploaded, but parsing did not produce all required structured financial artifacts.";
+  "Required source documents were uploaded, but parsing did not produce a usable T12 or Rent Roll core artifact.";
 const scaleMismatchMessage =
   "InvestorIQ extracted financial values from the uploaded documents, but the operating statement and rent roll are materially inconsistent.";
 
@@ -35,6 +35,19 @@ function deriveScaleMismatch(state, jobId) {
   return ratio > 5 ? { ratio, egi, annualInPlace } : null;
 }
 
+function insertCanonicalDeliveryDecision(state, jobId) {
+  return state.insertArtifact(jobId, "delivery_gate_decision", {
+    deliveryDecisionState: {
+      source: "canonical_delivery_decision",
+      customer_delivery_allowed: true,
+      hold_delivery: false,
+      delivery_gate_status: "deliverable",
+      core_valid_required_coverage: true,
+      canonical_delivery_action: "DELIVER",
+    },
+  });
+}
+
 export function simulateWorkerLifecycle(seed) {
   const state = new FakeSupabaseState(seed);
   const jobId = seed.analysis_jobs[0].id;
@@ -46,21 +59,21 @@ export function simulateWorkerLifecycle(seed) {
   state.transition(jobId, "rendering");
 
   const parsed = parsedDocTypes(state, jobId);
-  const missing = [];
-  if (!parsed.has("rent_roll")) missing.push("rent_roll");
-  if (!parsed.has("t12")) missing.push("t12");
-
   const hasT12Artifact = Boolean(state.artifact(jobId, "t12_parsed"));
   const hasRentRollArtifact = Boolean(state.artifact(jobId, "rent_roll_parsed"));
-  if (hasT12Artifact === false && !missing.includes("t12")) missing.push("t12");
-  if (hasRentRollArtifact === false && !missing.includes("rent_roll")) missing.push("rent_roll");
+  const hasUsableT12 = parsed.has("t12") && hasT12Artifact;
+  const hasUsableRentRoll = parsed.has("rent_roll") && hasRentRollArtifact;
 
-  if (missing.length > 0) {
+  // Phase 1 authority: either usable core source survives. Both are not required.
+  if (!hasUsableT12 && !hasUsableRentRoll) {
+    const missing = [];
+    if (!hasUsableT12) missing.push("t12");
+    if (!hasUsableRentRoll) missing.push("rent_roll");
     restoreAndFail(
       state,
       jobId,
       "MISSING_REQUIRED_DOCUMENTS",
-      `${requiredDocsMessage} Missing: ${missing.join(", ")}.`,
+      `${requiredDocsMessage} Missing usable core: ${missing.join(", ")}.`,
       "missing_required_documents",
       { missing },
       "rendering_integrity_validation_failed"
@@ -68,29 +81,42 @@ export function simulateWorkerLifecycle(seed) {
     return state;
   }
 
-  const mismatch = deriveScaleMismatch(state, jobId);
-  if (mismatch) {
-    restoreAndFail(
-      state,
-      jobId,
-      "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
-      scaleMismatchMessage,
-      "document_financial_scale_mismatch",
-      {
-        code: "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
-        ratio: mismatch.ratio,
-        t12_effective_gross_income: mismatch.egi,
-        rent_roll_annual_in_place_rent: mismatch.annualInPlace,
-      },
-      "document_financial_scale_mismatch"
-    );
-    return state;
+  // Cross-source scale reconciliation only exists when both core sources survived parsing.
+  if (hasUsableT12 && hasUsableRentRoll) {
+    const mismatch = deriveScaleMismatch(state, jobId);
+    if (mismatch) {
+      restoreAndFail(
+        state,
+        jobId,
+        "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+        scaleMismatchMessage,
+        "document_financial_scale_mismatch",
+        {
+          code: "DOCUMENT_FINANCIAL_SCALE_MISMATCH",
+          ratio: mismatch.ratio,
+          t12_effective_gross_income: mismatch.egi,
+          rent_roll_annual_in_place_rent: mismatch.annualInPlace,
+        },
+        "document_financial_scale_mismatch"
+      );
+      return state;
+    }
   }
 
-  state.createReport(jobId, { report_type: job.report_type || "unknown" });
-  state.insertArtifact(jobId, "report_generation", { source: "local-worker-state-simulator" });
+  const reportId = state.createReport(jobId, { report_type: job.report_type || "unknown" });
+  state.insertArtifact(jobId, "report_generation", {
+    source: "local-worker-state-simulator",
+    core_mode:
+      hasUsableT12 && hasUsableRentRoll
+        ? "dual_source_core"
+        : hasUsableT12
+          ? "t12_minimum_core"
+          : "rent_roll_minimum_core",
+  });
+  insertCanonicalDeliveryDecision(state, jobId);
+  state.registerGeneratedReportObject(jobId, reportId);
   state.transition(jobId, "publishing");
-  state.transition(jobId, "published");
+  state.finalizeWorkerPublicationV2(jobId);
   return state;
 }
 
@@ -131,6 +157,7 @@ function parsedFile(profile, docType, parseStatus = "parsed", parseError = null)
 export const workerStateScenarios = [
   {
     profile: "happy-screening",
+    description: "Dual-source Screening publishes through the atomic publication simulator.",
     seed: {
       analysis_jobs: [baseJob("happy-screening", "screening")],
       analysis_job_files: [parsedFile("happy-screening", "t12"), parsedFile("happy-screening", "rent_roll")],
@@ -144,11 +171,12 @@ export const workerStateScenarios = [
       entitlementRestored: false,
       errorCode: null,
       transitionsInclude: ["queued>extracting", "rendering>publishing", "publishing>published"],
-      artifactsPresent: ["report_generation"],
+      artifactsPresent: ["report_generation", "delivery_gate_decision", "report_quality_manifest"],
     },
   },
   {
     profile: "happy-underwriting",
+    description: "Dual-source Underwriting publishes through the atomic publication simulator.",
     seed: {
       analysis_jobs: [baseJob("happy-underwriting", "underwriting")],
       analysis_job_files: [parsedFile("happy-underwriting", "t12"), parsedFile("happy-underwriting", "rent_roll")],
@@ -162,11 +190,12 @@ export const workerStateScenarios = [
       entitlementRestored: false,
       errorCode: null,
       transitionsInclude: ["queued>extracting", "rendering>publishing", "publishing>published"],
-      artifactsPresent: ["report_generation"],
+      artifactsPresent: ["report_generation", "delivery_gate_decision", "report_quality_manifest"],
     },
   },
   {
     profile: "missing-rent-roll",
+    description: "T12-only minimum-core Underwriting remains admissible under Phase 1 authority.",
     seed: {
       analysis_jobs: [baseJob("missing-rent-roll", "underwriting")],
       analysis_job_files: [parsedFile("missing-rent-roll", "t12")],
@@ -175,18 +204,19 @@ export const workerStateScenarios = [
       reports: [],
     },
     expected: {
-      status: "failed",
-      reportCreated: false,
-      entitlementRestored: true,
-      errorCode: "MISSING_REQUIRED_DOCUMENTS",
-      failureReasonIncludes: "structured financial artifacts",
-      artifactsPresent: ["missing_required_documents", "entitlement_restored"],
-      artifactsAbsent: ["rent_roll_parsed"],
+      status: "published",
+      reportCreated: true,
+      entitlementRestored: false,
+      errorCode: null,
+      transitionsInclude: ["rendering>publishing", "publishing>published"],
+      artifactsPresent: ["t12_parsed", "report_generation", "delivery_gate_decision", "report_quality_manifest"],
+      artifactsAbsent: ["rent_roll_parsed", "entitlement_restored"],
       fileDiagnostics: [{ doc_type: "t12", parse_status: "parsed" }],
     },
   },
   {
     profile: "missing-t12",
+    description: "Rent-Roll-only minimum-core Underwriting remains admissible under Phase 1 authority.",
     seed: {
       analysis_jobs: [baseJob("missing-t12", "underwriting")],
       analysis_job_files: [parsedFile("missing-t12", "rent_roll")],
@@ -195,18 +225,19 @@ export const workerStateScenarios = [
       reports: [],
     },
     expected: {
-      status: "failed",
-      reportCreated: false,
-      entitlementRestored: true,
-      errorCode: "MISSING_REQUIRED_DOCUMENTS",
-      failureReasonIncludes: "structured financial artifacts",
-      artifactsPresent: ["missing_required_documents", "entitlement_restored"],
-      artifactsAbsent: ["t12_parsed"],
+      status: "published",
+      reportCreated: true,
+      entitlementRestored: false,
+      errorCode: null,
+      transitionsInclude: ["rendering>publishing", "publishing>published"],
+      artifactsPresent: ["rent_roll_parsed", "report_generation", "delivery_gate_decision", "report_quality_manifest"],
+      artifactsAbsent: ["t12_parsed", "entitlement_restored"],
       fileDiagnostics: [{ doc_type: "rent_roll", parse_status: "parsed" }],
     },
   },
   {
     profile: "missing-structured-artifacts",
+    description: "No usable core artifact remains a hard worker failure if corrupted state reaches rendering.",
     seed: {
       analysis_jobs: [baseJob("missing-structured-artifacts", "underwriting")],
       analysis_job_files: [
@@ -222,7 +253,7 @@ export const workerStateScenarios = [
       reportCreated: false,
       entitlementRestored: true,
       errorCode: "MISSING_REQUIRED_DOCUMENTS",
-      failureReasonIncludes: "structured financial artifacts",
+      failureReasonIncludes: "usable T12 or Rent Roll core artifact",
       artifactsPresent: ["missing_required_documents", "entitlement_restored"],
       fileDiagnostics: [
         { doc_type: "t12", parse_status: "failed", parse_error: "no structured T12 rows detected" },
@@ -232,6 +263,7 @@ export const workerStateScenarios = [
   },
   {
     profile: "scale-mismatch",
+    description: "Dual-source material scale mismatch remains a hard failure and restores the consumed entitlement.",
     seed: {
       analysis_jobs: [baseJob("scale-mismatch", "underwriting")],
       analysis_job_files: [parsedFile("scale-mismatch", "t12"), parsedFile("scale-mismatch", "rent_roll")],
@@ -250,6 +282,7 @@ export const workerStateScenarios = [
   },
   {
     profile: "incomplete-debt",
+    description: "Optional incomplete debt does not block publication or fabricate DSCR.",
     seed: {
       analysis_jobs: [baseJob("incomplete-debt", "underwriting")],
       analysis_job_files: [parsedFile("incomplete-debt", "t12"), parsedFile("incomplete-debt", "rent_roll"), parsedFile("incomplete-debt", "loan_term_sheet")],
@@ -267,7 +300,7 @@ export const workerStateScenarios = [
       reportCreated: true,
       entitlementRestored: false,
       errorCode: null,
-      artifactsPresent: ["loan_term_sheet_parsed", "report_qa_flags", "report_generation"],
+      artifactsPresent: ["loan_term_sheet_parsed", "report_qa_flags", "report_generation", "report_quality_manifest"],
       debtDscrAssessed: false,
     },
   },
