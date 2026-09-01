@@ -1,3 +1,5 @@
+import { applyPhase7EliteReportPresentation } from "./phase7-elite-report-presentation.js";
+
 function isFullUnderwritingMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   return normalized === "v1_core" || normalized === "underwriting" || normalized === "full_underwriting" || normalized.startsWith("full_underwriting_");
@@ -35,7 +37,8 @@ export function polishFullUnderwritingFinalHtml(html, { reportMode = null } = {}
   if (!isFullUnderwritingMode(reportMode)) return source;
 
   const paginationReleased = releaseMethodologyPagination(source);
-  return paginationReleased
+  const elitePresented = applyPhase7EliteReportPresentation(paginationReleased, { reportMode });
+  return elitePresented
     .split(/(<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>)/gi)
     .map((part) => (/^<(?:style|script)\b/i.test(part) ? part : sanitizeMarkupText(part)))
     .join("");
