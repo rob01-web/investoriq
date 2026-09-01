@@ -28,15 +28,17 @@ function visibleText(html = "") {
     .trim();
 }
 
-const baseHtml = `<!doctype html><html><head><style>.section{margin:0}</style></head><body><section class="section"><div class="section-header"><span class="section-header-title">Operating Evidence</span><span class="section-header-sub">Uploaded source evidence</span></div><div class="verdict-block"><div class="verdict-label">SCREENING SIGNAL</div><div class="metric-grid"><div class="card no-break"><p class="subsection-title">Operating Snapshot</p><table><tbody><tr><td>NOI</td><td>$945,000</td></tr></tbody></table></div></div></div></section></body></html>`;
+const governedSectionMarkup = '<section class="section"><div class="section-header"><span class="section-header-title">Operating Evidence</span><span class="section-header-sub">Uploaded source evidence</span></div><div class="verdict-block"><div class="verdict-label">SCREENING SIGNAL</div><div class="metric-grid"><div class="card no-break"><p class="subsection-title">Operating Snapshot</p><table><tbody><tr><td>NOI</td><td>$945,000</td></tr></tbody></table></div></div></div></section>';
+const baseHtml = `<!doctype html><html><head><style>.section{margin:0}</style></head><body>${governedSectionMarkup}</body></html>`;
 
 for (const reportMode of ["screening_v1", "full_underwriting"]) {
   const result = applyPhase7EliteReportPresentation(baseHtml, { reportMode });
   assert.match(result, /investoriq-phase7-elite-report-design/);
   assert.match(result, /data-iq-phase7="elite-report-redesign-v1"/);
   assert.match(result, new RegExp(`iq-phase7-${reportMode === "screening_v1" ? "screening" : "underwriting"}`));
-  assert.match(result, /iq-phase7-decision-cockpit/);
-  assert.match(result, /iq-phase7-section-header/);
+  assert.ok(result.includes(governedSectionMarkup), "Phase 7 styling must preserve governed section/card markup exactly");
+  assert.match(result, /\.iq-phase7 \.verdict-block/);
+  assert.match(result, /\.iq-phase7 \.section-header/);
   assert.equal(visibleText(result), visibleText(baseHtml), "Phase 7 presentation must preserve customer-visible source text");
   assert.equal(applyPhase7EliteReportPresentation(result, { reportMode }), result, "Phase 7 presentation must be idempotent");
 }
@@ -64,10 +66,12 @@ const sealedScreening = runScreeningReportPipeline({
 });
 assert.equal(sealedScreening.sealedCustomerOutput, true);
 assert.match(sealedScreening.html, /iq-phase7-screening/);
+assert.ok(sealedScreening.html.includes(governedSectionMarkup));
 assert.equal(visibleText(sealedScreening.html), visibleText(baseHtml));
 
 const underwritingHtml = polishFullUnderwritingFinalHtml(baseHtml, { reportMode: "full_underwriting" });
 assert.match(underwritingHtml, /iq-phase7-underwriting/);
+assert.ok(underwritingHtml.includes(governedSectionMarkup));
 assert.equal(visibleText(underwritingHtml), visibleText(baseHtml));
 
 assert.match(screeningPipelineSource, /applyPhase7EliteReportPresentation\(html, \{ reportMode \}\)/);
