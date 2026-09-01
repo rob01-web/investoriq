@@ -1,0 +1,53 @@
+name: InvestorIQ Phase 7 ELITE Report Certification
+
+on:
+  push:
+    branches:
+      - internal-phase7-elite-report-redesign-20260901
+    paths:
+      - 'api/_lib/phase7-elite-report-presentation.js'
+      - 'api/_lib/screening-report-pipeline.js'
+      - 'api/_lib/full-underwriting-final-surgical-polish.js'
+      - 'tests/qa/phase7-elite-report-design-contract-smoke.js'
+      - 'docs/PHASE7_ELITE_REPORT_DESIGN_AUTHORITY_2026-09-01.md'
+      - '.github/workflows/phase7-elite-report-certification.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: investoriq-phase7-elite-report-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phase7-elite-report-certification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Phase 7 branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run Phase 7 design authority
+        run: node tests/qa/phase7-elite-report-design-contract-smoke.js
+
+      - name: Run Screening sealed-lane regression
+        run: node tests/qa/screening-report-sealed-lane-authority-smoke.js
+
+      - name: Run Screening report regression
+        run: node tests/qa/screening-report-smoke.js
+
+      - name: Run Underwriting final-polish regression
+        run: node tests/qa/full-underwriting-final-surgical-polish-smoke.js
+
+      - name: Run production build
+        run: npm run build
