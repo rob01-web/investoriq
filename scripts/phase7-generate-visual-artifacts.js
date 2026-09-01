@@ -80,13 +80,38 @@ try {
   fs.rmSync(tempRunnerPath, { force: true });
 }
 
+function collectArtifactHeadings(html = "") {
+  const headings = [];
+  const pattern = /<span\b[^>]*class\s*=\s*(["'])[^"']*\bsection-header-title\b[^"']*\1[^>]*>([\s\S]*?)<\/span>/gi;
+  let match;
+  while ((match = pattern.exec(String(html || ""))) !== null) {
+    const text = String(match[2] || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text && !headings.includes(text)) headings.push(text);
+  }
+  return headings;
+}
+
 const authoritativeValidation = {};
 for (const [label, outputPath] of Object.entries(authoritativeOutputs)) {
   if (!fs.existsSync(outputPath)) throw new Error(`PHASE7_ARTIFACT_MISSING:${label}`);
   const html = fs.readFileSync(outputPath, "utf8");
   if (!/<!DOCTYPE html>/i.test(html)) throw new Error(`PHASE7_ARTIFACT_NOT_HTML:${label}`);
   if (!/data-iq-phase7="elite-report-redesign-v1"/i.test(html)) throw new Error(`PHASE7_PRESENTATION_MARKER_MISSING:${label}`);
-  if (!/Evidence Conviction Matrix/i.test(html)) throw new Error(`PHASE7_EVIDENCE_MATRIX_MISSING:${label}`);
+  if (!/Evidence Conviction Matrix/i.test(html)) {
+    console.error(`PHASE7_ARTIFACT_HEADING_DIAGNOSTIC:${label}:${JSON.stringify(collectArtifactHeadings(html))}`);
+    console.error(`PHASE7_ARTIFACT_MARKER_DIAGNOSTIC:${label}:${JSON.stringify({
+      presentation: /data-iq-phase7="elite-report-redesign-v1"/i.test(html),
+      evidenceMatrixMarker: /data-iq-phase7-evidence-matrix=/i.test(html),
+      decisionDriverMarker: /data-iq-phase7-decision-drivers=/i.test(html),
+      executiveCloseMarker: /<!--\s*END SECTION_0_5\s*-->/i.test(html),
+    })}`);
+    throw new Error(`PHASE7_EVIDENCE_MATRIX_MISSING:${label}`);
+  }
 
   const hasUpsideDrivers = /Key Upside Drivers/i.test(html);
   const hasPrimaryConstraints = /Primary Constraints/i.test(html);
