@@ -116,7 +116,7 @@ function insertEvidenceMatrixAtExecutiveClose(html = "", matrixHtml = "") {
     return source.replace(/<!--\s*END SECTION_0_5\s*-->/i, `${matrixHtml}\n<!-- END SECTION_0_5 -->`);
   }
 
-  const executiveHeadingIndex = source.search(/class\s*=\s*(["'])[^"']*\bsection-header-title\b[^"']*\1[^>]*>\s*Executive Summary\s*<\/span>/i);
+  const executiveHeadingIndex = source.search(/class\s*=\s*(["'])[^"']*\bsection-header-title\b[^"']*\1[^>]*>\s*Executive(?:\s+Investment)?\s+Summary\s*<\/span>/i);
   if (executiveHeadingIndex < 0) return source;
   const closeIndex = source.indexOf("</section>", executiveHeadingIndex);
   if (closeIndex < 0) return source;
