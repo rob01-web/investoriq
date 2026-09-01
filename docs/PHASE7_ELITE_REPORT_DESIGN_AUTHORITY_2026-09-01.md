@@ -3,9 +3,9 @@
 Date: 2026-09-01
 Branch: `internal-phase7-elite-report-redesign-20260901`
 Base authority: Phase 6 closure checkpoint `cebc8f4ea256ca067bf271797a3d266ceb46c37d`
-Certified implementation checkpoint: `c5f4ca7c4bdac62e0c2038324e5cfe45c84b2f99`
-Certification workflow run: `33559980802` (run 22)
-Certification artifact: `phase7-visual-certification-c5f4ca7c4bdac62e0c2038324e5cfe45c84b2f99`
+Certified implementation checkpoint: `42721cc422bf4186235063e9ae48c89505b8293a`
+Certification workflow run: `33569172978` (run 25)
+Certification artifact: `phase7-visual-certification-42721cc422bf4186235063e9ae48c89505b8293a`
 Status: CLOSED / CERTIFIED
 
 ## 1. Purpose
@@ -163,13 +163,13 @@ Phase 7 earned closure on the isolated branch after the real-artifact wall and p
 
 Certified implementation checkpoint:
 
-`c5f4ca7c4bdac62e0c2038324e5cfe45c84b2f99`
+`42721cc422bf4186235063e9ae48c89505b8293a`
 
 GitHub Actions certification:
 
 - workflow: `InvestorIQ Phase 7 ELITE Report Certification`;
-- run number: `22`;
-- run ID: `33559980802`;
+- run number: `25`;
+- run ID: `33569172978`;
 - result: PASS;
 - design authority: PASS;
 - decision-support authority: PASS;
@@ -183,7 +183,7 @@ GitHub Actions certification:
 
 Authoritative artifact set:
 
-`phase7-visual-certification-c5f4ca7c4bdac62e0c2038324e5cfe45c84b2f99`
+`phase7-visual-certification-42721cc422bf4186235063e9ae48c89505b8293a`
 
 Authoritative visual lanes:
 
@@ -193,7 +193,7 @@ Authoritative visual lanes:
 Final evidence-driven PDFs inspected page by page:
 
 - Screening: 4 pages;
-- Underwriting: 20 pages.
+- Underwriting: 18 pages.
 
 The page counts are outcomes of the evidence and layout, not contractual targets.
 
@@ -214,7 +214,9 @@ Final visual certification confirmed:
 
 The original Stonebridge blocker `PHASE7_EVIDENCE_MATRIX_MISSING:underwritingStonebridge` was traced to the real V2 executive title `Executive Investment Summary`, which was not recognized by the fallback Matrix insertion seam. The fix expanded that insertion seam to recognize the governed V2 title while retaining the existing minimum-domain evidence gate. A negative regression proves that insufficient-domain reports still do not receive a Matrix.
 
-Visual inspection subsequently found and repaired real PDF defects that static tests did not catch, including blank Screening pagination, an empty Screening support shell, Underwriting orphan headings, a duplicate nested cap-rate heading, and near-empty chapter-boundary pages. These repairs changed presentation flow only and did not remove supported evidence to force a page count.
+Visual inspection found and repaired real PDF defects that static tests did not catch, including blank Screening pagination, an empty Screening support shell, Underwriting orphan headings, a duplicate nested cap-rate heading, and near-empty chapter-boundary pages. These repairs changed presentation flow only and did not remove supported evidence to force a page count.
+
+A final independent visual pass after the earlier run 22 closure note identified two residual Stonebridge whitespace defects: a sparse page created by the Scenario chapter boundary after the whole-property value context, and a sparse source-appendix ending caused by a forced Quality Manifest page break. The final Phase 7 presentation guards now allow the Scenario chapter to flow after a short operating tail and allow Quality Manifest to use available source-appendix space. Both changes are presentation-only. The authoritative Stonebridge report naturally compacted from 20 pages to 18 pages with all supported evidence retained.
 
 ## 12. Exit criteria result
 
