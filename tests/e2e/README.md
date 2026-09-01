@@ -1,14 +1,16 @@
-# InvestorIQ E2E Break-Test Harness
+# InvestorIQ Local Regression and Lifecycle Simulation Harness
 
-Local deterministic harness for report-output and source-level regression checks. It is designed to run without secrets by default and to avoid live Supabase, Stripe, DocRaptor, or credit side effects.
+This directory contains deterministic local regression helpers. Despite the historical `e2e` directory name, these checks are **not production end-to-end certification** and must never be presented as proof that a real customer purchase, upload, worker run, publication, listing, or download succeeded.
 
-## Run
+The default harness is intentionally secret-free and avoids live Supabase, Stripe, DocRaptor, email, Storage mutations, credit consumption, and customer-visible report creation.
+
+## Run the legacy local regression harness
 
 ```bash
 npm run test:e2e
 ```
 
-The runner prints:
+The historical runner prints:
 
 ```text
 Test Name | Mode | Expected | Actual | Result | Notes
@@ -20,9 +22,34 @@ It also writes:
 tests/e2e/results/latest-e2e-results.json
 ```
 
-## Report/PDF Text Checks
+That JSON is local regression evidence only. It is not a production lifecycle receipt.
 
-After regenerating a report, pass one or more HTML/TXT/PDF paths:
+## Phase 6 lifecycle certification authority
+
+The forward lifecycle contract is certified by:
+
+```bash
+node tests/qa/phase6-lifecycle-certification-contract-smoke.js
+```
+
+The Phase 6 smoke binds the local simulator to the governing Phase 1 through Phase 3 contracts and verifies:
+
+- `dual_source_core`, `t12_minimum_core`, and `rent_roll_minimum_core` survival
+- hard failure only when no usable T12 or Rent Roll core artifact remains in the simulated worker state
+- cross-source scale mismatch only when both core sources survived
+- `reports` rows as revision/storage metadata, not publication-state authority
+- one simulated `finalize_worker_publication_v2` publication boundary
+- complete publication receipt lineage
+- current-revision promotion only through atomic finalization
+- idempotent replay after a committed publication
+- owner-bound customer listing through `customer_published_report_projection`
+- owner-bound signed download through the governed generated-report projection
+
+The simulator is still a simulator. Passing Phase 6 local certification proves contract alignment, not live infrastructure behavior. Production certification remains a separate gated operation after migrations and deployment are explicitly authorized.
+
+## Report/PDF text checks
+
+After regenerating a report locally, pass one or more HTML/TXT/PDF paths:
 
 ```bash
 node tests/e2e/run-e2e.js --report "path/to/report.pdf"
@@ -36,9 +63,9 @@ node tests/e2e/run-e2e.js --profile underwriting-dscr-constrained --report "path
 
 Multiple reports can also be provided with `E2E_REPORT_PATHS`, using the platform path delimiter.
 
-## Wave 2 Mock Lifecycle Checks
+## Wave 2 mock lifecycle checks
 
-Wave 2 uses seeded JSON fixtures only. It does not call Supabase, DocRaptor, Stripe, email, storage, or credit systems.
+Wave 2 uses seeded JSON fixtures only. It does not call Supabase, DocRaptor, Stripe, email, Storage, or entitlement systems. It is historical fixture regression coverage and is not forward lifecycle authority.
 
 Run all Wave 2 scenarios:
 
@@ -46,20 +73,15 @@ Run all Wave 2 scenarios:
 node tests/e2e/run-e2e.js --profile wave2
 ```
 
-Run one scenario:
+## Wave 3 worker-state simulation
 
-```bash
-node tests/e2e/run-e2e.js --profile missing-rent-roll
-node tests/e2e/run-e2e.js --profile missing-t12
-node tests/e2e/run-e2e.js --profile unsupported-capex-only
-node tests/e2e/run-e2e.js --profile scale-mismatch
-node tests/e2e/run-e2e.js --profile partial-rent-roll-sample
-node tests/e2e/run-e2e.js --profile incomplete-debt
+Wave 3 uses a local fake Supabase state object plus a pure worker-state simulator. Phase 6 corrected this simulator so one-core survival follows the current Phase 1 authority and report publication is no longer invented by assigning a `published` status to a report row.
+
+The simulator now models publication as:
+
+```text
+usable core -> report revision metadata -> generated object -> canonical delivery decision -> publishing -> finalize_worker_publication_v2 simulation -> complete publication receipt -> current revision -> published job
 ```
-
-## Wave 3 Worker-State Checks
-
-Wave 3 uses a local fake Supabase state object plus a pure worker-state simulator. It validates terminal job status, transition markers, reports row creation/absence, entitlement restoration markers, artifacts, and file parse diagnostics without calling live services.
 
 Run all Wave 3 scenarios:
 
@@ -67,32 +89,41 @@ Run all Wave 3 scenarios:
 node tests/e2e/run-e2e.js --profile wave3-worker-state
 ```
 
-## Wave 4 Parser Adversarial Checks
+Important historical profile names are retained for compatibility:
 
-Wave 4 uses local parser fixtures and test-only parser contract checks. It directly exercises the exported T12 table helper where available and validates adversarial text contracts for internal parser paths without calling live services.
+- `missing-rent-roll` now proves T12-only minimum-core survival
+- `missing-t12` now proves Rent-Roll-only minimum-core survival
+
+Those names no longer mean that the missing counterpart is a publication blocker.
+
+## Wave 4 parser adversarial checks
+
+Wave 4 uses local parser fixtures and test-only parser contract checks. It validates adversarial text contracts without calling live services.
 
 ```bash
 node tests/e2e/run-e2e.js --profile wave4-parser-adversarial
 ```
 
-## Current Coverage
+## What these local checks cover
 
-- Static source/template checks for recently hardened public copy.
-- Wave 1 break-test source/fixture checks for missing required document gates, structured artifact gates, T12/rent-roll scale mismatch, partial rent roll suppression, unsupported CapEx restraint, market survey restraint, scoped loan-rate parsing, and incomplete-debt DSCR restraint.
-- Wave 2 mock lifecycle checks for seeded job status, error/failure reason, report row presence/absence, artifact presence/absence, and public-output suppression rules.
-- Wave 3 local worker-state simulation for happy-path publishing, missing required docs, missing structured artifacts, scale mismatch, and incomplete-debt publishing without DSCR.
-- Wave 4 parser adversarial fixtures for rate collisions, tax-year collisions, glued T12 values, malformed/partial rent rolls, and unsupported CapEx prose.
-- Report text assertions for regenerated HTML/TXT/PDF outputs.
-- Fixture package inventory for local packages such as `Final_Testing/`.
-- Parser hardening source checks for generic fixed-rate loan terms and property-tax year rejection.
-- Safe skips for live job outcome tests until a seeded test-account contract exists.
+- Static source and template regressions.
+- Seeded lifecycle fixture behavior.
+- Corrected local worker-state simulation.
+- Parser adversarial fixtures.
+- Report text assertions for regenerated local artifacts.
+- Fixture package inventory.
+- Contract-level publication lineage through the dedicated Phase 6 smoke.
 
-## Not Covered Yet
+## What is intentionally not certified here
 
-- Creating live Supabase jobs.
-- Uploading fixture files through Dashboard flows.
-- DocRaptor PDF generation.
-- Credit/entitlement restoration assertions.
-- Database `analysis_jobs` / `reports` row assertions.
+- A real Stripe checkout and webhook grant.
+- A real customer browser upload.
+- A production admission database transaction.
+- A production worker claim and lease.
+- Production DocRaptor PDF generation.
+- Production Storage object creation.
+- Production `analysis_jobs`, `reports`, receipt, or revision mutations.
+- Production customer report listing or signed download.
+- Production entitlement restoration.
 
-Those are intentionally skipped unless a live E2E contract is added, because the harness must not burn credits, send emails, or create customer-visible reports by default.
+Those behaviors require the separately authorized production activation and certification sequence. Local simulations must never be used as a substitute for that evidence.
