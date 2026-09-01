@@ -1,0 +1,49 @@
+name: InvestorIQ Phase 6 Lifecycle Certification
+
+on:
+  push:
+    branches:
+      - internal-phase6-lifecycle-certification-20260901
+    paths:
+      - 'tests/e2e/**'
+      - 'tests/qa/phase6-lifecycle-certification-contract-smoke.js'
+      - 'api/customer-reports.js'
+      - 'api/customer-report-download.js'
+      - 'src/lib/reportUploadGate.js'
+      - 'docs/PHASE1_ADMISSION_UPLOAD_CORE_MODE_CONTRACT_2026-08-28.md'
+      - 'docs/PHASE3_WORKER_RENDER_RUNTIME_RECOVERY_AUTHORITY_2026-08-30.md'
+      - 'supabase/migrations/20260830121500_phase2_atomic_publication_delivery_authority.sql'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/phase6-lifecycle-certification.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: investoriq-phase6-lifecycle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phase6-lifecycle-certification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Phase 6 branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run Phase 6 lifecycle authority
+        run: npm run qa:phase6:lifecycle
+
+      - name: Run production build
+        run: npm run build
