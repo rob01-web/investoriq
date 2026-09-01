@@ -14,9 +14,9 @@ const vercel = read('vercel.json');
 // Browser access to raw pipeline state must be intercepted, never passed through.
 assert.match(wrapper, /tableName === 'analysis_jobs'/);
 assert.match(wrapper, /tableName === 'report_purchases'/);
-assert.match(wrapper, /surface=jobs/);
-assert.match(wrapper, /surface=entitlements/);
-assert.match(wrapper, /surface=admin_entitlements/);
+assert.match(wrapper, /new URLSearchParams\(\{\s*surface:\s*'jobs'/);
+assert.match(wrapper, /params\.set\('surface',\s*'entitlements'\)/);
+assert.match(wrapper, /params\.set\('surface',\s*'admin_entitlements'\)/);
 
 // Customer server projections expose only deliberately safe job/entitlement fields.
 assert.match(handler, /surface === 'jobs'/);
