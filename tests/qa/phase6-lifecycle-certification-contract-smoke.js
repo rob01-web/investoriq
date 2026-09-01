@@ -46,7 +46,7 @@ assert.match(phase2Migration, /publication_status, completed_at/i);
 assert.match(phase2Migration, /set status = 'published'/i);
 assert.match(phase2Migration, /set is_current_revision = true/i);
 assert.match(phase2Migration, /if p_next_status = 'published' then[\s\S]*PUBLICATION_ATOMIC_V2_REQUIRED/i);
-assert.match(phase3Authority, /finalize_worker_publication_v2 remains the only path to published state/i);
+assert.match(phase3Authority, /finalize_worker_publication_v2`?\s+remains the only path to published state/i);
 
 const createReportStart = fakeSupabase.indexOf('createReport(jobId');
 const createReportEnd = fakeSupabase.indexOf('registerGeneratedReportObject', createReportStart);
