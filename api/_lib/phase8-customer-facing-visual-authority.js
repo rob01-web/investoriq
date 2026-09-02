@@ -282,6 +282,7 @@ const PHASE8_STYLE = `<style id="investoriq-phase8-customer-facing-authority">
 @media print {
   .iq-phase8-screening .phase8-screening-evidence .card { break-inside:avoid; page-break-inside:avoid; }
   .iq-phase8-screening .phase8-methodology-compact { break-before:page !important; page-break-before:always !important; }
+  .iq-phase8-screening .report-footer { display:none !important; }
 }
 </style>`;
 
