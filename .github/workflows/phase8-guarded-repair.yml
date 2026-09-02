@@ -9,6 +9,7 @@ on:
       - 'scripts/phase8-apply-repair-v2.mjs'
       - 'scripts/phase8-apply-repair-v3.mjs'
       - 'scripts/phase8-apply-repair-v4.mjs'
+      - 'scripts/phase8-apply-repair-v5.mjs'
       - 'api/_lib/phase8-customer-facing-visual-authority.js'
       - 'tests/qa/phase8-source-reconciliation-authority-smoke.js'
       - 'tests/qa/phase8-customer-facing-visual-authority-smoke.js'
@@ -45,10 +46,11 @@ jobs:
           node --check scripts/phase8-apply-repair-v2.mjs
           node --check scripts/phase8-apply-repair-v3.mjs
           node --check scripts/phase8-apply-repair-v4.mjs
+          node --check scripts/phase8-apply-repair-v5.mjs
           node --check api/_lib/phase8-customer-facing-visual-authority.js
 
       - name: Apply exact-seam Phase 8 repair
-        run: node scripts/phase8-apply-repair-v4.mjs
+        run: node scripts/phase8-apply-repair-v5.mjs
 
       - name: Install locked dependencies
         run: npm ci
