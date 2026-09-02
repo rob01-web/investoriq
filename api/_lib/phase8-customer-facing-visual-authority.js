@@ -271,8 +271,10 @@ const PHASE8_STYLE = `<style id="investoriq-phase8-customer-facing-authority">
 .iq-phase8-screening .phase8-screening-evidence table { margin-top:6px; }
 .iq-phase8-screening .phase8-reconciliation-card { margin-top:10px; border-left:3px solid var(--iq8-gold); }
 .iq-phase8-screening .phase8-diligence-card { margin-top:10px; background:var(--iq8-paper); }
-.iq-phase8-screening .phase8-methodology-compact { padding-top:12px; }
-.iq-phase8-screening .phase8-methodology-compact .section-header { margin-bottom:10px; }
+.iq-phase8-screening .phase8-methodology-compact { padding-top:10px; padding-bottom:4px; }
+.iq-phase8-screening .phase8-methodology-compact .section-header { margin-bottom:7px; padding-bottom:7px; }
+.iq-phase8-screening .phase8-methodology-compact .methodology-section p { margin:2px 0 6px !important; line-height:1.38; }
+.iq-phase8-screening .phase8-methodology-compact .methodology-section h3 { margin:7px 0 2px !important; font-size:14px; line-height:1.18; }
 .iq-phase8-underwriting .subsection-title { letter-spacing:.085em !important; }
 .iq-phase8-underwriting .section-header-sub { letter-spacing:0 !important; }
 .iq-phase8-underwriting .institutional-eyebrow,.iq-phase8-underwriting .section-header-eyebrow { letter-spacing:.10em !important; }
