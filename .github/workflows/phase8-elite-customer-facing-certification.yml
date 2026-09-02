@@ -1,5 +1,6 @@
 name: InvestorIQ Phase 8 ELITE Customer-Facing Certification
 
+# Permanent Phase 8 authority wall: source-bound HTML, Chrome PDF, hashes, artifacts.
 on:
   push:
     branches:
