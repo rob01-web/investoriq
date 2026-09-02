@@ -47,6 +47,11 @@ function assertSharedCustomerAuthority(html, label) {
   return text;
 }
 
+function findTableRowByLabel(html = "", labelPattern) {
+  const rows = String(html || "").match(/<tr\b[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  return rows.find((row) => labelPattern.test(visibleText(row))) || null;
+}
+
 const screeningHtml = readRequired(artifacts.screening, "screening");
 const screeningText = assertSharedCustomerAuthority(screeningHtml, "screening");
 if (!/InvestorIQ Screening Report/i.test(screeningText)) throw new Error("PHASE8_SCREENING_IDENTITY_MISSING");
@@ -63,12 +68,20 @@ const underwritingHtml = readRequired(artifacts.underwriting, "underwriting");
 const underwritingText = assertSharedCustomerAuthority(underwritingHtml, "underwriting");
 if (!/InvestorIQ Underwriting Report/i.test(underwritingText)) throw new Error("PHASE8_UNDERWRITING_IDENTITY_MISSING");
 if (/InvestorIQ Investment Committee Memorandum/i.test(underwritingText)) throw new Error("PHASE8_LEGACY_UNDERWRITING_IDENTITY_FOUND");
-if (/Rent Roll Annual In-Place Rent[\s\S]{0,120}\$50,700/i.test(underwritingText)) {
+const reconciliationRow = findTableRowByLabel(
+  underwritingHtml,
+  /^Rent Roll Annual In-Place Rent\b/i
+);
+if (!reconciliationRow) {
+  throw new Error("PHASE8_UNDERWRITING_RECONCILIATION_ROW_MISSING");
+}
+const reconciliationRowText = visibleText(reconciliationRow);
+if (/\$50,700\b/.test(reconciliationRowText)) {
   throw new Error("PHASE8_UNDERWRITING_PARTIAL_ROWS_OVERRULED_PROPERTY_TOTAL");
 }
-const reconciliationMatch = underwritingText.match(/Rent Roll Annual In-Place Rent[\s\S]{0,180}(\$[0-9,]+)/i);
-if (reconciliationMatch && reconciliationMatch[1] !== "$1,036,800") {
-  throw new Error(`PHASE8_UNDERWRITING_RECONCILIATION_NOT_CANONICAL:${reconciliationMatch[1]}`);
+const reconciliationAmountMatch = reconciliationRowText.match(/\$[0-9,]+/g) || [];
+if (!reconciliationAmountMatch.includes("$1,036,800")) {
+  throw new Error(`PHASE8_UNDERWRITING_RECONCILIATION_NOT_CANONICAL:${reconciliationRowText}`);
 }
 if (!/Source Register|Evidence & Diligence Register|Source Appendix/i.test(underwritingText)) {
   throw new Error("PHASE8_UNDERWRITING_SOURCE_TRANSPARENCY_MISSING");
@@ -89,6 +102,8 @@ const manifest = {
     file: path.basename(artifacts.underwriting),
     bytes: fs.statSync(artifacts.underwriting).size,
     identity: "InvestorIQ Underwriting Report",
+    reconciliation_row_bound: true,
+    canonical_annual_in_place_rent: 1036800,
     partial_row_override_absent: true,
     source_transparency_present: true,
   },
