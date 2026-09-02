@@ -1,0 +1,82 @@
+name: InvestorIQ Phase 8 Screening Evidence Anchor Repair
+
+on:
+  push:
+    branches:
+      - internal-phase8-elite-customer-facing-visual-authority-20260902
+    paths:
+      - 'scripts/phase8-repair-screening-evidence-anchor.mjs'
+      - '.github/workflows/phase8-screening-evidence-anchor-repair.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: investoriq-phase8-screening-evidence-anchor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repair-real-screening-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact Phase 8 branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal-phase8-elite-customer-facing-visual-authority-20260902
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Syntax-check and apply Screening evidence-anchor repair
+        run: |
+          node --check scripts/phase8-repair-screening-evidence-anchor.mjs
+          node scripts/phase8-repair-screening-evidence-anchor.mjs
+          node --check api/_lib/phase8-customer-facing-visual-authority.js
+          node --check tests/qa/phase8-customer-facing-visual-authority-smoke.js
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run Phase 8 authority and Screening regressions
+        run: |
+          node tests/qa/phase8-source-reconciliation-authority-smoke.js
+          node tests/qa/phase8-customer-facing-visual-authority-smoke.js
+          node tests/qa/screening-report-sealed-lane-authority-smoke.js
+          node tests/qa/screening-report-smoke.js
+          node tests/qa/full-underwriting-final-surgical-polish-smoke.js
+
+      - name: Run production build
+        run: npm run build
+
+      - name: Generate real current-branch artifacts
+        env:
+          PHASE7_ARTIFACT_DIR: phase8-artifacts
+        run: node scripts/phase7-generate-visual-artifacts.js
+
+      - name: Validate real Phase 8 customer artifacts
+        env:
+          PHASE8_ARTIFACT_DIR: phase8-artifacts
+        run: node scripts/phase8-validate-visual-artifacts.js
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Commit only after real artifact validation passes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "investoriq-phase8-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            api/_lib/phase8-customer-facing-visual-authority.js \
+            tests/qa/phase8-customer-facing-visual-authority-smoke.js
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git commit -m "Phase 8: make Screening operating evidence artifact-safe"
+          git push origin HEAD:internal-phase8-elite-customer-facing-visual-authority-20260902
