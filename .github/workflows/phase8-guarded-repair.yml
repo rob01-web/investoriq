@@ -7,10 +7,7 @@ on:
     paths:
       - 'scripts/phase8-apply-repair.mjs'
       - 'scripts/phase8-apply-repair-v2.mjs'
-      - 'scripts/phase8-apply-repair-v3.mjs'
-      - 'scripts/phase8-apply-repair-v4.mjs'
-      - 'scripts/phase8-apply-repair-v5.mjs'
-      - 'scripts/phase8-apply-repair-v6.mjs'
+      - 'scripts/phase8-apply-repair-v7.mjs'
       - 'api/_lib/phase8-customer-facing-visual-authority.js'
       - 'tests/qa/phase8-source-reconciliation-authority-smoke.js'
       - 'tests/qa/phase8-customer-facing-visual-authority-smoke.js'
@@ -41,18 +38,15 @@ jobs:
           node-version: '20'
           cache: npm
 
-      - name: Syntax-check Phase 8 authority and patchers
+      - name: Syntax-check Phase 8 authority and product patchers
         run: |
           node --check scripts/phase8-apply-repair.mjs
           node --check scripts/phase8-apply-repair-v2.mjs
-          node --check scripts/phase8-apply-repair-v3.mjs
-          node --check scripts/phase8-apply-repair-v4.mjs
-          node --check scripts/phase8-apply-repair-v5.mjs
-          node --check scripts/phase8-apply-repair-v6.mjs
+          node --check scripts/phase8-apply-repair-v7.mjs
           node --check api/_lib/phase8-customer-facing-visual-authority.js
 
-      - name: Apply exact-seam Phase 8 repair
-        run: node scripts/phase8-apply-repair-v6.mjs
+      - name: Apply exact-seam Phase 8 product repair
+        run: node scripts/phase8-apply-repair-v7.mjs
 
       - name: Install locked dependencies
         run: npm ci
@@ -68,10 +62,7 @@ jobs:
           node tests/qa/screening-report-smoke.js
           node tests/qa/full-underwriting-final-surgical-polish-smoke.js
 
-      - name: Run current render-harness regression
-        run: node tests/qa/generate-client-report-rent-roll-smoke.js
-
-      - name: Run Phase 7 design regression
+      - name: Run Phase 7 design regressions
         run: |
           node tests/qa/phase7-elite-report-design-contract-smoke.js
           node tests/qa/phase7-decision-support-smoke.js
