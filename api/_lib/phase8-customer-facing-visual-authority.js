@@ -281,7 +281,7 @@ const PHASE8_STYLE = `<style id="investoriq-phase8-customer-facing-authority">
 .iq-phase8-underwriting #quality-manifest-title { margin-top:4px; }
 @media print {
   .iq-phase8-screening .phase8-screening-evidence .card { break-inside:avoid; page-break-inside:avoid; }
-  .iq-phase8-screening .phase8-methodology-compact { break-before:auto !important; page-break-before:auto !important; }
+  .iq-phase8-screening .phase8-methodology-compact { break-before:page !important; page-break-before:always !important; }
 }
 </style>`;
 
