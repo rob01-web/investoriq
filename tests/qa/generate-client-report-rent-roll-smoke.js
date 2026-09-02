@@ -883,6 +883,9 @@ const screeningHarnessRequest = {
         avg_market_rent: 1980,
         rent_to_market_gap: 0.0961538462,
       },
+      coverageArtifacts: fullRenderCoverageArtifacts.filter((artifact) =>
+        ["t12_parsed", "rent_roll_parsed"].includes(String(artifact?.type || ""))
+      ),
     },
   },
 };
