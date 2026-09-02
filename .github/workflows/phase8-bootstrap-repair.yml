@@ -33,6 +33,19 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Normalize bootstrap template escapes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/phase8-bootstrap-repair.mjs')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('\\\\`', '\\`')
+          s = s.replace('${{', '\\${{')
+          p.write_text(s, encoding='utf-8')
+          PY
+          node --check scripts/phase8-bootstrap-repair.mjs
+
       - name: Apply guarded Phase 8 repair
         run: node scripts/phase8-bootstrap-repair.mjs
 
