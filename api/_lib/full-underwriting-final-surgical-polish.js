@@ -1,5 +1,6 @@
 import { applyPhase7EliteReportPresentation } from "./phase7-elite-report-presentation.js";
 import { applyPhase7DecisionSupport } from "./phase7-decision-support.js";
+import { applyPhase8CustomerFacingVisualAuthority } from "./phase8-customer-facing-visual-authority.js";
 
 function isFullUnderwritingMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -40,7 +41,7 @@ function sanitizeMarkupText(markup = "") {
     .join("");
 }
 
-export function polishFullUnderwritingFinalHtml(html, { reportMode = null } = {}) {
+export function polishFullUnderwritingFinalHtml(html, { reportMode = null, sourceTruthPackage = null } = {}) {
   const source = String(html || "");
   if (!isFullUnderwritingMode(reportMode)) return source;
 
@@ -48,8 +49,9 @@ export function polishFullUnderwritingFinalHtml(html, { reportMode = null } = {}
   const paginationReleased = releaseMethodologyPagination(duplicateWrapperCollapsed);
   const elitePresented = applyPhase7EliteReportPresentation(paginationReleased, { reportMode });
   const decisionSupported = applyPhase7DecisionSupport(elitePresented, { reportMode });
-  return decisionSupported
+  const legacySanitized = decisionSupported
     .split(/(<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>)/gi)
     .map((part) => (/^<(?:style|script)\b/i.test(part) ? part : sanitizeMarkupText(part)))
     .join("");
+  return applyPhase8CustomerFacingVisualAuthority(legacySanitized, { reportMode, sourceTruthPackage });
 }

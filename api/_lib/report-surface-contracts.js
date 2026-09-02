@@ -172,6 +172,11 @@ function resolveCanonicalRentRollAnnualMetric({
     totalUnits > 0 &&
     representedUnitCount > 0 &&
     representedUnitCount < totalUnits;
+  const propertyWidePartialSignal =
+    payloadPartialSignal ||
+    rowCoveragePartial ||
+    sampleOrExcerptSignal ||
+    explicitControllingSummarySignal;
   const rowAnnual = rows.reduce((sum, row) => {
     const rent = rowRentValueForMetric(row, metricKey);
     const count = coerceNumber(row?.count);
@@ -275,20 +280,20 @@ function resolveCanonicalRentRollAnnualMetric({
     },
     {
       value: metricKey === "market"
-        ? rentRollPayload?.total_market_annual
-        : rentRollPayload?.total_in_place_annual,
+        ? rentRollPayload?.total_market_annual ?? rentRollPayload?.total_annual_market ?? rentRollPayload?.annual_market_rent
+        : rentRollPayload?.total_in_place_annual ?? rentRollPayload?.total_annual_in_place ?? rentRollPayload?.annual_in_place_rent,
       source_path: metricKey === "market"
-        ? "rentRollPayload.total_market_annual"
-        : "rentRollPayload.total_in_place_annual",
+        ? (rentRollPayload?.total_market_annual != null ? "rentRollPayload.total_market_annual" : rentRollPayload?.total_annual_market != null ? "rentRollPayload.total_annual_market" : "rentRollPayload.annual_market_rent")
+        : (rentRollPayload?.total_in_place_annual != null ? "rentRollPayload.total_in_place_annual" : rentRollPayload?.total_annual_in_place != null ? "rentRollPayload.total_annual_in_place" : "rentRollPayload.annual_in_place_rent"),
       kind: "payload_total_annual",
     },
     {
       value: metricKey === "market"
-        ? computedRentRoll?.total_market_annual
-        : computedRentRoll?.total_in_place_annual,
+        ? computedRentRoll?.total_market_annual ?? computedRentRoll?.total_annual_market ?? computedRentRoll?.annual_market_rent
+        : computedRentRoll?.total_in_place_annual ?? computedRentRoll?.total_annual_in_place ?? computedRentRoll?.annual_in_place_rent,
       source_path: metricKey === "market"
-        ? "computedRentRoll.total_market_annual"
-        : "computedRentRoll.total_in_place_annual",
+        ? (computedRentRoll?.total_market_annual != null ? "computedRentRoll.total_market_annual" : computedRentRoll?.total_annual_market != null ? "computedRentRoll.total_annual_market" : "computedRentRoll.annual_market_rent")
+        : (computedRentRoll?.total_in_place_annual != null ? "computedRentRoll.total_in_place_annual" : computedRentRoll?.total_annual_in_place != null ? "computedRentRoll.total_annual_in_place" : "computedRentRoll.annual_in_place_rent"),
       kind: "computed_total_annual",
     },
     {
@@ -315,8 +320,10 @@ function resolveCanonicalRentRollAnnualMetric({
     if (!Number.isFinite(value) || value <= 0) continue;
     const impliedMonthly = Number.isFinite(totalUnits) && totalUnits > 0 ? value / totalUnits / 12 : null;
     const matchesReferences = references.filter((reference) => !materiallyDifferent(value, reference.value));
+    const propertyWideCandidate = ["summary_annual", "summary_monthly", "payload_total_annual", "computed_total_annual"].includes(candidate.kind);
     const coherent =
       (preferTrustedSummaryAuthority && (candidate.kind === "summary_annual" || candidate.kind === "summary_monthly")) ||
+      (propertyWidePartialSignal && propertyWideCandidate) ||
       matchesReferences.length > 0 ||
       ((!(Number.isFinite(rowAnnual) && rowAnnual > 0)) && (!(Number.isFinite(weightedAnnual) && weightedAnnual > 0)));
     const candidateRecord = {
@@ -348,14 +355,15 @@ function resolveCanonicalRentRollAnnualMetric({
     }
   }
 
-  const preferenceOrder = preferTrustedSummaryAuthority
+  const preferPropertyWideAuthority = preferTrustedSummaryAuthority || propertyWidePartialSignal;
+  const preferenceOrder = preferPropertyWideAuthority
     ? new Map([
         ["summary_annual", 0],
         ["summary_monthly", 1],
-        ["row_derived_annual", 2],
-        ["weighted_avg_implied_annual", 3],
-        ["payload_total_annual", 4],
-        ["computed_total_annual", 5],
+        ["payload_total_annual", 2],
+        ["computed_total_annual", 3],
+        ["row_derived_annual", 4],
+        ["weighted_avg_implied_annual", 5],
       ])
     : new Map([
         ["row_derived_annual", 0],

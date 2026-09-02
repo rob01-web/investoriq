@@ -6149,8 +6149,8 @@ const attackRenderHarnessRequest = {
         total_units: 48,
         occupied_units: 44,
         vacant_units: 4,
-        total_annual_in_place: 1000000,
-        total_annual_market: 1100800,
+        total_annual_in_place: 1036800,
+        total_annual_market: 1137600,
         rent_to_market_gap: 0.0961538462,
       },
       acquisitionTermsPayload: {
@@ -6342,8 +6342,8 @@ const retest4RenderRequest = {
         total_units: 48,
         occupied_units: 44,
         vacant_units: 4,
-        total_annual_in_place: 1000000,
-        total_annual_market: 1100800,
+        total_annual_in_place: 1036800,
+        total_annual_market: 1137600,
         rent_to_market_gap: 0.0961538462,
       },
       acquisitionTermsPayload: {

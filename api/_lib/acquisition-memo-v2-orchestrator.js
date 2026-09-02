@@ -159,6 +159,7 @@ export function runAcquisitionMemoV2Orchestrator({
     });
     const baseHtml = polishFullUnderwritingFinalHtml(renderedHtml, {
       reportMode: customerSurfaceModel?.reportMode || acquisitionMemoV2DocumentArgs?.reportMode || null,
+      sourceTruthPackage: acquisitionMemoV2DocumentArgs?.sourceTruthPackage || null,
     });
     const enforcement = enforceAcquisitionMemoBossContractOnHtml(bossContract, baseHtml);
     const repairedHtml = repairAcquisitionMemoV2HtmlForRepairPlan(
