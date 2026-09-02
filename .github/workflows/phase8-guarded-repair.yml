@@ -1,0 +1,95 @@
+name: InvestorIQ Phase 8 Guarded Exact-Seam Repair
+
+on:
+  push:
+    branches:
+      - internal-phase8-elite-customer-facing-visual-authority-20260902
+    paths:
+      - 'scripts/phase8-apply-repair.mjs'
+      - 'api/_lib/phase8-customer-facing-visual-authority.js'
+      - 'tests/qa/phase8-source-reconciliation-authority-smoke.js'
+      - 'tests/qa/phase8-customer-facing-visual-authority-smoke.js'
+      - '.github/workflows/phase8-guarded-repair.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: investoriq-phase8-guarded-repair-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repair-test-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact Phase 8 branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal-phase8-elite-customer-facing-visual-authority-20260902
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Syntax-check Phase 8 authority and patcher
+        run: |
+          node --check scripts/phase8-apply-repair.mjs
+          node --check api/_lib/phase8-customer-facing-visual-authority.js
+
+      - name: Apply exact-seam Phase 8 repair
+        run: node scripts/phase8-apply-repair.mjs
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run Phase 8 authority tests
+        run: |
+          node tests/qa/phase8-source-reconciliation-authority-smoke.js
+          node tests/qa/phase8-customer-facing-visual-authority-smoke.js
+
+      - name: Run sealed-lane regressions
+        run: |
+          node tests/qa/screening-report-sealed-lane-authority-smoke.js
+          node tests/qa/screening-report-smoke.js
+          node tests/qa/full-underwriting-final-surgical-polish-smoke.js
+
+      - name: Run current render-harness regression
+        run: node tests/qa/generate-client-report-rent-roll-smoke.js
+
+      - name: Run Phase 7 design regression
+        run: |
+          node tests/qa/phase7-elite-report-design-contract-smoke.js
+          node tests/qa/phase7-decision-support-smoke.js
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff safety
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Commit repair only after green certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "investoriq-phase8-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            api/_lib/report-surface-contracts.js \
+            api/_lib/screening-report-pipeline.js \
+            api/_lib/full-underwriting-final-surgical-polish.js \
+            api/_lib/acquisition-memo-v2-orchestrator.js \
+            tests/qa/generate-client-report-rent-roll-smoke.js
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No repair diff to commit."
+            exit 0
+          fi
+          git commit -m "Phase 8: enforce canonical customer-facing report authority"
+          git push origin HEAD:internal-phase8-elite-customer-facing-visual-authority-20260902
