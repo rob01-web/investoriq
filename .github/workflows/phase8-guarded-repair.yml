@@ -6,6 +6,7 @@ on:
       - internal-phase8-elite-customer-facing-visual-authority-20260902
     paths:
       - 'scripts/phase8-apply-repair.mjs'
+      - 'scripts/phase8-apply-repair-v2.mjs'
       - 'api/_lib/phase8-customer-facing-visual-authority.js'
       - 'tests/qa/phase8-source-reconciliation-authority-smoke.js'
       - 'tests/qa/phase8-customer-facing-visual-authority-smoke.js'
@@ -36,13 +37,14 @@ jobs:
           node-version: '20'
           cache: npm
 
-      - name: Syntax-check Phase 8 authority and patcher
+      - name: Syntax-check Phase 8 authority and patchers
         run: |
           node --check scripts/phase8-apply-repair.mjs
+          node --check scripts/phase8-apply-repair-v2.mjs
           node --check api/_lib/phase8-customer-facing-visual-authority.js
 
       - name: Apply exact-seam Phase 8 repair
-        run: node scripts/phase8-apply-repair.mjs
+        run: node scripts/phase8-apply-repair-v2.mjs
 
       - name: Install locked dependencies
         run: npm ci
