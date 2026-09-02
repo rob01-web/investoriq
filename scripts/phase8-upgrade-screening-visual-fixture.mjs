@@ -1,5 +1,7 @@
 import fs from "node:fs";
 
+// Phase 8 visual authority requires the Screening render fixture to carry the
+// same canonical parsed core artifacts used by the sovereign source-truth package.
 const file = "tests/qa/generate-client-report-rent-roll-smoke.js";
 const source = fs.readFileSync(file, "utf8");
 const before = `      computedRentRoll: {
