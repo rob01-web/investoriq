@@ -41,7 +41,8 @@ jobs:
           p = Path('scripts/phase8-bootstrap-repair.mjs')
           s = p.read_text(encoding='utf-8')
           s = s.replace('\\\\`', '\\`')
-          s = s.replace('${{', '\\${{')
+          expression_open = chr(36) + '{{'
+          s = s.replace(expression_open, '\\' + expression_open)
           p.write_text(s, encoding='utf-8')
           PY
           node --check scripts/phase8-bootstrap-repair.mjs
