@@ -9,6 +9,7 @@ import {
   buildPhase8CertificationRequests,
   buildPhase8CertificationSourceProvenance,
 } from "../../scripts/phase8-visual-certification-fixtures.js";
+import { buildCanonicalSourceTruthPackage } from "../../api/_lib/source-truth-package.js";
 
 function completeHtml(body) {
   return `<!DOCTYPE html><html><body>${body}</body></html>`;
@@ -83,6 +84,32 @@ assert.deepEqual(
   ["1BR Interiors", "2BR Interiors", "Common Area Refresh", "Exterior / Security", "Contingency"]
 );
 assert.ok(renovationArtifact.payload.budget_rows.every((row) => Array.isArray(row.evidence) && row.evidence.length === 1));
+
+const underwritingSourceTruth = buildCanonicalSourceTruthPackage({
+  jobId: null,
+  propertyName: requests.underwriting.body.property_name,
+  uploadedFiles: underwritingPayloads.documentSources,
+  artifacts: underwritingPayloads.coverageArtifacts,
+});
+const supportByFilename = new Map(
+  underwritingSourceTruth.support.accepted.map((document) => [document.original_filename, document])
+);
+assert.equal(supportByFilename.size, 6);
+assert.equal(supportByFilename.get("Stonebridge_Assumptions.pdf")?.accepted_facts?.purchase_price, 13500000);
+assert.equal(supportByFilename.get("Current_Debt_Stonebridge.pdf")?.accepted_facts?.current_outstanding_balance, 6800000);
+assert.equal(supportByFilename.get("Stonebridge_Reno_Plan.pdf")?.accepted_facts?.renovation_plan_rows?.length, 5);
+assert.equal(supportByFilename.get("Stonebridge_Appraisal_Summary.pdf")?.accepted_facts?.appraisal_value, 14200000);
+assert.deepEqual(
+  supportByFilename.get("Stonebridge_Market_Survey.pdf")?.accepted_facts?.market_rent_ranges,
+  [
+    { unit_type: "1BR", low_monthly_rent: 2100, high_monthly_rent: 2250 },
+    { unit_type: "2BR", low_monthly_rent: 2500, high_monthly_rent: 2700 },
+  ]
+);
+assert.equal(
+  supportByFilename.get("Stonebridge_Phase_I_ESA.pdf")?.accepted_facts?.phase_i_status,
+  "none_identified_in_summary"
+);
 
 const contaminatedBinding = structuredClone(requests.underwriting);
 contaminatedBinding.body.__test_payloads.rentRollPayload.annual_in_place_rent = 1036800;

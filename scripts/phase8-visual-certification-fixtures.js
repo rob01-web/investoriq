@@ -192,8 +192,35 @@ function buildStonebridgeUnderwritingRequest() {
     { id: "stonebridge-phase-i-file", original_filename: "Stonebridge_Phase_I_ESA.pdf", doc_type: "supporting_document", semantic_doc_role: "phase_i_esa", mime_type: "application/pdf", parse_status: "parsed" },
   ];
 
-  const assumptionsText = "Stonebridge Lofts purchase assumptions and proposed acquisition financing. Purchase Price $13,500,000. NOI Basis $945,000. Going-In Cap Reference 7.00%. Proposed Acquisition Loan $9,450,000. LTV 70.0%. Interest Rate 5.95%. Amortization 30 years. Lender Fee 0.85%.";
-  const currentDebtText = "Stonebridge Lofts existing current debt statement. Current Outstanding Balance $6,800,000. Interest Rate 4.85%. Amortization Remaining 24 years. Monthly Payment $39,250. Maturity Date 2029-11-01.";
+  const assumptionsText = `Stonebridge Lofts - Purchase Assumptions / Proposed Acquisition Financing
+Document Role
+This document is intended to represent purchase assumptions and proposed acquisition financing only. It is not a current mortgage statement and does not represent existing debt.
+Acquisition Context
+Asking / Purchase Price $13,500,000
+NOI Basis $945,000
+Going-In Cap Reference 7.00%
+Proposed Acquisition Loan $9,450,000
+Proposed LTV 70.0%
+Proposed Interest Rate 5.95%
+Proposed Amortization 30 years
+Lender / Origination Fee 0.85%
+Limitations
+These are proposed acquisition financing assumptions for lender discussion only.
+Do not treat the proposed acquisition loan as current outstanding debt.
+Do not use this document to produce current debt DSCR, refinance capacity, DCF, waterfall, equity return, or a final recommendation.`;
+  const currentDebtText = `Stonebridge Lofts - Existing Current Debt Statement
+Document Role
+This is an existing/current debt context document. It is separate from proposed acquisition financing.
+Current Debt Terms
+Current Outstanding Balance $6,800,000
+Interest Rate 4.85%
+Amortization Remaining 24 years
+Monthly Payment $39,250
+Maturity Date 2029-11-01
+Limitations
+Display as current/existing debt context only in launch-mode Acquisition Memo unless the current product doctrine explicitly supports additional debt calculations.
+Keep this document separate from Stonebridge_Assumptions.pdf proposed acquisition financing.
+Do not produce refinance capacity, DCF, waterfall, equity return, or final recommendation from this document.`;
   const renovationText = stonebridgeAuthority.artifacts.misclassified_renovation.text;
   const renovationBudgetRows = [
     {
@@ -228,9 +255,41 @@ function buildStonebridgeUnderwritingRequest() {
       evidence: ["Contingency $153,000"],
     },
   ];
-  const appraisalText = "Stonebridge Lofts appraisal summary for context only. Appraised Value $14,200,000. Stabilized NOI $1,050,000. Appraisal Cap Rate 7.40%. Do not use appraisal values to override T12 or rent roll source facts.";
-  const marketText = "Stonebridge Lofts market rent survey context only. One-bedroom asking rents range from $2,100 to $2,250 per month. Two-bedroom asking rents range from $2,500 to $2,700 per month. Do not use survey asking rents to override rent roll source facts.";
-  const phaseIText = "Stonebridge Lofts Phase I environmental site assessment summary. No recognized environmental conditions were identified in the summary. Environmental context only; no independent environmental conclusion is made by InvestorIQ.";
+  const appraisalText = `Stonebridge Lofts - Appraisal Summary / Valuation Context
+Document Role
+This appraisal-style summary is provided as valuation context only. It should not override the purchase assumptions, T12 NOI, or rent roll market rent.
+Valuation Summary
+Appraised Value $14,200,000
+Stabilized NOI $1,050,000
+Stabilized Cap Rate 7.40%
+Market Value Conclusion $14,200,000
+Limitations
+The appraised value is not the purchase price.
+The stabilized NOI is not T12 NOI.
+The stabilized cap rate is not a verified exit cap for launch-mode Acquisition Memo outputs.
+Do not use this source to override core T12 or Rent Roll values.`;
+  const marketText = `Stonebridge Lofts - Market Rent Survey Context
+Document Role
+This survey provides market rent context only. It should not override the rent roll market rents.
+Market Rent Survey
+1BR Market Rent Range $2,100 - $2,250
+2BR Market Rent Range $2,500 - $2,700
+Broker Opinion Market rents could exceed current rent roll assumptions
+Limitations
+Context only; not a modeled rent-roll override.
+Do not use survey rents to inflate Annual Market Rent or Rent Gap.
+The rent roll remains the source of record for in-place and market rent fields in launch-mode reporting.`;
+  const phaseIText = `Stonebridge Lofts - Phase I ESA Summary
+Document Role
+Environmental due diligence context only. Not a financial modeling input.
+Summary
+Recognized Environmental Conditions None identified in this summary
+Scope Phase I Environmental Site Assessment summary
+Reliance For environmental context only
+Limitations
+Context only / not modeled.
+Do not treat as property tax support.
+Do not treat as quantitative input for NOI, value, debt, rent, or expense calculations.`;
 
   const coverageArtifacts = [
     {
