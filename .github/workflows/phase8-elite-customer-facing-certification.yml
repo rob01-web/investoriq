@@ -19,6 +19,7 @@ on:
       - 'scripts/phase8-artifact-identity-fingerprint.js'
       - 'scripts/phase8-visual-certification-fixtures.js'
       - 'scripts/phase8-validate-visual-artifacts.js'
+      - 'scripts/phase8-validate-rendered-pdfs.js'
       - 'tests/qa/phase8-artifact-identity-fingerprint-smoke.js'
       - '.github/workflows/phase8-elite-customer-facing-certification.yml'
   workflow_dispatch: {}
@@ -110,6 +111,11 @@ jobs:
             test -s "$pdf"
           done
           ls -lh phase8-artifacts
+
+      - name: Validate rendered PDF identities and core facts
+        env:
+          PHASE8_ARTIFACT_DIR: phase8-artifacts
+        run: node scripts/phase8-validate-rendered-pdfs.js
 
       - name: Record artifact hashes
         shell: bash

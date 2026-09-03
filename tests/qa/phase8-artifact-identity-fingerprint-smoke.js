@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   assertPhase8ArtifactIdentity,
+  assertPhase8ArtifactTextIdentity,
   assertPhase8SourceBindingIdentity,
   PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS,
 } from "../../scripts/phase8-artifact-identity-fingerprint.js";
@@ -34,6 +35,10 @@ const validUnderwriting = completeHtml(`
   <p>T12_Stonebridge_Lofts_Attack_Test_8.xlsx | Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx</p>
 `);
 assert.equal(assertPhase8ArtifactIdentity({ report: "underwriting", html: validUnderwriting }).core_facts_verified, true);
+assert.equal(
+  assertPhase8ArtifactTextIdentity({ report: "underwriting", text: validUnderwriting.replace(/<[^>]+>/g, " ") }).core_facts_verified,
+  true
+);
 
 const mislabeledHarbourstone = completeHtml(`
   <h1>InvestorIQ Underwriting Report</h1><h2>Stonebridge Lofts</h2>
@@ -45,6 +50,10 @@ const mislabeledHarbourstone = completeHtml(`
 `);
 assert.throws(
   () => assertPhase8ArtifactIdentity({ report: "underwriting", html: mislabeledHarbourstone }),
+  /PHASE8_ARTIFACT_IDENTITY_MISMATCH:underwriting:/
+);
+assert.throws(
+  () => assertPhase8ArtifactTextIdentity({ report: "underwriting", text: mislabeledHarbourstone.replace(/<[^>]+>/g, " ") }),
   /PHASE8_ARTIFACT_IDENTITY_MISMATCH:underwriting:/
 );
 

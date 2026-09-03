@@ -1,6 +1,8 @@
 export const PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS = Object.freeze({
   screening: Object.freeze({
     identity: "InvestorIQ Screening Report",
+    brand: "INVESTORIQ",
+    report_title: "Screening Report",
     property_name: "Harbourstone",
     total_units: 48,
     occupied_units: 46,
@@ -19,6 +21,8 @@ export const PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS = Object.freeze({
   }),
   underwriting: Object.freeze({
     identity: "InvestorIQ Underwriting Report",
+    brand: "INVESTORIQ",
+    report_title: "Underwriting Report",
     property_name: "Stonebridge Lofts",
     total_units: 64,
     occupied_units: 60,
@@ -93,14 +97,17 @@ function requireAnyPattern(text, patterns, report, field, detail) {
 function requireLabelValue(text, labels, valuePattern, report, field, detail, maxDistance = 180) {
   const labelPattern = labels.map(escapeRegex).join("|");
   const valueSource = valuePattern.source.replace(/^\^|\$$/g, "");
-  const forward = new RegExp(`(?:${labelPattern})[\\s\\S]{0,${maxDistance}}${valueSource}`, "i");
-  const reverse = new RegExp(`${valueSource}[\\s\\S]{0,${maxDistance}}(?:${labelPattern})`, "i");
+  const forwardValueSource = valueSource.replace(/^\\b/, "");
+  const reverseValueSource = valueSource.replace(/\\b$/, "");
+  const forward = new RegExp(`(?:${labelPattern})[\\s\\S]{0,${maxDistance}}${forwardValueSource}`, "i");
+  const reverse = new RegExp(`${reverseValueSource}[\\s\\S]{0,${maxDistance}}(?:${labelPattern})`, "i");
   if (!forward.test(text) && !reverse.test(text)) fail(report, field, detail);
 }
 
-function validateCoreFingerprint({ html, report, fingerprint }) {
-  const text = visibleArtifactText(html);
-  requirePattern(text, new RegExp(escapeRegex(fingerprint.identity), "i"), report, "report_identity", fingerprint.identity);
+function validateCoreFingerprint({ text: inputText, report, fingerprint }) {
+  const text = String(inputText || "").replace(/\s+/g, " ").trim();
+  requirePattern(text, new RegExp(`\\b${escapeRegex(fingerprint.brand)}\\b`, "i"), report, "report_brand", fingerprint.brand);
+  requirePattern(text, new RegExp(`\\b${escapeRegex(fingerprint.report_title)}\\b`, "i"), report, "report_title", fingerprint.report_title);
   requirePattern(text, new RegExp(`\\b${escapeRegex(fingerprint.property_name)}\\b`, "i"), report, "property_name", fingerprint.property_name);
 
   requireLabelValue(text, ["Units", "Total Units"], new RegExp(`\\b${fingerprint.total_units}\\b`), report, "total_units", String(fingerprint.total_units));
@@ -133,10 +140,23 @@ export function assertPhase8ArtifactIdentity({ report, html }) {
   if (!fingerprint) throw new Error(`PHASE8_ARTIFACT_IDENTITY_UNKNOWN_REPORT:${report}`);
   if (!/<!DOCTYPE html>/i.test(String(html || ""))) fail(report, "document", "complete_html_required");
 
-  const result = validateCoreFingerprint({ html, report, fingerprint });
   const text = visibleArtifactText(html);
+  requirePattern(text, new RegExp(escapeRegex(fingerprint.identity), "i"), report, "report_identity", fingerprint.identity);
+  return assertPhase8ArtifactTextIdentity({ report, text });
+}
+
+export function assertPhase8ArtifactTextIdentity({ report, text }) {
+  const fingerprint = PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS[report];
+  if (!fingerprint) throw new Error(`PHASE8_ARTIFACT_IDENTITY_UNKNOWN_REPORT:${report}`);
+  const normalizedText = String(text || "")
+    .replace(/_\s+/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalizedText) fail(report, "document", "visible_text_required");
+
+  const result = validateCoreFingerprint({ text: normalizedText, report, fingerprint });
   for (const forbidden of fingerprint.forbidden_contamination || []) {
-    if (text.includes(forbidden.token)) {
+    if (normalizedText.includes(forbidden.token)) {
       fail(report, `forbidden_${forbidden.field}`, forbidden.token);
     }
   }

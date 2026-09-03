@@ -15,6 +15,7 @@ const root = path.resolve(__dirname, "../..");
 const presentationSource = fs.readFileSync(path.join(root, "api/_lib/phase7-elite-report-presentation.js"), "utf8");
 const screeningPipelineSource = fs.readFileSync(path.join(root, "api/_lib/screening-report-pipeline.js"), "utf8");
 const underwritingPolishSource = fs.readFileSync(path.join(root, "api/_lib/full-underwriting-final-surgical-polish.js"), "utf8");
+const runtimeTemplateSource = fs.readFileSync(path.join(root, "api/report-template-runtime.html"), "utf8");
 const designAuthority = fs.readFileSync(path.join(root, "docs/PHASE7_ELITE_REPORT_DESIGN_AUTHORITY_2026-09-01.md"), "utf8");
 
 function visibleText(html = "") {
@@ -102,6 +103,7 @@ assert.match(screeningPipelineSource, /normalizeScreeningCustomerIdentity\(compa
 assert.match(screeningPipelineSource, /applyPhase7EliteReportPresentation\(identityHtml, \{ reportMode \}\)/);
 assert.match(screeningPipelineSource, /applyPhase7DecisionSupport\(presentationHtml, \{ reportMode \}\)/);
 assert.match(underwritingPolishSource, /applyPhase7EliteReportPresentation\(paginationReleased, \{ reportMode \}\)/);
+assert.match(runtimeTemplateSource, /<div class="cover-report-type">\{\{COVER_REPORT_TYPE_LABEL\}\}<\/div>/);
 assert.match(presentationSource, /\.iq-phase7-screening \.grid-2-balanced > :only-child\s*\{[\s\S]*?grid-column:\s*1 \/ -1;/);
 assert.match(presentationSource, /\.iq-phase7-screening section\.section\.no-break\s*\{[\s\S]*?break-inside:\s*auto;/);
 assert.match(presentationSource, /data-iq-elite-section="investorQuestions"/);
