@@ -193,9 +193,9 @@ function formatAssetIdentityForSurface({ customerSurfaceModel = null, sourcePack
       coreMetrics?.assetClass ||
       ""
   ).trim();
-  if (Number.isFinite(unitCount) && unitCount > 0 && assetClass) return `${Math.round(unitCount)}-Unit ${assetClass}`;
+  if (Number.isFinite(unitCount) && unitCount > 0 && assetClass) return `${Math.round(unitCount)} Unit ${assetClass}`;
   if (assetClass) return assetClass;
-  if (Number.isFinite(unitCount) && unitCount > 0) return `${Math.round(unitCount)}-Unit`;
+  if (Number.isFinite(unitCount) && unitCount > 0) return `${Math.round(unitCount)} Unit`;
   return "Property Identity";
 }
 

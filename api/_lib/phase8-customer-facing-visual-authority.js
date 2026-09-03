@@ -1,3 +1,5 @@
+import { applyPhase8AOwnerAcceptanceAuthority } from "./phase8a-owner-acceptance-authority.js";
+
 const PHASE8_MARKER = "elite-customer-facing-authority-v1";
 
 function normalizeMode(value = "") {
@@ -40,7 +42,9 @@ function ratio(value) {
 function money(value) {
   const n = finite(value);
   if (n === null) return null;
-  return `$${Math.round(n).toLocaleString("en-CA")}`;
+  const normalized = Object.is(n, -0) ? 0 : n;
+  const absolute = Math.abs(Math.round(normalized)).toLocaleString("en-CA");
+  return normalized < 0 ? `($${absolute})` : `$${absolute}`;
 }
 
 function percent(value, decimals = 1) {
@@ -302,6 +306,7 @@ export function applyPhase8CustomerFacingVisualAuthority(html, { reportMode = nu
   }
   source = sanitizeVisibleMarkup(source, lane);
   source = injectStyle(addPhase8BodyMarker(source, lane));
+  source = applyPhase8AOwnerAcceptanceAuthority(source, { lane, sourceTruthPackage });
   assertCustomerSurface(source, lane, sourceTruthPackage);
   return source;
 }

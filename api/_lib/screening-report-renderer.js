@@ -820,7 +820,7 @@ export function buildScreeningCustomerOutput({
     const coverSnapshotValueStyle = "color:#F9FAFB;font-size:11px;font-weight:600;";
     const _coverRrUnits = coerceNumber(computedRentRoll?.total_units);
     const unitCount = Number.isFinite(_coverRrUnits) && _coverRrUnits > 0 ? _coverRrUnits : null;
-    if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily - ${unitCount} Units</span></div>`);
+    if (unitCount) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Asset Class</span><span style="${coverSnapshotValueStyle}">Multifamily | ${unitCount} Units</span></div>`);
     const docCount = Array.isArray(documentSources) ? documentSources.length : 0;
     if (docCount > 0) snapRows.push(`<div style="display:flex;gap:12px;padding:3px 0;"><span style="width:96px;color:#9CA3AF;font-size:10px;letter-spacing:.5px;text-transform:uppercase;">Documents</span><span style="${coverSnapshotValueStyle}">${docCount} uploaded file${docCount === 1 ? "" : "s"}</span></div>`);
     const modeLabel = reportMode === "screening_v1" ? "Preliminary Screening" : UNDERWRITING_REPORT_IDENTITY.canonicalTitle;
