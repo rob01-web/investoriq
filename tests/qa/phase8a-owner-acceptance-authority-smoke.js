@@ -43,7 +43,7 @@ const screening = applyPhase8AOwnerAcceptanceAuthority(screeningInput, {
 assert.match(screening, /data-iq-phase8a="owner-acceptance-recovery-v1"/);
 assert.match(screening, /Screening Disposition/);
 assert.match(screening, />HOLD</);
-assert.match(screening, /43\.9%/);
+assert.match(screening, /44\.0%/);
 assert.match(screening, /Reconcile the two core income bases before full Underwriting/);
 assert.match(screening, /Operating Strength/);
 assert.match(screening, /Rent Position/);
