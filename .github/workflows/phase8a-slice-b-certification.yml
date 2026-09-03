@@ -32,8 +32,19 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Apply guarded Slice B patch
+      - name: Normalize and apply guarded Slice B patch
+        shell: bash
         run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/phase8a-slice-b-patch.mjs')
+          s = p.read_text(encoding='utf-8')
+          old = 'conditions.push(question.replace(/\\?$/, "."));'
+          new = 'conditions.push(question.endsWith("?") ? question.slice(0, -1) + "." : question);'
+          if old not in s:
+              raise SystemExit('PHASE8A_SLICE_B_ESCAPE_SEAM_MISSING')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
           node --check scripts/phase8a-slice-b-patch.mjs
           node scripts/phase8a-slice-b-patch.mjs
       - name: Install dependencies
