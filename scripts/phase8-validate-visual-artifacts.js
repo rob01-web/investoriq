@@ -1,11 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  assertPhase8ArtifactIdentity,
+  assertPhase8SourceBindingIdentity,
+  PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS,
+  visibleArtifactText,
+} from "./phase8-artifact-identity-fingerprint.js";
+import { buildPhase8CertificationRequests } from "./phase8-visual-certification-fixtures.js";
+
 const artifactDir = path.resolve(process.env.PHASE8_ARTIFACT_DIR || "phase8-artifacts");
 const artifacts = {
   screening: path.join(artifactDir, "phase7-screening-harbourstone.html"),
   underwriting: path.join(artifactDir, "phase7-underwriting-stonebridge.html"),
 };
+const certificationRequests = buildPhase8CertificationRequests();
 
 function readRequired(filePath, label) {
   if (!fs.existsSync(filePath)) throw new Error(`PHASE8_ARTIFACT_MISSING:${label}:${filePath}`);
@@ -15,16 +24,7 @@ function readRequired(filePath, label) {
 }
 
 function visibleText(html = "") {
-  return String(html || "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&#39;/gi, "'")
-    .replace(/&quot;/gi, '"')
-    .replace(/\s+/g, " ")
-    .trim();
+  return visibleArtifactText(html);
 }
 
 function assertSharedCustomerAuthority(html, label) {
@@ -47,11 +47,6 @@ function assertSharedCustomerAuthority(html, label) {
   return text;
 }
 
-function findTableRowByLabel(html = "", labelPattern) {
-  const rows = String(html || "").match(/<tr\b[^>]*>[\s\S]*?<\/tr>/gi) || [];
-  return rows.find((row) => labelPattern.test(visibleText(row))) || null;
-}
-
 const screeningHtml = readRequired(artifacts.screening, "screening");
 const screeningText = assertSharedCustomerAuthority(screeningHtml, "screening");
 if (!/InvestorIQ Screening Report/i.test(screeningText)) throw new Error("PHASE8_SCREENING_IDENTITY_MISSING");
@@ -61,28 +56,15 @@ if (!/T12 Operating Evidence/i.test(screeningText)) throw new Error("PHASE8_SCRE
 if (!/Rent Roll Evidence/i.test(screeningText)) throw new Error("PHASE8_SCREENING_RENT_ROLL_EVIDENCE_MISSING");
 if (!/Source Reconciliation/i.test(screeningText)) throw new Error("PHASE8_SCREENING_RECONCILIATION_MISSING");
 if (!/Diligence Priorities/i.test(screeningText)) throw new Error("PHASE8_SCREENING_DILIGENCE_PRIORITIES_MISSING");
-if (!/Annual In-Place Rent[\s\S]{0,120}\$1,036,800/i.test(screeningText)) throw new Error("PHASE8_SCREENING_CANONICAL_ANNUAL_RENT_MISSING");
-if (!/Annual Market Rent[\s\S]{0,120}\$1,137,600/i.test(screeningText)) throw new Error("PHASE8_SCREENING_CANONICAL_MARKET_RENT_MISSING");
+const screeningIdentity = assertPhase8ArtifactIdentity({ report: "screening", html: screeningHtml });
+const screeningSourceBinding = assertPhase8SourceBindingIdentity({ report: "screening", request: certificationRequests.screening });
 
 const underwritingHtml = readRequired(artifacts.underwriting, "underwriting");
 const underwritingText = assertSharedCustomerAuthority(underwritingHtml, "underwriting");
 if (!/InvestorIQ Underwriting Report/i.test(underwritingText)) throw new Error("PHASE8_UNDERWRITING_IDENTITY_MISSING");
 if (/InvestorIQ Investment Committee Memorandum/i.test(underwritingText)) throw new Error("PHASE8_LEGACY_UNDERWRITING_IDENTITY_FOUND");
-const reconciliationRow = findTableRowByLabel(
-  underwritingHtml,
-  /^Rent Roll Annual In-Place Rent\b/i
-);
-if (!reconciliationRow) {
-  throw new Error("PHASE8_UNDERWRITING_RECONCILIATION_ROW_MISSING");
-}
-const reconciliationRowText = visibleText(reconciliationRow);
-if (/\$50,700\b/.test(reconciliationRowText)) {
-  throw new Error("PHASE8_UNDERWRITING_PARTIAL_ROWS_OVERRULED_PROPERTY_TOTAL");
-}
-const reconciliationAmountMatch = reconciliationRowText.match(/\$[0-9,]+/g) || [];
-if (!reconciliationAmountMatch.includes("$1,036,800")) {
-  throw new Error(`PHASE8_UNDERWRITING_RECONCILIATION_NOT_CANONICAL:${reconciliationRowText}`);
-}
+const underwritingIdentity = assertPhase8ArtifactIdentity({ report: "underwriting", html: underwritingHtml });
+const underwritingSourceBinding = assertPhase8SourceBindingIdentity({ report: "underwriting", request: certificationRequests.underwriting });
 if (!/Source Register|Evidence & Diligence Register|Source Appendix/i.test(underwritingText)) {
   throw new Error("PHASE8_UNDERWRITING_SOURCE_TRANSPARENCY_MISSING");
 }
@@ -95,16 +77,18 @@ const manifest = {
     bytes: fs.statSync(artifacts.screening).size,
     identity: "InvestorIQ Screening Report",
     evidence_section: true,
-    canonical_annual_in_place_rent: 1036800,
-    canonical_annual_market_rent: 1137600,
+    identity_fingerprint: PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS.screening,
+    identity_validation: screeningIdentity,
+    source_binding_validation: screeningSourceBinding,
   },
   underwriting: {
     file: path.basename(artifacts.underwriting),
     bytes: fs.statSync(artifacts.underwriting).size,
     identity: "InvestorIQ Underwriting Report",
-    reconciliation_row_bound: true,
-    canonical_annual_in_place_rent: 1036800,
-    partial_row_override_absent: true,
+    identity_fingerprint: PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS.underwriting,
+    identity_validation: underwritingIdentity,
+    source_binding_validation: underwritingSourceBinding,
+    harbourstone_contamination_absent: true,
     source_transparency_present: true,
   },
   customer_surface: {

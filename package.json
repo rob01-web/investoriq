@@ -14,6 +14,7 @@
     "qa:component:contracts": "node tests/qa/report-contract-qa-smoke.js && node tests/qa/empty-table-collapse-smoke.js",
     "qa:component:sources": "node tests/qa/source-report-coverage-qa-smoke.js && node tests/qa/qa-action-plan-smoke.js && node tests/qa/qa-manager-review-smoke.js",
     "qa:diagnostic:stonebridge-source-authority": "node tests/qa/stonebridge-retest21-source-authority-smoke.js",
+    "qa:diagnostic:phase8-artifact-identity": "node tests/qa/phase8-artifact-identity-fingerprint-smoke.js",
     "qa:component:source-truth-pipelines": "node tests/qa/source-truth-pipeline-authority-smoke.js",
     "qa:diagnostic:source-truth-phase7-8": "node tests/qa/source-truth-phase7-8-smoke.js",
     "qa:component:source-truth-matrix": "node tests/qa/source-truth-constitutional-matrix-smoke.js",

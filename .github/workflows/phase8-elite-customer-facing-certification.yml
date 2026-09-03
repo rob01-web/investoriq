@@ -16,7 +16,10 @@ on:
       - 'tests/qa/phase8-source-reconciliation-authority-smoke.js'
       - 'tests/qa/phase8-customer-facing-visual-authority-smoke.js'
       - 'scripts/phase7-generate-visual-artifacts.js'
+      - 'scripts/phase8-artifact-identity-fingerprint.js'
+      - 'scripts/phase8-visual-certification-fixtures.js'
       - 'scripts/phase8-validate-visual-artifacts.js'
+      - 'tests/qa/phase8-artifact-identity-fingerprint-smoke.js'
       - '.github/workflows/phase8-elite-customer-facing-certification.yml'
   workflow_dispatch: {}
 
@@ -51,6 +54,9 @@ jobs:
 
       - name: Run Phase 8 customer-facing authority
         run: node tests/qa/phase8-customer-facing-visual-authority-smoke.js
+
+      - name: Run Phase 8 artifact identity authority
+        run: node tests/qa/phase8-artifact-identity-fingerprint-smoke.js
 
       - name: Run Screening sealed-lane regressions
         run: |
