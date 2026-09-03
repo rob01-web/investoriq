@@ -112,45 +112,126 @@ function renderSignalList(items = []) {
   }).join("")}</ul>`;
 }
 
+function executiveMetric(contract, key) {
+  const receipt = contract?.metrics?.[key];
+  return receipt?.displayReady === true ? receipt : null;
+}
+
+function renderExecutiveMetric(contract, key, label = null) {
+  const receipt = executiveMetric(contract, key);
+  if (!receipt) return "";
+  return `<div class="phase8a-exec-metric" data-iq-phase8a-exec-metric="${escapeHtml(key)}"><span>${escapeHtml(label || receipt.label || key)}</span><strong>${escapeHtml(formatMetricValue(receipt))}</strong></div>`;
+}
+
+function executiveDecisionState(primary = null) {
+  const code = String(primary?.code || "");
+  if (code === "PRIMARY_SOURCE_RECONCILIATION_REQUIRED") return "RECONCILIATION REQUIRED";
+  if (code === "CURRENT_DEBT_DSCR_BELOW_1X" || code === "PROPOSED_FINANCING_DSCR_BELOW_1X") return "FINANCING REVIEW REQUIRED";
+  if (primary?.statement) return "DILIGENCE REQUIRED";
+  return "UNDERWRITING REVIEW READY";
+}
+
+function executiveThesisPoints(contract) {
+  const metrics = contract?.metrics || {};
+  const points = [];
+  const occupancy = executiveMetric(contract, "occupancy");
+  const noiMargin = executiveMetric(contract, "noiMargin");
+  const grossRentDifference = executiveMetric(contract, "annualGrossRentDifference");
+  const currentDscr = executiveMetric(contract, "currentDebtDscr");
+  const proposedDscr = executiveMetric(contract, "proposedFinancingDscr");
+  const purchasePrice = executiveMetric(contract, "purchasePrice");
+  const goingInCapRate = executiveMetric(contract, "goingInCapRate");
+
+  if (occupancy && noiMargin) {
+    points.push(`Current operations show ${formatMetricValue(occupancy)} occupancy and a ${formatMetricValue(noiMargin)} NOI margin.`);
+  }
+  if (purchasePrice && goingInCapRate) {
+    points.push(`The transaction is presented at ${formatMetricValue(purchasePrice)} with a ${formatMetricValue(goingInCapRate)} going-in cap rate.`);
+  }
+  if (grossRentDifference) {
+    points.push(`The Rent Roll documents ${formatMetricValue(grossRentDifference)} of annual gross rent difference versus market rent. This is rent evidence, not NOI.`);
+  }
+  if (currentDscr && proposedDscr) {
+    const current = finite(currentDscr.value);
+    const proposed = finite(proposedDscr.value);
+    const change = current !== null && proposed !== null ? current - proposed : null;
+    points.push(change !== null && change > 0
+      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+      : `Current and proposed debt coverage are ${formatMetricValue(currentDscr)} and ${formatMetricValue(proposedDscr)}, respectively.`);
+  }
+  return points.slice(0, 4);
+}
+
+function executiveConditions(contract, primary = null) {
+  const conditions = [];
+  const code = String(primary?.code || "");
+  if (code === "PRIMARY_SOURCE_RECONCILIATION_REQUIRED") {
+    conditions.push("The T12 and Rent Roll income bases must be reconciled before variance-sensitive conclusions are relied upon.");
+  } else if (primary?.statement) {
+    conditions.push(customerCopy(primary.statement));
+  }
+
+  const diligence = Array.isArray(contract?.executiveInvestmentSummary?.unresolvedDiligence)
+    ? contract.executiveInvestmentSummary.unresolvedDiligence.filter((item) => item?.question)
+    : [];
+  for (const item of diligence) {
+    const question = customerCopy(item.question);
+    if (question && !conditions.some((existing) => existing.toLowerCase() === question.toLowerCase())) {
+      conditions.push(question.endsWith("?") ? question.slice(0, -1) + "." : question);
+    }
+  }
+
+  const proposedDscr = executiveMetric(contract, "proposedFinancingDscr");
+  if (proposedDscr) {
+    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+  }
+  return conditions.slice(0, 4);
+}
+
 function renderExecutiveInvestmentSummary(contract) {
   const section = contract?.executiveInvestmentSummary || {};
   const disposition = sectionDisposition(contract, "executiveInvestmentSummary");
   if (!shouldRender(contract, "executiveInvestmentSummary")) return "";
 
   const primary = section?.primaryConstraint;
+  const decisionState = executiveDecisionState(primary);
+  const thesisPoints = executiveThesisPoints(contract);
+  const conditions = executiveConditions(contract, primary);
+  const propertyName = contract?.identity?.propertyName || section?.assetStatement || "Property";
+  const assetStatement = section?.assetStatement || contract?.identity?.assetIdentity || null;
+  const assetDescriptor = assetStatement && assetStatement !== propertyName ? assetStatement : null;
+
+  const metricsHtml = [
+    renderExecutiveMetric(contract, "purchasePrice", "Purchase Price"),
+    renderExecutiveMetric(contract, "noi", "T12 NOI"),
+    renderExecutiveMetric(contract, "occupancy", "Occupancy"),
+    renderExecutiveMetric(contract, "goingInCapRate", "Going-In Cap Rate"),
+    renderExecutiveMetric(contract, "proposedLoanAmount", "Proposed Loan"),
+    renderExecutiveMetric(contract, "proposedFinancingDscr", "Proposed DSCR"),
+  ].filter(Boolean).join("");
+
+  const thesisHtml = thesisPoints.length
+    ? `<div class="phase8a-exec-panel"><p class="subsection-title">Investment Thesis</p><ul>${thesisPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}</ul></div>`
+    : "";
+  const conditionsHtml = conditions.length
+    ? `<div class="phase8a-exec-panel"><p class="subsection-title">What Must Be True</p><ul>${conditions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+    : "";
+
   const primaryHtml = primary?.statement
-    ? `<div class="iq-callout iq-ic-primary-constraint" data-iq-tone="constraint" data-iq-elite-primary-constraint="${escapeHtml(primary?.code || "")}">
-        <p class="iq-callout-title">Primary Constraint</p>
-        <p class="iq-callout-copy"><strong>${escapeHtml(primary?.title || "Constraint")}</strong>. ${escapeHtml(customerCopy(primary.statement))}</p>
-        ${primary?.investorImpact ? `<p class="iq-callout-copy iq-ic-callout-follow">Investor impact: ${escapeHtml(customerCopy(primary.investorImpact))}</p>` : ""}
-      </div>`
+    ? `<div class="phase8a-exec-gate"><span>Primary Decision Gate</span><strong>${escapeHtml(primary?.title || "Diligence item")}</strong><p>${escapeHtml(customerCopy(primary.statement))}</p>${primary?.investorImpact ? `<p><b>Why it matters:</b> ${escapeHtml(customerCopy(primary.investorImpact))}</p>` : ""}</div>`
     : "";
-
-  const diligence = (Array.isArray(section?.unresolvedDiligence) ? section.unresolvedDiligence : [])
-    .filter((item) => item?.question)
-    .slice(0, 2);
-  const diligenceHtml = diligence.length
-    ? `<div class="iq-ic-focus-block">
-        <p class="subsection-title">Committee Focus</p>
-        <div class="iq-ic-focus-grid">${diligence.map((item) => `<div class="iq-ic-focus-item" data-iq-elite-question="${escapeHtml(item?.code || "")}">${escapeHtml(customerCopy(item.question))}</div>`).join("")}</div>
-      </div>`
-    : "";
-
-  const assetStatement = section?.assetStatement || contract?.identity?.assetIdentity || "Property";
-  const propertyName = contract?.identity?.propertyName || null;
-  const assetDescriptor = propertyName && propertyName !== assetStatement ? assetStatement : null;
 
   return renderSection({
     title: "Executive Investment Summary",
     sectionKey: "executiveInvestmentSummary",
     disposition,
-    bodyHtml: `<div class="iq-ic-summary-lead">
-      <p class="iq-ic-asset-statement">${escapeHtml(propertyName || assetStatement)}</p>
-      ${assetDescriptor ? `<p class="iq-ic-asset-descriptor">${escapeHtml(assetDescriptor)}</p>` : ""}
-      <p class="body-copy iq-ic-summary-copy">Document-backed committee framing using verified source facts and deterministic calculations. Scenario assumptions are not introduced on this surface.</p>
-    </div>${primaryHtml}${diligenceHtml}`,
+    bodyHtml: `<div class="phase8a-exec-header"><div><p class="phase8a-exec-property">${escapeHtml(propertyName)}</p>${assetDescriptor ? `<p class="phase8a-exec-asset">${escapeHtml(assetDescriptor)}</p>` : ""}</div><div class="phase8a-exec-state"><span>Current Decision State</span><strong>${escapeHtml(decisionState)}</strong></div></div>
+      ${metricsHtml ? `<div class="phase8a-exec-metrics">${metricsHtml}</div>` : ""}
+      ${primaryHtml}
+      <div class="phase8a-exec-columns">${thesisHtml}${conditionsHtml}</div>
+      <p class="phase8a-exec-boundary">This page frames the current underwriting decision from the documents provided. Scenario cases and detailed source treatment appear in the sections that follow.</p>`,
     legacySectionLabel: "Executive Summary",
-    bodyClass: "iq-ic-summary-card",
+    bodyClass: "iq-ic-summary-card phase8a-executive-summary",
   });
 }
 

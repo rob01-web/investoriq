@@ -353,6 +353,28 @@ const PHASE8A_STYLE = `<style id="investoriq-phase8a-owner-acceptance-authority"
 .iq-phase8a-screening .phase8a-limitations-card,
 .iq-phase8a-screening .phase8a-use-card { margin-top:10px; }
 
+/* Underwriting executive decision page. */
+.iq-phase8a-underwriting .phase8a-executive-summary { padding:12px 14px !important; }
+.iq-phase8a-underwriting .phase8a-exec-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding-bottom:9px; border-bottom:1px solid var(--iq8a-rule); }
+.iq-phase8a-underwriting .phase8a-exec-property { margin:0; font-family:var(--font-display); font-size:20pt; line-height:1; color:var(--iq8a-ink); }
+.iq-phase8a-underwriting .phase8a-exec-asset { margin:4px 0 0; color:var(--iq8a-muted); font-size:8pt; }
+.iq-phase8a-underwriting .phase8a-exec-state { max-width:2.45in; padding:7px 10px; border-left:3px solid var(--iq8a-gold); background:var(--iq8a-paper); }
+.iq-phase8a-underwriting .phase8a-exec-state span { display:block; color:#7a817c; font-size:6.5pt; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; }
+.iq-phase8a-underwriting .phase8a-exec-state strong { display:block; color:var(--iq8a-forest-deep); font-size:10pt; line-height:1.25; }
+.iq-phase8a-underwriting .phase8a-exec-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; margin:10px 0; }
+.iq-phase8a-underwriting .phase8a-exec-metric { min-width:0; padding:7px 8px; border:1px solid var(--iq8a-rule); background:#fff; }
+.iq-phase8a-underwriting .phase8a-exec-metric span { display:block; color:#7a817c; font-size:6pt; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
+.iq-phase8a-underwriting .phase8a-exec-metric strong { display:block; color:var(--iq8a-ink); font-family:var(--font-display); font-size:13pt; line-height:1.1; }
+.iq-phase8a-underwriting .phase8a-exec-gate { margin:9px 0; padding:8px 10px; border-left:3px solid var(--iq8a-gold); background:#fbfaf6; }
+.iq-phase8a-underwriting .phase8a-exec-gate > span { display:block; color:#7a817c; font-size:6.5pt; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.iq-phase8a-underwriting .phase8a-exec-gate > strong { display:block; margin:2px 0 3px; color:var(--iq8a-ink); font-size:9pt; }
+.iq-phase8a-underwriting .phase8a-exec-gate p { margin:2px 0; font-size:8pt; line-height:1.35; }
+.iq-phase8a-underwriting .phase8a-exec-columns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.iq-phase8a-underwriting .phase8a-exec-panel { min-width:0; padding-top:7px; border-top:1px solid var(--iq8a-rule); }
+.iq-phase8a-underwriting .phase8a-exec-panel ul { margin:0; padding-left:15px; }
+.iq-phase8a-underwriting .phase8a-exec-panel li { margin-bottom:4px; font-size:7.6pt; line-height:1.35; }
+.iq-phase8a-underwriting .phase8a-exec-boundary { margin:7px 0 0; padding-top:6px; border-top:1px solid #ece9e1; color:#737b76; font-size:6.6pt; line-height:1.35; }
+
 /* Underwriting cover must retain the same family geometry without the Phase 7 gold-square collision. */
 .iq-phase8a-underwriting .cover-classification { border-left-color:var(--iq8a-forest) !important; background:rgba(23,63,43,.045) !important; }
 .iq-phase8a-underwriting .cover-classification strong,
