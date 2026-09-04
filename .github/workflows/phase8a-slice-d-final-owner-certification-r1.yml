@@ -10,6 +10,7 @@ on:
       - 'scripts/phase8a-slice-d-test-alignment-patch.mjs'
       - 'scripts/phase8a-slice-d-generator-alignment-patch.mjs'
       - 'scripts/phase8a-validate-slice-d-artifacts.js'
+      - 'scripts/phase8a-validate-pdf-page-continuity.js'
       - '.github/workflows/phase8a-slice-d-final-owner-certification-r1.yml'
   workflow_dispatch: {}
 
@@ -111,25 +112,9 @@ jobs:
         run: node scripts/phase8-validate-rendered-pdfs.js
 
       - name: Reject blank or stranded PDF pages
-        shell: bash
-        run: |
-          set -euo pipefail
-          command -v pdfinfo >/dev/null
-          command -v pdftotext >/dev/null
-          : > phase8a-artifacts/phase8a-slice-d-page-continuity.txt
-          for pdf in phase8a-artifacts/phase7-screening-harbourstone.pdf phase8a-artifacts/phase7-underwriting-stonebridge.pdf; do
-            pages="$(pdfinfo "$pdf" | awk '/^Pages:/ {print $2}')"
-            echo "$(basename "$pdf") pages=$pages" | tee -a phase8a-artifacts/phase8a-slice-d-page-continuity.txt
-            for p in $(seq 1 "$pages"); do
-              chars="$(pdftotext -f "$p" -l "$p" "$pdf" - 2>/dev/null | tr -d '[:space:]' | wc -c | tr -d ' ')"
-              echo "page=$p nonspace_chars=$chars" >> phase8a-artifacts/phase8a-slice-d-page-continuity.txt
-              if [ "$p" -eq 1 ]; then
-                test "$chars" -ge 20
-              else
-                test "$chars" -ge 80
-              fi
-            done
-          done
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-artifacts
+        run: node scripts/phase8a-validate-pdf-page-continuity.js
 
       - name: Diff safety
         run: git diff --check
