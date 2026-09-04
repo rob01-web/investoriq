@@ -14,63 +14,31 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           ref: internal-phase8a-owner-acceptance-recovery-20260903-r1
           fetch-depth: 1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-      - name: Apply current Slice C patches
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/phase8a-slice-c-decision-patch-normalize.mjs
-          node scripts/phase8a-slice-c-patch.mjs
-          node scripts/phase8a-slice-c-decision-snapshot-patch.mjs
-          node scripts/phase8a-slice-c-test-alignment-patch.mjs
-          node scripts/phase8a-slice-c-decision-support-compat-patch.mjs
-          node scripts/phase8a-slice-c-closed-slice-compat-patch.mjs
-          node scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs
-          node scripts/phase8a-slice-c-dscr-display-compat-patch.mjs
-      - name: Install dependencies
-        run: npm ci
-      - name: Generate patched exact handler artifacts
-        env:
-          PHASE7_ARTIFACT_DIR: phase8a-dscr-diagnostic-artifacts
-        run: node scripts/phase7-generate-visual-artifacts.js
-      - name: Persist raw decision snapshot markup
+      - name: Locate DSCR text transformations
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p PHASE8A_DIAGNOSTICS
-          node --input-type=module <<'NODE' > PHASE8A_DIAGNOSTICS/stonebridge-dscr-surface.txt
-          import fs from 'node:fs';
-          const html = fs.readFileSync('phase8a-dscr-diagnostic-artifacts/phase7-underwriting-stonebridge.html','utf8');
-          const text = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&#39;/gi,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim();
-          const ti = text.indexOf('Investment Decision Snapshot');
-          console.log('VISIBLE SNAPSHOT');
-          console.log(ti >= 0 ? text.slice(ti, ti + 3200) : 'MISSING');
-          console.log('\nRAW WINDOWS');
-          for (const token of ['2.01x','1.40x','phase8a-investment-snapshot-table','currentDebtDscr','proposedFinancingDscr']) {
-            let from = 0; let n = 0;
-            console.log(`TOKEN=${token}`);
-            while (n < 8) {
-              const i = html.indexOf(token, from);
-              if (i < 0) break;
-              console.log(`[${n}] ${html.slice(Math.max(0,i-450), i+650)}`);
-              from = i + token.length; n++;
-            }
-            if (!n) console.log('MISSING');
-          }
-          NODE
+          {
+            echo '=== FILES WITH DSCR AND replace/sanitize/strip/remove ==='
+            grep -R -n -I -E 'DSCR|dscr' api scripts tests 2>/dev/null | grep -E 'replace|sanitize|strip|remove|customer|copy' | head -n 600 || true
+            echo
+            echo '=== LITERAL DSCR REPLACEMENT CANDIDATES ==='
+            grep -R -n -I -E 'replace\([^\n]*DSCR|DSCR[^\n]*replace|replace\([^\n]*dscr|dscr[^\n]*replace' api scripts 2>/dev/null | head -n 600 || true
+            echo
+            echo '=== WHOLE WORD FILTERS / BANNED TOKEN TABLES ==='
+            grep -R -n -I -E 'banned|forbidden|internal|sanitize|customerFacing|customer_copy|customerCopy|humanize|polish' api/_lib scripts 2>/dev/null | grep -E 'DSCR|dscr|replace|token|phrase|word' | head -n 800 || true
+          } > PHASE8A_DIAGNOSTICS/dscr-removal-candidates.txt
           git config user.name "investoriq-phase8a-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add PHASE8A_DIAGNOSTICS/stonebridge-dscr-surface.txt
+          git add PHASE8A_DIAGNOSTICS/dscr-removal-candidates.txt
           if ! git diff --cached --quiet; then
-            git commit -m "Phase 8A diagnostic: capture raw decision snapshot markup"
+            git commit -m "Phase 8A diagnostic: locate DSCR removal authority"
             git push origin HEAD:internal-phase8a-owner-acceptance-recovery-20260903-r1
           fi
