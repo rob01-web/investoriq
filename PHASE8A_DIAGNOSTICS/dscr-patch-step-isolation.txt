@@ -1,0 +1,114 @@
+=== BASE ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=9
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+210:    renderExecutiveMetric(contract, "proposedFinancingDscr", "Proposed DSCR"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-decision-patch-normalize.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=9
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+210:    renderExecutiveMetric(contract, "proposedFinancingDscr", "Proposed DSCR"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-patch.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=9
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+210:    renderExecutiveMetric(contract, "proposedFinancingDscr", "Proposed DSCR"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-decision-snapshot-patch.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=10
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+252:      snapshotCell("Current DSCR", snapshotMetricValue(contract, "currentDebtDscr"), "Existing debt context"),
+253:      snapshotCell("Proposed DSCR", snapshotMetricValue(contract, "proposedFinancingDscr"), "Stated proposed terms"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-test-alignment-patch.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=10
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+252:      snapshotCell("Current DSCR", snapshotMetricValue(contract, "currentDebtDscr"), "Existing debt context"),
+253:      snapshotCell("Proposed DSCR", snapshotMetricValue(contract, "proposedFinancingDscr"), "Stated proposed terms"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-decision-support-compat-patch.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=10
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+252:      snapshotCell("Current DSCR", snapshotMetricValue(contract, "currentDebtDscr"), "Existing debt context"),
+253:      snapshotCell("Proposed DSCR", snapshotMetricValue(contract, "proposedFinancingDscr"), "Stated proposed terms"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-closed-slice-compat-patch.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=10
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+252:      snapshotCell("Current DSCR", snapshotMetricValue(contract, "currentDebtDscr"), "Existing debt context"),
+253:      snapshotCell("Proposed DSCR", snapshotMetricValue(contract, "proposedFinancingDscr"), "Stated proposed terms"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=10
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+252:      snapshotCell("Current DSCR", snapshotMetricValue(contract, "currentDebtDscr"), "Existing debt context"),
+253:      snapshotCell("Proposed DSCR", snapshotMetricValue(contract, "proposedFinancingDscr"), "Stated proposed terms"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
+=== AFTER scripts/phase8a-slice-c-dscr-display-compat-patch.mjs ===
+api/_lib/full-underwriting-chapter1-elite-renderer.js DSCR_COUNT=10
+159:      ? `Proposed financing tightens DSCR from ${formatMetricValue(currentDscr)} currently to ${formatMetricValue(proposedDscr)}, a ${change.toFixed(2)}x reduction in coverage.`
+186:    conditions.push(`Proposed financing terms must remain acceptable after lender diligence; modeled DSCR at the stated terms is ${formatMetricValue(proposedDscr)}.`);
+252:      snapshotCell("Current DSCR", snapshotDisplayValue(executiveMetric(contract, "currentDebtDscr")?.value, "ratio_x"), "Existing debt context"),
+253:      snapshotCell("Proposed DSCR", snapshotDisplayValue(executiveMetric(contract, "proposedFinancingDscr")?.value, "ratio_x"), "Stated proposed terms"),
+api/_lib/acquisition-memo-v2-document.js DSCR_COUNT=18
+930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+1296:    scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
+api/_lib/full-underwriting-debt-intelligence-renderer.js DSCR_COUNT=6
+api/_lib/phase8a-owner-acceptance-authority.js DSCR_COUNT=2
+
