@@ -58,9 +58,17 @@ function assertPhase7PresentationAuthority(html, label) {
   if (!/data-iq-phase7="elite-report-redesign-v1"/i.test(html)) {
     throw new Error(`PHASE7_PRESENTATION_MARKER_MISSING:${label}`);
   }
-  if (!/Evidence Conviction Matrix/i.test(html)) {
+  const phase8aOwnerAcceptance = /data-iq-phase8a="owner-acceptance-recovery-v1"/i.test(html);
+  const evidenceSurfacePresent = phase8aOwnerAcceptance
+    ? label === "screening"
+      ? /Evidence Coverage/i.test(html)
+      : label === "underwriting"
+        ? /Decision Evidence Map/i.test(html)
+        : false
+    : /Evidence Conviction Matrix/i.test(html);
+  if (!evidenceSurfacePresent) {
     console.error(`PHASE7_ARTIFACT_HEADING_DIAGNOSTIC:${label}:${JSON.stringify(collectArtifactHeadings(html))}`);
-    throw new Error(`PHASE7_EVIDENCE_MATRIX_MISSING:${label}`);
+    throw new Error(`PHASE7_EVIDENCE_SURFACE_MISSING:${label}:phase8a=${phase8aOwnerAcceptance}`);
   }
 
   const hasUpsideDrivers = /Key Upside Drivers/i.test(html);
@@ -120,7 +128,7 @@ const manifest = {
   fresh_artifact_checks: [
     "complete HTML document",
     "Phase 7 presentation marker",
-    "Evidence Conviction Matrix when supported",
+    "decision evidence surface required for the active presentation authority",
     "What Changes the Decision evidence gating",
     "no customer-visible literal or encoded em/en dash punctuation",
     "hard report identity and authorized core-fact fingerprint",

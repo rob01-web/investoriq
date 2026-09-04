@@ -148,7 +148,8 @@ assert.match(sealedScreening.html, /Evidence Conviction Matrix/);
 assert.match(sealedScreening.html, /What Changes the Decision/);
 
 const polishedUnderwriting = polishFullUnderwritingFinalHtml(underwritingHtml, { reportMode: "full_underwriting" });
-assert.match(polishedUnderwriting, /Evidence Conviction Matrix/);
+assert.match(polishedUnderwriting, /Decision Evidence Map/);
+assert.doesNotMatch(polishedUnderwriting, /Evidence Conviction Matrix/);
 assert.match(polishedUnderwriting, /What Changes the Decision/);
 
 assert.match(screeningPipelineSource, /applyPhase7DecisionSupport\(presentationHtml, \{ reportMode \}\)/);

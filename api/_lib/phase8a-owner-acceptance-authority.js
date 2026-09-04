@@ -410,7 +410,12 @@ function humanizeUnderwritingCopy(html = "") {
     .replace(/a 11\.16%/gi, "an 11.16%")
     .replace(/produces\s+([0-9.]+x)\s+less DSCR than current debt/gi, "produces DSCR that is $1 lower than current debt")
     .replace(/\b64-Unit\b/gi, "64 Unit")
-    .replace(/\b48-Unit\b/gi, "48 Unit");
+    .replace(/\b48-Unit\b/gi, "48 Unit")
+    .replace(/(<div class="cover-prop-sub">)\s*Underwriting Report\s*(<\/div>)/i, "$1Investment Committee Memorandum$2")
+    .replace(/Evidence Conviction Matrix/gi, "Decision Evidence Map")
+    .replace(/Decision evidence already presented in this report, organized by decision domain\./gi, "Where the report supports each core committee question.")
+    .replace(/<th>report sections<\/th>/gi, "<th>Report Sections</th>")
+    .replace(/This matrix organizes existing report evidence only\. It does not independently score source quality, infer missing evidence, or create new underwriting assumptions\./gi, "This map points to existing report sections only. It does not score source quality, fill evidence gaps, or add underwriting assumptions.");
 }
 
 function addAuthorityMarker(html = "", lane = null) {
@@ -570,12 +575,57 @@ const PHASE8A_STYLE = `<style id="investoriq-phase8a-owner-acceptance-authority"
 .iq-phase8a-underwriting .phase8a-exec-panel li { margin-bottom:3px; font-size:6.7pt; line-height:1.28; }
 .iq-phase8a-underwriting .phase8a-exec-boundary { margin-top:6px; font-size:5.7pt; line-height:1.25; }
 
+/* Final owner-acceptance editorial treatment for the decision evidence map. */
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix { margin-top:10px !important; padding:10px 12px !important; border:1px solid var(--iq8a-rule) !important; border-top:2px solid var(--iq8a-forest) !important; background:#fff !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix .subsection-title { margin-bottom:3px !important; font-size:10pt !important; color:var(--iq8a-ink) !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix > p.small { margin:0 0 6px !important; color:#6e7771 !important; font-size:5.9pt !important; line-height:1.3 !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix table { width:100% !important; table-layout:fixed !important; margin-top:5px !important; border-collapse:collapse !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th { padding:5px 6px !important; color:#68716b !important; font-size:5.5pt !important; letter-spacing:.065em !important; text-transform:uppercase !important; vertical-align:bottom !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td { padding:5px 6px !important; font-size:5.9pt !important; line-height:1.32 !important; vertical-align:top !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th:nth-child(1),
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td:nth-child(1) { width:21% !important; font-weight:600 !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th:nth-child(2),
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td:nth-child(2) { width:11% !important; text-align:center !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th:nth-child(3),
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td:nth-child(3) { width:68% !important; }
+.iq-phase8a-underwriting .phase7-evidence-conviction-matrix tbody tr:nth-child(even) td { background:#fbfaf7 !important; }
+
 /* Underwriting cover must retain the same family geometry without the Phase 7 gold-square collision. */
 .iq-phase8a-underwriting .cover-classification { border-left-color:var(--iq8a-forest) !important; background:rgba(23,63,43,.045) !important; }
 .iq-phase8a-underwriting .cover-classification strong,
 .iq-phase8a-underwriting .cover-meta-grid strong { color:var(--iq8a-ink) !important; }
 
 @media print {
+  /* Keep named-page changes on the same logical content box. Without these
+     assignments Chromium/Prince can strand a wrapper, chapter heading, or
+     trailing appendix block on an otherwise empty page. */
+  .iq-phase8a-screening .report-container { page:iq-body; }
+
+  .iq-phase8a-underwriting .header-strip { display:none !important; }
+  .iq-phase8a-underwriting .institutional-chapter { page:iq-body; }
+  .iq-phase8a-underwriting .institutional-chapter[data-iq-chapter="committee-overview"] { page:iq-decision; }
+  .iq-phase8a-underwriting .institutional-chapter[data-iq-chapter="committee-overview"] > div > section.section { page:iq-decision; }
+  .iq-phase8a-underwriting .report-footer { display:none !important; }
+
+  /* The cover already supplies the page boundary. Keep the committee heading
+     with the decision snapshot, and let the post-snapshot committee sections
+     use available space instead of forcing another named-page break. */
+  .iq-phase8a-underwriting section[data-iq-elite-section="executiveInvestmentSummary"] {
+    break-before:auto !important;
+    page-break-before:auto !important;
+    break-after:auto !important;
+    page-break-after:auto !important;
+  }
+
+  /* Phase 7 protected these driver blocks as indivisible. Phase 8A uses
+     tighter editorial tables, so allow them to flow instead of leaving
+     half-empty pages for a small boundary note. */
+  .iq-phase8a-underwriting section[data-iq-elite-driver-section="underwriting-driver-analysis"],
+  .iq-phase8a-underwriting [data-iq-elite-driver-boundaries="true"] {
+    break-inside:auto !important;
+    page-break-inside:auto !important;
+  }
+
   .iq-phase8a-screening .phase8a-axis { break-inside:avoid; page-break-inside:avoid; }
   .iq-phase8a-screening .phase8a-methodology .card { break-inside:avoid; page-break-inside:avoid; }
 }
