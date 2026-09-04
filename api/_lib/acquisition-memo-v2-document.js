@@ -20,6 +20,10 @@ import { buildFullUnderwritingValuationReconciliationV1 } from "./full-underwrit
 import { renderFullUnderwritingValuationReconciliation } from "./full-underwriting-valuation-reconciliation-renderer.js";
 import { buildFullUnderwritingQualityManifestV1 } from "./full-underwriting-quality-manifest-v1.js";
 import { renderFullUnderwritingQualityManifestV1Html } from "./full-underwriting-quality-manifest-renderer.js";
+import {
+  INVESTORIQ_UNDERWRITING_OPENING_CSS,
+  renderPublicationCover,
+} from "./investoriq-publication-design-system.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -766,34 +770,18 @@ function renderBrandCoverSection({ propertyName, propertyAddress, propertyTitle,
     .filter((value) => value.toLowerCase() !== normalizedPropertyName)
     .join(" | ");
   const visibleClassification = customerSurfaceModel?.identity?.visibleClassification || "Acquisition Underwriting Review";
-  return `<div class="cover-wrap" data-iq-cover-system="elite-10b1-light-institutional-v1">
-    <table class="cover-table" width="100%">
-      <tr>
-        <td class="cover-cell">
-          <div class="cover-brand-name">INVESTORIQ</div>
-          <div class="cover-brand-sub">Institutional Real Estate Analysis</div>
-
-          <div class="cover-prop-name">${escapeHtml(propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle)}</div>
-          ${coverLocation ? `<div class="cover-address">${escapeHtml(coverLocation)}</div>` : ""}
-          <hr class="cover-divider" />
-          <div class="cover-prop-sub">${escapeHtml(UNDERWRITING_REPORT_IDENTITY.canonicalTitle)}</div>
-          <div class="cover-classification">
-            <span>Review Classification</span>
-            <strong>${escapeHtml(visibleClassification)}</strong>
-          </div>
-          <div class="cover-meta-grid">
-            <div><span>${escapeHtml(propertyProfileLabel)}</span><strong>${escapeHtml(propertyProfileValue)}</strong></div>
-            <div><span>Evidence Basis</span><strong>${escapeHtml(`${uploadedFileCount} uploaded files`)}</strong></div>
-            <div><span>Prepared</span><strong>${escapeHtml(generatedLabel || "Date not stated")}</strong></div>
-          </div>
-          <div class="cover-footer-row">
-            <span class="cover-footer-text">Confidential | InvestorIQ Technologies Inc.</span>
-            <span class="cover-footer-text">Document-Backed Property Underwriting</span>
-          </div>
-        </td>
-      </tr>
-    </table>
-  </div>`;
+  return renderPublicationCover({
+    propertyName,
+    fallbackTitle: UNDERWRITING_REPORT_IDENTITY.canonicalTitle,
+    location: coverLocation,
+    reportTitle: UNDERWRITING_REPORT_IDENTITY.canonicalTitle,
+    classification: visibleClassification,
+    profileLabel: propertyProfileLabel,
+    profileValue: propertyProfileValue,
+    evidenceBasis: `${uploadedFileCount} uploaded files`,
+    preparedLabel: generatedLabel || "Date not stated",
+    footerRight: "Document-Backed Property Underwriting",
+  });
 }
 
 function renderExecutiveSummarySection({ sourcePackage = null, acquisitionMemoProjection = null, coreMetrics = null, customerSurfaceModel = null } = {}) {
@@ -2454,52 +2442,7 @@ export function renderCompleteAcquisitionMemoV2Html({
     .iq-callout-title { margin:0 0 var(--space-1) 0; font-size:8.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-2); }
     .iq-callout-copy { margin:0; color:var(--ink-3); font-size:10.5px; line-height:1.5; }
     .iq-evidence-badge { font-family:var(--font-mono); font-size:7px; letter-spacing:0.04em; white-space:nowrap; }
-    [data-iq-elite10b2="investment-committee-opening-v1"] .section { padding-bottom:var(--space-5); }
-    .iq-ic-summary-card { padding-top:0 !important; }
-    .iq-ic-summary-lead { border-top:0; padding:0 0 var(--space-2); }
-    .iq-ic-asset-statement { margin:0 0 2px 0; font-family:var(--font-display); font-size:21pt; font-weight:600; line-height:1.08; letter-spacing:-0.02em; color:var(--charcoal); }
-    .iq-ic-asset-descriptor { margin:0 0 var(--space-2) 0; font-family:var(--font-mono); font-size:7pt; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-4); }
-    .iq-ic-summary-copy { max-width:6.25in; margin-bottom:0; }
-    .iq-ic-primary-constraint { margin-top:var(--space-3); margin-bottom:0; }
-    .iq-ic-callout-follow { margin-top:var(--space-1); }
-    .iq-ic-focus-block { margin-top:var(--space-3); }
-    .iq-ic-focus-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-4); }
-    .iq-ic-focus-item { border-top:0; padding-top:0; color:var(--ink-2); font-size:10.1px; line-height:1.42; break-inside:avoid-page; page-break-inside:avoid; }
-    .iq-ic-metrics-card { padding-top:0 !important; }
-    .iq-ic-metric-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:var(--rule-strong); border-bottom:var(--rule-standard); margin-bottom:var(--space-3); break-inside:avoid-page; page-break-inside:avoid; }
-    .iq-ic-metric { min-height:0.82in; padding:var(--space-3) var(--space-3) var(--space-3) 0; }
-    .iq-ic-metric:nth-child(3n+2), .iq-ic-metric:nth-child(3n+3) { border-left:var(--rule-soft); padding-left:var(--space-3); }
-    .iq-ic-metric:nth-child(n+4) { border-top:var(--rule-soft); }
-    .iq-ic-metric-label { display:block; min-height:20px; font-family:var(--font-mono); font-size:6.5pt; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-4); line-height:1.35; }
-    .iq-ic-metric-value { display:block; margin-top:4px; font-family:var(--font-display); font-size:17pt; font-weight:600; color:var(--ink); line-height:1.08; font-variant-numeric:tabular-nums; }
-    .iq-ic-secondary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:var(--rule-soft); border-bottom:var(--rule-soft); break-inside:avoid-page; page-break-inside:avoid; }
-    .iq-ic-secondary-metric { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:var(--space-2); align-items:baseline; padding:5px 8px; border-bottom:var(--rule-soft); min-width:0; }
-    .iq-ic-secondary-metric:nth-child(odd) { border-right:var(--rule-soft); }
-    .iq-ic-secondary-metric:nth-last-child(-n+2) { border-bottom:none; }
-    .iq-ic-secondary-label { min-width:0; color:var(--ink-3); font-size:8.5px; line-height:1.35; }
-    .iq-ic-secondary-value { color:var(--ink); font-family:var(--font-mono); font-size:8.5px; font-weight:600; text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
-    .iq-ic-lineage-note { margin-top:var(--space-2); }
-    .iq-ic-observations-card, .iq-ic-risks-card, .iq-ic-questions-card, .iq-ic-reconciliation-card { padding-top:0 !important; }
-    .iq-ic-signal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3) var(--space-4); }
-    .iq-ic-signal-panel { border-top:0; padding-top:0; break-inside:avoid-page; page-break-inside:avoid; }
-    .iq-ic-signal-list { margin:0; padding-left:16px; }
-    .iq-ic-signal-list li { margin-bottom:var(--space-1); color:var(--ink-2); line-height:1.42; }
-    .iq-ic-signal-list li:last-child { margin-bottom:0; }
-    .iq-ic-signal-qualification { margin-top:2px; color:var(--ink-4); font-style:italic; }
-    .iq-ic-risk-list { border-top:var(--rule-standard); }
-    .iq-ic-risk-item { padding:var(--space-3) 0; border-bottom:var(--rule-soft); break-inside:avoid-page; page-break-inside:avoid; }
-    .iq-ic-risk-item:last-child { border-bottom:none; }
-    .iq-ic-risk-item .body-copy:last-child { margin-bottom:0; }
-    .iq-ic-question-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); }
-    .iq-ic-question-item { border-top:var(--rule-standard); padding-top:var(--space-2); break-inside:avoid-page; page-break-inside:avoid; }
-    .iq-ic-question-copy { margin-top:0; margin-bottom:var(--space-1); color:var(--ink-2); }
-    .iq-ic-question-why { margin:0; color:var(--ink-4); }
-    .iq-ic-reconciliation-callout { margin-top:0; margin-bottom:var(--space-2); }
-    .iq-ic-reconciliation-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-top:0; border-bottom:0; break-inside:avoid-page; page-break-inside:avoid; }
-    .iq-ic-reconciliation-metric { padding:var(--space-2); border-left:var(--rule-soft); min-width:0; }
-    .iq-ic-reconciliation-metric:first-child { border-left:none; }
-    .iq-ic-reconciliation-metric .iq-ic-secondary-label { display:block; min-height:24px; }
-    .iq-ic-reconciliation-metric .iq-ic-secondary-value { display:block; margin-top:3px; text-align:left; font-size:9px; }
+${INVESTORIQ_UNDERWRITING_OPENING_CSS}
     .data-coverage-table { width:100%; table-layout:fixed; }
     .data-coverage-table td { white-space:normal; overflow-wrap:anywhere; word-break:break-word; hyphens:auto; }
     .data-coverage-table td:last-child, .source-register-table td:last-child { text-align:left; }

@@ -1,4 +1,12 @@
 import { FULL_UNDERWRITING_CHAPTER1_ELITE_CONTRACT_VERSION } from "./full-underwriting-chapter1-elite-contract.js";
+import {
+  renderPublicationDecisionBand,
+  renderPublicationMetricMatrix,
+  renderPublicationObservationGrid,
+  renderPublicationReconciliationAlert,
+  renderPublicationSection,
+  renderPublicationThreePanelStrip,
+} from "./investoriq-publication-design-system.js";
 
 const HIDDEN_DISPOSITIONS = new Set(["omit", "collapse"]);
 
@@ -93,23 +101,15 @@ function renderSection({
   allowBreak = false,
   bodyClass = "",
 }) {
-  if (!bodyHtml) return "";
-  const bodyClasses = ["card", allowBreak ? "allow-break" : "no-break", bodyClass].filter(Boolean).join(" ");
-  return `<section class="section" data-iq-elite-section="${escapeHtml(sectionKey)}" data-iq-disposition="${escapeHtml(disposition || "include")}"${legacySectionLabel ? ` data-iq-boss-section="${escapeHtml(legacySectionLabel)}"` : ""}>
-    <div class="section-header"><span class="section-header-title">${escapeHtml(title)}</span></div>
-    <div class="${bodyClasses}">${bodyHtml}</div>
-  </section>`;
-}
-
-function renderSignalList(items = []) {
-  const valid = (Array.isArray(items) ? items : []).filter((item) => item?.statement);
-  if (!valid.length) return "";
-  return `<ul class="iq-ic-signal-list">${valid.map((item) => {
-    const qualification = item?.qualification
-      ? `<div class="small iq-ic-signal-qualification">${escapeHtml(customerCopy(item.qualification))}</div>`
-      : "";
-    return `<li data-iq-elite-signal="${escapeHtml(item?.code || "")}">${escapeHtml(customerCopy(item.statement))}${qualification}</li>`;
-  }).join("")}</ul>`;
+  return renderPublicationSection({
+    title,
+    sectionKey,
+    disposition,
+    bodyHtml,
+    legacySectionLabel,
+    allowBreak,
+    bodyClass,
+  });
 }
 
 function executiveMetric(contract, key) {
@@ -205,7 +205,7 @@ function snapshotMetricValue(contract, key) {
 }
 
 function snapshotCell(label, value, note = "") {
-  return `<td><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not available")}</strong>${note ? `<em>${escapeHtml(note)}</em>` : ""}</td>`;
+  return { label, value, note };
 }
 
 function renderExecutiveInvestmentSummary(contract) {
@@ -260,7 +260,27 @@ function renderExecutiveInvestmentSummary(contract) {
       snapshotCell("Documented Annual Gross Rent Lift", snapshotDisplayValue(context?.documentedAnnualGrossRentLift, "currency"), "Gross rent arithmetic, not NOI"),
       snapshotCell("NOI / Purchase Price", snapshotMetricValue(contract, "noiToPurchasePriceCapRate"), "Consistency view"),
     ],
-  ].map((cells) => `<tr>${cells.join("")}</tr>`).join("");
+  ];
+  const decisionBandHtml = renderPublicationDecisionBand({
+    columns: [
+      {
+        label: "Current Decision State",
+        value: decisionState,
+        detail: primary?.title || "Evidence-bound underwriting review",
+      },
+      {
+        label: "Strategy Fit",
+        value: strategyFit,
+        detail: "Only source-supported transaction, capital, and debt facts may establish this label.",
+      },
+      {
+        label: "Asset",
+        value: propertyName,
+        detail: assetDescriptor,
+      },
+    ],
+  });
+  const metricMatrixHtml = renderPublicationMetricMatrix({ rows });
 
   const primaryText = primary?.statement ? customerCopy(primary.statement) : "No evidence-triggered primary gate is established.";
   const killItems = [
@@ -271,27 +291,21 @@ function renderExecutiveInvestmentSummary(contract) {
     context?.strategyEvidenceReady !== true ? "Strategy fit remains insufficiently evidenced by the current support package." : null,
   ].filter(Boolean).slice(0, 3);
 
-  const thesisHtml = thesisPoints.length
-    ? `<div class="phase8a-exec-panel"><p class="subsection-title">Investment Thesis</p><ul>${thesisPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}</ul></div>`
-    : "";
-  const killHtml = killItems.length
-    ? `<div class="phase8a-exec-panel"><p class="subsection-title">What Can Kill or Reprice It</p><ul>${killItems.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}</ul></div>`
-    : "";
-  const conditionsHtml = conditions.length
-    ? `<div class="phase8a-exec-panel"><p class="subsection-title">What Must Be True</p><ul>${conditions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
-    : "";
+  const decisionPanelsHtml = renderPublicationThreePanelStrip({
+    panels: [
+      { title: "Investment Thesis", items: thesisPoints },
+      { title: "What Can Kill or Reprice It", items: killItems },
+      { title: "What Must Be True", items: conditions },
+    ],
+  });
 
   return renderSection({
     title: "Investment Decision Snapshot",
     sectionKey: "executiveInvestmentSummary",
     disposition,
-    bodyHtml: `<div class="phase8a-investment-decision-band">
-        <div><span>Current Decision State</span><strong>${escapeHtml(decisionState)}</strong><p>${escapeHtml(primary?.title || "Evidence-bound underwriting review")}</p></div>
-        <div><span>Strategy Fit</span><strong>${escapeHtml(strategyFit)}</strong><p>Only source-supported transaction, capital, and debt facts may establish this label.</p></div>
-        <div><span>Asset</span><strong>${escapeHtml(propertyName)}</strong>${assetDescriptor ? `<p>${escapeHtml(assetDescriptor)}</p>` : ""}</div>
-      </div>
-      <table class="phase8a-investment-snapshot-table"><tbody>${rows}</tbody></table>
-      <div class="phase8a-exec-columns">${thesisHtml}${killHtml}${conditionsHtml}</div>
+    bodyHtml: `${decisionBandHtml}
+      ${metricMatrixHtml}
+      ${decisionPanelsHtml}
       <p class="phase8a-exec-boundary">Decision first. Facts before prose. Scenario cases and detailed source treatment remain in the sections that follow.</p>`,
     legacySectionLabel: "Executive Summary",
     bodyClass: "iq-ic-summary-card phase8a-executive-summary",
@@ -392,15 +406,22 @@ function renderInvestmentCase(contract) {
     ["Financing Signals", section.financingSignals],
     ["Constraint Signals", section.constraintSignals],
   ].map(([label, items]) => {
-    const html = renderSignalList(items);
-    return html ? `<div class="iq-ic-signal-panel"><p class="subsection-title">${escapeHtml(label)}</p>${html}</div>` : "";
-  }).filter(Boolean).join("");
-  if (!groups) return "";
+    const normalized = (Array.isArray(items) ? items : [])
+      .filter((item) => item?.statement)
+      .map((item) => ({
+        code: item?.code || "",
+        statement: customerCopy(item.statement),
+        qualification: item?.qualification ? customerCopy(item.qualification) : "",
+      }));
+    return { label, items: normalized };
+  }).filter((group) => group.items.length > 0);
+  const observationGridHtml = renderPublicationObservationGrid({ groups });
+  if (!observationGridHtml) return "";
   return renderSection({
     title: "Underwriting Observations",
     sectionKey: "investmentCase",
     disposition,
-    bodyHtml: `<div class="iq-ic-signal-grid">${groups}</div><p class="footer-note iq-ic-lineage-note">These observations are mathematical or document-supported only. No discretionary investment grade is assigned.</p>`,
+    bodyHtml: `${observationGridHtml}<p class="footer-note iq-ic-lineage-note">These observations are mathematical or document-supported only. No discretionary investment grade is assigned.</p>`,
     legacySectionLabel: "Underwriting Observations",
     allowBreak: true,
     bodyClass: "iq-ic-observations-card",
@@ -469,22 +490,19 @@ function renderSourceReconciliationAlert(contract) {
   const disposition = sectionDisposition(contract, "sourceReconciliationAlert");
   if (!shouldRender(contract, "sourceReconciliationAlert") || section?.displayReady !== true) return "";
   const reconciliationMetrics = [
-    ["T12 Gross Potential Rent", formatMoney(section.t12GrossPotentialRent)],
-    ["Rent Roll Annual In-Place Rent", formatMoney(section.rentRollAnnualInPlaceRent)],
-    ["Rent Roll less T12", formatMoney(section.differenceAmount)],
-    ["Variance", formatPercent(section.varianceRatio, 2)],
-  ].map(([label, value]) => `<div class="iq-ic-reconciliation-metric">
-      <span class="iq-ic-secondary-label">${escapeHtml(label)}</span>
-      <strong class="iq-ic-secondary-value">${escapeHtml(value)}</strong>
-    </div>`).join("");
+    { label: "T12 Gross Potential Rent", value: formatMoney(section.t12GrossPotentialRent) },
+    { label: "Rent Roll Annual In-Place Rent", value: formatMoney(section.rentRollAnnualInPlaceRent) },
+    { label: "Rent Roll less T12", value: formatMoney(section.differenceAmount) },
+    { label: "Variance", value: formatPercent(section.varianceRatio, 2) },
+  ];
   return renderSection({
     title: "Primary Source Reconciliation Alert",
     sectionKey: "sourceReconciliationAlert",
     disposition,
-    bodyHtml: `<div class="iq-callout iq-ic-reconciliation-callout" data-iq-tone="constraint">
-        <p class="iq-callout-title">Source Reconciliation Required</p>
-        <p class="iq-callout-copy">${escapeHtml(customerCopy(section.disclosure || ""))}</p>
-      </div><div class="iq-ic-reconciliation-grid">${reconciliationMetrics}</div>`,
+    bodyHtml: renderPublicationReconciliationAlert({
+      disclosure: customerCopy(section.disclosure || ""),
+      metrics: reconciliationMetrics,
+    }),
     legacySectionLabel: "Primary Constraint / Review Disclosure",
     allowBreak: true,
     bodyClass: "iq-ic-reconciliation-card",

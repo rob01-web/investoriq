@@ -1,4 +1,5 @@
 import { applyPhase8AOwnerAcceptanceAuthority } from "./phase8a-owner-acceptance-authority.js";
+import { applyPhase8BCrossProductPublicationAuthority } from "./phase8b-cross-product-publication-authority.js";
 
 const PHASE8_MARKER = "elite-customer-facing-authority-v1";
 
@@ -220,6 +221,9 @@ function assertCustomerSurface(html = "", lane = null, sourceTruthPackage = null
   if (/[\u2013\u2014]/.test(text) || /&(?:ndash|mdash);|&#(?:8211|8212);|&#x(?:2013|2014);/i.test(text)) violations.push("customer_dash_punctuation");
   if (/\b(?:AI|LLM|parser|prompt|worker|runtime|database)\b|stack trace/i.test(text)) violations.push("internal_technical_language");
   if (lane === "screening" && /Capital Intelligence Memorandum/i.test(text)) violations.push("legacy_screening_identity");
+  if (lane === "screening" && /\b(?:DSCR|LTV|debt yield|financing|purchase price|valuation|appraisal|IRR|cash-on-cash|equity multiple)\b/i.test(text)) {
+    violations.push("underwriting_semantic_leakage");
+  }
   if (lane === "underwriting" && /InvestorIQ Investment Committee Memorandum/i.test(text)) violations.push("legacy_underwriting_identity");
 
   if (lane === "underwriting" && sourceTruthPackage?.source === "canonical_source_truth_package") {
@@ -307,6 +311,7 @@ export function applyPhase8CustomerFacingVisualAuthority(html, { reportMode = nu
   source = sanitizeVisibleMarkup(source, lane);
   source = injectStyle(addPhase8BodyMarker(source, lane));
   source = applyPhase8AOwnerAcceptanceAuthority(source, { lane, sourceTruthPackage });
+  source = applyPhase8BCrossProductPublicationAuthority(source, { lane, sourceTruthPackage });
   assertCustomerSurface(source, lane, sourceTruthPackage);
   return source;
 }

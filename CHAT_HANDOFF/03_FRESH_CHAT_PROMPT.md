@@ -1,223 +1,114 @@
-# InvestorIQ Fresh-Chat Continuation - 2026-09-04
+# InvestorIQ Fresh-Chat Prompt — Phase 8B Closed, Release Gate Next
 
-Treat these root files as current authority:
+Read this file first and treat it as governing authority for the continuation. Do not restart the audit, Phase 8, Phase 8A, or Phase 8B.
 
-1. `CHAT_HANDOFF/00_CURRENT_HANDOFF.md`
-2. `CHAT_HANDOFF/01_MASTER_PLAN.md`
-3. `CHAT_HANDOFF/02_ELITE_REPORT_BLUEPRINT.md`
+## What Rob should upload
 
-Historical detail is preserved under `CHAT_HANDOFF/archived/`. Never delete or overwrite historical authority merely to simplify the folder.
+For an ordinary continuation, this file is sufficient.
 
-## Current Git authority
+For owner visual acceptance or report-specific discussion, Rob should additionally upload only these exact two files:
+
+- `phase8b-screening-harbourstone.pdf`
+- `phase8b-underwriting-stonebridge.pdf`
+
+Do not ask Rob to upload the entire `CHAT_HANDOFF` folder. Do not use an older fresh-chat prompt, recovery PDF, Phase 8 PDF, ZIP backup, JSON provenance file, or audit receipt as current authority unless a specific historical question requires it.
+
+## Current repository authority
 
 - Repository: `rob01-web/investoriq`
-- Immutable artifact-integrity recovery branch: `internal-phase8-artifact-integrity-recovery-20260903`
-- Exact recovered integrity HEAD: `4e9d01648aeb7a0f0616f20d8a72264cbea13443`
-- Exact recovered integrity tree: `fa99e62e1e67fde1bb854e59f6cf0b46e142bec7`
-- Active owner-acceptance branch: `internal-phase8a-owner-acceptance-recovery-20260903-r1`
-- Slice A product checkpoint: `2f19c92379722c5049e73cfee7d6b83074f79a07`
-- Slice B product checkpoint: `eedec29035fa23e4bf6058c14a3ba8aaabc6de36`
-- Slice C: IN PROGRESS, not certified or closed yet.
+- Active isolated branch: `internal-phase8b-cross-product-publication-system-20260904`
+- Certified Phase 8B product HEAD: `01dc75a1a732780a70da3eae9ed2dc1b69468756`
+- Certified Phase 8B tree: `783e73559e11ac955774d4b08f37d1282bde7e1c`
+- Phase 8A base: `113e5e2`
+- Remote `main` observed 2026-09-04: `b69d8dd3911449b82c94770d51f22302e47adcd9`
+- Phase 8B candidate branch was not present on the remote when this handoff was written.
+- No Phase 8B merge, Vercel deployment, migration, scheduler action, production Storage mutation, or Stripe change has occurred.
 
-Do not restart Phase 8 or reconstruct the artifact-integrity recovery. Continue from the active Phase 8A branch.
+The immutable Phase 8 artifact-integrity recovery remains:
 
-## Proven artifact-integrity recovery
+- branch: `internal-phase8-artifact-integrity-recovery-20260903`
+- HEAD: `4e9d01648aeb7a0f0616f20d8a72264cbea13443`
+- tree: `fa99e62e1e67fde1bb854e59f6cf0b46e142bec7`
 
-The prior Stonebridge-labelled certification artifact had inherited Harbourstone operating payloads. That defect is recovered and permanently gated.
+Never weaken request, property, source, HTML, PDF, filename, or cross-property identity gates.
 
-Authorized Stonebridge fingerprint:
+## Phase 8B is closed locally
 
-- 64 units
-- 60 occupied / 4 vacant
-- 93.75% occupancy
-- T12 GPR $1,612,800
-- EGI $1,500,000
-- OpEx $555,000
-- NOI $945,000
-- annual in-place rent $1,432,800
-- annual market rent $1,718,400
+Phase 8B established one canonical InvestorIQ publication system shared by Screening and Underwriting. All slices 8B-A through 8B-F are committed and locally certified.
 
-Never weaken the request/source/HTML/PDF identity gates.
+Governing receipt:
 
-## Phase 8A completed work
+`docs/PHASE8B_CROSS_PRODUCT_PUBLICATION_CERTIFICATION_2026-09-04.md`
 
-### Slice A CLOSED
+Key implementation seam:
 
-- Screening forest-green cover defect fixed at the real `.cover-cell` ownership seam.
-- Underwriting gold-square cover collision fixed at the real Phase 7 pseudo-element cascade seam.
-- Screening and Underwriting now share a white-first premium family.
-- Screening has evidence-bound triage disposition and stable comparison axes.
-- Harbourstone correctly resolves to HOLD because of material T12 / Rent Roll income-basis disagreement.
+`api/_lib/investoriq-publication-design-system.js`
 
-### Slice B CLOSED
+Final candidate artifacts:
 
-Stonebridge Underwriting page 2 was rebuilt in the real Chapter 1 renderer into a decision-first investment page showing:
+| Artifact | Pages | SHA-256 |
+|---|---:|---|
+| `phase8b-screening-harbourstone.pdf` | 5 | `049e111bf1728e080b9b8cab5bc2ffeb82f1fbc45569974a6c3bf2a0e4766127` |
+| `phase8b-underwriting-stonebridge.pdf` | 20 | `cfe6346dcc64fa8425fcfcc17afca99ae235834ae1b33c06432e24930de9b9b1` |
 
-- `RECONCILIATION REQUIRED`
-- purchase price
-- T12 NOI
-- occupancy
-- going-in cap rate
-- proposed loan
-- proposed DSCR
-- primary decision gate
-- investment thesis
-- what must be true
+Verified Phase 8A input baselines:
 
-The real PDF was visually inspected and the direction is materially stronger.
+| Artifact | Pages | SHA-256 |
+|---|---:|---|
+| Harbourstone Screening baseline | 5 | `98064be89c0287a8e4a2e6a845f5daabe2ef9bcc6953f552b1ddac8c8146f36d` |
+| Stonebridge Underwriting baseline | 20 | `da4cbb3b310f1e2129fe30878a0186861de9c6b41ccebb3046722aea2ba22a9e` |
 
-## NEW LOCKED DECISION-FIRST DOCTRINE
+The final Phase 8B PDFs were rendered with WeasyPrint 66 because the managed execution sandbox blocked Chromium socket creation. The adapter changed pagination/containment only, not customer content or analytical authority. Final launch acceptance should still prove the intended customer rendering path.
 
-The first analytical page of each report must answer the report's primary customer decision immediately.
+## Permanent product doctrine
 
-Permanent rules:
+InvestorIQ has two products:
 
-1. Decision first.
-2. Facts before prose.
-3. Prefer numbers, short labels, tables, matrices, compact charts, and one-line implications over paragraphs.
-4. Never force a conclusion when evidence is insufficient.
-5. Strategy classification is shown only when uploaded documents support it.
-6. Any finding deep in the report that could materially change the decision must bubble up to the first analytical page.
-7. Detailed provenance remains available but should not dominate investor-facing pages.
+- Screening answers whether a property deserves more investor time and a full Underwriting review.
+- Underwriting answers how the investor should pursue the property, on what basis, with what strategy, and what can kill the deal.
 
-## Screening Decision Snapshot
+The first analytical page answers the primary customer decision immediately. Facts precede prose. Strategy and conclusions may not exceed the uploaded evidence. Material findings bubble up. Detailed provenance remains available without dominating investor-facing pages.
 
-Screening's first analytical page must answer:
+Source authority remains document-specific. Do not invent facts, collapse source distinctions, use tests as product authority, or revive cross-property payload contamination.
 
-> Is this property worth more of the investor's time and a full Underwriting review?
+## Current release verdict
 
-Evidence-bound disposition states:
+**HOLD. Do not push, merge, deploy, migrate, activate, or mutate production merely because Phase 8B passed locally.**
 
-- `ADVANCE`
-- `HOLD`
-- `DO NOT ADVANCE`
-- `INSUFFICIENT EVIDENCE`
+The following gates remain:
 
-If the uploaded T12/Rent Roll evidence cannot safely support a disposition, use `INSUFFICIENT EVIDENCE` rather than guessing.
+1. Rob explicitly accepts the exact two Phase 8B PDFs.
+2. Resolve the repository's Vercel Hobby function-budget sentinel: 15 deployable routes versus a limit of 12.
+3. Re-run the authoritative launch QA and production build without weakening tests or production behavior.
+4. With explicit authorization, push only the isolated Phase 8B candidate branch.
+5. Verify the remote ref equals the intended candidate HEAD.
+6. Create a non-production preview and prove it is `READY`, tied to the expected SHA, and correctly aliased for preview.
+7. Validate critical browser/API/report generation behavior, including the intended customer PDF path.
+8. Ask for explicit authorization before any merge, production promotion, migration, scheduler activation, Storage mutation, Stripe/pricing action, or historical-row cleanup.
+9. If production is authorized, promote the exact validated artifact once and record URL, target, state, SHA, alias, and post-deploy evidence.
 
-Where supported, put the meat and potatoes on page 2:
+Known inherited QA maintenance items must remain visible:
 
-- disposition and one-line reason;
-- exact next action;
-- Underwriting readiness;
-- units / occupancy;
-- NOI / NOI margin / expense ratio;
-- break-even occupancy / operating cushion;
-- annual in-place rent;
-- annual market rent;
-- gross rent gap dollars and percent;
-- source consistency / T12 vs Rent Roll variance;
-- top upside signal;
-- top risk or diligence item.
+- `tests/qa/vercel-function-budget-smoke.js` fails at `15/12`; this is a real deployment-plan gate.
+- `tests/qa/launch-critical-architecture-smoke.js` rejects the unclassified `qa:phase6:lifecycle` script name.
+- `tests/qa/full-underwriting-gates-full-render-smoke.js` expects the stale label `Accepted T12 NOI`; certified output uses `T12 NOI`.
 
-Screening may show an evidence-bound operating profile such as `STABILIZED`, `LIGHT VALUE-ADD CANDIDATE`, `OPERATING PRESSURE`, or `INSUFFICIENT EVIDENCE`. Do not call a T12/Rent-Roll-only Screening property BRRRR, fix-and-flip, refinance, or another transaction strategy.
+Classify each failure against current product and architecture authority before changing code or tests. Never make production behavior worse merely to make a stale assertion green.
 
-A compact cover + roughly 2-3 analytical pages is desirable if the evidence can be communicated without loss. It is not a hard page cap.
+## CHAT_HANDOFF rules
 
-## Underwriting Investment Decision Snapshot
+The live root contains only:
 
-Underwriting's first analytical page must answer:
+1. `00_CURRENT_HANDOFF.md`
+2. `01_MASTER_PLAN.md`
+3. `02_ELITE_REPORT_BLUEPRINT.md`
+4. `03_FRESH_CHAT_PROMPT.md`
+5. `README.md`
 
-> How should the investor pursue this property, on what basis, with what strategy, and what can kill or materially reprice the deal?
+All prior authority remains under `CHAT_HANDOFF/archived/`. Do not delete or overwrite it. Before materially rewriting a live authority file, preserve an exact dated snapshot. Add status updates at the top of long-lived authority files; replace a fresh-chat prompt only after archiving its predecessor.
 
-Where supported, surface the most important 5-10 items across:
+If Rob's Windows root contains many legacy files, use `scripts/maintenance/consolidate-chat-handoff.ps1`. Dry-run first, then run with `-Apply`. It must create a full ZIP backup before moving any extra root file into a timestamped archive.
 
-- current decision state;
-- purchase basis / price per unit;
-- T12 NOI and occupancy;
-- going-in cap / appraisal context;
-- proposed loan / LTV / debt yield;
-- current vs proposed DSCR;
-- documented rent gap;
-- renovation / CapEx scope and timing;
-- documented gross rent lift;
-- principal downside / deal breaker;
-- negotiation leverage;
-- what must be true before closing;
-- strategy fit.
+## Immediate mission
 
-Potential evidence-bound strategy labels:
-
-- `STABILIZED HOLD`
-- `LIGHT VALUE-ADD HOLD`
-- `MAJOR VALUE-ADD / REPOSITION`
-- `REHAB / REFINANCE / HOLD`
-- `SHORT-HOLD / RESALE`
-- `INSUFFICIENT EVIDENCE`
-
-Buy & Hold / BRRRR shorthand may appear only as a secondary comparable label when the uploaded purchase, capital, financing/refinance, and execution evidence truly supports it.
-
-## Page 2 visual architecture
-
-Do NOT put everything inside one giant card and do NOT make it look like a SaaS dashboard.
-
-Target institutional editorial layout:
-
-- top 15-20%: one full-width decision band;
-- middle 50-60%: dense structured numeric table/grid;
-- bottom 20-30%: two or three compact decision panels such as `WHY IT WORKS`, `WHAT CAN KILL IT`, `WHAT MUST BE TRUE`, `NEGOTIATION LEVERS`, or `NEXT ACTION`;
-- almost no paragraph prose;
-- strong numeric hierarchy;
-- restrained white / forest / gold palette;
-- thin rules and subtle fills;
-- no decorative shadows, pills, or oversized rounded cards.
-
-Screening page 2 should be understandable in roughly 15-30 seconds. Underwriting page 2 should let an experienced investor understand the deal thesis, basis, leverage, upside, primary risk, and immediate action without searching the memo.
-
-## DocRaptor / Prince ELITE publishing requirement
-
-The owner believes InvestorIQ is still underusing DocRaptor and wants the final reports to look materially above the Blackstone benchmark.
-
-Treat DocRaptor/Prince as a professional publishing engine, not merely a converter.
-
-During final Phase 8A visual work deliberately evaluate and use relevant capabilities such as:
-
-- named pages for cover / snapshot / chapters / appendix;
-- page-specific `@page` rules and margin boxes;
-- running section/chapter headers;
-- controlled footers and page counters;
-- widow/orphan and keep-with-next controls;
-- deliberate table continuation behavior;
-- page floats for charts/source notes where useful;
-- PDF bookmarks / internal navigation;
-- full-bleed cover treatment where appropriate;
-- mixed orientation only where a wide matrix genuinely earns it;
-- vector SVG / print-safe charts;
-- professional typography and font embedding.
-
-Chrome PDF may remain a CI sanity check. Final owner acceptance should inspect the actual launch customer rendering path.
-
-## Blackstone benchmark
-
-Do not copy Blackstone branding or exact layouts.
-
-Borrow its institutional habits:
-
-- conclusion first;
-- transaction facts immediately visible;
-- information-dense tables;
-- timelines/matrices/charts where useful;
-- minimal hunting for the decision;
-- professional page rhythm.
-
-InvestorIQ should exceed Blackstone with stronger source truth, reconciliation, provenance, and non-invention.
-
-## FIRST TASK IN THE NEW CHAT
-
-Continue Phase 8A from the exact current branch. Do NOT restart the project.
-
-1. Confirm the current branch and inspect the Slice C patch/validator work already present.
-2. Finish Slice C at the true renderer/contract seams.
-3. Implement/finalize the locked Screening Decision Snapshot and Underwriting Investment Decision Snapshot doctrine.
-4. Make the reports substantially more decision-dense and less prose-heavy.
-5. Complete capital-plan economics, market-survey synthesis, honest sensitivity framing, valuation cross-check wording, Screening page-3 compaction, and readiness wording.
-6. Deliberately use DocRaptor/Prince publishing capabilities to raise the final visual standard above generic HTML-to-PDF output.
-7. Complete pagination and full human anti-AI/editorial cleanup.
-8. Generate the exact launch-path Harbourstone Screening and Stonebridge Underwriting PDFs.
-9. Run the recovered identity wall, all focused regressions, production build, exact PDF hashes, and page-by-page full-resolution visual inspection.
-10. Bring those exact PDFs to Rob for owner acceptance.
-11. Only after exact-artifact owner acceptance, perform the one deliberate synchronization to `main` and Vercel production unless Rob explicitly overrides that sequence.
-
-Do not apply migrations, activate the scheduler, mutate production Storage, or change Stripe/pricing as part of this report-design work.
-
-BOOOOOOOOOOOOOOOOOOOOOOOOOOM.
+Confirm whether Rob has explicitly accepted both exact Phase 8B PDFs. If not, perform or facilitate that review first. Then resolve the Vercel function-budget gate and produce a preview-deployment plan. Do not infer production authorization from enthusiasm or from the request for a readiness opinion.

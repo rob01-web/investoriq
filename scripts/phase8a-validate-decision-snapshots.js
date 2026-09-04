@@ -28,9 +28,15 @@ assert.match(screening, /\$1,036,800/);
 assert.match(screening, /\$1,137,600/);
 assert.match(screening, /\$100,800 \/ 9\.7%/);
 assert.match(screening, /-44\.0%/);
-assert.match(screening, /Why It May Work/);
-assert.match(screening, /What Can Kill or Hold It/);
-assert.match(screening, /Next Action/);
+if (/data-iq-phase8b="cross-product-publication-system-v1"/.test(screening)) {
+  assert.match(screening, /Screening Thesis/);
+  assert.match(screening, /What Can Stop Advancement/);
+  assert.match(screening, /What Must Be True to Advance/);
+} else {
+  assert.match(screening, /Why It May Work/);
+  assert.match(screening, /What Can Kill or Hold It/);
+  assert.match(screening, /Next Action/);
+}
 assert.match(screening, /Operating Strength/);
 assert.match(screening, /Rent Position/);
 assert.match(screening, /Source Consistency/);

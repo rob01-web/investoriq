@@ -37,20 +37,34 @@ const screeningText = visibleText(screeningHtml);
 const underwritingText = visibleText(underwritingHtml);
 
 // Screening must perform triage, not expose internal matrix terminology.
-requireText(screeningText, /Screening Decision Profile/i, "screening-profile");
-requireText(screeningText, /Why the property remains competitive/i, "screening-competitive-case");
-requireText(screeningText, /Why the disposition is HOLD/i, "screening-hold-reason");
-requireText(screeningText, /Conditions to advance/i, "screening-conditions");
-requireText(screeningText, /Occupancy is 95\.8%/i, "screening-occupancy");
-requireText(screeningText, /NOI margin is 59\.1%/i, "screening-noi-margin");
-requireText(screeningText, /Operating occupancy cushion is 71\.5 percentage points/i, "screening-cushion");
-requireText(screeningText, /Rent Roll market rent is 9\.7% above in-place rent/i, "screening-rent-gap");
-requireText(screeningText, /Evidence Coverage/i, "screening-evidence-coverage");
-requireText(screeningText, /Screening Scope/i, "screening-scope");
+if (/data-iq-phase8b="cross-product-publication-system-v1"/.test(screeningHtml)) {
+  requireText(screeningText, /Screening Decision Snapshot/i, "screening-snapshot");
+  requireText(screeningText, /Screening Thesis/i, "screening-thesis");
+  requireText(screeningText, /What Can Stop Advancement/i, "screening-stop-case");
+  requireText(screeningText, /What Must Be True to Advance/i, "screening-conditions");
+  requireText(screeningText, /Occupancy is 95\.8%/i, "screening-occupancy");
+  requireText(screeningText, /NOI margin is 59\.1%/i, "screening-noi-margin");
+  requireText(screeningText, /Operating Cushion\s+71\.5 pp above break-even/i, "screening-cushion");
+  requireText(screeningText, /Documented market rent exceeds in-place rent by \$100,800 annually/i, "screening-rent-gap");
+  requireText(screeningText, /Decision Evidence Map/i, "screening-evidence-map");
+  requireText(screeningText, /Data Coverage/i, "screening-data-coverage");
+  requireText(screeningText, /Multifamily\s*\|\s*48 Units/i, "screening-human-unit-label");
+} else {
+  requireText(screeningText, /Screening Decision Profile/i, "screening-profile");
+  requireText(screeningText, /Why the property remains competitive/i, "screening-competitive-case");
+  requireText(screeningText, /Why the disposition is HOLD/i, "screening-hold-reason");
+  requireText(screeningText, /Conditions to advance/i, "screening-conditions");
+  requireText(screeningText, /Occupancy is 95\.8%/i, "screening-occupancy");
+  requireText(screeningText, /NOI margin is 59\.1%/i, "screening-noi-margin");
+  requireText(screeningText, /Operating occupancy cushion is 71\.5 percentage points/i, "screening-cushion");
+  requireText(screeningText, /Rent Roll market rent is 9\.7% above in-place rent/i, "screening-rent-gap");
+  requireText(screeningText, /Evidence Coverage/i, "screening-evidence-coverage");
+  requireText(screeningText, /Screening Scope/i, "screening-scope");
+  requireText(screeningText, /48 Unit Multifamily/i, "screening-human-unit-label");
+}
 forbidText(screeningText, /Evidence Conviction Matrix/i, "screening-internal-matrix-label");
 forbidText(screeningText, /Framework Note/i, "screening-framework-note");
 forbidText(screeningText, /\b48-Unit\b/i, "screening-dash-unit-label");
-requireText(screeningText, /48 Unit Multifamily/i, "screening-human-unit-label");
 
 // Capital-plan synthesis must use only arithmetic from the accepted source plan.
 requireText(underwritingText, /Capital Program Economics/i, "capital-heading");

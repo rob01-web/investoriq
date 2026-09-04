@@ -49,11 +49,19 @@ for (const [label, html, text] of [
   }
 }
 
-if (!/Screening Decision Snapshot\s+HOLD/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_HOLD_MISSING");
+if (/data-iq-phase8b="cross-product-publication-system-v1"/.test(screening)) {
+  if (!/Screening Decision Snapshot\s+Current Decision State\s+HOLD/i.test(screeningText)) throw new Error("PHASE8B_SCREENING_HOLD_MISSING");
+} else if (!/Screening Decision Snapshot\s+HOLD/i.test(screeningText)) {
+  throw new Error("PHASE8A_SCREENING_HOLD_MISSING");
+}
 if (!/Underwriting Readiness\s+HOLD/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_READINESS_MISSING");
 if (!/Source Consistency\s+44\.0% material variance/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_SOURCE_CONSISTENCY_MISSING");
 if (!/Operating Cushion\s+71\.5 pp above break-even/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_OPERATING_CUSHION_MISSING");
-if (!/data-iq-phase8a-methodology="true"/i.test(screening)) throw new Error("PHASE8A_SCREENING_METHODOLOGY_MISSING");
+if (/data-iq-phase8b="cross-product-publication-system-v1"/.test(screening)) {
+  if (!/data-iq-elite-section="screeningGovernance"/i.test(screening)) throw new Error("PHASE8B_SCREENING_GOVERNANCE_MISSING");
+} else if (!/data-iq-phase8a-methodology="true"/i.test(screening)) {
+  throw new Error("PHASE8A_SCREENING_METHODOLOGY_MISSING");
+}
 if (!/Full_Render_T12\.xlsx/i.test(screeningText) || !/Full_Render_Rent_Roll\.xlsx/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_SOURCE_NAMES_MISSING");
 if (/\$-813,200/.test(screeningText)) throw new Error("PHASE8A_SCREENING_NEGATIVE_MONEY_STYLE_REGRESSION");
 if (!/\(\$813,200\)/.test(screeningText)) throw new Error("PHASE8A_SCREENING_NEGATIVE_MONEY_INSTITUTIONAL_FORMAT_MISSING");

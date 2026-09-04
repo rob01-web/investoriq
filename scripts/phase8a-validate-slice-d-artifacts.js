@@ -39,7 +39,12 @@ const underwritingText = visibleText(underwritingHtml);
 // Preserve the Screening owner-acceptance authority while Slice D edits Underwriting only.
 requirePattern(screeningText, /Screening Report/i, "screening-title");
 requirePattern(screeningText, /Methodology\s*&\s*Data Transparency/i, "screening-methodology");
-requirePattern(screeningText, /Screening Decision Profile/i, "screening-decision-profile");
+if (/data-iq-phase8b="cross-product-publication-system-v1"/.test(screeningHtml)) {
+  requirePattern(screeningText, /Screening Decision Snapshot/i, "screening-decision-snapshot");
+  requirePattern(screeningText, /Decision Evidence (?:&|and) Key Metrics/i, "screening-decision-evidence");
+} else {
+  requirePattern(screeningText, /Screening Decision Profile/i, "screening-decision-profile");
+}
 
 // Cover subtitle is editorial, while canonical product identity remains Underwriting Report.
 requirePattern(underwritingHtml, /<div class="cover-prop-sub">\s*Investment Committee Memorandum\s*<\/div>/i, "underwriting-cover-subtitle");

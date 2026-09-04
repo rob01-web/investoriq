@@ -5,6 +5,7 @@ import { buildInstitutionalGate10ReportFixture } from "./fixtures/institutional-
 
 const rendererSource = fs.readFileSync("api/_lib/full-underwriting-chapter1-elite-renderer.js", "utf8");
 const documentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
+const designSystemSource = fs.readFileSync("api/_lib/investoriq-publication-design-system.js", "utf8");
 const fixture = buildInstitutionalGate10ReportFixture("elite-10b2-committee-opening-system");
 const html = fixture.html;
 const chapter1 = html.match(
@@ -15,7 +16,7 @@ let checks = 0;
 assert.ok(chapter1, "rendered committee-overview chapter");
 assert.match(chapter1, /data-iq-elite-chapter1="true"/);
 assert.match(chapter1, /data-iq-elite10b2="investment-committee-opening-v1"/);
-assert.match(chapter1, /Executive Investment Summary/);
+assert.match(chapter1, /Investment Decision Snapshot/);
 assert.match(chapter1, /Key Metrics Snapshot/);
 assert.match(chapter1, /Underwriting Observations/);
 assert.doesNotMatch(chapter1, /Key Investor Questions/);
@@ -24,20 +25,19 @@ assert.match(chapter1, /Primary Source Reconciliation Alert/);
 assert.doesNotMatch(chapter1, /Investment Case \/ Decision Frame/);
 checks += 1;
 
-assert.match(chapter1, /class="iq-ic-summary-lead"/);
-assert.match(chapter1, /class="iq-ic-asset-statement"/);
+assert.match(chapter1, /class="phase8a-investment-decision-band"/);
 assert.match(chapter1, /Institutional Gate 10 Property/);
-assert.match(chapter1, /class="iq-ic-asset-descriptor">64-Unit/);
-assert.match(chapter1, /Committee Focus/);
-assert.match(chapter1, /data-iq-elite-primary-constraint="PRIMARY_SOURCE_RECONCILIATION_REQUIRED"/);
-assert.match(chapter1, /class="iq-callout iq-ic-primary-constraint" data-iq-tone="constraint"/);
+assert.match(chapter1, /<p>64-Unit<\/p>/);
+assert.match(chapter1, /What Must Be True/);
+assert.match(chapter1, /RECONCILIATION REQUIRED/);
+assert.match(chapter1, /class="iq-callout iq-ic-reconciliation-callout" data-iq-tone="constraint"/);
 checks += 1;
 
 const signalCodes = [...chapter1.matchAll(/data-iq-elite-signal="([^"]+)"/g)].map((match) => match[1]);
 for (const code of ["OPERATING_OCCUPANCY_ESTABLISHED", "OPERATING_NOI_ESTABLISHED", "DOCUMENTED_GROSS_RENT_GAP"]) {
   assert.equal(signalCodes.filter((item) => item === code).length, 1, `${code} should render once in the decision-frame surface`);
 }
-assert.equal((chapter1.match(/What explains the difference between T12 Gross Potential Rent and Rent Roll annual in-place rent\?/g) || []).length, 1, "Committee Focus question should not be repeated");
+assert.equal((chapter1.match(/What explains the difference between T12 Gross Potential Rent and Rent Roll annual in-place rent\./g) || []).length, 1, "decision condition should not be repeated");
 checks += 1;
 
 const metricKeys = [...chapter1.matchAll(/data-iq-elite-metric="([^"]+)"/g)].map((match) => match[1]);
@@ -51,7 +51,7 @@ assert.match(chapter1, /class="iq-ic-secondary-metric"/);
 checks += 1;
 
 assert.match(rendererSource, /\.slice\(0, 6\)/);
-assert.match(rendererSource, /bodyClass: "iq-ic-summary-card"/);
+assert.match(rendererSource, /bodyClass: "iq-ic-summary-card phase8a-executive-summary"/);
 assert.match(rendererSource, /allowBreak: true,[\s\S]*bodyClass: "iq-ic-metrics-card"/);
 assert.match(rendererSource, /allowBreak: true,[\s\S]*bodyClass: "iq-ic-observations-card"/);
 assert.match(rendererSource, /allowBreak: true,[\s\S]*bodyClass: "iq-ic-questions-card"/);
@@ -69,10 +69,11 @@ for (const selector of [
   ".iq-ic-reconciliation-callout",
   ".iq-ic-reconciliation-grid",
 ]) {
-  assert.ok(documentSource.includes(selector), `missing ELITE-10B2 style: ${selector}`);
+  assert.ok(designSystemSource.includes(selector), `missing extracted ELITE-10B2 style: ${selector}`);
 }
-assert.match(documentSource, /\.iq-ic-metric-grid\s*\{[^}]*break-inside:avoid-page;[^}]*page-break-inside:avoid;/s);
-assert.match(documentSource, /\.iq-ic-signal-panel\s*\{[^}]*break-inside:avoid-page;[^}]*page-break-inside:avoid;/s);
+assert.match(designSystemSource, /\.iq-ic-metric-grid\s*\{[^}]*break-inside:avoid-page;[^}]*page-break-inside:avoid;/s);
+assert.match(designSystemSource, /\.iq-ic-signal-panel\s*\{[^}]*break-inside:avoid-page;[^}]*page-break-inside:avoid;/s);
+assert.match(documentSource, /INVESTORIQ_UNDERWRITING_OPENING_CSS/);
 checks += 1;
 
 const chapter1Contract = buildFullUnderwritingChapter1EliteContract({
@@ -113,9 +114,11 @@ checks += 1;
 const coverFunction = documentSource.match(
   /function renderBrandCoverSection\([\s\S]*?\n\}\n\nfunction renderExecutiveSummarySection/,
 )?.[0] || "";
-assert.match(coverFunction, /data-iq-cover-system="elite-10b1-light-institutional-v1"/);
-assert.match(coverFunction, /class="cover-prop-sub">\$\{escapeHtml\(UNDERWRITING_REPORT_IDENTITY\.canonicalTitle\)\}/);
-assert.doesNotMatch(coverFunction, /cover-kicker|>Full Underwriting/i);
+assert.match(coverFunction, /return renderPublicationCover\(\{/);
+assert.match(coverFunction, /reportTitle: UNDERWRITING_REPORT_IDENTITY\.canonicalTitle/);
+assert.match(designSystemSource, /data-iq-cover-system="elite-10b1-light-institutional-v1"/);
+assert.match(designSystemSource, /class="cover-prop-sub"/);
+assert.doesNotMatch(`${coverFunction}\n${designSystemSource}`, /cover-kicker|>Full Underwriting/i);
 assert.equal(rendererSource.includes("cover-wrap"), false);
 checks += 1;
 

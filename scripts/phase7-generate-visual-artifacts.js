@@ -59,7 +59,10 @@ function assertPhase7PresentationAuthority(html, label) {
     throw new Error(`PHASE7_PRESENTATION_MARKER_MISSING:${label}`);
   }
   const phase8aOwnerAcceptance = /data-iq-phase8a="owner-acceptance-recovery-v1"/i.test(html);
-  const evidenceSurfacePresent = phase8aOwnerAcceptance
+  const phase8bCrossProduct = /data-iq-phase8b="cross-product-publication-system-v1"/i.test(html);
+  const evidenceSurfacePresent = phase8bCrossProduct && label === "screening"
+    ? /Operating Evidence &amp; Diligence Priorities|Decision Evidence Map/i.test(html)
+    : phase8aOwnerAcceptance
     ? label === "screening"
       ? /Evidence Coverage/i.test(html)
       : label === "underwriting"

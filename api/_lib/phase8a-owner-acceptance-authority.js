@@ -1,3 +1,5 @@
+import { INVESTORIQ_PHASE8A_PUBLICATION_CSS } from "./investoriq-publication-design-system.js";
+
 const PHASE8A_MARKER = "owner-acceptance-recovery-v1";
 
 function finite(value) {
@@ -171,6 +173,18 @@ function buildScreeningDisposition(sourceTruthPackage = null) {
     diligenceBurden,
     reconciliationMaterial,
   };
+}
+
+// Phase 8B consumes the accepted Phase 8A screening decision model as
+// presentation input. Exporting the existing model prevents the publication
+// layer from recreating or reinterpreting analytical authority.
+export function getPhase8AScreeningDecisionModel(sourceTruthPackage = null) {
+  const decision = buildScreeningDisposition(sourceTruthPackage);
+  return Object.freeze({
+    ...decision,
+    operatingProfile: screeningOperatingProfile(decision),
+    readiness: screeningReadinessLabel(decision),
+  });
 }
 
 function dispositionTone(disposition = "") {
@@ -537,63 +551,7 @@ const PHASE8A_STYLE = `<style id="investoriq-phase8a-owner-acceptance-authority"
 .iq-phase8a p, .iq-phase8a li { widows:2; orphans:2; }
 .iq-phase8a .section-header, .iq-phase8a .subsection-title { break-after:avoid-page; page-break-after:avoid; }
 
-/* Underwriting executive decision page. */
-.iq-phase8a-underwriting .phase8a-executive-summary { padding:0 !important; border-top:0 !important; }
-.iq-phase8a-underwriting .phase8a-exec-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding-bottom:9px; border-bottom:1px solid var(--iq8a-rule); }
-.iq-phase8a-underwriting .phase8a-exec-property { margin:0; font-family:var(--font-display); font-size:20pt; line-height:1; color:var(--iq8a-ink); }
-.iq-phase8a-underwriting .phase8a-exec-asset { margin:4px 0 0; color:var(--iq8a-muted); font-size:8pt; }
-.iq-phase8a-underwriting .phase8a-exec-state { max-width:2.45in; padding:7px 10px; border-left:3px solid var(--iq8a-gold); background:var(--iq8a-paper); }
-.iq-phase8a-underwriting .phase8a-exec-state span { display:block; color:#7a817c; font-size:6.5pt; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; }
-.iq-phase8a-underwriting .phase8a-exec-state strong { display:block; color:var(--iq8a-forest-deep); font-size:10pt; line-height:1.25; }
-.iq-phase8a-underwriting .phase8a-exec-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; margin:10px 0; }
-.iq-phase8a-underwriting .phase8a-exec-metric { min-width:0; padding:7px 8px; border:1px solid var(--iq8a-rule); background:#fff; }
-.iq-phase8a-underwriting .phase8a-exec-metric span { display:block; color:#7a817c; font-size:6pt; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
-.iq-phase8a-underwriting .phase8a-exec-metric strong { display:block; color:var(--iq8a-ink); font-family:var(--font-display); font-size:13pt; line-height:1.1; }
-.iq-phase8a-underwriting .phase8a-exec-gate { margin:9px 0; padding:8px 10px; border-left:3px solid var(--iq8a-gold); background:#fbfaf6; }
-.iq-phase8a-underwriting .phase8a-exec-gate > span { display:block; color:#7a817c; font-size:6.5pt; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
-.iq-phase8a-underwriting .phase8a-exec-gate > strong { display:block; margin:2px 0 3px; color:var(--iq8a-ink); font-size:9pt; }
-.iq-phase8a-underwriting .phase8a-exec-gate p { margin:2px 0; font-size:8pt; line-height:1.35; }
-.iq-phase8a-underwriting .phase8a-exec-columns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.iq-phase8a-underwriting .phase8a-exec-panel { min-width:0; padding-top:7px; border-top:1px solid var(--iq8a-rule); }
-.iq-phase8a-underwriting .phase8a-exec-panel ul { margin:0; padding-left:15px; }
-.iq-phase8a-underwriting .phase8a-exec-panel li { margin-bottom:4px; font-size:7.6pt; line-height:1.35; }
-.iq-phase8a-underwriting .phase8a-exec-boundary { margin:7px 0 0; padding-top:6px; border-top:1px solid #ece9e1; color:#737b76; font-size:6.6pt; line-height:1.35; }
-
-.iq-phase8a-underwriting .phase8a-investment-decision-band { display:grid; grid-template-columns:1.45fr .8fr .9fr; gap:0; margin:0 0 11px; background:var(--iq8a-forest-deep); color:#fff; }
-.iq-phase8a-underwriting .phase8a-investment-decision-band > div { min-width:0; padding:12px 14px; }
-.iq-phase8a-underwriting .phase8a-investment-decision-band > div + div { border-left:1px solid rgba(255,255,255,.2); }
-.iq-phase8a-underwriting .phase8a-investment-decision-band span { display:block; color:#d6c484; font-size:5.9pt; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
-.iq-phase8a-underwriting .phase8a-investment-decision-band strong { display:block; margin-top:3px; color:#fff; font-family:var(--font-display); font-size:16pt; line-height:1.02; }
-.iq-phase8a-underwriting .phase8a-investment-decision-band p { margin:4px 0 0; color:#eef1ef; font-size:6.7pt; line-height:1.28; }
-.iq-phase8a-underwriting .phase8a-investment-snapshot-table { margin:0; table-layout:fixed; border-top:1px solid var(--iq8a-rule); }
-.iq-phase8a-underwriting .phase8a-investment-snapshot-table td { width:25%; padding:6px 7px 6px 0; background:#fff !important; border-bottom:1px solid var(--iq8a-rule); }
-.iq-phase8a-underwriting .phase8a-investment-snapshot-table td span { display:block; color:#767f79; font-size:5.5pt; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
-.iq-phase8a-underwriting .phase8a-investment-snapshot-table td strong { display:block; margin-top:2px; color:var(--iq8a-ink); font-family:var(--font-display); font-size:10.7pt; line-height:1.05; }
-.iq-phase8a-underwriting .phase8a-investment-snapshot-table td em { display:block; margin-top:2px; color:#7a817c; font-size:5.4pt; font-style:normal; line-height:1.2; }
-.iq-phase8a-underwriting .phase8a-exec-columns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:10px; }
-.iq-phase8a-underwriting .phase8a-exec-panel { padding-top:7px; border-top:2px solid var(--iq8a-forest); }
-.iq-phase8a-underwriting .phase8a-exec-panel li { margin-bottom:3px; font-size:6.7pt; line-height:1.28; }
-.iq-phase8a-underwriting .phase8a-exec-boundary { margin-top:6px; font-size:5.7pt; line-height:1.25; }
-
-/* Final owner-acceptance editorial treatment for the decision evidence map. */
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix { margin-top:10px !important; padding:10px 12px !important; border:1px solid var(--iq8a-rule) !important; border-top:2px solid var(--iq8a-forest) !important; background:#fff !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix .subsection-title { margin-bottom:3px !important; font-size:10pt !important; color:var(--iq8a-ink) !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix > p.small { margin:0 0 6px !important; color:#6e7771 !important; font-size:5.9pt !important; line-height:1.3 !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix table { width:100% !important; table-layout:fixed !important; margin-top:5px !important; border-collapse:collapse !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th { padding:5px 6px !important; color:#68716b !important; font-size:5.5pt !important; letter-spacing:.065em !important; text-transform:uppercase !important; vertical-align:bottom !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td { padding:5px 6px !important; font-size:5.9pt !important; line-height:1.32 !important; vertical-align:top !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th:nth-child(1),
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td:nth-child(1) { width:21% !important; font-weight:600 !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th:nth-child(2),
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td:nth-child(2) { width:11% !important; text-align:center !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix th:nth-child(3),
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix td:nth-child(3) { width:68% !important; }
-.iq-phase8a-underwriting .phase7-evidence-conviction-matrix tbody tr:nth-child(even) td { background:#fbfaf7 !important; }
-
-/* Underwriting cover must retain the same family geometry without the Phase 7 gold-square collision. */
-.iq-phase8a-underwriting .cover-classification { border-left-color:var(--iq8a-forest) !important; background:rgba(23,63,43,.045) !important; }
-.iq-phase8a-underwriting .cover-classification strong,
-.iq-phase8a-underwriting .cover-meta-grid strong { color:var(--iq8a-ink) !important; }
+${INVESTORIQ_PHASE8A_PUBLICATION_CSS}
 
 @media print {
   /* Keep named-page changes on the same logical content box. Without these
