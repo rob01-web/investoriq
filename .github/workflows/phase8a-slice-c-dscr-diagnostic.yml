@@ -20,25 +20,49 @@ jobs:
         with:
           ref: internal-phase8a-owner-acceptance-recovery-20260903-r1
           fetch-depth: 1
-      - name: Locate DSCR text transformations
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Isolate DSCR-removal patch step
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p PHASE8A_DIAGNOSTICS
-          {
-            echo '=== FILES WITH DSCR AND replace/sanitize/strip/remove ==='
-            grep -R -n -I -E 'DSCR|dscr' api scripts tests 2>/dev/null | grep -E 'replace|sanitize|strip|remove|customer|copy' | head -n 600 || true
-            echo
-            echo '=== LITERAL DSCR REPLACEMENT CANDIDATES ==='
-            grep -R -n -I -E 'replace\([^\n]*DSCR|DSCR[^\n]*replace|replace\([^\n]*dscr|dscr[^\n]*replace' api scripts 2>/dev/null | head -n 600 || true
-            echo
-            echo '=== WHOLE WORD FILTERS / BANNED TOKEN TABLES ==='
-            grep -R -n -I -E 'banned|forbidden|internal|sanitize|customerFacing|customer_copy|customerCopy|humanize|polish' api/_lib scripts 2>/dev/null | grep -E 'DSCR|dscr|replace|token|phrase|word' | head -n 800 || true
-          } > PHASE8A_DIAGNOSTICS/dscr-removal-candidates.txt
+          OUT=PHASE8A_DIAGNOSTICS/dscr-patch-step-isolation.txt
+          : > "$OUT"
+          report() {
+            local label="$1"
+            echo "=== $label ===" >> "$OUT"
+            for f in \
+              api/_lib/full-underwriting-chapter1-elite-renderer.js \
+              api/_lib/acquisition-memo-v2-document.js \
+              api/_lib/full-underwriting-debt-intelligence-renderer.js \
+              api/_lib/phase8a-owner-acceptance-authority.js; do
+              if [[ -f "$f" ]]; then
+                printf '%s DSCR_COUNT=' "$f" >> "$OUT"
+                grep -o -I -E 'DSCR|dscr' "$f" | wc -l | tr -d ' ' >> "$OUT"
+                grep -n -I -E 'Current DSCR|Current Debt DSCR|Proposed DSCR|Proposed Financing DSCR|modeled DSCR|tightens.*DSCR' "$f" | head -n 30 >> "$OUT" || true
+              fi
+            done
+            echo >> "$OUT"
+          }
+          report BASE
+          for s in \
+            scripts/phase8a-slice-c-decision-patch-normalize.mjs \
+            scripts/phase8a-slice-c-patch.mjs \
+            scripts/phase8a-slice-c-decision-snapshot-patch.mjs \
+            scripts/phase8a-slice-c-test-alignment-patch.mjs \
+            scripts/phase8a-slice-c-decision-support-compat-patch.mjs \
+            scripts/phase8a-slice-c-closed-slice-compat-patch.mjs \
+            scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs \
+            scripts/phase8a-slice-c-dscr-display-compat-patch.mjs; do
+            node "$s"
+            report "AFTER $s"
+          done
           git config user.name "investoriq-phase8a-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add PHASE8A_DIAGNOSTICS/dscr-removal-candidates.txt
+          git add "$OUT"
           if ! git diff --cached --quiet; then
-            git commit -m "Phase 8A diagnostic: locate DSCR removal authority"
+            git commit -m "Phase 8A diagnostic: isolate DSCR removal step"
             git push origin HEAD:internal-phase8a-owner-acceptance-recovery-20260903-r1
           fi
