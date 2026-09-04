@@ -1,0 +1,18 @@
+TOKEN=Current DSCR
+MISSING
+
+TOKEN=Proposed DSCR
+MISSING
+
+TOKEN=tightens DSCR
+MISSING
+
+TOKEN=modeled DSCR
+MISSING
+
+REGEX EVIDENCE
+/Current DSCR.{0,100}/i null
+/Proposed DSCR.{0,100}/i null
+/tightens DSCR.{0,180}/i null
+/currentDebtDscr/gi [ 'currentDebtDscr' ]
+/proposedFinancingDscr/gi [ 'proposedFinancingDscr' ]
