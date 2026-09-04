@@ -1,0 +1,168 @@
+name: InvestorIQ Phase 8A Slice C Certification R6
+
+on:
+  push:
+    branches:
+      - internal-phase8a-owner-acceptance-recovery-20260903-r1
+    paths:
+      - 'scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs'
+      - '.github/workflows/phase8a-slice-c-certification-r6.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: investoriq-phase8a-slice-c-r6-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch-certify-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Phase 8A branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal-phase8a-owner-acceptance-recovery-20260903-r1
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Apply guarded Slice C patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/phase8a-slice-c-decision-patch-normalize.mjs
+          node --check scripts/phase8a-slice-c-patch.mjs
+          node --check scripts/phase8a-slice-c-decision-snapshot-patch.mjs
+          node --check scripts/phase8a-slice-c-test-alignment-patch.mjs
+          node --check scripts/phase8a-slice-c-decision-support-compat-patch.mjs
+          node --check scripts/phase8a-slice-c-closed-slice-compat-patch.mjs
+          node --check scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs
+          node scripts/phase8a-slice-c-patch.mjs
+          node scripts/phase8a-slice-c-decision-snapshot-patch.mjs
+          node scripts/phase8a-slice-c-test-alignment-patch.mjs
+          node scripts/phase8a-slice-c-decision-support-compat-patch.mjs
+          node scripts/phase8a-slice-c-closed-slice-compat-patch.mjs
+          node scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run focused Phase 8A decision tests
+        run: |
+          node tests/qa/phase8a-owner-acceptance-authority-smoke.js
+          node tests/qa/phase8a-underwriting-executive-summary-smoke.js
+          node tests/qa/full-underwriting-chapter1-elite-contract-smoke.js
+          node tests/qa/full-underwriting-chapter1-elite-renderer-integration-smoke.js
+          node tests/qa/full-underwriting-chapter1-elite-document-wiring-smoke.js
+          node tests/qa/phase7-decision-support-smoke.js
+
+      - name: Run inherited identity and publication wall
+        run: |
+          node tests/qa/phase8-artifact-identity-fingerprint-smoke.js
+          node tests/qa/phase8-source-reconciliation-authority-smoke.js
+          node tests/qa/phase8-customer-facing-visual-authority-smoke.js
+          node tests/qa/screening-report-sealed-lane-authority-smoke.js
+          node tests/qa/screening-report-smoke.js
+          node tests/qa/full-underwriting-final-surgical-polish-smoke.js
+          node tests/qa/phase7-elite-report-design-contract-smoke.js
+          node tests/qa/phase7-decision-support-smoke.js
+
+      - name: Production build
+        run: npm run build
+
+      - name: Generate exact source-bound handler HTML
+        env:
+          PHASE7_ARTIFACT_DIR: phase8a-artifacts
+        run: node scripts/phase7-generate-visual-artifacts.js
+
+      - name: Validate recovered identities
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-artifacts
+        run: node scripts/phase8-validate-visual-artifacts.js
+
+      - name: Validate Slice A, B and C surfaces
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-artifacts
+        run: |
+          node scripts/phase8a-validate-slice-a-artifacts.js
+          node scripts/phase8a-validate-slice-b-artifacts.js
+          node scripts/phase8a-validate-slice-c-artifacts.js
+          node scripts/phase8a-validate-decision-snapshots.js
+
+      - name: Render certification PDFs with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in phase8a-artifacts/phase7-screening-harbourstone.html phase8a-artifacts/phase7-underwriting-stonebridge.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+
+      - name: Validate rendered PDF identities
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-artifacts
+        run: node scripts/phase8-validate-rendered-pdfs.js
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Commit Slice C only after green certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "investoriq-phase8a-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- \
+            scripts/phase8a-slice-c-decision-snapshot-patch.mjs \
+            api/_lib/acquisition-memo-v2-document.js \
+            api/_lib/full-underwriting-driver-analysis-renderer.js \
+            api/_lib/full-underwriting-valuation-reconciliation-renderer.js \
+            api/_lib/full-underwriting-chapter1-elite-contract.js \
+            api/_lib/full-underwriting-chapter1-elite-renderer.js \
+            api/_lib/phase8a-owner-acceptance-authority.js \
+            api/_lib/phase7-decision-support.js \
+            tests/qa/phase8a-owner-acceptance-authority-smoke.js \
+            tests/qa/full-underwriting-chapter1-elite-renderer-integration-smoke.js \
+            scripts/phase8a-validate-slice-a-artifacts.js
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m "Phase 8A: close Slice C decision-first report intelligence"
+            git push origin HEAD:internal-phase8a-owner-acceptance-recovery-20260903-r1
+          fi
+
+      - name: Record Slice C receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "phase8a_slice_c_head=$(git rev-parse HEAD)"
+            echo "phase8a_slice_c_tree=$(git rev-parse HEAD^{tree})"
+            echo "recovered_integrity_base=4e9d01648aeb7a0f0616f20d8a72264cbea13443"
+            echo "screening_authority=Harbourstone exact source-bound handler path"
+            echo "underwriting_authority=Stonebridge Lofts exact source-bound handler path"
+            (cd phase8a-artifacts && sha256sum phase7-screening-harbourstone.html phase7-screening-harbourstone.pdf phase7-underwriting-stonebridge.html phase7-underwriting-stonebridge.pdf)
+          } > phase8a-artifacts/phase8a-slice-c-receipt.txt
+
+      - name: Upload Slice C artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase8a-slice-c-r6-owner-acceptance-${{ github.run_id }}
+          path: |
+            phase8a-artifacts/phase7-screening-harbourstone.html
+            phase8a-artifacts/phase7-screening-harbourstone.pdf
+            phase8a-artifacts/phase7-underwriting-stonebridge.html
+            phase8a-artifacts/phase7-underwriting-stonebridge.pdf
+            phase8a-artifacts/phase7-visual-artifact-manifest.json
+            phase8a-artifacts/phase8-visual-authority-manifest.json
+            phase8a-artifacts/phase8a-slice-c-receipt.txt
+          if-no-files-found: error
+          retention-days: 14
