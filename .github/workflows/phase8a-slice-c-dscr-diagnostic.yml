@@ -1,0 +1,33 @@
+name: InvestorIQ Phase 8A Slice C DSCR Diagnostic
+
+on:
+  push:
+    branches:
+      - internal-phase8a-owner-acceptance-recovery-20260903-r1
+    paths:
+      - '.github/workflows/phase8a-slice-c-dscr-diagnostic.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-phase8a-owner-acceptance-recovery-20260903-r1
+          fetch-depth: 1
+      - name: Locate V2 document args and financial intelligence authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=api/_lib/generate-client-report-impl.js
+          echo '=== acquisitionMemoV2DocumentArgs occurrences ==='
+          grep -n -C 16 'acquisitionMemoV2DocumentArgs' "$FILE" || true
+          echo '=== institutional financial intelligence occurrences ==='
+          grep -n -C 12 -E 'institutionalFinancialIntelligence|financialIntelligence|buildCanonicalInstitutionalFinancialIntelligence' "$FILE" || true
+          echo '=== source truth result occurrences near V2 construction ==='
+          grep -n -C 8 -E 'sourceTruthPackageResult|acquisitionMemoV2Bridge' "$FILE" | head -n 500 || true
