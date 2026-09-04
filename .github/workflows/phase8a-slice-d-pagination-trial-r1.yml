@@ -1,0 +1,109 @@
+name: InvestorIQ Phase 8A Slice D Pagination Trial R1
+
+on:
+  push:
+    branches:
+      - internal-phase8a-owner-acceptance-recovery-20260903-r1
+    paths:
+      - 'scripts/phase8a-slice-d-pagination-authority-patch.mjs'
+      - '.github/workflows/phase8a-slice-d-pagination-trial-r1.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  render-trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-phase8a-owner-acceptance-recovery-20260903-r1
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Apply pagination continuity patch
+        run: |
+          node --check scripts/phase8a-slice-d-pagination-authority-patch.mjs
+          node scripts/phase8a-slice-d-pagination-authority-patch.mjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run report authority wall
+        run: |
+          node tests/qa/phase8a-hold-dscr-authority-smoke.js
+          node tests/qa/phase8a-owner-acceptance-authority-smoke.js
+          node tests/qa/phase8a-underwriting-executive-summary-smoke.js
+          node tests/qa/phase8-artifact-identity-fingerprint-smoke.js
+          node tests/qa/phase8-source-reconciliation-authority-smoke.js
+          node tests/qa/phase8-customer-facing-visual-authority-smoke.js
+          node tests/qa/phase7-elite-report-design-contract-smoke.js
+          npm run build
+
+      - name: Generate exact handler artifacts
+        env:
+          PHASE7_ARTIFACT_DIR: phase8a-pagination-trial
+        run: node scripts/phase7-generate-visual-artifacts.js
+
+      - name: Validate semantic surfaces
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-pagination-trial
+        run: |
+          node scripts/phase8-validate-visual-artifacts.js
+          node scripts/phase8a-validate-slice-a-artifacts.js
+          node scripts/phase8a-validate-slice-b-artifacts.js
+          node scripts/phase8a-validate-slice-c-artifacts.js
+          node scripts/phase8a-validate-decision-snapshots.js
+
+      - name: Render pagination trial PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in phase8a-pagination-trial/phase7-screening-harbourstone.html phase8a-pagination-trial/phase7-underwriting-stonebridge.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+
+      - name: Validate PDF identities
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-pagination-trial
+        run: node scripts/phase8-validate-rendered-pdfs.js
+
+      - name: Record page-count diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "head=$(git rev-parse HEAD)"
+            for pdf in phase8a-pagination-trial/*.pdf; do
+              echo "=== $pdf ==="
+              pdfinfo "$pdf" | grep -E '^(Pages|Page size|File size):' || true
+              sha256sum "$pdf"
+            done
+          } > phase8a-pagination-trial/pagination-trial-receipt.txt
+          cat phase8a-pagination-trial/pagination-trial-receipt.txt
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Upload pagination trial
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase8a-slice-d-pagination-trial-r1-${{ github.run_id }}
+          path: |
+            phase8a-pagination-trial/phase7-screening-harbourstone.html
+            phase8a-pagination-trial/phase7-screening-harbourstone.pdf
+            phase8a-pagination-trial/phase7-underwriting-stonebridge.html
+            phase8a-pagination-trial/phase7-underwriting-stonebridge.pdf
+            phase8a-pagination-trial/pagination-trial-receipt.txt
+          if-no-files-found: error
+          retention-days: 14
