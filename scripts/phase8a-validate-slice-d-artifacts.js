@@ -48,10 +48,10 @@ requirePattern(underwritingText, /InvestorIQ Underwriting Report/i, "canonical-p
 
 // Decision evidence page must read as a reader-facing map, not internal framework language.
 requirePattern(underwritingText, /Decision Evidence Map/i, "decision-evidence-map");
-requirePattern(underwritingHtml, /<th>Report Sections<\/th>/i, "decision-evidence-report-sections-header");
+requirePattern(underwritingHtml, /<th>Report Sections<\/th>/, "decision-evidence-report-sections-header");
 requirePattern(underwritingText, /Where the report supports each core committee question\./i, "decision-evidence-intro");
 forbidPattern(underwritingText, /Evidence Conviction Matrix/i, "old-evidence-matrix-label");
-forbidPattern(underwritingHtml, /<th>report sections<\/th>/i, "lowercase-report-sections-header");
+forbidPattern(underwritingHtml, /<th>report sections<\/th>/, "lowercase-report-sections-header");
 
 // Customer-facing copy remains free of typographic em/en dashes.
 forbidPattern(screeningText, /[\u2013\u2014]/u, "screening-unicode-dash");
