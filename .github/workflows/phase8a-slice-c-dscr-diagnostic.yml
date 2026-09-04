@@ -10,7 +10,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   diagnose:
@@ -39,31 +39,33 @@ jobs:
           node scripts/phase8a-slice-c-dscr-display-compat-patch.mjs
       - name: Install dependencies
         run: npm ci
-      - name: Inspect exact Stonebridge financial intelligence
-        run: node scripts/phase8a-diagnose-stonebridge-financial-intelligence.mjs
       - name: Generate patched exact handler artifacts
         env:
           PHASE7_ARTIFACT_DIR: phase8a-dscr-diagnostic-artifacts
         run: node scripts/phase7-generate-visual-artifacts.js
-      - name: Print DSCR surface evidence
+      - name: Persist compact DSCR surface evidence
         shell: bash
         run: |
           set -euo pipefail
-          HTML=phase8a-dscr-diagnostic-artifacts/phase7-underwriting-stonebridge.html
-          echo '=== raw DSCR markup ==='
-          grep -io -C 3 -E '.{0,180}(Current DSCR|Proposed DSCR|DSCR from|modeled DSCR).{0,220}' "$HTML" || true
-          echo '=== visible text around DSCR ==='
-          node --input-type=module <<'NODE'
+          mkdir -p PHASE8A_DIAGNOSTICS
+          node --input-type=module <<'NODE' > PHASE8A_DIAGNOSTICS/stonebridge-dscr-surface.txt
           import fs from 'node:fs';
           const html = fs.readFileSync('phase8a-dscr-diagnostic-artifacts/phase7-underwriting-stonebridge.html','utf8');
           const text = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&#39;/gi,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim();
           for (const token of ['Current DSCR','Proposed DSCR','tightens DSCR','modeled DSCR']) {
             const i = text.indexOf(token);
-            console.log(token, i >= 0 ? text.slice(Math.max(0,i-220), i+520) : 'MISSING');
+            console.log(`TOKEN=${token}`);
+            console.log(i >= 0 ? text.slice(Math.max(0,i-260), i+620) : 'MISSING');
+            console.log('');
           }
+          const patterns = [/Current DSCR.{0,100}/i,/Proposed DSCR.{0,100}/i,/tightens DSCR.{0,180}/i,/currentDebtDscr/gi,/proposedFinancingDscr/gi];
+          console.log('REGEX EVIDENCE');
+          for (const p of patterns) console.log(String(p), html.match(p));
           NODE
-      - name: Print Chapter 1 metric wiring source
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -n -C 8 -E 'currentDebtDscr|proposedFinancingDscr|metricFromCalculationReceipt|financialIntelligenceAccepted' api/_lib/full-underwriting-chapter1-elite-contract.js | head -n 700
+          git config user.name "investoriq-phase8a-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add PHASE8A_DIAGNOSTICS/stonebridge-dscr-surface.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Phase 8A diagnostic: capture Stonebridge DSCR surface"
+            git push origin HEAD:internal-phase8a-owner-acceptance-recovery-20260903-r1
+          fi
