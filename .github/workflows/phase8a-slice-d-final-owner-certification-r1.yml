@@ -8,6 +8,7 @@ on:
       - 'scripts/phase8a-slice-d-pagination-authority-patch.mjs'
       - 'scripts/phase8a-slice-d-editorial-polish-patch.mjs'
       - 'scripts/phase8a-slice-d-test-alignment-patch.mjs'
+      - 'scripts/phase8a-slice-d-generator-alignment-patch.mjs'
       - 'scripts/phase8a-validate-slice-d-artifacts.js'
       - '.github/workflows/phase8a-slice-d-final-owner-certification-r1.yml'
   workflow_dispatch: {}
@@ -42,9 +43,11 @@ jobs:
           node --check scripts/phase8a-slice-d-pagination-authority-patch.mjs
           node --check scripts/phase8a-slice-d-editorial-polish-patch.mjs
           node --check scripts/phase8a-slice-d-test-alignment-patch.mjs
+          node --check scripts/phase8a-slice-d-generator-alignment-patch.mjs
           node scripts/phase8a-slice-d-pagination-authority-patch.mjs
           node scripts/phase8a-slice-d-editorial-polish-patch.mjs
           node scripts/phase8a-slice-d-test-alignment-patch.mjs
+          node scripts/phase8a-slice-d-generator-alignment-patch.mjs
 
       - name: Install dependencies
         run: npm ci
@@ -139,7 +142,8 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add -- \
             api/_lib/phase8a-owner-acceptance-authority.js \
-            tests/qa/phase7-decision-support-smoke.js
+            tests/qa/phase7-decision-support-smoke.js \
+            scripts/phase7-generate-visual-artifacts.js
           git diff --cached --check
           if ! git diff --cached --quiet; then
             git commit -m "Phase 8A: close owner-acceptance editorial and pagination authority"
