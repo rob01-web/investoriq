@@ -1,0 +1,46 @@
+=== FILES WITH DSCR AND replace/sanitize/strip/remove ===
+api/_lib/acquisition-memo-v2-customer-surface-model.js:1609:    sections.debtServiceCoverage?.facts?.proposedFinancing?.dscr ??
+api/_lib/acquisition-memo-v2-customer-surface-model.js:1610:      canonicalFinancialIntelligence?.customerSections?.debtServiceCoverage?.facts?.proposedFinancing?.dscr
+api/_lib/acquisition-memo-v2-customer-surface-model.js:1662:    dscr: {
+api/_lib/acquisition-memo-v2-customer-surface-model.js:1663:      label: "Proposed Acquisition DSCR",
+api/_lib/acquisition-memo-v2-customer-surface-model.js:2288:  const dscrAuthorized = canonicalFinancialIntelligence?.customerSections?.debtServiceCoverage?.displayReady === true;
+api/_lib/acquisition-memo-v2-customer-surface-model.js:2507:  if (dscrAuthorized) {
+api/_lib/acquisition-memo-v2-customer-surface-model.js:2509:      const roleLabel = roleKey === "currentDebt" ? "Current Debt DSCR" : "Proposed Acquisition DSCR";
+api/_lib/acquisition-memo-v2-customer-surface-model.js:2510:      const ratio = normalizeMoney(roleFacts?.dscr);
+api/_lib/acquisition-memo-v2-customer-surface-model.js:2513:          "HTML_CANONICAL_DSCR_VALUE_MISSING",
+api/_lib/acquisition-memo-v2-customer-surface-model.js:2535:    (!dscrAuthorized && containsText(htmlText, "DSCR")) ||
+api/_lib/acquisition-memo-v2-surface-copy.js:49:  if (state?.current_debt_dscr_status === "computed" && Number.isFinite(state?.current_debt_dscr)) {
+api/_lib/acquisition-memo-v2-surface-copy.js:51:      value: formatMultiple(state.current_debt_dscr, 2),
+api/_lib/acquisition-memo-v2-surface-copy.js:52:      explanation: "Current debt DSCR computed from verified current debt balance and debt service.",
+api/_lib/acquisition-memo-v2-surface-copy.js:54:      detail: "Current debt DSCR is assessed from verified current debt balance and debt service.",
+api/_lib/acquisition-memo-v2-surface-copy.js:58:    "Current-debt DSCR and refinance capacity were not assessed because no true current debt balance was verified.";
+api/_lib/generate-client-report-impl.js:409:    // to produce rendered/customer DSCR truth.
+api/_lib/generate-client-report-impl.js:3524:      finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
+api/_lib/generate-client-report-impl.js:3536:      finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
+api/_lib/generate-client-report-impl.js:5969:    finalHtml = replaceAll(finalHtml, "{{DEBT_DSCR_NOTE}}", "");
+api/_lib/generate-client-report-impl.js:6615:      finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
+api/_lib/generate-client-report-impl.js:7110:      finalHtml = stripMarkedSection(finalHtml, "EXEC_DSCR_CARD");
+api/_lib/phase8a-owner-acceptance-authority.js:291:    .replace(/produces\s+([0-9.]+x)\s+less DSCR than current debt/gi, "produces DSCR that is $1 lower than current debt")
+api/_lib/acquisition-memo-v2-document.js:930:    Number.isFinite(Number(current?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(current.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.currentDebt.dscr"><span>Current Debt DSCR</span><strong>${Number(current.dscr).toFixed(2)}x</strong></div>` : "",
+api/_lib/acquisition-memo-v2-document.js:931:    Number.isFinite(Number(proposed?.dscr)) ? `<div class="evidence-chart-stat" data-iq-value="${Number(proposed.dscr)}" data-iq-source-path="customerSections.debtServiceCoverage.facts.proposedFinancing.dscr"><span>Proposed Financing DSCR</span><strong>${Number(proposed.dscr).toFixed(2)}x</strong></div>` : "",
+api/_lib/full-underwriting-chapter1-elite-renderer.js:25:    .replace(/Governed current debt DSCR/gi, "Current debt DSCR")
+api/_lib/full-underwriting-chapter1-elite-renderer.js:26:    .replace(/Governed proposed financing DSCR/gi, "Proposed financing DSCR")
+api/_lib/acquisition-memo-v2-boss-repair.js:501:    outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
+api/_lib/acquisition-memo-v2-boss-repair.js:518:    outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
+api/_lib/acquisition-memo-v2-boss-repair.js:543:    outputHtml = stripMarkedSection(outputHtml, "EXEC_DSCR_CARD");
+api/_lib/acquisition-memo-v2-boss-repair.js:556:    outputHtml = replaceAll(outputHtml, "{{DEBT_DSCR_NOTE}}", currentDebtNotAssessedRenderCopy.explanation);
+tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js:797:const genericCurrentDscr = Number(genericLocalCustomerSurfaceModel?.financialIntelligence?.customerSections?.debtServiceCoverage?.facts?.currentDebt?.dscr);
+tests/qa/premium-acquisition-underwriting-v1-model-skeleton-smoke.js:157:canonicalFinancialIntelligence.customerSections.debtServiceCoverage.dscr = 0;
+tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js:94:assert.equal(fixture.customerSurfaceModel.sections.debtServiceCoverage.facts.currentDebt.dscr, 2.01);
+tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js:96:assert.equal(fixture.customerSurfaceModel.sections.debtServiceCoverage.facts.proposedFinancing.dscr, 1.4);
+tests/qa/generate-client-report-rent-roll-smoke.js:188:assert.match(reportSource, /stripMarkedSection\(finalHtml, "EXEC_DSCR_CARD"\)/);
+tests/qa/generate-client-report-rent-roll-smoke.js:1834:assert.match(reportSource, /finalHtml = replaceAll\(finalHtml, "\{\{DEBT_DSCR_NOTE\}\}", ""\);/);
+
+=== LITERAL DSCR REPLACEMENT CANDIDATES ===
+
+=== WHOLE WORD FILTERS / BANNED TOKEN TABLES ===
+api/_lib/deterministic-dscr-analysis.js:250:      customerFacingCopyProduced: false,
+api/_lib/investoriq-qa-doctrine.js:178:- No mojibake, typos, awkward punctuation, dangling periods, or internal debug wording.
+api/_lib/generate-client-report-impl.js:3423:    const displayPropertyAddress = (sanitizeDisplayText(propertyAddress) || "").replace(/\s+,/g, ",");
+scripts/phase8-artifact-identity-fingerprint.js:159:    if (normalizedText.includes(forbidden.token)) {
+scripts/phase8-artifact-identity-fingerprint.js:160:      fail(report, `forbidden_${forbidden.field}`, forbidden.token);
