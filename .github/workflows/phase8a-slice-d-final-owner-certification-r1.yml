@@ -1,0 +1,174 @@
+name: InvestorIQ Phase 8A Slice D Final Owner Certification R1
+
+on:
+  push:
+    branches:
+      - internal-phase8a-owner-acceptance-recovery-20260903-r1
+    paths:
+      - 'scripts/phase8a-slice-d-pagination-authority-patch.mjs'
+      - 'scripts/phase8a-slice-d-editorial-polish-patch.mjs'
+      - 'scripts/phase8a-validate-slice-d-artifacts.js'
+      - '.github/workflows/phase8a-slice-d-final-owner-certification-r1.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: investoriq-phase8a-slice-d-final-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  certify-and-close:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Phase 8A branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal-phase8a-owner-acceptance-recovery-20260903-r1
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Apply final Slice D authority patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/phase8a-slice-d-pagination-authority-patch.mjs
+          node --check scripts/phase8a-slice-d-editorial-polish-patch.mjs
+          node scripts/phase8a-slice-d-pagination-authority-patch.mjs
+          node scripts/phase8a-slice-d-editorial-polish-patch.mjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Phase 8A focused authority wall
+        run: |
+          node tests/qa/phase8a-hold-dscr-authority-smoke.js
+          node tests/qa/phase8a-owner-acceptance-authority-smoke.js
+          node tests/qa/phase8a-underwriting-executive-summary-smoke.js
+          node tests/qa/full-underwriting-chapter1-elite-contract-smoke.js
+          node tests/qa/full-underwriting-chapter1-elite-renderer-integration-smoke.js
+          node tests/qa/full-underwriting-chapter1-elite-document-wiring-smoke.js
+          node tests/qa/full-underwriting-valuation-reconciliation-v1-smoke.js
+          node tests/qa/phase7-decision-support-smoke.js
+
+      - name: Run inherited identity and publication wall
+        run: |
+          node tests/qa/phase8-artifact-identity-fingerprint-smoke.js
+          node tests/qa/phase8-source-reconciliation-authority-smoke.js
+          node tests/qa/phase8-customer-facing-visual-authority-smoke.js
+          node tests/qa/screening-report-sealed-lane-authority-smoke.js
+          node tests/qa/screening-report-smoke.js
+          node tests/qa/full-underwriting-final-surgical-polish-smoke.js
+          node tests/qa/phase7-elite-report-design-contract-smoke.js
+          node tests/qa/phase7-decision-support-smoke.js
+
+      - name: Production build
+        run: npm run build
+
+      - name: Generate exact source-bound handler HTML
+        env:
+          PHASE7_ARTIFACT_DIR: phase8a-artifacts
+        run: node scripts/phase7-generate-visual-artifacts.js
+
+      - name: Validate semantic owner-acceptance surfaces
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-artifacts
+        run: |
+          node scripts/phase8-validate-visual-artifacts.js
+          node scripts/phase8a-validate-slice-a-artifacts.js
+          node scripts/phase8a-validate-slice-b-artifacts.js
+          node scripts/phase8a-validate-slice-c-artifacts.js
+          node scripts/phase8a-validate-slice-d-artifacts.js
+          node scripts/phase8a-validate-decision-snapshots.js
+
+      - name: Render final owner-acceptance PDFs with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in phase8a-artifacts/phase7-screening-harbourstone.html phase8a-artifacts/phase7-underwriting-stonebridge.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+
+      - name: Validate rendered PDF identities
+        env:
+          PHASE8_ARTIFACT_DIR: phase8a-artifacts
+        run: node scripts/phase8-validate-rendered-pdfs.js
+
+      - name: Reject blank or stranded PDF pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v pdfinfo >/dev/null
+          command -v pdftotext >/dev/null
+          : > phase8a-artifacts/phase8a-slice-d-page-continuity.txt
+          for pdf in phase8a-artifacts/phase7-screening-harbourstone.pdf phase8a-artifacts/phase7-underwriting-stonebridge.pdf; do
+            pages="$(pdfinfo "$pdf" | awk '/^Pages:/ {print $2}')"
+            echo "$(basename "$pdf") pages=$pages" | tee -a phase8a-artifacts/phase8a-slice-d-page-continuity.txt
+            for p in $(seq 1 "$pages"); do
+              chars="$(pdftotext -f "$p" -l "$p" "$pdf" - 2>/dev/null | tr -d '[:space:]' | wc -c | tr -d ' ')"
+              echo "page=$p nonspace_chars=$chars" >> phase8a-artifacts/phase8a-slice-d-page-continuity.txt
+              if [ "$p" -eq 1 ]; then
+                test "$chars" -ge 20
+              else
+                test "$chars" -ge 80
+              fi
+            done
+          done
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Commit final Slice D authority only after green certification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "investoriq-phase8a-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- api/_lib/phase8a-owner-acceptance-authority.js
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m "Phase 8A: close owner-acceptance editorial and pagination authority"
+            git push origin HEAD:internal-phase8a-owner-acceptance-recovery-20260903-r1
+          fi
+
+      - name: Record final owner-acceptance receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "phase8a_final_head=$(git rev-parse HEAD)"
+            echo "phase8a_final_tree=$(git rev-parse HEAD^{tree})"
+            echo "recovered_integrity_base=4e9d01648aeb7a0f0616f20d8a72264cbea13443"
+            echo "slice_c_certified_head=ba03f4569b94828eecaf6b7004a3c66430303a5b"
+            echo "screening_authority=Harbourstone exact source-bound handler path"
+            echo "underwriting_authority=Stonebridge Lofts exact source-bound handler path"
+            echo "underwriting_cover_subtitle=Investment Committee Memorandum"
+            echo "canonical_underwriting_product_identity=InvestorIQ Underwriting Report"
+            (cd phase8a-artifacts && sha256sum phase7-screening-harbourstone.html phase7-screening-harbourstone.pdf phase7-underwriting-stonebridge.html phase7-underwriting-stonebridge.pdf)
+          } > phase8a-artifacts/phase8a-final-owner-acceptance-receipt.txt
+
+      - name: Upload final owner-acceptance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase8a-final-owner-acceptance-${{ github.run_id }}
+          path: |
+            phase8a-artifacts/phase7-screening-harbourstone.html
+            phase8a-artifacts/phase7-screening-harbourstone.pdf
+            phase8a-artifacts/phase7-underwriting-stonebridge.html
+            phase8a-artifacts/phase7-underwriting-stonebridge.pdf
+            phase8a-artifacts/phase7-visual-artifact-manifest.json
+            phase8a-artifacts/phase8-visual-authority-manifest.json
+            phase8a-artifacts/phase8a-slice-d-page-continuity.txt
+            phase8a-artifacts/phase8a-final-owner-acceptance-receipt.txt
+          if-no-files-found: error
+          retention-days: 14
