@@ -1,7 +1,22 @@
+TOKEN=Investment Decision Snapshot
+ource Reconciliation Disclosure Property Scale 64 Units Evidence Basis 8 uploaded files Prepared Sep 4, 2026 Confidential | InvestorIQ Technologies Inc. Document-Backed Property Underwriting INVESTORIQ Document-Backed Property Underwriting Stonebridge Lofts Sep 4, 2026 Investment Committee Overview Investment Decision Snapshot Current Decision State RECONCILIATION REQUIRED Primary source reconciliation required Strategy Fit LIGHT VALUE-ADD HOLD Only source-supported transaction, capital, and debt facts may establish this label. Asset Stonebridge Lofts 64 Unit Purchase Price $13,500,000 Transaction basis Price / Unit $210,938 Calculated from units T12 NOI $945,000 Current operating basis Occupancy 93.8% Rent Roll basis Going-In Cap Rate 7.0% Stated transaction input Appraised Value Context $14,200,000 $700,000 vs purchase price Proposed Loan $9,450,000 Acquisition financing Proposed LTV 70.0% Stated financing input Current 2.01x Existing debt context Proposed 1.40x Stated proposed terms Proposed Debt Yield 10.0% T12 NOI / proposed loan Gross Rent Gap $285,600 19.9% Capital Program $1,280,000 24 months Interior Units in Program 38 of 
+
+TOKEN=Current Decision State
+re Property Scale 64 Units Evidence Basis 8 uploaded files Prepared Sep 4, 2026 Confidential | InvestorIQ Technologies Inc. Document-Backed Property Underwriting INVESTORIQ Document-Backed Property Underwriting Stonebridge Lofts Sep 4, 2026 Investment Committee Overview Investment Decision Snapshot Current Decision State RECONCILIATION REQUIRED Primary source reconciliation required Strategy Fit LIGHT VALUE-ADD HOLD Only source-supported transaction, capital, and debt facts may establish this label. Asset Stonebridge Lofts 64 Unit Purchase Price $13,500,000 Transaction basis Price / Unit $210,938 Calculated from units T12 NOI $945,000 Current operating basis Occupancy 93.8% Rent Roll basis Going-In Cap Rate 7.0% Stated transaction input Appraised Value Context $14,200,000 $700,000 vs purchase price Proposed Loan $9,450,000 Acquisition financing Proposed LTV 70.0% Stated financing input Current 2.01x Existing debt context Proposed 1.40x Stated proposed terms Proposed Debt Yield 10.0% T12 NOI / proposed loan Gross Rent Gap $285,600 19.9% Capital Program $1,280,000 24 months Interior Units in Program 38 of 64 units 59.4% Documented Ann
+
+TOKEN=Strategy Fit
+ential | InvestorIQ Technologies Inc. Document-Backed Property Underwriting INVESTORIQ Document-Backed Property Underwriting Stonebridge Lofts Sep 4, 2026 Investment Committee Overview Investment Decision Snapshot Current Decision State RECONCILIATION REQUIRED Primary source reconciliation required Strategy Fit LIGHT VALUE-ADD HOLD Only source-supported transaction, capital, and debt facts may establish this label. Asset Stonebridge Lofts 64 Unit Purchase Price $13,500,000 Transaction basis Price / Unit $210,938 Calculated from units T12 NOI $945,000 Current operating basis Occupancy 93.8% Rent Roll basis Going-In Cap Rate 7.0% Stated transaction input Appraised Value Context $14,200,000 $700,000 vs purchase price Proposed Loan $9,450,000 Acquisition financing Proposed LTV 70.0% Stated financing input Current 2.01x Existing debt context Proposed 1.40x Stated proposed terms Proposed Debt Yield 10.0% T12 NOI / proposed loan Gross Rent Gap $285,600 19.9% Capital Program $1,280,000 24 months Interior Units in Program 38 of 64 units 59.4% Documented Annual Gross Rent Lift $124,200 Gross rent arithmetic, not NOI NOI / Purchase Price 7.0% 
+
 TOKEN=Current DSCR
 MISSING
 
+TOKEN=Current Debt DSCR
+MISSING
+
 TOKEN=Proposed DSCR
+MISSING
+
+TOKEN=Proposed Financing DSCR
 MISSING
 
 TOKEN=tightens DSCR
@@ -10,9 +25,10 @@ MISSING
 TOKEN=modeled DSCR
 MISSING
 
-REGEX EVIDENCE
-/Current DSCR.{0,100}/i null
-/Proposed DSCR.{0,100}/i null
-/tightens DSCR.{0,180}/i null
-/currentDebtDscr/gi [ 'currentDebtDscr' ]
-/proposedFinancingDscr/gi [ 'proposedFinancingDscr' ]
+TOKEN=RECONCILIATION REQUIRED
+its Evidence Basis 8 uploaded files Prepared Sep 4, 2026 Confidential | InvestorIQ Technologies Inc. Document-Backed Property Underwriting INVESTORIQ Document-Backed Property Underwriting Stonebridge Lofts Sep 4, 2026 Investment Committee Overview Investment Decision Snapshot Current Decision State RECONCILIATION REQUIRED Primary source reconciliation required Strategy Fit LIGHT VALUE-ADD HOLD Only source-supported transaction, capital, and debt facts may establish this label. Asset Stonebridge Lofts 64 Unit Purchase Price $13,500,000 Transaction basis Price / Unit $210,938 Calculated from units T12 NOI $945,000 Current operating basis Occupancy 93.8% Rent Roll basis Going-In Cap Rate 7.0% Stated transaction input Appraised Value Context $14,200,000 $700,000 vs purchase price Proposed Loan $9,450,000 Acquisition financing Proposed LTV 70.0% Stated financing input Current 2.01x Existing debt context Proposed 1.40x Stated proposed terms Proposed Debt Yield 10.0% T12 NOI / proposed loan Gross Rent Gap $285,600 19.9% Capital Program $1,280,000 24 months Interior Units in Program 38 of 64 units 59.4% Documented Annual Gross Rent Lift $12
+
+ALL VISIBLE DSCR WINDOWS
+DSCR_COUNT=0
+SNAPSHOT_MARKUP_COUNT=6
+EXEC_SUMMARY_COUNT=2
