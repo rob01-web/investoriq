@@ -1,182 +1,259 @@
 # InvestorIQ Current Handoff
 
-**Updated:** 2026-09-03
-**Status:** Phase 8 CLOSED / CERTIFIED. Post-Phase-8 owner acceptance and report deep dive NEXT.
+**Updated:** 2026-09-04
+**Status:** Phase 8 artifact integrity RECOVERED. Phase 8A Owner-Acceptance Recovery ACTIVE. Slices A and B CLOSED. Slice C IN PROGRESS.
 
-## 1. Governing Git checkpoint
+## 1. Governing Git authority
 
 - Repository: `rob01-web/investoriq`
-- Current isolated branch: `internal-phase8-elite-customer-facing-visual-authority-20260902`
-- Final Phase 8 certified branch HEAD: `43731914702a34a13b7dd0ceabb3fdecae337f10`
-- Phase 8 cleanup checkpoint: `0e1cdaf59a9875db7862948562118ee70c9dfa3c`
-- Final permanent certification workflow run: `33695177993`
-- Final certification job: `100462403978`
-- Result: PASS
-- `main`: untouched by Phase 8
-- Production: untouched by Phase 8
+- Immutable Phase 8 artifact-integrity recovery branch: `internal-phase8-artifact-integrity-recovery-20260903`
+- Exact recovered integrity HEAD: `4e9d01648aeb7a0f0616f20d8a72264cbea13443`
+- Exact recovered integrity tree: `fa99e62e1e67fde1bb854e59f6cf0b46e142bec7`
+- Active owner-acceptance branch: `internal-phase8a-owner-acceptance-recovery-20260903-r1`
+- Phase 8A Slice A product checkpoint: `2f19c92379722c5049e73cfee7d6b83074f79a07`
+- Phase 8A Slice B product checkpoint: `eedec29035fa23e4bf6058c14a3ba8aaabc6de36`
+- Slice C patch/validator preparation exists above the Slice B product checkpoint but Slice C is not yet certified or closed.
+- GitHub `main` remains at the older production line and has not been synchronized with Phase 8A.
+- Vercel production remains on the older production line.
 
-Do not merge `main`, deploy production, apply migrations, activate the scheduler, mutate production Storage, or make other production changes without explicit owner authorization.
+Do not lose or rewrite the exact `4e9d016...` recovery. It is the immutable provenance checkpoint for the artifact-integrity repair.
 
-## 2. Phase 8 closure
+## 2. Artifact-integrity recovery is complete
 
-Phase 8 ELITE Customer-Facing Visual Authority is CLOSED and CERTIFIED on the isolated branch.
+The prior Phase 8 certification artifact labelled Stonebridge had inherited Harbourstone operating payloads. The defect was real and was repaired before Phase 8A owner-acceptance work began.
 
-The permanent final wall passed:
+The recovered Stonebridge fingerprint is:
 
-- Phase 8 source-reconciliation authority
-- Phase 8 customer-facing authority
-- Screening sealed-lane regressions
-- Screening report regression
-- Underwriting final-polish regression
-- Phase 7 ELITE report design regression
-- Phase 7 decision-support regression
-- production build
-- handler-driven authoritative HTML generation
-- customer-facing HTML validation
-- headless Chrome PDF rendering
-- SHA-256 recording
-- artifact upload
-- page-by-page visual inspection
+- 64 units
+- 60 occupied
+- 4 vacant
+- 93.75% occupancy
+- T12 GPR: $1,612,800
+- EGI: $1,500,000
+- OpEx: $555,000
+- NOI: $945,000
+- annual in-place rent: $1,432,800
+- annual market rent: $1,718,400
 
-Final certified artifacts:
+Permanent recovery protections verify property/request identity, canonical source identity, final HTML facts, final PDF facts, expected filenames, and absence of cross-property contamination before certification hashes are accepted.
 
-- Screening: 5 pages
-- Underwriting: 18 pages
+## 3. Phase 8A Slice A CLOSED
 
-Final hashes:
+Slice A repaired the shared report-family visual authority and Screening triage surface.
 
-- Screening HTML: `fd81cc6bddc6a39a3ff608fa27ab9916fd9c3b5d480acc7eedeeccc646e6c55d`
-- Screening PDF: `b895f2a84c2fc66eeb1f500b51ea53ebf016995d951af9137d6d3a4d0f22fd80`
-- Underwriting HTML: `c24d7001d5ad10114f6e8405810a0600e78524542e08345da20713c6c245065e`
-- Underwriting PDF: `ae9cada885f4a5624b73ca897842542b156f4fb7647062467992ed66b959caa5`
-- Phase 8 visual authority manifest: `5a682966242bb586cd2cd7793df87280d3fc46ddd22ada6c47fff5a85201ee63`
+Closed results:
 
-Important Phase 8 repairs proven by the final wall:
+- Screening dark forest-green cover removed at the actual `.cover-cell` ownership seam.
+- Underwriting Phase 7 gold-square collision removed at the actual `::after` cascade seam.
+- Screening and Underwriting now share a white-first institutional cover family.
+- Screening now exposes an evidence-bound triage disposition and six stable comparison axes.
+- Harbourstone correctly resolves to `HOLD` because its T12 and Rent Roll income bases materially disagree.
+- Screening methodology was simplified toward customer-facing use rather than engineering explanation.
+- Real source-bound HTML, Chrome PDF, inherited regressions, build, and final-PDF identity gates passed.
 
-- partial visible rent-roll rows can no longer override a verified property-wide annual total;
-- Screening is source-bound to validated T12 and Rent Roll artifacts;
-- Screening includes source-backed `Operating Evidence & Diligence Priorities`;
-- Underwriting reconciliation is validated against the actual bounded table row;
-- Screening `Methodology & Data Transparency` is a deliberate final page rather than an orphaned subsection;
-- the colliding legacy Screening fixed print footer is suppressed in print;
-- temporary Phase 8 bootstrap and repair machinery was removed before final certification.
+## 4. Phase 8A Slice B CLOSED
 
-## 3. Immediate next move
+Underwriting page 2 was rebuilt in the actual Chapter 1 renderer as a decision-first investment page.
 
-Start a fresh chat with a READ-ONLY deep dive into the two final Phase 8 PDFs before changing any code.
+Stonebridge now opens with:
 
-The purpose of the deep dive is not to prove that the certification wall passed. It already did.
+- current decision state: `RECONCILIATION REQUIRED`
+- purchase price
+- T12 NOI
+- occupancy
+- going-in cap rate
+- proposed loan
+- proposed DSCR
+- primary decision gate
+- investment thesis
+- what must be true
 
-The purpose is owner-level product acceptance:
+The page was visually inspected and is materially stronger than the prior QA-style executive summary. Slice B passed the full inherited authority wall, production build, source-bound artifact generation, real PDF identity validation, and visual inspection.
 
-1. inspect every Screening page at full resolution;
-2. inspect every Underwriting page at full resolution;
-3. judge whether the reports are visually premium enough;
-4. judge whether Screening provides enough decision value for its $199 role;
-5. judge whether Underwriting feels like a true institutional decision book;
-6. compare the two reports as one InvestorIQ family;
-7. perform another human copy sweep for robotic or AI-associated language, including any dash punctuation that might somehow have escaped automated gates;
-8. identify any remaining visual, wording, density, chart, table, hierarchy, or product-utility issues;
-9. classify findings before deciding whether another implementation phase is warranted.
+## 5. Phase 8A Slice C IN PROGRESS
 
-Do not edit code until the owner acceptance audit is complete and findings are ranked.
+Slice C is not yet closed. Prepared scope includes:
 
-## 4. Screening mission
+- capital-plan economics from already authorized Stonebridge facts only;
+- Rent Roll versus supplied market-survey synthesis;
+- elimination of misleading cross-output driver ranking;
+- clearer source-presence/readiness wording;
+- truthful NOI/cap-rate consistency framing instead of presenting a circular transaction-input calculation as an independent valuation opinion;
+- Screening page 3 decision-density repair;
+- pagination and editorial compaction after the analytical surfaces are correct.
 
-Screening is not a cheap short report and not a mini Underwriting report.
+Prepared Stonebridge arithmetic must remain clearly labelled as arithmetic from uploaded documents, not invented investment assumptions:
 
-Its job is to help a user take a shortlist of candidate properties, quickly identify the strongest opportunities and biggest concerns, and decide which asset or assets deserve full Underwriting.
+- 38 of 64 units in the stated interior program;
+- $802,000 interior capital;
+- $478,000 other stated capital;
+- $1.28M total stated capital plan;
+- $124,200 documented annual gross rent lift;
+- simple gross payback context may be shown only with explicit language that it is not NOI, ROI, IRR, or a value forecast.
 
-A good Screening report should answer:
+## 6. NEW LOCKED PRODUCT DOCTRINE: DECISION FIRST
 
-- What is this property?
-- What source evidence did InvestorIQ receive?
-- What does the operating picture look like?
-- What are the strongest supported signals?
-- What are the primary constraints?
-- Are T12 and Rent Roll evidence aligned or materially different?
-- What could materially change the screening view?
-- What evidence remains missing?
-- Is deeper Underwriting attention justified?
+The owner and assistant agreed on a new information-architecture rule:
 
-There is no fixed Screening page count. Decision usefulness and evidence determine length.
+> The first analytical page must answer the product's primary customer decision immediately. The rest of the report exists to prove, challenge, and deepen that page.
 
-## 5. Underwriting mission
+Supporting rules:
 
-Underwriting is the deeper institutional decision book.
+1. Facts before prose.
+2. Prefer numbers, labels, tables, matrices, charts, and one-line observations over paragraphs.
+3. No forced conclusions. `INSUFFICIENT EVIDENCE` is preferable to an unsupported classification.
+4. Any strategy classification must be evidence-bound to the uploaded documents.
+5. Any finding deep in the report that could materially change the decision must bubble up to the first analytical page.
+6. Investor-facing pages should not repeatedly expose internal provenance/governance language. Detailed auditability remains available in the source/audit layer.
 
-It should provide materially greater decision value than Screening through supported operating analysis, reconciliation, transaction context, debt and capital structure, scenario analysis, valuation, diligence, source transparency, and quality-manifest authority.
+## 7. Screening Decision Snapshot doctrine
 
-There is no fixed Underwriting page count.
+Screening requires only T12 and/or Rent Roll core evidence under the existing core-gated publication constitution. It must never pretend that those documents establish transaction, financing, rehab, refinance, or exit facts that were not uploaded.
 
-Do not add filler to make a report longer and do not suppress legitimate supported analysis to make it shorter.
+The first analytical page is now conceptually the `Screening Decision Snapshot`.
 
-## 6. Pricing authority
+Evidence-bound disposition states:
 
-Current canonical pricing remains:
+- `ADVANCE`
+- `HOLD`
+- `DO NOT ADVANCE`
+- `INSUFFICIENT EVIDENCE`
 
-- Screening: $199
-- Underwriting: $499
-- Bundle: 2 Screening + 1 Underwriting for $699
+The page should surface, where supported:
 
-Phase 4 commerce authority previously closed the canonical server catalog, Stripe price authority, quantity and bundle allocation, atomic/idempotent entitlement grants, promotion handling, server-verified success messaging, and server-sourced UI pricing. Do not casually reopen that work during report review.
+- disposition and one-line reason;
+- underwriting readiness;
+- occupancy;
+- NOI;
+- NOI margin;
+- expense ratio;
+- break-even occupancy / operating cushion;
+- annual in-place rent;
+- annual market rent;
+- gross rent gap in dollars and percent;
+- T12 versus Rent Roll source consistency;
+- top upside signal;
+- top risk / diligence item;
+- exact next action.
 
-## 7. Source and publication doctrine
+Screening strategy language must stay within what T12/Rent Roll can safely establish. It may show an operating profile such as `STABILIZED`, `LIGHT VALUE-ADD CANDIDATE`, or `INSUFFICIENT EVIDENCE` when objectively supported. It must not claim BRRRR, fix-and-flip, refinance viability, or another transaction strategy without the necessary supporting evidence.
 
-Core-gated publication remains authoritative.
+A high-quality Screening report may naturally compress to roughly 2-3 analytical pages plus cover if the evidence can be communicated without losing decision value. This is an aspiration, not a hard page cap.
 
-Canonical core modes:
+## 8. Underwriting Investment Decision Snapshot doctrine
 
-- `dual_source_core`
-- `t12_minimum_core`
-- `rent_roll_minimum_core`
-- `insufficient_core`
+Underwriting requires core evidence plus at least one supporting document and often receives several supporting documents. Its first analytical page should answer the acquisition decision at substantially greater depth.
 
-The first three may preserve a publication obligation when delivery authority permits it. Optional-document defects should qualify, collapse, omit, or create a quality incident rather than destroying a valid-core report.
+Target decision surfaces, only where supported:
 
-Never invent facts, assumptions, market evidence, IRR, MOIC, DCF, waterfall returns, refinance conclusions, BUY/SELL/HOLD recommendations, or unsupported lender decisions.
+- current decision state;
+- transaction basis and price per unit;
+- T12 NOI and occupancy;
+- going-in cap rate and valuation/appraisal context;
+- current versus proposed debt coverage;
+- proposed loan/LTV/debt yield where supported;
+- value-creation source;
+- capital plan and timing;
+- documented rent lift and market positioning;
+- principal downside / deal breaker;
+- negotiation leverage;
+- what must be true before closing;
+- evidence-bound strategy fit.
 
-## 8. Customer-facing writing doctrine
+Potential Underwriting strategy classifications may include, only when the uploaded evidence supports the necessary facts:
 
-Customer-facing report copy should contain no em dash punctuation and no en dash used as prose punctuation.
+- `STABILIZED HOLD`
+- `LIGHT VALUE-ADD HOLD`
+- `MAJOR VALUE-ADD / REPOSITION`
+- `REHAB / REFINANCE / HOLD`
+- `SHORT-HOLD / RESALE`
+- `INSUFFICIENT EVIDENCE`
 
-Also remove or avoid:
+Consumer shorthand such as Buy & Hold or BRRRR may be presented only as a secondary comparable label when the source package genuinely supports the required purchase, capital, debt/refinance, and execution facts. Never infer a strategy simply because the template wants one.
 
-- generic AI-sounding filler;
-- robotic transitions;
-- repetitive disclaimers;
-- internal engineering terminology;
-- internal governance language where a natural customer phrase exists;
-- fake certainty;
-- duplicated narrative that adds no decision value.
+## 9. Page 2 visual doctrine
 
-Preserve normal hyphens, mathematical negative signs, ISO dates, and legitimate source-stated ranges.
+Do not render the meat-and-potatoes page as one giant SaaS-style card.
 
-## 9. Visual family doctrine
+Use an institutional editorial cockpit:
 
-Screening and Underwriting must look like siblings in one premium InvestorIQ report family.
+- top: one full-width decision band with the state, reason, and next action;
+- middle: dense numeric grid/table zones for the most important operating, transaction, debt, and value-creation facts;
+- bottom: compact decision panels such as `WHY IT WORKS`, `WHAT CAN KILL IT`, `WHAT MUST BE TRUE`, `NEGOTIATION LEVERS`, or `NEXT ACTION` as appropriate to the product;
+- very little paragraph prose;
+- strong numeric hierarchy and tabular alignment;
+- thin rules, restrained shading, no decorative card clutter;
+- no excessive rounded boxes, drop shadows, dashboard chrome, or empty whitespace;
+- every visual element must carry decision information.
 
-Shared direction:
+Screening should be readable in roughly 15-30 seconds. Underwriting page 2 should let an experienced investor understand the deal thesis, basis, leverage, upside, primary risk, and immediate action without hunting elsewhere in the memo.
 
-- crisp white-first surfaces;
-- restrained forest green and gold accents;
-- institutional typography;
-- disciplined spacing;
-- consistent tables and charts;
-- consistent section hierarchy;
-- consistent source transparency;
-- print-safe pagination.
+## 10. DocRaptor / Prince publishing doctrine
 
-Screening should feel faster, tighter, more comparative, and more triage-oriented.
+The owner wants InvestorIQ to use DocRaptor as a true publishing engine, not merely an HTML-to-PDF converter.
 
-Underwriting should feel deeper, more explanatory, more scenario-oriented, and more like an institutional decision book.
+Phase 8A final visual work should deliberately evaluate and use relevant Prince/DocRaptor paged-media capabilities where they improve the reports, including:
 
-## 10. Historical preservation
+- named page classes for cover, decision pages, chapters, and appendices;
+- precise `@page` margin boxes;
+- running chapter/section headers and controlled footers;
+- widow/orphan controls;
+- keep-with-next / break control for tables, titles, and callouts;
+- page floats for charts or source notes where useful;
+- PDF bookmarks / internal navigation where useful;
+- page counters and section-aware furniture;
+- full-bleed or specialty cover treatment where appropriate;
+- mixed page orientation only where a genuinely wide analytical table or matrix earns it;
+- vector SVG/chart output and high-resolution print-safe graphics;
+- deliberate typography, spacing, and table continuation behavior.
 
-Do not delete historical handoff files.
+The goal is not decoration. The goal is a report that looks and behaves like a professionally typeset institutional investment book and materially exceeds a generic browser-printed PDF.
 
-`CHAT_HANDOFF/archived/` is the immutable history of prior checkpoints, including the detailed August ELITE work. The current root files are navigation and current authority, not replacements for the historical record.
+Chrome PDF rendering may remain useful as a CI sanity check, but final owner acceptance should inspect the actual customer rendering path intended for launch.
 
-If a current summary appears to omit an old detail, consult the archive rather than guessing.
+## 11. Blackstone benchmark doctrine
 
-BOOOOOOOOOOM.
+Blackstone is a benchmark for decision density, not a template to copy.
+
+The useful lesson from the sample memo is:
+
+> conclusion first, evidence second, explanation third.
+
+InvestorIQ should borrow the institutional habits of compact transaction tables, immediate key metrics, timeline/strategy surfaces, sensitivity matrices, disciplined charts, and strong page hierarchy while remaining visually original and materially stronger on source truth, provenance, reconciliation, and non-invention.
+
+## 12. Production / deployment position
+
+All current Phase 8A work remains isolated from production. The owner wants one deliberate synchronization to `main` and Vercel rather than repeated deployments.
+
+Do not use a production deploy merely as a way to preserve work. GitHub already preserves the branch. Complete the active Phase 8A analytical/visual work, generate and inspect the exact customer-path PDFs, obtain owner acceptance, then perform one deliberate `main` + Vercel synchronization unless the owner explicitly overrides that sequence.
+
+No migrations, scheduler activation, production Storage mutation, or Stripe changes are part of this report-design handoff.
+
+## 13. Immediate next move
+
+Start a fresh chat from this handoff.
+
+The next chat should:
+
+1. read `00_CURRENT_HANDOFF.md`, `01_MASTER_PLAN.md`, and `02_ELITE_REPORT_BLUEPRINT.md`;
+2. continue from `internal-phase8a-owner-acceptance-recovery-20260903-r1`;
+3. preserve `4e9d016...` as immutable recovery authority;
+4. finish Slice C rather than restarting Phase 8A;
+5. implement the locked Decision Snapshot doctrine at the true renderer/contract seams;
+6. make the reports more decision-dense and substantially less prose-heavy;
+7. deliberately exploit DocRaptor/Prince paged-media capabilities for the final customer artifact;
+8. complete pagination/editorial cleanup;
+9. run the full exact-artifact integrity wall;
+10. visually inspect the exact Screening and Underwriting PDFs page by page;
+11. bring those exact files to the owner for final acceptance;
+12. only then perform the one deliberate `main` + Vercel production synchronization.
+
+## 14. Historical preservation
+
+The superseded 2026-09-03 root authority files were copied verbatim to:
+
+`CHAT_HANDOFF/archived/2026-09-04-pre-decision-snapshot-doctrine/`
+
+Never clean the handoff by deleting historical authority. The root stays simple; history stays in `archived/`.
+
+BOOOOOOOOOOOOOOOOOOM.
