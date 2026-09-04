@@ -88,18 +88,16 @@ function renderDriverTable(contract) {
     const stressText = driver.stressInput?.label || formatValue(driver.stressInput?.value, driver.stressInput?.units);
     const outputText = `${target.label}: ${formatValue(target.outputChange, target.units)}`;
     return `<tr data-iq-driver-key="${escapeHtml(driver.driverKey)}" data-iq-evidence-class="scenario">
-      <td><strong>#${escapeHtml(String(driver.overallRank))}</strong></td>
       <td><strong>${escapeHtml(driver.label)}</strong><span class="iq-table-subtext">Base ${escapeHtml(baseText)} | ${escapeHtml(driverEvidenceLabel(driver))}</span></td>
       <td>${escapeHtml(stressText)}</td>
       <td>${escapeHtml(outputText)}</td>
       <td>${escapeHtml(percent(target.relativeImpactRatio, 1))}</td>
-      <td>${escapeHtml(driver.impactLabel)}</td>
     </tr>`;
   }).join("");
   return section(
-    "Underwriting Driver Analysis",
+    "Sensitivity Reference",
     "underwriting-driver-analysis",
-    `<p class="body-copy">InvestorIQ ranks only drivers supported by the defined sensitivity set. Ranking reflects absolute relative movement in each driver's primary target output under the stated downside stress.</p><table class="detail-table iq-driver-table" data-iq-driver-table="v1"><thead><tr><th>Rank</th><th>Driver &amp; Base</th><th>Stress</th><th>Primary Output Change</th><th>Relative Impact</th><th>Materiality</th></tr></thead><tbody>${rows}</tbody></table><p class="footer-note">${escapeHtml(customerCopy(contract.rankingPolicy.crossOutputComparisonCaveat))} Each row uses accepted or deterministically calculated base inputs.</p>`,
+    `<p class="body-copy">These downside cases are shown side by side for reference. They are not ranked against one another because the shock magnitudes and target outputs differ.</p><table class="detail-table iq-driver-table" data-iq-driver-table="v2"><thead><tr><th>Driver &amp; Base</th><th>Stress</th><th>Output Change</th><th>Relative Movement Within Target</th></tr></thead><tbody>${rows}</tbody></table><p class="footer-note">Each row should be read within its own output family. Occupancy and operating-expense cases change NOI; cap-rate cases change implied value.</p>`,
     dispositionValue(disposition)
   );
 }
@@ -115,9 +113,9 @@ function renderDecisionInterpretation(contract) {
     ? `<div class="subsection-block" data-iq-driver-combined-context="true" data-iq-evidence-class="scenario"><p class="subsection-title">Compound Downside Context</p><table class="detail-table"><tbody><tr><td>Scenario Occupancy</td><td>${escapeHtml(percent(decision.combinedDownsideContext.scenarioOccupancy))}</td></tr><tr><td>Operating-Expense Stress</td><td>${escapeHtml(percent(decision.combinedDownsideContext.operatingExpenseStressRate))}</td></tr><tr><td>Scenario NOI</td><td>${escapeHtml(money(decision.combinedDownsideContext.scenarioNoi))}</td></tr><tr><td>NOI Change vs Base</td><td>${escapeHtml(money(decision.combinedDownsideContext.noiDeltaVsBase))}</td></tr><tr><td>Relative NOI Movement</td><td>${escapeHtml(percent(decision.combinedDownsideContext.relativeNoiImpactRatio))}</td></tr></tbody></table><p class="footer-note">${escapeHtml(customerCopy(decision.combinedDownsideContext.interpretation))}</p></div>`
     : "";
   return section(
-    "Decision Interpretation",
+    "Sensitivity Interpretation",
     "driver-decision-interpretation",
-    `<p class="body-copy"><strong>${escapeHtml(customerCopy(decision.headline))}</strong></p>${targetNotes ? `<ul style="margin:8px 0 0 0;padding-left:18px;">${targetNotes}</ul>` : ""}${combined}<p class="footer-note">${escapeHtml(customerCopy(decision.caveat))}</p>`,
+    `<p class="body-copy"><strong>Read each case against the output it changes; the report does not assign a cross-output rank.</strong></p>${targetNotes ? `<ul style="margin:8px 0 0 0;padding-left:18px;">${targetNotes}</ul>` : ""}${combined}<p class="footer-note">Sensitivity cases are conditional tests, not probabilities, forecasts, or investment decisions.</p>`,
     dispositionValue(disposition)
   );
 }
@@ -128,7 +126,7 @@ function renderDeferredDrivers(contract) {
   const items = contract.deferredDrivers
     .map((driver) => `<li style="margin-bottom:5px;"><strong>${escapeHtml(driver.label)}:</strong> ${escapeHtml(customerCopy(driver.reason))}</li>`)
     .join("");
-  return `<div class="iq-boundary-list allow-break" data-iq-elite-driver-boundaries="true" data-iq-disposition="${escapeHtml(dispositionValue(disposition))}"><p class="subsection-title">Drivers Outside Current Sensitivity Scope</p><ul style="margin:0;padding-left:18px;">${items}</ul><p class="footer-note">These drivers remain outside the ranking until a defined deterministic sensitivity is available.</p></div>`;
+  return `<div class="iq-boundary-list allow-break" data-iq-elite-driver-boundaries="true" data-iq-disposition="${escapeHtml(dispositionValue(disposition))}"><p class="subsection-title">Drivers Outside Current Sensitivity Scope</p><ul style="margin:0;padding-left:18px;">${items}</ul><p class="footer-note">These drivers remain outside the current sensitivity set until a defined test is available.</p></div>`;
 }
 
 export function renderFullUnderwritingDriverAnalysisV1Html(contract) {

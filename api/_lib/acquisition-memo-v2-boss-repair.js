@@ -268,7 +268,7 @@ export function applyAcquisitionMemoV2BossRepairPlan(customerSurfaceModel, repai
   return repaired;
 }
 
-export function repairAcquisitionMemoV2HtmlForRepairPlan(html, repairPlan = null) {
+export function repairAcquisitionMemoV2HtmlForRepairPlan(html, repairPlan = null, { financialIntelligence = null } = {}) {
   if (typeof html !== "string" || !repairPlan) return html;
   const hasRepairableHtmlIssue =
     Array.isArray(repairPlan.forbiddenSurface) && repairPlan.forbiddenSurface.length > 0;
@@ -278,7 +278,9 @@ export function repairAcquisitionMemoV2HtmlForRepairPlan(html, repairPlan = null
   for (const pattern of REPAIRABLE_INTERNAL_LANGUAGE_PATTERNS) {
     repaired = repaired.replace(pattern, "");
   }
+  const dscrAuthorized = financialIntelligence?.customerSections?.debtServiceCoverage?.displayReady === true;
   for (const pattern of REPAIRABLE_ADVANCED_SURFACE_PATTERNS) {
+    if (dscrAuthorized && pattern.source === "\\bDSCR\\b") continue;
     repaired = repaired.replace(pattern, "");
   }
   return repaired;

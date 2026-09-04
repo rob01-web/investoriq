@@ -156,12 +156,12 @@ function build({ sourceTruth = {}, financialIntelligence = financialIntelligence
 {
   const html = renderFullUnderwritingChapter1EliteHtml(build());
   assert.match(html, /data-iq-elite-chapter1="true"/);
-  assert.match(html, /Executive Investment Summary/);
+  assert.match(html, /Investment Decision Snapshot/);
   assert.match(html, /Key Metrics Snapshot/);
   assert.match(html, /data-iq-elite10b2="investment-committee-opening-v1"/);
   assert.match(html, /Riverstone Apartments/);
-  assert.match(html, /class="iq-ic-asset-descriptor">100-Unit Multifamily/);
-  assert.match(html, /Committee Focus/);
+  assert.match(html, /100-Unit Multifamily/);
+  assert.match(html, /What Must Be True/);
   assert.match(html, /Underwriting Observations/);
   assert.doesNotMatch(html, /Key Investor Questions/);
 }
@@ -207,7 +207,7 @@ function build({ sourceTruth = {}, financialIntelligence = financialIntelligence
   assert.match(html, /-4\.17%/);
   assert.match(html, /does not infer the cause/);
   assert.doesNotMatch(html, /Principal Risks &amp; Constraints/);
-  assert.match(html, /data-iq-elite-primary-constraint="PRIMARY_SOURCE_RECONCILIATION_REQUIRED"/);
+  assert.match(html, /data-iq-elite-signal="PRIMARY_SOURCE_RECONCILIATION_REQUIRED"/);
 }
 
 // 5. Accepted purchase assumptions surface transaction/value context without assumptions.
@@ -230,7 +230,7 @@ function build({ sourceTruth = {}, financialIntelligence = financialIntelligence
   }));
   assert.match(html, /data-iq-elite-metric="currentDebtDscr"/);
   assert.match(html, />0\.92x</);
-  assert.match(html, /data-iq-elite-primary-constraint="CURRENT_DEBT_DSCR_BELOW_1X"/);
+  assert.match(html, /data-iq-elite-signal="CURRENT_DEBT_DSCR_BELOW_1X"/);
   assert.match(html, /below 1\.00x/);
   const visibleText = html.replace(/<[^>]+>/g, " ");
   assert.doesNotMatch(visibleText, /\b(?:safe|strong|weak)\b|institutional threshold/i);

@@ -69,6 +69,11 @@ requireText(underwritingText, /1BR\s+\$2,050\s+\$2,100 to \$2,250\s+\$50 below s
 requireText(underwritingText, /2BR\s+\$2,425\s+\$2,500 to \$2,700\s+\$75 below survey low/i, "market-2br");
 requireText(underwritingText, /Rent Roll market rents are below the supplied survey floors for every matched unit type/i, "market-conclusion");
 
+// Debt-service coverage must remain explicitly labeled when source-authorized.
+requireText(underwritingText, /Current DSCR\s+2\.01x/i, "current-dscr-label");
+requireText(underwritingText, /Proposed DSCR\s+1\.40x/i, "proposed-dscr-label");
+requireText(underwritingText, /Proposed financing tightens DSCR from 2\.01x currently to 1\.40x/i, "dscr-comparison-copy");
+
 // Source presence must not be presented as diligence sufficiency.
 forbidText(underwritingText, /Complete for this analysis/i, "diligence-overstatement");
 requireText(underwritingText, /Source facts available/i, "source-facts-available");

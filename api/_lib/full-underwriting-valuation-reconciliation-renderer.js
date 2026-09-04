@@ -73,11 +73,11 @@ function renderPurchaseComparison(model) {
     <p class="subsection-title">Purchase Price Reconciliation</p>
     <table class="detail-table iq-numeric-table"><tbody>
       <tr><td>Purchase Price</td><td>${money(row.purchasePrice)}</td><td>${badge("source_backed")}</td></tr>
-      <tr><td>InvestorIQ Implied Value Less Purchase Price</td><td>${money(row.delta)}</td><td>${badge("deterministic_calculated")}</td></tr>
+      <tr><td>NOI / Cap-Rate Cross-Check Less Purchase Price</td><td>${money(row.delta)}</td><td>${badge("deterministic_calculated")}</td></tr>
       <tr><td>Variance vs Purchase Price</td><td>${percent(row.deltaPct, 1)}</td><td>${badge("deterministic_calculated")}</td></tr>
       <tr><td>Accepted NOI / Purchase Price</td><td>${percent(row.purchasePriceImpliedCapRate, 2)}</td><td>${badge("deterministic_calculated")}</td></tr>
     </tbody></table>
-    <p class="footer-note">${escapeHtml(comparisonSentence("InvestorIQ implied value", row))} The purchase-price ratio is a deterministic cross-check using accepted T12 NOI; it does not create a new transaction assumption.</p>
+    <p class="footer-note">${escapeHtml(comparisonSentence("NOI / cap-rate cross-check value", row))} The purchase-price ratio is a deterministic cross-check using accepted T12 NOI; it does not create a new transaction assumption.</p>
   </div>`;
 }
 
@@ -97,7 +97,7 @@ function renderAppraisalComparison(model) {
       <tr><td>Appraised Value</td><td>${money(row.appraisalValue)}</td><td>${badge("third_party_context")}</td></tr>
       ${Number.isFinite(row.appraisalStabilizedNoi) ? `<tr><td>Appraisal Stabilized NOI</td><td>${money(row.appraisalStabilizedNoi)}</td><td>${badge("third_party_context")}</td></tr>` : ""}
       ${Number.isFinite(row.appraisalStabilizedCapRate) ? `<tr><td>Appraisal Stabilized Cap Rate</td><td>${surfacePercent(row.appraisalStabilizedCapRate)}</td><td>${badge("third_party_context")}</td></tr>` : ""}
-      <tr><td>Appraised Value Less InvestorIQ Implied Value</td><td>${money(row.deltaVsInvestorIq)}</td><td>${badge("deterministic_calculated")}</td></tr>
+      <tr><td>Appraised Value Less NOI / Cap-Rate Cross-Check</td><td>${money(row.deltaVsInvestorIq)}</td><td>${badge("deterministic_calculated")}</td></tr>
       ${Number.isFinite(row.deltaVsPurchasePrice) ? `<tr><td>Appraised Value Less Purchase Price</td><td>${money(row.deltaVsPurchasePrice)}</td><td>${badge("deterministic_calculated")}</td></tr>` : ""}
     </tbody></table>
     <p class="footer-note">${escapeHtml(comparisonSentence("Appraised value", comparison))} Appraisal information remains uploaded third-party context and cannot replace accepted T12 NOI or accepted transaction facts.</p>
@@ -143,14 +143,14 @@ function renderObservations(model) {
   for (const observation of Array.isArray(model?.observations) ? model.observations : []) {
     if (observation.code === "IMPLIED_VALUE_VS_PURCHASE_PRICE" && Number.isFinite(observation.delta)) {
       const direction = observation.direction === "aligned" ? "is effectively aligned with" : `is ${money(Math.abs(observation.delta))} ${observation.direction}`;
-      lines.push(`InvestorIQ implied value ${direction} the accepted purchase-price basis${Number.isFinite(observation.deltaPct) ? ` (${percent(Math.abs(observation.deltaPct), 1)})` : ""}.`);
+      lines.push(`NOI / cap-rate cross-check value ${direction} the accepted purchase-price basis${Number.isFinite(observation.deltaPct) ? ` (${percent(Math.abs(observation.deltaPct), 1)})` : ""}.`);
     }
     if (observation.code === "PURCHASE_PRICE_IMPLIED_CAP_RATE_CROSSCHECK" && Number.isFinite(observation.purchasePriceImpliedCapRate)) {
       lines.push(`Accepted T12 NOI divided by the accepted purchase price equals ${percent(observation.purchasePriceImpliedCapRate, 2)}, compared with the accepted going-in cap rate of ${percent(observation.acceptedGoingInCapRate, 2)}.`);
     }
     if (observation.code === "APPRAISAL_VS_INVESTORIQ_VALUE" && Number.isFinite(observation.delta)) {
       const direction = observation.direction === "aligned" ? "is effectively aligned with" : `is ${money(Math.abs(observation.delta))} ${observation.direction}`;
-      lines.push(`The uploaded appraisal value ${direction} InvestorIQ's deterministic indication${Number.isFinite(observation.deltaPct) ? ` (${percent(Math.abs(observation.deltaPct), 1)})` : ""}.`);
+      lines.push(`The uploaded appraisal value ${direction} the NOI / cap-rate cross-check${Number.isFinite(observation.deltaPct) ? ` (${percent(Math.abs(observation.deltaPct), 1)})` : ""}.`);
     }
     if (observation.code === "GOVERNED_CAP_RATE_SCENARIO_RANGE" && Number.isFinite(observation.lowValue) && Number.isFinite(observation.highValue)) {
       lines.push(`Cap-rate scenarios produce an implied-value range of ${money(observation.lowValue)} to ${money(observation.highValue)} across ${observation.scenarioCount} scenario points.`);
@@ -187,14 +187,14 @@ export function renderFullUnderwritingValuationReconciliation(
   return `<section class="section" data-iq-section="eliteValuationReconciliation" data-iq-disposition="${escapeHtml(model.disposition)}">
     <div class="section-header"><span class="section-header-title">${escapeHtml(model.visibleLabel || "Valuation Position & Reconciliation")}</span></div>
     <div class="card no-break" data-iq-subsection="accepted-value-indication">
-      <p class="subsection-title">Accepted-Basis Value Indication</p>
+      <p class="subsection-title">NOI / Cap-Rate Cross-Check</p>
       <table class="detail-table iq-numeric-table"><tbody>
         <tr><td>Accepted T12 NOI</td><td>${money(base.noi)}</td><td>${badge("source_backed")}</td></tr>
         <tr><td>Accepted Going-In Cap Rate</td><td>${percent(base.acceptedGoingInCapRate, 2)}</td><td>${badge("source_backed")}</td></tr>
-        <tr><td>InvestorIQ Implied Value</td><td style="font-weight:600;">${money(base.impliedValue)}</td><td>${badge("deterministic_calculated")}</td></tr>
+        <tr><td>NOI / Cap-Rate Cross-Check Value</td><td style="font-weight:600;">${money(base.impliedValue)}</td><td>${badge("deterministic_calculated")}</td></tr>
         ${Number.isFinite(base.valuePerUnit) ? `<tr><td>Implied Value Per Unit</td><td>${money(base.valuePerUnit)}</td><td>${badge("deterministic_calculated")}</td></tr>` : ""}
       </tbody></table>
-      <p class="footer-note">InvestorIQ implied value equals accepted T12 NOI divided by the accepted going-in cap rate. No additional forward-model assumptions are introduced.</p>
+      <p class="footer-note">NOI / cap-rate cross-check value equals T12 NOI divided by the stated going-in cap rate. Because the cap rate is itself a transaction input, this is a consistency cross-check, not an independent valuation opinion.</p>
     </div>
     ${renderBridge(model)}
     ${renderPurchaseComparison(model)}

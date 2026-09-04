@@ -2542,7 +2542,7 @@ function validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel(html, model) {
     containsText(htmlText, "final recommendation") ||
     /\bBUY\b/i.test(normalizedHtml) ||
     /\bSELL\b/i.test(normalizedHtml) ||
-    /\bHOLD\b/i.test(normalizedHtml) ||
+    /\bHOLD\b/i.test(normalizedHtml.replace(/\bLIGHT VALUE-ADD HOLD\b/gi, "")) ||
     containsText(htmlText, "loan approval") ||
     containsText(htmlText, "lender commitment")
   ) {

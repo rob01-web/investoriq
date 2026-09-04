@@ -164,7 +164,14 @@ export function runAcquisitionMemoV2Orchestrator({
     const enforcement = enforceAcquisitionMemoBossContractOnHtml(bossContract, baseHtml);
     const repairedHtml = repairAcquisitionMemoV2HtmlForRepairPlan(
       enforcement?.repairedHtml || baseHtml,
-      htmlRepairPlan
+      htmlRepairPlan,
+      {
+        financialIntelligence:
+          bossContract?.financialIntelligence ||
+          customerSurfaceModel?.financialIntelligence ||
+          acquisitionMemoV2DocumentArgs?.financialIntelligence ||
+          null,
+      }
     );
     const bossCompliance = assessAcquisitionMemoBossCompliance(
       bossContract,

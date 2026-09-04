@@ -188,6 +188,26 @@ function executiveConditions(contract, primary = null) {
   return conditions.slice(0, 4);
 }
 
+function snapshotDisplayValue(value, units = "") {
+  const n = finite(value);
+  if (n === null) return "Not available";
+  if (units === "currency") return formatMoney(n);
+  if (units === "ratio") return formatPercent(n, 1);
+  if (units === "ratio_x") return `${n.toFixed(2)}x`;
+  if (units === "count") return Math.round(n).toLocaleString("en-US");
+  if (units === "months") return `${Math.round(n)} months`;
+  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function snapshotMetricValue(contract, key) {
+  const receipt = executiveMetric(contract, key);
+  return receipt ? formatMetricValue(receipt) : "Not available";
+}
+
+function snapshotCell(label, value, note = "") {
+  return `<td><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not available")}</strong>${note ? `<em>${escapeHtml(note)}</em>` : ""}</td>`;
+}
+
 function renderExecutiveInvestmentSummary(contract) {
   const section = contract?.executiveInvestmentSummary || {};
   const disposition = sectionDisposition(contract, "executiveInvestmentSummary");
@@ -200,36 +220,79 @@ function renderExecutiveInvestmentSummary(contract) {
   const propertyName = contract?.identity?.propertyName || section?.assetStatement || "Property";
   const assetStatement = section?.assetStatement || contract?.identity?.assetIdentity || null;
   const assetDescriptor = assetStatement && assetStatement !== propertyName ? assetStatement : null;
+  const context = contract?.decisionSnapshotContext || {};
+  const strategyFit = String(context?.strategyFit || "INSUFFICIENT EVIDENCE");
+  const noi = executiveMetric(contract, "noi");
+  const proposedLoan = executiveMetric(contract, "proposedLoanAmount");
+  const debtYield = noi && proposedLoan && finite(proposedLoan.value) > 0
+    ? finite(noi.value) / finite(proposedLoan.value)
+    : null;
 
-  const metricsHtml = [
-    renderExecutiveMetric(contract, "purchasePrice", "Purchase Price"),
-    renderExecutiveMetric(contract, "noi", "T12 NOI"),
-    renderExecutiveMetric(contract, "occupancy", "Occupancy"),
-    renderExecutiveMetric(contract, "goingInCapRate", "Going-In Cap Rate"),
-    renderExecutiveMetric(contract, "proposedLoanAmount", "Proposed Loan"),
-    renderExecutiveMetric(contract, "proposedFinancingDscr", "Proposed DSCR"),
-  ].filter(Boolean).join("");
+  const capitalUnitCoverage = finite(context?.plannedInteriorUnits) !== null && executiveMetric(contract, "units")
+    ? `${snapshotDisplayValue(context.plannedInteriorUnits, "count")} of ${snapshotMetricValue(contract, "units")} units`
+    : "Not available";
+  const appraisalPremium = finite(context?.appraisalValue) !== null && executiveMetric(contract, "purchasePrice")
+    ? finite(context.appraisalValue) - finite(executiveMetric(contract, "purchasePrice").value)
+    : null;
+
+  const rows = [
+    [
+      snapshotCell("Purchase Price", snapshotMetricValue(contract, "purchasePrice"), "Transaction basis"),
+      snapshotCell("Price / Unit", snapshotMetricValue(contract, "pricePerUnit"), "Calculated from units"),
+      snapshotCell("T12 NOI", snapshotMetricValue(contract, "noi"), "Current operating basis"),
+      snapshotCell("Occupancy", snapshotMetricValue(contract, "occupancy"), "Rent Roll basis"),
+    ],
+    [
+      snapshotCell("Going-In Cap Rate", snapshotMetricValue(contract, "goingInCapRate"), "Stated transaction input"),
+      snapshotCell("Appraised Value Context", snapshotDisplayValue(context?.appraisalValue, "currency"), appraisalPremium !== null ? `${formatMoney(appraisalPremium)} vs purchase price` : "Third-party context"),
+      snapshotCell("Proposed Loan", snapshotMetricValue(contract, "proposedLoanAmount"), "Acquisition financing"),
+      snapshotCell("Proposed LTV", snapshotMetricValue(contract, "proposedLtv"), "Stated financing input"),
+    ],
+    [
+      snapshotCell("Current DSCR", snapshotDisplayValue(executiveMetric(contract, "currentDebtDscr")?.value, "ratio_x"), "Existing debt context"),
+      snapshotCell("Proposed DSCR", snapshotDisplayValue(executiveMetric(contract, "proposedFinancingDscr")?.value, "ratio_x"), "Stated proposed terms"),
+      snapshotCell("Proposed Debt Yield", debtYield !== null ? formatPercent(debtYield, 1) : "Not available", "T12 NOI / proposed loan"),
+      snapshotCell("Gross Rent Gap", snapshotMetricValue(contract, "annualGrossRentDifference"), snapshotMetricValue(contract, "annualGrossRentGapRatio")),
+    ],
+    [
+      snapshotCell("Capital Program", snapshotDisplayValue(context?.totalCapitalBudget, "currency"), context?.planDurationMonths ? snapshotDisplayValue(context.planDurationMonths, "months") : "Document-stated budget"),
+      snapshotCell("Interior Units in Program", capitalUnitCoverage, context?.plannedUnitShare !== null && context?.plannedUnitShare !== undefined ? formatPercent(context.plannedUnitShare, 1) : "Document-stated scope"),
+      snapshotCell("Documented Annual Gross Rent Lift", snapshotDisplayValue(context?.documentedAnnualGrossRentLift, "currency"), "Gross rent arithmetic, not NOI"),
+      snapshotCell("NOI / Purchase Price", snapshotMetricValue(contract, "noiToPurchasePriceCapRate"), "Consistency view"),
+    ],
+  ].map((cells) => `<tr>${cells.join("")}</tr>`).join("");
+
+  const primaryText = primary?.statement ? customerCopy(primary.statement) : "No evidence-triggered primary gate is established.";
+  const killItems = [
+    primary?.statement ? primaryText : null,
+    executiveMetric(contract, "proposedFinancingDscr") && executiveMetric(contract, "currentDebtDscr")
+      ? `Proposed financing tightens coverage from ${snapshotDisplayValue(executiveMetric(contract, "currentDebtDscr")?.value, "ratio_x")} to ${snapshotDisplayValue(executiveMetric(contract, "proposedFinancingDscr")?.value, "ratio_x")}.`
+      : null,
+    context?.strategyEvidenceReady !== true ? "Strategy fit remains insufficiently evidenced by the current support package." : null,
+  ].filter(Boolean).slice(0, 3);
 
   const thesisHtml = thesisPoints.length
     ? `<div class="phase8a-exec-panel"><p class="subsection-title">Investment Thesis</p><ul>${thesisPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}</ul></div>`
+    : "";
+  const killHtml = killItems.length
+    ? `<div class="phase8a-exec-panel"><p class="subsection-title">What Can Kill or Reprice It</p><ul>${killItems.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}</ul></div>`
     : "";
   const conditionsHtml = conditions.length
     ? `<div class="phase8a-exec-panel"><p class="subsection-title">What Must Be True</p><ul>${conditions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
     : "";
 
-  const primaryHtml = primary?.statement
-    ? `<div class="phase8a-exec-gate"><span>Primary Decision Gate</span><strong>${escapeHtml(primary?.title || "Diligence item")}</strong><p>${escapeHtml(customerCopy(primary.statement))}</p>${primary?.investorImpact ? `<p><b>Why it matters:</b> ${escapeHtml(customerCopy(primary.investorImpact))}</p>` : ""}</div>`
-    : "";
-
   return renderSection({
-    title: "Executive Investment Summary",
+    title: "Investment Decision Snapshot",
     sectionKey: "executiveInvestmentSummary",
     disposition,
-    bodyHtml: `<div class="phase8a-exec-header"><div><p class="phase8a-exec-property">${escapeHtml(propertyName)}</p>${assetDescriptor ? `<p class="phase8a-exec-asset">${escapeHtml(assetDescriptor)}</p>` : ""}</div><div class="phase8a-exec-state"><span>Current Decision State</span><strong>${escapeHtml(decisionState)}</strong></div></div>
-      ${metricsHtml ? `<div class="phase8a-exec-metrics">${metricsHtml}</div>` : ""}
-      ${primaryHtml}
-      <div class="phase8a-exec-columns">${thesisHtml}${conditionsHtml}</div>
-      <p class="phase8a-exec-boundary">This page frames the current underwriting decision from the documents provided. Scenario cases and detailed source treatment appear in the sections that follow.</p>`,
+    bodyHtml: `<div class="phase8a-investment-decision-band">
+        <div><span>Current Decision State</span><strong>${escapeHtml(decisionState)}</strong><p>${escapeHtml(primary?.title || "Evidence-bound underwriting review")}</p></div>
+        <div><span>Strategy Fit</span><strong>${escapeHtml(strategyFit)}</strong><p>Only source-supported transaction, capital, and debt facts may establish this label.</p></div>
+        <div><span>Asset</span><strong>${escapeHtml(propertyName)}</strong>${assetDescriptor ? `<p>${escapeHtml(assetDescriptor)}</p>` : ""}</div>
+      </div>
+      <table class="phase8a-investment-snapshot-table"><tbody>${rows}</tbody></table>
+      <div class="phase8a-exec-columns">${thesisHtml}${killHtml}${conditionsHtml}</div>
+      <p class="phase8a-exec-boundary">Decision first. Facts before prose. Scenario cases and detailed source treatment remain in the sections that follow.</p>`,
     legacySectionLabel: "Executive Summary",
     bodyClass: "iq-ic-summary-card phase8a-executive-summary",
   });

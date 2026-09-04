@@ -49,7 +49,7 @@ for (const [label, html, text] of [
   }
 }
 
-if (!/Screening Disposition\s+HOLD/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_HOLD_MISSING");
+if (!/Screening Decision Snapshot\s+HOLD/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_HOLD_MISSING");
 if (!/Underwriting Readiness\s+HOLD/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_READINESS_MISSING");
 if (!/Source Consistency\s+44\.0% material variance/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_SOURCE_CONSISTENCY_MISSING");
 if (!/Operating Cushion\s+71\.5 pp above break-even/i.test(screeningText)) throw new Error("PHASE8A_SCREENING_OPERATING_CUSHION_MISSING");

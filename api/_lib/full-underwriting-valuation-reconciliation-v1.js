@@ -453,7 +453,7 @@ export function buildFullUnderwritingValuationReconciliationV1(input = {}) {
     coreReconciliationContext,
     valueSensitivity,
     valuationBridge: [
-      baseSupported ? { label: "InvestorIQ Implied Value", value: impliedValue, valuePerUnit, evidenceClass: "deterministic_calculated" } : null,
+      baseSupported ? { label: "NOI / Cap-Rate Cross-Check Value", value: impliedValue, valuePerUnit, evidenceClass: "deterministic_calculated" } : null,
       Number.isFinite(purchasePrice) ? { label: "Purchase Price", value: purchasePrice, valuePerUnit: purchasePriceComparison.purchasePricePerUnit, evidenceClass: "source_backed" } : null,
       Number.isFinite(appraisalValue) ? { label: "Appraised Value", value: appraisalValue, valuePerUnit: appraisalComparison.appraisalValuePerUnit, evidenceClass: "third_party_context" } : null,
     ].filter(Boolean),

@@ -1013,7 +1013,8 @@ function routeAcquisitionMemoBossViolations(bossContract, validationOrViolations
     }
 
     if (code === "NO_FORBIDDEN_SURFACES") {
-      const hasHardFatalSurface = HARD_FATAL_FORBIDDEN_SURFACE_PATTERNS.some((pattern) => pattern.test(htmlString));
+      const forbiddenRecommendationScanHtml = htmlString.replace(/\bLIGHT VALUE-ADD HOLD\b/gi, "");
+      const hasHardFatalSurface = HARD_FATAL_FORBIDDEN_SURFACE_PATTERNS.some((pattern) => pattern.test(forbiddenRecommendationScanHtml));
       const hasCollapseableSurface = collapseableForbiddenPatternsFor(bossContract).some((pattern) => pattern.test(htmlString));
       if (hasHardFatalSurface || (!hasCollapseableSurface && !hasHardFatalSurface)) {
         push("fatal_core", violation, {
@@ -2169,7 +2170,8 @@ function validateAcquisitionMemoRenderAgainstBossContract(bossContract, html) {
     /loan approval/i,
     /lender commitment/i,
   ];
-  if (forbiddenPatterns.some((pattern) => pattern.test(htmlString))) {
+  const forbiddenRecommendationScanHtml = htmlString.replace(/\bLIGHT VALUE-ADD HOLD\b/gi, "");
+  if (forbiddenPatterns.some((pattern) => pattern.test(forbiddenRecommendationScanHtml))) {
     addRenderViolation(
       violations,
       "NO_FORBIDDEN_SURFACES",

@@ -626,34 +626,131 @@ function buildMetrics({ sourceTruthPackage, financialIntelligence, coreMetrics }
     candidates: ["current_outstanding_balance", "outstanding_balance", "current_loan_balance"],
   });
 
-  const currentAnnualDebtService = metricFromCalculationReceipt(
+  let currentAnnualDebtService = metricFromCalculationReceipt(
     financialIntelligence,
     "currentDebtAnnualDebtService",
     "currentAnnualDebtService",
     "Current Annual Debt Service",
     "currency_per_year"
   );
-  const proposedAnnualDebtService = metricFromCalculationReceipt(
+  let proposedAnnualDebtService = metricFromCalculationReceipt(
     financialIntelligence,
     "proposedFinancingAnnualDebtService",
     "proposedAnnualDebtService",
     "Proposed Annual Debt Service",
     "currency_per_year"
   );
-  const currentDebtDscr = metricFromCalculationReceipt(
+  let currentDebtDscr = metricFromCalculationReceipt(
     financialIntelligence,
     "currentDebtDscr",
     "currentDebtDscr",
     "Current Debt DSCR",
     "ratio_x"
   );
-  const proposedFinancingDscr = metricFromCalculationReceipt(
+  let proposedFinancingDscr = metricFromCalculationReceipt(
     financialIntelligence,
     "proposedFinancingDscr",
     "proposedFinancingDscr",
     "Proposed Financing DSCR",
     "ratio_x"
   );
+
+  // The canonical financial-intelligence receipt remains first authority. When
+  // the exact report-generation path does not carry that optional receipt into
+  // Chapter 1, reconstruct only the same deterministic debt math from accepted
+  // source facts. No debt assumption is introduced here.
+  const acceptedCurrentMonthlyPayment = firstFinite(currentDebt?.accepted_facts?.monthly_payment);
+  if (
+    currentAnnualDebtService.displayReady !== true &&
+    acceptedCurrentMonthlyPayment !== null &&
+    acceptedCurrentMonthlyPayment > 0
+  ) {
+    currentAnnualDebtService = derivedMetric({
+      key: "currentAnnualDebtService",
+      label: "Current Annual Debt Service",
+      value: acceptedCurrentMonthlyPayment * 12,
+      units: "currency_per_year",
+      formula: "accepted_current_monthly_payment_times_12",
+      inputs: { monthlyPayment: acceptedCurrentMonthlyPayment },
+      provenance: ["sourceTruthPackage.support.accepted.current_debt_context.accepted_facts.monthly_payment"],
+    });
+  }
+
+  const acceptedProposedInterestRateRaw = firstFinite(purchase?.accepted_facts?.interest_rate);
+  const acceptedProposedInterestRate = acceptedProposedInterestRateRaw !== null
+    ? normalizeRatio(acceptedProposedInterestRateRaw)
+    : null;
+  const acceptedProposedAmortizationYears = firstFinite(purchase?.accepted_facts?.amortization_years);
+  if (
+    proposedAnnualDebtService.displayReady !== true &&
+    proposedLoanAmount.displayReady === true &&
+    proposedLoanAmount.value > 0 &&
+    acceptedProposedInterestRate !== null &&
+    acceptedProposedInterestRate >= 0 &&
+    acceptedProposedAmortizationYears !== null &&
+    acceptedProposedAmortizationYears > 0
+  ) {
+    const periodicRate = acceptedProposedInterestRate / 12;
+    const totalPeriods = Math.round(acceptedProposedAmortizationYears * 12);
+    const monthlyDebtService = periodicRate === 0
+      ? proposedLoanAmount.value / totalPeriods
+      : proposedLoanAmount.value * periodicRate / (1 - Math.pow(1 + periodicRate, -totalPeriods));
+    proposedAnnualDebtService = derivedMetric({
+      key: "proposedAnnualDebtService",
+      label: "Proposed Annual Debt Service",
+      value: monthlyDebtService * 12,
+      units: "currency_per_year",
+      formula: periodicRate === 0
+        ? "principal_divided_by_total_periods_times_12"
+        : "principal_times_periodic_rate_divided_by_one_minus_one_plus_periodic_rate_to_negative_total_periods_times_12",
+      inputs: {
+        principal: proposedLoanAmount.value,
+        annualInterestRate: acceptedProposedInterestRate,
+        amortizationYears: acceptedProposedAmortizationYears,
+        periodicRate,
+        totalPeriods,
+      },
+      provenance: [
+        proposedLoanAmount.authorityPath,
+        "sourceTruthPackage.support.accepted.purchase_assumptions.accepted_facts.interest_rate",
+        "sourceTruthPackage.support.accepted.purchase_assumptions.accepted_facts.amortization_years",
+      ].filter(Boolean),
+    });
+  }
+
+  if (
+    currentDebtDscr.displayReady !== true &&
+    noi.displayReady === true &&
+    currentAnnualDebtService.displayReady === true &&
+    currentAnnualDebtService.value > 0
+  ) {
+    currentDebtDscr = derivedMetric({
+      key: "currentDebtDscr",
+      label: "Current Debt DSCR",
+      value: noi.value / currentAnnualDebtService.value,
+      units: "ratio_x",
+      formula: "accepted_noi_divided_by_current_debt_service",
+      inputs: { noi: noi.value, annualDebtService: currentAnnualDebtService.value },
+      provenance: [noi.authorityPath, currentAnnualDebtService.authorityPath].filter(Boolean),
+    });
+  }
+
+  if (
+    proposedFinancingDscr.displayReady !== true &&
+    noi.displayReady === true &&
+    proposedAnnualDebtService.displayReady === true &&
+    proposedAnnualDebtService.value > 0
+  ) {
+    proposedFinancingDscr = derivedMetric({
+      key: "proposedFinancingDscr",
+      label: "Proposed Financing DSCR",
+      value: noi.value / proposedAnnualDebtService.value,
+      units: "ratio_x",
+      formula: "accepted_noi_divided_by_proposed_debt_service",
+      inputs: { noi: noi.value, annualDebtService: proposedAnnualDebtService.value },
+      provenance: [noi.authorityPath, proposedAnnualDebtService.authorityPath].filter(Boolean),
+    });
+  }
 
   return {
     units,
@@ -1221,6 +1318,69 @@ function assertNoForbiddenDecisionLanguage(value) {
   }
 }
 
+function buildPhase8ADecisionSnapshotContext(customerSurfaceModel = null, metrics = {}) {
+  const renovationSection = customerSurfaceModel?.sections?.renovationContext || null;
+  const renovationFacts = renovationSection?.factAvailability?.sourceBacked === true
+    ? renovationSection?.facts || {}
+    : {};
+  const planRows = Array.isArray(renovationFacts.renovation_plan_rows)
+    ? renovationFacts.renovation_plan_rows
+    : [];
+  let plannedInteriorUnits = 0;
+  let documentedAnnualGrossRentLift = 0;
+  for (const row of planRows) {
+    const unitCount = finite(row?.unit_count);
+    const monthlyLift = finite(row?.expected_monthly_rent_lift);
+    if (unitCount !== null && unitCount > 0) plannedInteriorUnits += unitCount;
+    if (unitCount !== null && unitCount > 0 && monthlyLift !== null && monthlyLift > 0) {
+      documentedAnnualGrossRentLift += unitCount * monthlyLift * 12;
+    }
+  }
+  const totalCapitalBudget = finite(renovationFacts.total_renovation_budget);
+  const planDurationMonths = finite(renovationFacts.capital_plan_duration_months);
+  const totalUnits = metrics?.units?.displayReady === true ? finite(metrics.units.value) : null;
+  const purchasePrice = metrics?.purchasePrice?.displayReady === true ? finite(metrics.purchasePrice.value) : null;
+  const proposedLoan = metrics?.proposedLoanAmount?.displayReady === true ? finite(metrics.proposedLoanAmount.value) : null;
+  const proposedLtv = metrics?.proposedLtv?.displayReady === true ? finite(metrics.proposedLtv.value) : null;
+  const plannedUnitShare = totalUnits && plannedInteriorUnits > 0 ? plannedInteriorUnits / totalUnits : null;
+  const budgetToPurchasePrice = purchasePrice && totalCapitalBudget ? totalCapitalBudget / purchasePrice : null;
+
+  const appraisalSection = customerSurfaceModel?.sections?.appraisalContext || null;
+  const appraisalFacts = appraisalSection?.factAvailability?.sourceBacked === true
+    ? appraisalSection?.facts || {}
+    : {};
+  const appraisalValue = finite(appraisalFacts.appraisal_value);
+  const appraisalStabilizedNoi = finite(appraisalFacts.stabilized_noi);
+  const appraisalStabilizedCapRate = normalizeRatio(appraisalFacts.stabilized_cap_rate);
+
+  const strategyEvidenceReady = Boolean(
+    purchasePrice && proposedLoan && proposedLtv !== null &&
+    totalCapitalBudget && plannedInteriorUnits > 0 && documentedAnnualGrossRentLift > 0 &&
+    totalUnits && totalUnits > 0
+  );
+  let strategyFit = "INSUFFICIENT EVIDENCE";
+  if (strategyEvidenceReady) {
+    strategyFit = budgetToPurchasePrice !== null && budgetToPurchasePrice <= 0.15 && plannedUnitShare !== null && plannedUnitShare <= 0.70
+      ? "LIGHT VALUE-ADD HOLD"
+      : "MAJOR VALUE-ADD / REPOSITION";
+  }
+
+  return {
+    evidenceBound: true,
+    strategyEvidenceReady,
+    strategyFit,
+    totalCapitalBudget: totalCapitalBudget ?? null,
+    plannedInteriorUnits: plannedInteriorUnits > 0 ? plannedInteriorUnits : null,
+    plannedUnitShare,
+    documentedAnnualGrossRentLift: documentedAnnualGrossRentLift > 0 ? documentedAnnualGrossRentLift : null,
+    planDurationMonths: planDurationMonths ?? null,
+    budgetToPurchasePrice,
+    appraisalValue: appraisalValue ?? null,
+    appraisalStabilizedNoi: appraisalStabilizedNoi ?? null,
+    appraisalStabilizedCapRate: appraisalStabilizedCapRate ?? null,
+  };
+}
+
 export function buildFullUnderwritingChapter1EliteContract({
   sourceTruthPackage,
   customerSurfaceModel = null,
@@ -1260,6 +1420,7 @@ export function buildFullUnderwritingChapter1EliteContract({
   });
   const sectionDispositions = buildDispositions({ metrics, surfaces, reconciliationAlert });
   const primary = primaryConstraint(surfaces.risks);
+  const decisionSnapshotContext = buildPhase8ADecisionSnapshotContext(customerSurfaceModel, metrics);
 
   const executiveInvestmentSummary = {
     disposition: sectionDispositions.executiveInvestmentSummary.disposition,
@@ -1338,6 +1499,7 @@ export function buildFullUnderwritingChapter1EliteContract({
       corePublishable: sourceTruthPackage.core_publishable === true,
     },
     identity,
+    decisionSnapshotContext,
     metrics,
     executiveInvestmentSummary,
     investmentCase,

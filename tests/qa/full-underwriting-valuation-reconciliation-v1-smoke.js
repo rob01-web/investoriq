@@ -124,7 +124,7 @@ equal(model.valueSensitivity.rows[1].evidenceClass, "deterministic_calculated", 
 close(model.valueSensitivity.rows[2].capRate, 0.065, 1e-10, "upper governed cap rate");
 close(model.valueSensitivity.rows[2].impliedValue, 600000 / 0.065, 0.01, "upper-rate scenario value");
 
-check(model.valuationBridge.some((row) => row.label === "InvestorIQ Implied Value" && row.evidenceClass === "deterministic_calculated"), "bridge includes deterministic InvestorIQ value");
+check(model.valuationBridge.some((row) => row.label === "NOI / Cap-Rate Cross-Check Value" && row.evidenceClass === "deterministic_calculated"), "bridge includes deterministic NOI / cap-rate cross-check value");
 check(model.valuationBridge.some((row) => row.label === "Purchase Price" && row.evidenceClass === "source_backed"), "bridge includes source-backed purchase price");
 check(model.valuationBridge.some((row) => row.label === "Appraised Value" && row.evidenceClass === "third_party_context"), "bridge includes third-party appraisal");
 check(model.observations.some((row) => row.code === "IMPLIED_VALUE_VS_PURCHASE_PRICE"), "purchase-price interpretation emitted");

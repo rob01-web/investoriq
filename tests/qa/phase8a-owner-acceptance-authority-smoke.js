@@ -41,7 +41,7 @@ const screening = applyPhase8AOwnerAcceptanceAuthority(screeningInput, {
 });
 
 assert.match(screening, /data-iq-phase8a="owner-acceptance-recovery-v1"/);
-assert.match(screening, /Screening Disposition/);
+assert.match(screening, /Screening Decision Snapshot/);
 assert.match(screening, />HOLD</);
 assert.match(screening, /44\.0%/);
 assert.match(screening, /Reconcile the two core income bases before full Underwriting/);
@@ -72,7 +72,7 @@ assert.doesNotMatch(underwriting, /64-Unit/);
 
 const metadata = phase8AOwnerAcceptanceMetadata();
 assert.equal(metadata.sharedWhiteFirstCover, true);
-assert.deepEqual(metadata.screeningDispositionValues, ["ADVANCE", "HOLD", "DO NOT ADVANCE"]);
+assert.deepEqual(metadata.screeningDispositionValues, ["ADVANCE", "HOLD", "DO NOT ADVANCE", "INSUFFICIENT EVIDENCE"]);
 assert.equal(metadata.opaqueCompositeScore, false);
 assert.equal(metadata.sourceTruthMutationAllowed, false);
 assert.equal(metadata.hardcodedPageCount, false);

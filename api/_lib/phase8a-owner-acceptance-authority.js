@@ -39,6 +39,12 @@ function formatPercent(value, digits = 1) {
   return n === null ? null : `${(n * 100).toFixed(digits)}%`;
 }
 
+function formatMoney(value) {
+  const n = finite(value);
+  if (n === null) return "Not available";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
 function canonicalScreeningMetrics(sourceTruthPackage = null) {
   const t12 = acceptedFacts(sourceTruthPackage, "t12");
   const rr = acceptedFacts(sourceTruthPackage, "rent_roll");
@@ -126,7 +132,7 @@ function buildScreeningDisposition(sourceTruthPackage = null) {
     reason = `T12 Gross Potential Rent and annual in-place Rent Roll income differ by ${formatPercent(Math.abs(m.reconciliationVariance), 1)}.`;
     nextStep = "Reconcile the two core income bases before full Underwriting.";
   } else if (incompleteCorePair) {
-    disposition = "HOLD";
+    disposition = "INSUFFICIENT EVIDENCE";
     reason = "Only one core operating source is available for this Screening.";
     nextStep = `Obtain the missing ${m.hasT12 ? "Rent Roll" : "T12 operating statement"} before full Underwriting.`;
   } else if (cautions.length > 0) {
@@ -170,6 +176,7 @@ function buildScreeningDisposition(sourceTruthPackage = null) {
 function dispositionTone(disposition = "") {
   if (disposition === "ADVANCE") return "advance";
   if (disposition === "DO NOT ADVANCE") return "stop";
+  if (disposition === "INSUFFICIENT EVIDENCE") return "insufficient";
   return "hold";
 }
 
@@ -177,29 +184,116 @@ function comparisonCell(label, value) {
   return `<div class="phase8a-axis"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not available")}</strong></div>`;
 }
 
+function screeningOperatingProfile(d = {}) {
+  if (!d.hasT12 || !d.hasRentRoll) return "INSUFFICIENT EVIDENCE";
+  if (
+    (d.expenseRatio !== null && d.expenseRatio >= 0.65) ||
+    (d.noiMargin !== null && d.noiMargin <= 0.30) ||
+    (d.breakEvenOccupancy !== null && d.breakEvenOccupancy >= 0.95)
+  ) return "OPERATING PRESSURE";
+  if (
+    d.rentGapRatio !== null && d.rentGapRatio >= 0.05 &&
+    d.noiMargin !== null && d.noiMargin >= 0.45 &&
+    d.occupancy !== null && d.occupancy >= 0.90
+  ) return "LIGHT VALUE-ADD CANDIDATE";
+  return "STABILIZED";
+}
+
+function screeningReadinessLabel(d = {}) {
+  if (d.disposition === "ADVANCE") return "ADVANCE";
+  if (d.disposition === "DO NOT ADVANCE") return "DO NOT ADVANCE";
+  if (d.disposition === "INSUFFICIENT EVIDENCE") return "INSUFFICIENT EVIDENCE";
+  return "HOLD";
+}
+
+function screeningSnapshotCell(label, value) {
+  return `<td><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not available")}</strong></td>`;
+}
+
+function screeningPanel(label, items = []) {
+  const valid = items.filter(Boolean);
+  if (!valid.length) return "";
+  return `<div class="phase8a-screening-action-panel"><p>${escapeHtml(label)}</p><ul>${valid.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`;
+}
+
 function injectScreeningDisposition(html = "", sourceTruthPackage = null) {
   const source = String(html || "");
   if (!source || source.includes('data-iq-phase8a-screening-disposition="true"')) return source;
   const d = buildScreeningDisposition(sourceTruthPackage);
   const tone = dispositionTone(d.disposition);
+  const operatingProfile = screeningOperatingProfile(d);
+  const readiness = screeningReadinessLabel(d);
+  const grossRentDifference = d.annualMarket !== null && d.annualInPlace !== null
+    ? d.annualMarket - d.annualInPlace
+    : null;
+  const cushion = d.occupancy !== null && d.breakEvenOccupancy !== null
+    ? `${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} pp above break-even`
+    : "Not available";
+  const sourceVariance = d.reconciliationVariance !== null
+    ? formatPercent(d.reconciliationVariance, 1)
+    : "Not available";
+
+  const whyItMayWork = [
+    d.occupancy !== null ? `Occupancy is ${formatPercent(d.occupancy)}.` : null,
+    d.noiMargin !== null ? `NOI margin is ${formatPercent(d.noiMargin)}.` : null,
+    grossRentDifference !== null && grossRentDifference > 0
+      ? `Rent Roll market rent exceeds in-place rent by ${formatMoney(grossRentDifference)} annually.`
+      : null,
+  ];
+  const killOrHold = [
+    d.reconciliationMaterial ? `T12 and Rent Roll income bases differ by ${formatPercent(Math.abs(d.reconciliationVariance), 1)}.` : null,
+    d.expenseRatio !== null && d.expenseRatio >= 0.55 ? `Expense ratio is ${formatPercent(d.expenseRatio)}.` : null,
+    !d.hasT12 || !d.hasRentRoll ? "A core operating source is missing." : null,
+  ];
 
   let next = source.replace(
     /(<div class="cover-verdict-value[^>]*>)[\s\S]*?(<\/div>)/i,
     `$1${escapeHtml(d.disposition)}$2<div class="phase8a-cover-reason">${escapeHtml(d.nextStep)}</div>`
   );
 
-  const newVerdict = `<div class="verdict-block phase8a-screening-disposition" data-iq-phase8a-screening-disposition="true" data-iq-disposition="${tone}">
-    <div class="verdict-label">Screening Disposition</div>
-    <div class="verdict-classification">${escapeHtml(d.disposition)}</div>
-    <div class="verdict-pressure"><strong>Primary reason:</strong> ${escapeHtml(d.reason)}</div>
-    <div class="verdict-rationale"><strong>Next step:</strong> ${escapeHtml(d.nextStep)}</div>
-    <div class="phase8a-axis-grid">
-      ${comparisonCell("Operating Strength", d.operatingStrength)}
-      ${comparisonCell("Rent Position", d.rentPosition)}
-      ${comparisonCell("Source Consistency", d.sourceConsistency)}
-      ${comparisonCell("Operating Cushion", d.operatingCushion)}
-      ${comparisonCell("Diligence Burden", d.diligenceBurden)}
-      ${comparisonCell("Underwriting Readiness", d.disposition)}
+  const rows = [
+    [
+      screeningSnapshotCell("Units", d.units !== null ? Math.round(d.units).toLocaleString("en-US") : "Not available"),
+      screeningSnapshotCell("Occupancy", formatPercent(d.occupancy)),
+      screeningSnapshotCell("T12 NOI", formatMoney(d.noi)),
+    ],
+    [
+      screeningSnapshotCell("NOI Margin", formatPercent(d.noiMargin)),
+      screeningSnapshotCell("Expense Ratio", formatPercent(d.expenseRatio)),
+      screeningSnapshotCell("Break-Even Occupancy", formatPercent(d.breakEvenOccupancy)),
+    ],
+    [
+      screeningSnapshotCell("Annual In-Place Rent", formatMoney(d.annualInPlace)),
+      screeningSnapshotCell("Annual Market Rent", formatMoney(d.annualMarket)),
+      screeningSnapshotCell("Gross Rent Gap", grossRentDifference !== null ? `${formatMoney(grossRentDifference)} / ${formatPercent(d.rentGapRatio)}` : "Not available"),
+    ],
+    [
+      screeningSnapshotCell("T12 Gross Potential Rent", formatMoney(d.gpr)),
+      screeningSnapshotCell("Rent Roll Annual In-Place", formatMoney(d.annualInPlace)),
+      screeningSnapshotCell("Rent Roll vs T12 Variance", sourceVariance),
+    ],
+  ].map((cells) => `<tr>${cells.join("")}</tr>`).join("");
+
+  const profileRows = [
+    ["Operating Strength", d.operatingStrength],
+    ["Rent Position", d.rentPosition],
+    ["Source Consistency", d.sourceConsistency],
+    ["Operating Cushion", cushion],
+    ["Diligence Burden", d.diligenceBurden],
+    ["Underwriting Readiness", readiness],
+  ].map(([label, value]) => `<div class="phase8a-screening-profile-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not available")}</strong></div>`).join("");
+
+  const newVerdict = `<div class="verdict-block phase8a-screening-snapshot" data-iq-phase8a-screening-disposition="true" data-iq-disposition="${tone}">
+    <div class="phase8a-screening-decision-band">
+      <div class="phase8a-screening-decision-main"><span>Screening Decision Snapshot</span><strong>${escapeHtml(d.disposition)}</strong><p>${escapeHtml(d.reason)}</p></div>
+      <div class="phase8a-screening-decision-side"><span>Operating Profile</span><strong>${escapeHtml(operatingProfile)}</strong><span>Next Action</span><b>${escapeHtml(d.nextStep)}</b></div>
+    </div>
+    <table class="phase8a-screening-snapshot-table"><tbody>${rows}</tbody></table>
+    <div class="phase8a-screening-profile-strip">${profileRows}</div>
+    <div class="phase8a-screening-actions">
+      ${screeningPanel("Why It May Work", whyItMayWork)}
+      ${screeningPanel("What Can Kill or Hold It", killOrHold.length ? killOrHold : [d.reason])}
+      ${screeningPanel("Next Action", [d.nextStep])}
     </div>
   </div>`;
 
@@ -214,6 +308,32 @@ function injectScreeningDisposition(html = "", sourceTruthPackage = null) {
     .replace(/Classification is capped by source reconciliation disclosure pending reconciliation of rent roll and T12 evidence\./gi, "The Screening disposition remains on hold until the T12 and Rent Roll income bases are reconciled.");
 
   return next;
+}
+
+function buildScreeningDecisionProfile(sourceTruthPackage = null) {
+  const d = buildScreeningDisposition(sourceTruthPackage);
+  const strengths = [];
+  if (d.occupancy !== null) strengths.push(`Occupancy is ${formatPercent(d.occupancy)}.`);
+  if (d.noiMargin !== null) strengths.push(`NOI margin is ${formatPercent(d.noiMargin)}.`);
+  if (d.occupancy !== null && d.breakEvenOccupancy !== null) strengths.push(`Operating occupancy cushion is ${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} percentage points.`);
+  if (d.rentGapRatio !== null && d.rentGapRatio > 0) strengths.push(`Rent Roll market rent is ${formatPercent(d.rentGapRatio)} above in-place rent.`);
+  const conditions = [];
+  if (d.reconciliationMaterial) conditions.push("Reconcile the T12 and Rent Roll income bases.");
+  if (d.rentGapRatio !== null && d.rentGapRatio > 0) conditions.push("Validate the documented path from in-place rent to market rent.");
+  conditions.push("Confirm the T12 and Rent Roll remain current before full Underwriting.");
+  return `<div class="card no-break phase8a-screening-profile" data-iq-phase8a-screening-profile="true"><p class="subsection-title">Screening Decision Profile</p><div class="phase8a-profile-grid"><div><p class="phase8a-profile-label">Why the property remains competitive</p><ul>${strengths.slice(0,4).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div><div><p class="phase8a-profile-label">Why the disposition is ${escapeHtml(d.disposition)}</p><p>${escapeHtml(d.reason)}</p><p class="phase8a-profile-label">Conditions to advance</p><ul>${conditions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div></div></div>`;
+}
+
+function replaceScreeningDecisionTail(html = "", sourceTruthPackage = null) {
+  let source = String(html || "");
+  const profile = buildScreeningDecisionProfile(sourceTruthPackage);
+  source = source.replace(/<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Summary<\/p>[\s\S]*?<\/div>/i, profile);
+  source = source.replace(/<div class="card no-break phase7-evidence-conviction-matrix"([\s\S]*?)<p class="subsection-title">Evidence Conviction Matrix<\/p>[\s\S]*?<\/div>/i, '<div class="card no-break phase8a-evidence-coverage" data-iq-legacy-label="Evidence Conviction Matrix"><p class="subsection-title">Evidence Coverage</p><p>Core operating facts and the material T12 / Rent Roll reconciliation issue are presented in this Screening. Detailed source treatment appears on the methodology page.</p></div>');
+  source = source.replace(/<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Framework Note<\/p>[\s\S]*?<\/div>/i, '<div class="card no-break phase8a-screening-scope" style="margin-top:6px;"><p class="subsection-title">Screening Scope</p><p>Screening evaluates operating strength, rent position, source consistency, and diligence burden. Debt, valuation, and return analysis belong in Full Underwriting.</p></div>');
+  source = source.replace(/\b48-Unit Multifamily\b/gi, "48 Unit Multifamily");
+  source = source.replace(/Source-bound operating facts used to decide whether deeper underwriting is warranted/gi, "Core operating facts used to decide whether deeper underwriting is warranted");
+  source = source.replace(/Screening identifies operating signals and evidence gaps. Financing, valuation, and return modeling remain outside this report unless separately authorized in the appropriate product./gi, "Screening stops at operating triage. Financing, valuation, and return analysis belong in Full Underwriting.");
+  return source;
 }
 
 function buildScreeningMethodology(sourceTruthPackage = null) {
@@ -353,8 +473,67 @@ const PHASE8A_STYLE = `<style id="investoriq-phase8a-owner-acceptance-authority"
 .iq-phase8a-screening .phase8a-limitations-card,
 .iq-phase8a-screening .phase8a-use-card { margin-top:10px; }
 
+.iq-phase8a-screening .phase8a-screening-profile { margin-top:10px; padding:12px 14px; border-top:2px solid var(--iq8a-forest); }
+.iq-phase8a-screening .phase8a-profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.iq-phase8a-screening .phase8a-profile-label { margin:0 0 5px; color:#6f7872; font-size:6.5pt; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+.iq-phase8a-screening .phase8a-profile-grid ul { margin:0; padding-left:16px; }
+.iq-phase8a-screening .phase8a-profile-grid li { margin-bottom:5px; }
+.iq-phase8a-screening .phase8a-evidence-coverage { margin-top:10px; padding:10px 12px; }
+
+/* Phase 8A decision-first editorial cockpit and Prince paged-media authority. */
+.iq-phase8a-screening .phase8a-screening-snapshot { margin:0; padding:0; border:0; background:#fff; }
+.iq-phase8a-screening .phase8a-screening-decision-band { display:grid; grid-template-columns:1.7fr .9fr; gap:18px; margin:0 0 12px; padding:14px 16px; background:var(--iq8a-forest-deep); color:#fff; }
+.iq-phase8a-screening .phase8a-screening-decision-main span,
+.iq-phase8a-screening .phase8a-screening-decision-side span { display:block; color:#d6c484; font-size:6.4pt; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }
+.iq-phase8a-screening .phase8a-screening-decision-main strong { display:block; margin:3px 0 5px; color:#fff; font-family:var(--font-display); font-size:24pt; line-height:1; }
+.iq-phase8a-screening .phase8a-screening-decision-main p { margin:0; color:#edf1ee; font-size:8pt; line-height:1.35; }
+.iq-phase8a-screening .phase8a-screening-decision-side { padding-left:14px; border-left:1px solid rgba(255,255,255,.22); }
+.iq-phase8a-screening .phase8a-screening-decision-side strong { display:block; margin:3px 0 10px; color:#fff; font-size:10pt; line-height:1.2; }
+.iq-phase8a-screening .phase8a-screening-decision-side b { display:block; margin-top:3px; color:#fff; font-size:7.5pt; line-height:1.3; font-weight:500; }
+.iq-phase8a-screening .phase8a-screening-snapshot-table { margin:0; table-layout:fixed; border-top:1px solid var(--iq8a-rule); }
+.iq-phase8a-screening .phase8a-screening-snapshot-table td { width:33.333%; padding:7px 8px 7px 0; border-bottom:1px solid var(--iq8a-rule); background:#fff !important; }
+.iq-phase8a-screening .phase8a-screening-snapshot-table td span { display:block; color:#777f79; font-size:5.8pt; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.iq-phase8a-screening .phase8a-screening-snapshot-table td strong { display:block; margin-top:2px; color:var(--iq8a-ink); font-family:var(--font-display); font-size:12pt; line-height:1.05; }
+.iq-phase8a-screening .phase8a-screening-profile-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 12px; margin-top:10px; }
+.iq-phase8a-screening .phase8a-screening-profile-item { padding:5px 0; border-bottom:1px solid #ece9e1; }
+.iq-phase8a-screening .phase8a-screening-profile-item span { display:block; color:#7a817c; font-size:5.7pt; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.iq-phase8a-screening .phase8a-screening-profile-item strong { display:block; margin-top:2px; color:var(--iq8a-ink); font-size:7.5pt; line-height:1.25; }
+.iq-phase8a-screening .phase8a-screening-actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:11px; }
+.iq-phase8a-screening .phase8a-screening-action-panel { padding-top:7px; border-top:2px solid var(--iq8a-forest); }
+.iq-phase8a-screening .phase8a-screening-action-panel p { margin:0 0 4px; color:#69716c; font-size:6pt; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+.iq-phase8a-screening .phase8a-screening-action-panel ul { margin:0; padding-left:14px; }
+.iq-phase8a-screening .phase8a-screening-action-panel li { margin-bottom:3px; font-size:7pt; line-height:1.3; }
+.iq-phase8a-screening .phase8a-screening-snapshot[data-iq-disposition="insufficient"] .phase8a-screening-decision-band { background:#4c5350; }
+
+@page iq-body {
+  size: Letter;
+  margin: .46in .52in .56in .52in;
+  @top-left { content: "INVESTORIQ"; font-family:'DM Sans',sans-serif; font-size:6pt; font-weight:700; letter-spacing:.08em; color:#173f2b; }
+  @top-right { content: string(iq-section, first); font-family:'DM Sans',sans-serif; font-size:6pt; color:#737b76; }
+  @bottom-left { content: string(iq-property, first); font-family:'DM Sans',sans-serif; font-size:5.8pt; color:#8a8f8b; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family:'DM Mono',monospace; font-size:5.8pt; color:#8a8f8b; }
+}
+@page iq-decision {
+  size: Letter;
+  margin: .40in .52in .54in .52in;
+  @top-left { content: "INVESTORIQ  |  DECISION SNAPSHOT"; font-family:'DM Sans',sans-serif; font-size:6pt; font-weight:700; letter-spacing:.07em; color:#173f2b; }
+  @top-right { content: string(iq-property, first); font-family:'DM Sans',sans-serif; font-size:6pt; color:#737b76; }
+  @bottom-left { content: "DECISION FIRST. FACTS BEFORE PROSE."; font-family:'DM Sans',sans-serif; font-size:5.6pt; color:#8a8f8b; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family:'DM Mono',monospace; font-size:5.8pt; color:#8a8f8b; }
+}
+.iq-phase8a .cover-prop-name { string-set: iq-property content(); }
+.iq-phase8a .section { page: iq-body; }
+.iq-phase8a .section-header-title { string-set: iq-section content(); -prince-bookmark-level:1; -prince-bookmark-label:content(); }
+.iq-phase8a-underwriting section[data-iq-elite-section="executiveInvestmentSummary"] { page:iq-decision; break-before:page; break-after:page; }
+.iq-phase8a-underwriting section[data-iq-elite-section="executiveInvestmentSummary"] .phase7-evidence-conviction-matrix { break-before:page; page-break-before:always; }
+.iq-phase8a table thead { display:table-header-group; }
+.iq-phase8a table tfoot { display:table-footer-group; }
+.iq-phase8a table tr { break-inside:avoid; page-break-inside:avoid; }
+.iq-phase8a p, .iq-phase8a li { widows:2; orphans:2; }
+.iq-phase8a .section-header, .iq-phase8a .subsection-title { break-after:avoid-page; page-break-after:avoid; }
+
 /* Underwriting executive decision page. */
-.iq-phase8a-underwriting .phase8a-executive-summary { padding:12px 14px !important; }
+.iq-phase8a-underwriting .phase8a-executive-summary { padding:0 !important; border-top:0 !important; }
 .iq-phase8a-underwriting .phase8a-exec-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding-bottom:9px; border-bottom:1px solid var(--iq8a-rule); }
 .iq-phase8a-underwriting .phase8a-exec-property { margin:0; font-family:var(--font-display); font-size:20pt; line-height:1; color:var(--iq8a-ink); }
 .iq-phase8a-underwriting .phase8a-exec-asset { margin:4px 0 0; color:var(--iq8a-muted); font-size:8pt; }
@@ -374,6 +553,22 @@ const PHASE8A_STYLE = `<style id="investoriq-phase8a-owner-acceptance-authority"
 .iq-phase8a-underwriting .phase8a-exec-panel ul { margin:0; padding-left:15px; }
 .iq-phase8a-underwriting .phase8a-exec-panel li { margin-bottom:4px; font-size:7.6pt; line-height:1.35; }
 .iq-phase8a-underwriting .phase8a-exec-boundary { margin:7px 0 0; padding-top:6px; border-top:1px solid #ece9e1; color:#737b76; font-size:6.6pt; line-height:1.35; }
+
+.iq-phase8a-underwriting .phase8a-investment-decision-band { display:grid; grid-template-columns:1.45fr .8fr .9fr; gap:0; margin:0 0 11px; background:var(--iq8a-forest-deep); color:#fff; }
+.iq-phase8a-underwriting .phase8a-investment-decision-band > div { min-width:0; padding:12px 14px; }
+.iq-phase8a-underwriting .phase8a-investment-decision-band > div + div { border-left:1px solid rgba(255,255,255,.2); }
+.iq-phase8a-underwriting .phase8a-investment-decision-band span { display:block; color:#d6c484; font-size:5.9pt; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.iq-phase8a-underwriting .phase8a-investment-decision-band strong { display:block; margin-top:3px; color:#fff; font-family:var(--font-display); font-size:16pt; line-height:1.02; }
+.iq-phase8a-underwriting .phase8a-investment-decision-band p { margin:4px 0 0; color:#eef1ef; font-size:6.7pt; line-height:1.28; }
+.iq-phase8a-underwriting .phase8a-investment-snapshot-table { margin:0; table-layout:fixed; border-top:1px solid var(--iq8a-rule); }
+.iq-phase8a-underwriting .phase8a-investment-snapshot-table td { width:25%; padding:6px 7px 6px 0; background:#fff !important; border-bottom:1px solid var(--iq8a-rule); }
+.iq-phase8a-underwriting .phase8a-investment-snapshot-table td span { display:block; color:#767f79; font-size:5.5pt; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+.iq-phase8a-underwriting .phase8a-investment-snapshot-table td strong { display:block; margin-top:2px; color:var(--iq8a-ink); font-family:var(--font-display); font-size:10.7pt; line-height:1.05; }
+.iq-phase8a-underwriting .phase8a-investment-snapshot-table td em { display:block; margin-top:2px; color:#7a817c; font-size:5.4pt; font-style:normal; line-height:1.2; }
+.iq-phase8a-underwriting .phase8a-exec-columns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:10px; }
+.iq-phase8a-underwriting .phase8a-exec-panel { padding-top:7px; border-top:2px solid var(--iq8a-forest); }
+.iq-phase8a-underwriting .phase8a-exec-panel li { margin-bottom:3px; font-size:6.7pt; line-height:1.28; }
+.iq-phase8a-underwriting .phase8a-exec-boundary { margin-top:6px; font-size:5.7pt; line-height:1.25; }
 
 /* Underwriting cover must retain the same family geometry without the Phase 7 gold-square collision. */
 .iq-phase8a-underwriting .cover-classification { border-left-color:var(--iq8a-forest) !important; background:rgba(23,63,43,.045) !important; }
@@ -399,6 +594,7 @@ export function applyPhase8AOwnerAcceptanceAuthority(html, { lane = null, source
   if (!source || !["screening", "underwriting"].includes(lane)) return source;
   if (lane === "screening") {
     source = injectScreeningDisposition(source, sourceTruthPackage);
+    source = replaceScreeningDecisionTail(source, sourceTruthPackage);
     source = replaceScreeningMethodology(source, sourceTruthPackage);
   } else {
     source = humanizeUnderwritingCopy(source);
@@ -412,7 +608,7 @@ export function phase8AOwnerAcceptanceMetadata() {
   return {
     marker: PHASE8A_MARKER,
     sharedWhiteFirstCover: true,
-    screeningDispositionValues: ["ADVANCE", "HOLD", "DO NOT ADVANCE"],
+    screeningDispositionValues: ["ADVANCE", "HOLD", "DO NOT ADVANCE", "INSUFFICIENT EVIDENCE"],
     opaqueCompositeScore: false,
     sourceTruthMutationAllowed: false,
     hardcodedPageCount: false,

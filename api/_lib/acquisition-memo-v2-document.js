@@ -969,7 +969,7 @@ function renderUploadedFilesSection({ sourcePackage = null } = {}) {
 
 function renderReadinessBodyHtml({ renderedAcquisitionMemo = null, acquisitionMemoProjection = null, customerSurfaceModel = null } = {}) {
   if (customerSurfaceModel) {
-    return `<p class="body-copy">Support readiness reflects the documents provided for this review. Missing or partial optional support limits only the dependent analysis.</p>`;
+    return `<p class="body-copy">Document coverage reflects the files and usable facts provided for this review. Source presence does not by itself establish diligence sufficiency.</p>`;
   }
   const signals = acquisitionMemoProjection?.financingReadinessSignals || {};
   const summaryHtml = stripDocumentTreatmentSummaryMarkers(renderedAcquisitionMemo?.financingReadinessSummaryHtml || "").trim();
@@ -984,15 +984,15 @@ function supportFactBundleStatus(customerSurfaceModel = null, sectionKey = "", f
   const required = Array.isArray(availability?.required) ? availability.required : [];
   const missing = Array.isArray(availability?.missing) ? availability.missing : [];
   if (availability?.sourceBacked === true && missing.length === 0) {
-    return required.length > 0 ? "Complete for this analysis" : "Accepted as context";
+    return required.length > 0 ? "Source facts available" : "Source received as context";
   }
   if (availability?.sourcePresent === true || section?.sourceDoc) {
     return required.length > 0
-      ? "Partial support; dependent analysis limited"
-      : "Received as context";
+      ? "Source received; dependent analysis limited"
+      : "Source received as context";
   }
   if (!section && fallbackSourcePresent === true) {
-    return "Received; detailed use limited";
+    return "Source received; detail limited";
   }
   return "Not provided";
 }
@@ -1477,15 +1477,47 @@ function renderRenovationContextSection(customerSurfaceModel = null, { suppressS
   const section = customerSurfaceModel?.sections?.renovationContext || null;
   if (section?.factAvailability?.sourceBacked !== true) return "";
   const facts = section?.facts || {};
-  const summaryRows = suppressSummary ? [] : [
-    Number.isFinite(toFiniteNumber(facts.total_renovation_budget))
-      ? `<tr><td>Total Renovation Budget</td><td>${formatMoney(facts.total_renovation_budget)}</td></tr>`
-      : "",
-    Number.isFinite(toFiniteNumber(facts.capital_plan_duration_months))
-      ? `<tr><td>Stated Plan Duration</td><td>${Math.round(Number(facts.capital_plan_duration_months))} months</td></tr>`
-      : "",
-  ].filter(Boolean);
+  const totalBudget = Number.isFinite(toFiniteNumber(facts.total_renovation_budget)) ? Number(facts.total_renovation_budget) : null;
+  const durationMonths = Number.isFinite(toFiniteNumber(facts.capital_plan_duration_months)) ? Math.round(Number(facts.capital_plan_duration_months)) : null;
+  const totalUnits = Number.isFinite(Number(customerSurfaceModel?.sourceBackedFacts?.unitMix?.total_units))
+    ? Number(customerSurfaceModel.sourceBackedFacts.unitMix.total_units)
+    : null;
   const planRows = Array.isArray(facts.renovation_plan_rows) ? facts.renovation_plan_rows : [];
+
+  let plannedUnits = 0;
+  let interiorCapital = 0;
+  let annualGrossLift = 0;
+  let otherStatedCapital = 0;
+  const timedRows = [];
+  for (const row of planRows) {
+    const unitCount = toFiniteNumber(row?.unit_count);
+    const costPerUnit = toFiniteNumber(row?.cost_per_unit);
+    const monthlyLift = toFiniteNumber(row?.expected_monthly_rent_lift);
+    const statedAmount = toFiniteNumber(row?.stated_amount);
+    if (Number.isFinite(unitCount) && unitCount > 0 && Number.isFinite(costPerUnit) && costPerUnit >= 0) {
+      plannedUnits += unitCount;
+      interiorCapital += unitCount * costPerUnit;
+      if (Number.isFinite(monthlyLift)) annualGrossLift += unitCount * monthlyLift * 12;
+    } else if (Number.isFinite(statedAmount) && statedAmount >= 0) {
+      otherStatedCapital += statedAmount;
+    }
+    const start = toFiniteNumber(row?.start_month);
+    const end = toFiniteNumber(row?.end_month);
+    if (Number.isFinite(unitCount) && unitCount > 0 && Number.isFinite(start) && Number.isFinite(end)) {
+      timedRows.push({ label: String(row?.category || "Interior Program"), start: Math.round(start), end: Math.round(end) });
+    }
+  }
+
+  const plannedShare = Number.isFinite(totalUnits) && totalUnits > 0 ? plannedUnits / totalUnits : null;
+  const grossLiftOnBudget = Number.isFinite(totalBudget) && totalBudget > 0 && annualGrossLift > 0 ? annualGrossLift / totalBudget : null;
+  const totalSimplePayback = Number.isFinite(totalBudget) && totalBudget > 0 && annualGrossLift > 0 ? totalBudget / annualGrossLift : null;
+  const interiorSimplePayback = interiorCapital > 0 && annualGrossLift > 0 ? interiorCapital / annualGrossLift : null;
+
+  const summaryRows = suppressSummary ? [] : [
+    totalBudget !== null ? `<tr><td>Total Renovation Budget</td><td>${formatMoney(totalBudget)}</td></tr>` : "",
+    durationMonths !== null ? `<tr><td>Stated Plan Duration</td><td>${durationMonths} months</td></tr>` : "",
+  ].filter(Boolean);
+
   const detailRows = planRows.map((row) => {
     const unitCount = Number.isFinite(toFiniteNumber(row?.unit_count)) ? Math.round(Number(row.unit_count)).toLocaleString("en-US") : "Not stated";
     const costBasis = Number.isFinite(toFiniteNumber(row?.cost_per_unit))
@@ -1501,19 +1533,33 @@ function renderRenovationContextSection(customerSurfaceModel = null, { suppressS
       : "Not stated";
     return `<tr><td>${escapeHtml(row?.category || "Stated Scope")}</td><td>${escapeHtml(unitCount)}</td><td>${escapeHtml(costBasis)}</td><td>${escapeHtml(rentLift)}</td><td>${escapeHtml(timing)}</td></tr>`;
   }).join("");
-  if (!summaryRows.length && !detailRows) return "";
+
+  const synthesisRows = [
+    plannedUnits > 0 ? `<tr><td>Interior Units in Stated Program</td><td>${Math.round(plannedUnits).toLocaleString("en-US")}${plannedShare !== null ? ` of ${Math.round(totalUnits).toLocaleString("en-US")} (${(plannedShare * 100).toFixed(1)}%)` : ""}</td></tr>` : "",
+    interiorCapital > 0 ? `<tr><td>Interior Capital</td><td>${formatMoney(interiorCapital)}</td></tr>` : "",
+    otherStatedCapital > 0 ? `<tr><td>Other Stated Capital</td><td>${formatMoney(otherStatedCapital)}</td></tr>` : "",
+    annualGrossLift > 0 ? `<tr><td>Documented Annual Gross Rent Lift</td><td>${formatMoney(annualGrossLift)}</td></tr>` : "",
+    grossLiftOnBudget !== null ? `<tr><td>Gross Rent Lift / Total Budget</td><td>${(grossLiftOnBudget * 100).toFixed(1)}%</td></tr>` : "",
+    totalSimplePayback !== null ? `<tr><td>Simple Gross Payback on Total Budget</td><td>${totalSimplePayback.toFixed(2)} years</td></tr>` : "",
+    interiorSimplePayback !== null ? `<tr><td>Interior-Only Simple Gross Payback</td><td>${interiorSimplePayback.toFixed(2)} years</td></tr>` : "",
+  ].filter(Boolean).join("");
+
+  const timelineRows = timedRows.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td>Month ${row.start}</td><td>Month ${row.end}</td></tr>`).join("");
+  const synthesis = synthesisRows
+    ? `<div class="subsection-block phase8a-capital-synthesis" data-iq-phase8a-capital-synthesis="true"><p class="subsection-title">Capital Program Economics</p><table class="detail-table"><tbody>${synthesisRows}</tbody></table><p class="footer-note">Gross rent lift is document-based rent arithmetic, not NOI. Simple gross payback divides stated capital by documented gross annual rent lift and is not ROI, IRR, or a value-creation forecast.</p></div>`
+    : "";
+  const timeline = timelineRows
+    ? `<div class="subsection-block"><p class="subsection-title">Stated Execution Window</p><table class="detail-table"><thead><tr><th>Program</th><th>Start</th><th>End</th></tr></thead><tbody>${timelineRows}</tbody></table></div>`
+    : "";
   const detailTable = detailRows
     ? `<div class="subsection-block"><p class="subsection-title">Document-Stated Plan Detail</p><table class="detail-table renovation-plan-table"><thead><tr><th>Scope</th><th>Units</th><th>Cost Basis</th><th>Rent Lift</th><th>Timing</th></tr></thead><tbody>${detailRows}</tbody></table></div>`
     : "";
-  const body = `${summaryRows.length ? `<table class="detail-table numeric-context-table"><tbody>${summaryRows.join("")}</tbody></table>` : ""}${detailTable}<p class="footer-note">Only document-stated facts are shown. No derived renovation or return-impact calculations are introduced.</p>`;
+  if (!summaryRows.length && !detailRows && !synthesisRows) return "";
+  const body = `${summaryRows.length ? `<table class="detail-table numeric-context-table"><tbody>${summaryRows.join("")}</tbody></table>` : ""}${synthesis}${timeline}${detailTable}`;
   if (suppressSummary) {
     return `<div class="subsection-block iq-renovation-detail" data-iq-section="renovationContext"><p class="subsection-title">Renovation / CapEx Context</p>${body}</div>`;
   }
-  return renderSection(
-    section.visibleLabel || "Renovation / CapEx Context",
-    body,
-    { pageBreakBefore: false, allowBreak: true }
-  );
+  return renderSection(section.visibleLabel || "Renovation / CapEx Context", body, { pageBreakBefore: false, allowBreak: true });
 }
 
 function renderMarketSurveyContextSection(customerSurfaceModel = null) {
@@ -1522,9 +1568,32 @@ function renderMarketSurveyContextSection(customerSurfaceModel = null) {
   const ranges = Array.isArray(section?.facts?.market_rent_ranges) ? section.facts.market_rent_ranges : [];
   const rows = ranges.map((row) => `<tr><td>${escapeHtml(row?.unit_type || "Unit Type")}</td><td>${formatMoney(row?.low_monthly_rent)}</td><td>${formatMoney(row?.high_monthly_rent)}</td></tr>`).join("");
   if (!rows) return "";
+
+  const unitMixFacts = customerSurfaceModel?.sourceBackedFacts?.unitMix || {};
+  const unitMixRows = (Array.isArray(unitMixFacts?.unit_mix) ? unitMixFacts.unit_mix : [])
+    .map(normalizeStructuredUnitMixRow)
+    .filter(Boolean);
+  const comparisons = [];
+  for (const range of ranges) {
+    const label = String(range?.unit_type || "").trim().toLowerCase();
+    const match = unitMixRows.find((row) => String(row?.label || "").trim().toLowerCase() === label);
+    const market = Number(match?.market);
+    const low = Number(range?.low_monthly_rent);
+    const high = Number(range?.high_monthly_rent);
+    if (!match || !Number.isFinite(market) || !Number.isFinite(low) || !Number.isFinite(high)) continue;
+    let position = "Within survey range";
+    if (market < low) position = `${formatMoney(low - market)} below survey low`;
+    else if (market > high) position = `${formatMoney(market - high)} above survey high`;
+    comparisons.push({ label: range.unit_type, market, low, high, position });
+  }
+  const comparisonRows = comparisons.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td>${formatMoney(row.market)}</td><td>${formatMoney(row.low)} to ${formatMoney(row.high)}</td><td>${escapeHtml(row.position)}</td></tr>`).join("");
+  const allBelow = comparisons.length > 0 && comparisons.every((row) => row.market < row.low);
+  const comparisonHtml = comparisonRows
+    ? `<div class="subsection-block" data-iq-phase8a-market-comparison="true"><p class="subsection-title">Rent Roll vs Market Survey</p><table class="detail-table"><thead><tr><th>Unit Type</th><th>Rent Roll Market</th><th>Survey Range</th><th>Position</th></tr></thead><tbody>${comparisonRows}</tbody></table><p class="footer-note">${allBelow ? "Rent Roll market rents are below the supplied survey floors for every matched unit type. The documented rent gap therefore does not depend on substituting the higher survey ranges." : "The comparison places Rent Roll market rents beside the supplied survey ranges without replacing either source."}</p></div>`
+    : "";
   return renderSection(
     section.visibleLabel || "Market Rent Survey Context",
-    `<table class="detail-table market-range-table"><thead><tr><th>Unit Type</th><th>Low Monthly Rent</th><th>High Monthly Rent</th></tr></thead><tbody>${rows}</tbody></table><p class="footer-note">Survey ranges are document context only and do not replace rents accepted from the Rent Roll.</p>`,
+    `<table class="detail-table market-range-table"><thead><tr><th>Unit Type</th><th>Low Monthly Rent</th><th>High Monthly Rent</th></tr></thead><tbody>${rows}</tbody></table>${comparisonHtml}<p class="footer-note">Survey ranges are third-party context. Rent Roll rents remain the operating rent basis used elsewhere in this report.</p>`,
     { pageBreakBefore: false, allowBreak: true }
   );
 }
