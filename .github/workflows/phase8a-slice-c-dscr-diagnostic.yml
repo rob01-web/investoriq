@@ -5,6 +5,7 @@ on:
     branches:
       - internal-phase8a-owner-acceptance-recovery-20260903-r1
     paths:
+      - 'scripts/phase8a-diagnose-stonebridge-financial-intelligence.mjs'
       - '.github/workflows/phase8a-slice-c-dscr-diagnostic.yml'
   workflow_dispatch: {}
 
@@ -14,12 +15,20 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           ref: internal-phase8a-owner-acceptance-recovery-20260903-r1
           fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Inspect exact Stonebridge financial intelligence
+        run: node scripts/phase8a-diagnose-stonebridge-financial-intelligence.mjs
       - name: Locate V2 document args and financial intelligence authority
         shell: bash
         run: |
@@ -29,5 +38,3 @@ jobs:
           grep -n -C 16 'acquisitionMemoV2DocumentArgs' "$FILE" || true
           echo '=== institutional financial intelligence occurrences ==='
           grep -n -C 12 -E 'institutionalFinancialIntelligence|financialIntelligence|buildCanonicalInstitutionalFinancialIntelligence' "$FILE" || true
-          echo '=== source truth result occurrences near V2 construction ==='
-          grep -n -C 8 -E 'sourceTruthPackageResult|acquisitionMemoV2Bridge' "$FILE" | head -n 500 || true
