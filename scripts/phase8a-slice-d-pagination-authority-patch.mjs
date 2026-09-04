@@ -17,7 +17,18 @@ const replacement = `@media print {
   .iq-phase8a-underwriting .header-strip { display:none !important; }
   .iq-phase8a-underwriting .institutional-chapter { page:iq-body; }
   .iq-phase8a-underwriting .institutional-chapter[data-iq-chapter="committee-overview"] { page:iq-decision; }
+  .iq-phase8a-underwriting .institutional-chapter[data-iq-chapter="committee-overview"] > div > section.section { page:iq-decision; }
   .iq-phase8a-underwriting .report-footer { display:none !important; }
+
+  /* The cover already supplies the page boundary. Keep the committee heading
+     with the decision snapshot, and let the post-snapshot committee sections
+     use available space instead of forcing another named-page break. */
+  .iq-phase8a-underwriting section[data-iq-elite-section="executiveInvestmentSummary"] {
+    break-before:auto !important;
+    page-break-before:auto !important;
+    break-after:auto !important;
+    page-break-after:auto !important;
+  }
 
   /* Phase 7 protected these driver blocks as indivisible. Phase 8A uses
      tighter editorial tables, so allow them to flow instead of leaving
