@@ -31,6 +31,14 @@ patchFile("tests/qa/full-underwriting-chapter1-elite-renderer-integration-smoke.
     "  assert.match(html, /Committee Focus/);",
     "  assert.match(html, /What Must Be True/);",
   ],
+  [
+    "  assert.match(html, /data-iq-elite-primary-constraint=\"PRIMARY_SOURCE_RECONCILIATION_REQUIRED\"/);",
+    "  assert.match(html, /data-iq-elite-signal=\"PRIMARY_SOURCE_RECONCILIATION_REQUIRED\"/);",
+  ],
+  [
+    "  assert.match(html, /data-iq-elite-primary-constraint=\"CURRENT_DEBT_DSCR_BELOW_1X\"/);",
+    "  assert.match(html, /data-iq-elite-signal=\"CURRENT_DEBT_DSCR_BELOW_1X\"/);",
+  ],
 ]);
 
 console.log("phase8a-slice-c-test-alignment-patch: PATCHED");
