@@ -42,7 +42,7 @@ jobs:
         env:
           PHASE7_ARTIFACT_DIR: phase8a-dscr-diagnostic-artifacts
         run: node scripts/phase7-generate-visual-artifacts.js
-      - name: Persist decision snapshot evidence
+      - name: Persist raw decision snapshot markup
         shell: bash
         run: |
           set -euo pipefail
@@ -51,32 +51,26 @@ jobs:
           import fs from 'node:fs';
           const html = fs.readFileSync('phase8a-dscr-diagnostic-artifacts/phase7-underwriting-stonebridge.html','utf8');
           const text = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&#39;/gi,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim();
-          const tokens = ['Investment Decision Snapshot','Current Decision State','Strategy Fit','Current DSCR','Current Debt DSCR','Proposed DSCR','Proposed Financing DSCR','tightens DSCR','modeled DSCR','RECONCILIATION REQUIRED'];
-          for (const token of tokens) {
-            const i = text.toLowerCase().indexOf(token.toLowerCase());
+          const ti = text.indexOf('Investment Decision Snapshot');
+          console.log('VISIBLE SNAPSHOT');
+          console.log(ti >= 0 ? text.slice(ti, ti + 3200) : 'MISSING');
+          console.log('\nRAW WINDOWS');
+          for (const token of ['2.01x','1.40x','phase8a-investment-snapshot-table','currentDebtDscr','proposedFinancingDscr']) {
+            let from = 0; let n = 0;
             console.log(`TOKEN=${token}`);
-            console.log(i >= 0 ? text.slice(Math.max(0,i-300), i+850) : 'MISSING');
-            console.log('');
+            while (n < 8) {
+              const i = html.indexOf(token, from);
+              if (i < 0) break;
+              console.log(`[${n}] ${html.slice(Math.max(0,i-450), i+650)}`);
+              from = i + token.length; n++;
+            }
+            if (!n) console.log('MISSING');
           }
-          console.log('ALL VISIBLE DSCR WINDOWS');
-          const lower = text.toLowerCase();
-          let from = 0;
-          let count = 0;
-          while (true) {
-            const i = lower.indexOf('dscr', from);
-            if (i < 0 || count >= 30) break;
-            console.log(`[${count}] ${text.slice(Math.max(0,i-180), i+320)}`);
-            from = i + 4;
-            count++;
-          }
-          console.log(`DSCR_COUNT=${count}`);
-          console.log(`SNAPSHOT_MARKUP_COUNT=${(html.match(/phase8a-investment-snapshot-table/g)||[]).length}`);
-          console.log(`EXEC_SUMMARY_COUNT=${(html.match(/phase8a-executive-summary/g)||[]).length}`);
           NODE
           git config user.name "investoriq-phase8a-bot"
           git config user.email "actions@users.noreply.github.com"
           git add PHASE8A_DIAGNOSTICS/stonebridge-dscr-surface.txt
           if ! git diff --cached --quiet; then
-            git commit -m "Phase 8A diagnostic: capture decision snapshot evidence"
+            git commit -m "Phase 8A diagnostic: capture raw decision snapshot markup"
             git push origin HEAD:internal-phase8a-owner-acceptance-recovery-20260903-r1
           fi
