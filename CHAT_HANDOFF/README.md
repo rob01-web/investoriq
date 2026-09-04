@@ -1,28 +1,38 @@
 # InvestorIQ CHAT_HANDOFF Folder
 
-This folder is organized to keep the active handoff simple without losing historical information.
+This folder keeps the active authority simple without deleting historical information.
 
 ## Current root files
 
-Use these first:
+Use only these for normal continuation:
 
-- `00_CURRENT_HANDOFF.md` - current state, Git authority, immediate next move
-- `01_MASTER_PLAN.md` - current program doctrine and protected boundaries
-- `02_ELITE_REPORT_BLUEPRINT.md` - current Screening and Underwriting report authority
+- `00_CURRENT_HANDOFF.md` - current state, Git authority, active phase, immediate next move
+- `01_MASTER_PLAN.md` - current product/program doctrine and protected boundaries
+- `02_ELITE_REPORT_BLUEPRINT.md` - current Screening and Underwriting information/visual authority
 - `03_FRESH_CHAT_PROMPT.md` - copy/paste continuation prompt for the next chat
+- `README.md` - folder rules
 
 ## Archive
 
-`archived/` is the historical record.
+`archived/` is the immutable historical record.
 
-Historical Markdown files should be preserved, not deleted or rewritten simply because a newer checkpoint exists.
+Superseded root authority must be copied into a dated archive snapshot before the root version is materially rewritten.
 
-When the root summaries omit older detail, consult the archive rather than guessing.
+The 2026-09-03 authority files that preceded the Decision Snapshot doctrine are preserved verbatim under:
 
-The pre-September root handoffs were moved into a dated archive snapshot without changing their contents.
+`archived/2026-09-04-pre-decision-snapshot-doctrine/`
+
+Older August/September checkpoints remain under the existing archive hierarchy.
 
 ## Preservation rule
 
 **Never clean this folder by deleting historical authority.**
 
-Organization means moving superseded files into `archived/`, not discarding them.
+Organization means:
+
+1. keep only the five current navigation/authority files at root;
+2. move or copy superseded authority into `archived/`;
+3. keep evidence bundles, PDFs, ZIPs, audit receipts, and historical scratch material out of the root authority set;
+4. consult archived checkpoints rather than reconstructing missing history from memory.
+
+If a local working copy contains many extra handoff files, do not delete them blindly. Preserve the local folder first, then reconcile it to the clean remote authority structure.
