@@ -1,21 +1,30 @@
 // Final shared presentation authority. Product differences are content and
 // column count, never a second font, cover, table, or page-furniture system.
 export const INVESTORIQ_PUBLICATION_PARITY_CSS = `
+@font-face { font-family:'InvestorIQ Cormorant Garamond'; font-style:normal; font-weight:400; font-display:block; src:url('https://raw.githubusercontent.com/CatharsisFonts/Cormorant/6d210fd3550b7358ca62d6ba3e354ec1ec940813/fonts/otf/CormorantGaramond-Regular.otf') format('opentype'); }
+@font-face { font-family:'InvestorIQ Cormorant Garamond'; font-style:normal; font-weight:500; font-display:block; src:url('https://raw.githubusercontent.com/CatharsisFonts/Cormorant/6d210fd3550b7358ca62d6ba3e354ec1ec940813/fonts/otf/CormorantGaramond-Medium.otf') format('opentype'); }
+@font-face { font-family:'InvestorIQ Cormorant Garamond'; font-style:normal; font-weight:600; font-display:block; src:url('https://raw.githubusercontent.com/CatharsisFonts/Cormorant/6d210fd3550b7358ca62d6ba3e354ec1ec940813/fonts/otf/CormorantGaramond-SemiBold.otf') format('opentype'); }
+@font-face { font-family:'InvestorIQ Cormorant Garamond'; font-style:normal; font-weight:700; font-display:block; src:url('https://raw.githubusercontent.com/CatharsisFonts/Cormorant/6d210fd3550b7358ca62d6ba3e354ec1ec940813/fonts/otf/CormorantGaramond-Bold.otf') format('opentype'); }
+@font-face { font-family:'InvestorIQ DM Sans'; font-style:normal; font-weight:400; font-display:block; src:url('https://raw.githubusercontent.com/googlefonts/dm-fonts/4412393b7d2de9fe7a92064c2dce9b5af5d7fd26/Sans/fonts/otf/DMSans-Regular.otf') format('opentype'); }
+@font-face { font-family:'InvestorIQ DM Sans'; font-style:normal; font-weight:500; font-display:block; src:url('https://raw.githubusercontent.com/googlefonts/dm-fonts/4412393b7d2de9fe7a92064c2dce9b5af5d7fd26/Sans/fonts/otf/DMSans-Medium.otf') format('opentype'); }
+@font-face { font-family:'InvestorIQ DM Sans'; font-style:normal; font-weight:700; font-display:block; src:url('https://raw.githubusercontent.com/googlefonts/dm-fonts/4412393b7d2de9fe7a92064c2dce9b5af5d7fd26/Sans/fonts/otf/DMSans-Bold.otf') format('opentype'); }
+@font-face { font-family:'InvestorIQ DM Mono'; font-style:normal; font-weight:400; font-display:block; src:url('https://raw.githubusercontent.com/googlefonts/dm-mono/57fadabfb200a77de2812540026c249dc3013077/exports/DMMono-Regular.ttf') format('truetype'); }
+@font-face { font-family:'InvestorIQ DM Mono'; font-style:normal; font-weight:500; font-display:block; src:url('https://raw.githubusercontent.com/googlefonts/dm-mono/57fadabfb200a77de2812540026c249dc3013077/exports/DMMono-Medium.ttf') format('truetype'); }
 @page iq-body {
   size: Letter; margin: .46in .52in .56in;
-  @top-left { content: "INVESTORIQ"; font-family:'DM Sans',sans-serif; font-size:6pt; font-weight:700; letter-spacing:.08em; color:#173f2b; }
-  @top-right { content: string(iq-section, first); font-family:'DM Sans',sans-serif; font-size:6pt; color:#606b64; }
-  @bottom-left { content: string(iq-property) " | CONFIDENTIAL"; font-family:'DM Sans',sans-serif; font-size:5.8pt; color:#606b64; }
-  @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family:'DM Mono',monospace; font-size:5.8pt; color:#606b64; }
+  @top-left { content: "INVESTORIQ"; font-family:'InvestorIQ DM Sans',sans-serif; font-size:6pt; font-weight:700; letter-spacing:.08em; color:#173f2b; }
+  @top-right { content: string(iq-section, first); font-family:'InvestorIQ DM Sans',sans-serif; font-size:6pt; color:#606b64; }
+  @bottom-left { content: string(iq-property) " | CONFIDENTIAL"; font-family:'InvestorIQ DM Sans',sans-serif; font-size:5.8pt; color:#606b64; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family:'InvestorIQ DM Mono',monospace; font-size:5.8pt; color:#606b64; }
 }
 @page {
   size: Letter; margin: .46in .52in .56in;
-  @top-left { content: "INVESTORIQ"; font-family:'DM Sans',sans-serif; font-size:6pt; font-weight:700; letter-spacing:.08em; color:#173f2b; }
-  @top-right { content: string(iq-section, first); font-family:'DM Sans',sans-serif; font-size:6pt; color:#606b64; }
-  @bottom-left { content: string(iq-property) " | CONFIDENTIAL"; font-family:'DM Sans',sans-serif; font-size:5.8pt; color:#606b64; }
-  @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family:'DM Mono',monospace; font-size:5.8pt; color:#606b64; }
+  @top-left { content: "INVESTORIQ"; font-family:'InvestorIQ DM Sans',sans-serif; font-size:6pt; font-weight:700; letter-spacing:.08em; color:#173f2b; }
+  @top-right { content: string(iq-section, first); font-family:'InvestorIQ DM Sans',sans-serif; font-size:6pt; color:#606b64; }
+  @bottom-left { content: string(iq-property) " | CONFIDENTIAL"; font-family:'InvestorIQ DM Sans',sans-serif; font-size:5.8pt; color:#606b64; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family:'InvestorIQ DM Mono',monospace; font-size:5.8pt; color:#606b64; }
 }
-.iq-phase8b { margin:0 !important; padding:0 !important; --font-display:'Cormorant Garamond',Georgia,serif; --font-body:'DM Sans',sans-serif; --font-mono:'DM Mono',monospace; font-family:var(--font-body); font-size:8.5pt; line-height:1.42; }
+.iq-phase8b { margin:0 !important; padding:0 !important; --font-display:'InvestorIQ Cormorant Garamond',Georgia,serif; --font-body:'InvestorIQ DM Sans',sans-serif; --font-mono:'InvestorIQ DM Mono',monospace; font-family:var(--font-body); font-size:8.5pt; line-height:1.42; }
 .iq-phase8b [data-iq-phase8b-slice] { display:none !important; }
 .iq-phase8b .report-container { width:100% !important; max-width:none !important; margin:0 !important; padding:0 !important; box-shadow:none !important; }
 .iq-phase8b .cover-wrap { height:10.5in !important; background:#fff !important; overflow:visible !important; }

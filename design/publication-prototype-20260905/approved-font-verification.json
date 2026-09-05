@@ -1,0 +1,30 @@
+{
+  "checkpoint": "visual-elite-step-1-approved-font-foundation",
+  "date": "2026-09-05",
+  "representative_property": "Stonebridge Lofts",
+  "prototype_pages": 5,
+  "renderer": "WeasyPrint 68.0 local representative proof only",
+  "pdf_page_size_points": "612 x 792",
+  "approved_families_observed": [
+    "Cormorant Garamond",
+    "DM Sans",
+    "DM Mono"
+  ],
+  "disallowed_families_observed": [],
+  "explicitly_rejected_families": [
+    "P052",
+    "Nimbus Sans",
+    "Noto Sans",
+    "DejaVu"
+  ],
+  "visual_review": {
+    "screening_cover": "pass",
+    "screening_decision": "pass",
+    "underwriting_cover": "pass",
+    "underwriting_decision": "pass",
+    "underwriting_operating_exhibit": "pass",
+    "clipping_or_overflow": "none observed"
+  },
+  "production_font_source_policy": "Exact complete upstream font files are pinned to immutable source commits and Git blob identities in the shared Phase 8B publication CSS. Generated PDFs must embed the approved families.",
+  "important_limit": "This receipt records representative local font and composition proof. It is not actual DocRaptor or Prince proof and is not customer-path certification."
+}
