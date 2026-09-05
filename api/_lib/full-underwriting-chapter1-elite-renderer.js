@@ -299,6 +299,7 @@ function renderExecutiveInvestmentSummary(contract) {
       ${decisionPanelsHtml}
       <p class="phase8a-exec-boundary">Decision first. Facts before prose. Scenario cases and detailed source treatment remain in the sections that follow.</p>`,
     legacySectionLabel: "Executive Summary",
+    allowBreak: true,
     bodyClass: "iq-ic-summary-card phase8a-executive-summary",
   });
 }
