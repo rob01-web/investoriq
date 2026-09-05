@@ -21,7 +21,7 @@ Do not ask Rob to upload the entire `CHAT_HANDOFF` folder. Do not use an older f
 - Certified Phase 8B tree: `783e73559e11ac955774d4b08f37d1282bde7e1c`
 - Phase 8A base: `113e5e2`
 - Remote `main` observed 2026-09-04: `b69d8dd3911449b82c94770d51f22302e47adcd9`
-- Phase 8B candidate branch was not present on the remote when this handoff was written.
+- Phase 8B candidate branch is present on GitHub. Initial transport commit `f8a9a1034dce5b33f680b8752befa821c0d4fa89` has tree `e173e49b719995b60e2046518dc94d33e1616a71`, byte-for-byte identical to local handoff HEAD `cb5497c`.
 - No Phase 8B merge, Vercel deployment, migration, scheduler action, production Storage mutation, or Stripe change has occurred.
 
 The immutable Phase 8 artifact-integrity recovery remains:
@@ -80,12 +80,11 @@ The following gates remain:
 1. Rob explicitly accepts the exact two Phase 8B PDFs.
 2. Resolve the repository's Vercel Hobby function-budget sentinel: 15 deployable routes versus a limit of 12.
 3. Re-run the authoritative launch QA and production build without weakening tests or production behavior.
-4. With explicit authorization, push only the isolated Phase 8B candidate branch.
-5. Verify the remote ref equals the intended candidate HEAD.
-6. Create a non-production preview and prove it is `READY`, tied to the expected SHA, and correctly aliased for preview.
-7. Validate critical browser/API/report generation behavior, including the intended customer PDF path.
-8. Ask for explicit authorization before any merge, production promotion, migration, scheduler activation, Storage mutation, Stripe/pricing action, or historical-row cleanup.
-9. If production is authorized, promote the exact validated artifact once and record URL, target, state, SHA, alias, and post-deploy evidence.
+4. Preserve the already-pushed isolated Phase 8B candidate branch and its verified tree identity.
+5. Create a non-production preview only with explicit authorization and prove it is `READY`, tied to the expected SHA, and correctly aliased for preview.
+6. Validate critical browser/API/report generation behavior, including the intended customer PDF path.
+7. Ask for explicit authorization before any merge, production promotion, migration, scheduler activation, Storage mutation, Stripe/pricing action, or historical-row cleanup.
+8. If production is authorized, promote the exact validated artifact once and record URL, target, state, SHA, alias, and post-deploy evidence.
 
 Known inherited QA maintenance items must remain visible:
 

@@ -40,7 +40,7 @@ No report-design closeout authorizes database migrations, scheduler activation, 
 | Phase 8B local certification | PASS | Preserve exact product HEAD and artifacts |
 | Owner acceptance | PENDING | Rob accepts the two exact Phase 8B PDFs |
 | Vercel function budget | FAIL (`15/12`) | Consolidate deployable routes or change the documented deployment plan |
-| Isolated branch on remote | NOT PRESENT | Push only after authorization and gates |
+| Isolated branch on remote | PASS | Initial transport `f8a9a103`; tree `e173e49b` matches local `cb5497c` exactly |
 | Preview deployment | NOT RUN | Create after branch push; require `READY` |
 | Production deployment | NOT AUTHORIZED | Promote only after preview proof and explicit authorization |
 

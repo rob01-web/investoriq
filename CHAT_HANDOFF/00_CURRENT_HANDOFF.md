@@ -13,7 +13,7 @@
 - Certified Phase 8B tree: `783e73559e11ac955774d4b08f37d1282bde7e1c`
 - Phase 8A base: `113e5e2`
 - Remote `main` observed 2026-09-04: `b69d8dd3911449b82c94770d51f22302e47adcd9`
-- The Phase 8B branch is not present on the remote.
+- The Phase 8B branch is present on GitHub. Initial transport commit `f8a9a1034dce5b33f680b8752befa821c0d4fa89` has tree `e173e49b719995b60e2046518dc94d33e1616a71`, byte-for-byte identical to local handoff HEAD `cb5497c`.
 - No merge to `main`, Vercel deployment, migration, scheduler action, Storage mutation, or Stripe change has occurred.
 
 The immutable Phase 8 artifact-integrity recovery at `4e9d01648aeb7a0f0616f20d8a72264cbea13443` remains preserved provenance beneath the later Phase 8A and Phase 8B work.
@@ -41,7 +41,7 @@ These replaced the verified Phase 8A baselines only for Phase 8B acceptance comp
 
 1. Rob must explicitly accept the exact two Phase 8B PDFs above.
 2. The repository's deployable-function sentinel currently fails at `15/12` for the Vercel Hobby budget.
-3. The isolated Phase 8B branch must first be pushed as the only candidate branch and verified remotely.
+3. The isolated Phase 8B branch is now pushed and remotely verified.
 4. A preview deployment must become `READY`, identify the candidate SHA, and pass the intended customer-path report checks.
 5. Only then may the same validated artifact be deliberately promoted/synchronized to production with explicit authorization.
 
@@ -53,7 +53,7 @@ Two additional inherited QA maintenance failures remain classified and visible: 
 2. Review and explicitly accept or reject the exact Phase 8B PDFs.
 3. Resolve the 15/12 Vercel function-budget deployment gate.
 4. Re-run the launch wall and production build.
-5. With explicit authorization, push the isolated branch and create a preview.
+5. With explicit authorization, create a preview from the isolated branch.
 6. Verify the preview end to end; then explicitly authorize production promotion.
 
 ---
