@@ -1,3 +1,5 @@
+import { INVESTORIQ_VISUAL_ELITE_CSS } from "./investoriq-visual-elite-css.js";
+
 // Final shared presentation authority. Product differences are content and
 // column count, never a second font, cover, table, or page-furniture system.
 export const INVESTORIQ_PUBLICATION_PARITY_CSS = `
@@ -87,4 +89,5 @@ export const INVESTORIQ_PUBLICATION_PARITY_CSS = `
   .iq-phase8b section[data-iq-elite-section="screeningDecisionSnapshot"] { break-before:auto !important; }
   .iq-phase8b .iq-debt-profile { break-inside:avoid !important; page-break-inside:avoid !important; }
 }
+${INVESTORIQ_VISUAL_ELITE_CSS}
 `;
