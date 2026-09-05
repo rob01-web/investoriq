@@ -1,5 +1,6 @@
 import { publicationMoney as money, publicationPercent as percent } from "./publication-format.js";
 import { validateFullUnderwritingOperatingIntelligenceContract } from "./full-underwriting-operating-intelligence-contract.js";
+import { renderVisualEliteOperatingEarningsBridge } from "./investoriq-visual-elite-exhibits.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -16,10 +17,6 @@ function customerCopy(value) {
     .replace(/this operating-intelligence contract/gi, "this operating analysis")
     .replace(/operating-intelligence contract/gi, "operating analysis");
 }
-
-
-
-
 
 function pp(value) {
   const n = Number(value);
@@ -124,10 +121,11 @@ function renderNoiAnalysis(contract) {
     s.occupancyBreakEvenSpread.displayReady ? noteRow("Occupancy vs Operating Break-Even", pp(s.occupancyBreakEvenSpread.value)) : "",
     s.noiIdentityDifference.displayReady ? noteRow("EGI less OpEx less NOI", money(s.noiIdentityDifference.value), s.noiIdentityReconciles === true ? "Within deterministic reconciliation tolerance" : "Review accepted totals") : "",
   ].filter(Boolean).join("");
+  const earningsBridge = renderVisualEliteOperatingEarningsBridge(s);
   return section(
     "NOI & Margin Analysis",
     "noi-margin-analysis",
-    `<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table><p class="footer-note">Operating break-even is a deterministic operating relationship. Debt service is not included here unless separately analyzed in the debt chapter.</p>`,
+    `${earningsBridge}<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table><p class="footer-note">Operating break-even is a deterministic operating relationship. Debt service is not included here unless separately analyzed in the debt chapter.</p>`,
     dispositionValue(s)
   );
 }
