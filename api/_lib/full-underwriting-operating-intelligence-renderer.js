@@ -97,13 +97,12 @@ function renderExpenseStructure(contract) {
   const detailRows = (Array.isArray(s.rows) ? s.rows : [])
     .filter((expense) => expense.shareOfOperatingExpenses !== null)
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 6)
     .map((expense) => `<tr><td>${escapeHtml(expense.label)}</td><td>${escapeHtml(money(expense.amount))}</td><td>${escapeHtml(percent(expense.shareOfOperatingExpenses))}</td>${expense.amountPerUnit !== null ? `<td>${escapeHtml(money(expense.amountPerUnit))}</td>` : "<td>Not available</td>"}</tr>`)
     .join("");
   return section(
     "Expense Structure",
     "expense-structure",
-    `<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table>${detailRows ? `<div class="subsection-block"><p class="subsection-title">Largest Accepted Expense Lines</p><table class="detail-table iq-numeric-table"><thead><tr><th>Expense</th><th>Amount</th><th>Share</th><th>Per Unit</th></tr></thead><tbody>${detailRows}</tbody></table></div>` : ""}${s.qualification ? `<p class="footer-note">${escapeHtml(customerCopy(s.qualification))}</p>` : ""}`,
+    `<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table>${detailRows ? `<div class="subsection-block"><p class="subsection-title">Accepted Expense Lines</p><table class="detail-table iq-numeric-table"><thead><tr><th>Expense</th><th>Amount</th><th>Share</th><th>Per Unit</th></tr></thead><tbody>${detailRows}</tbody></table></div>` : ""}${s.qualification ? `<p class="footer-note">${escapeHtml(customerCopy(s.qualification))}</p>` : ""}`,
     dispositionValue(s)
   );
 }
