@@ -1,3 +1,4 @@
+import { publicationMoney as money, publicationPercent as percent } from "./publication-format.js";
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&(?:mdash|ndash);|&#(?:8211|8212);|&#x(?:2013|2014);/gi, " - ")
@@ -9,19 +10,9 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-function money(value) {
-  if (!Number.isFinite(value)) return "Not available";
-  const rounded = Math.round(value + 1e-7);
-  const absolute = Math.abs(rounded).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  return rounded < 0 ? `($${absolute})` : `$${absolute}`;
-}
 
-function percent(value, digits = 1) {
-  if (!Number.isFinite(value)) return "Not available";
-  const rounded = Number((value * 100).toFixed(digits));
-  const normalized = Object.is(rounded, -0) ? 0 : rounded;
-  return `${normalized.toFixed(digits)}%`;
-}
+
+
 
 function surfacePercent(value) {
   if (!Number.isFinite(value)) return "Not available";

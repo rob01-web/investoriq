@@ -1,3 +1,4 @@
+import { publicationMoney as money, publicationPercent as percent } from "./publication-format.js";
 import { validateFullUnderwritingDriverAnalysisV1 } from "./full-underwriting-driver-analysis-v1.js";
 
 function escapeHtml(value) {
@@ -30,29 +31,18 @@ function customerCopy(value) {
     .replace(/\bgoverned\b/gi, "defined");
 }
 
-function money(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "Not available";
-  const normalized = Object.is(n, -0) ? 0 : n;
-  const absolute = Math.abs(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  return normalized < 0 ? `($${absolute})` : `$${absolute}`;
-}
 
-function percent(value, digits = 1) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "Not available";
-  const pct = Math.abs(n) <= 1.5 ? n * 100 : n;
-  return `${pct.toFixed(digits)}%`;
-}
+
+
 
 function multiple(value) {
   const n = Number(value);
   return Number.isFinite(n) ? `${n.toFixed(2)}x` : "Not available";
 }
 
-function formatValue(value, units) {
+function formatValue(value, units, label = "") {
   if (String(units || "").startsWith("currency")) return money(value);
-  if (units === "ratio" || units === "percent" || units === "percentage") return percent(value, units === "ratio" ? 2 : 1);
+  if (units === "ratio" || units === "percent" || units === "percentage") return percent(value, /cap.*rate/i.test(label) ? 2 : 1);
   if (units === "multiple") return multiple(value);
   const n = Number(value);
   return Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "Not available";
@@ -84,7 +74,7 @@ function renderDriverTable(contract) {
   if (!contract.availability?.chapterContributionDisplayReady || isCollapsed(disposition)) return "";
   const rows = contract.rankedDrivers.map((driver) => {
     const target = driver.targetOutput || {};
-    const baseText = formatValue(driver.baseInput?.value, driver.baseInput?.units);
+    const baseText = formatValue(driver.baseInput?.value, driver.baseInput?.units, driver.label);
     const stressText = driver.stressInput?.label || formatValue(driver.stressInput?.value, driver.stressInput?.units);
     const outputText = `${target.label}: ${formatValue(target.outputChange, target.units)}`;
     return `<tr data-iq-driver-key="${escapeHtml(driver.driverKey)}" data-iq-evidence-class="scenario">

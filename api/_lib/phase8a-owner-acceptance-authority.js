@@ -1,3 +1,5 @@
+import { reconcileExpenseSource } from "./expense-source-reconciliation.js";
+import { publicationCushion } from "./publication-format.js";
 import { INVESTORIQ_PHASE8A_PUBLICATION_CSS } from "./investoriq-publication-design-system.js";
 
 const PHASE8A_MARKER = "owner-acceptance-recovery-v1";
@@ -82,6 +84,7 @@ function canonicalScreeningMetrics(sourceTruthPackage = null) {
   return {
     t12,
     rr,
+    expenseReconciliation: reconcileExpenseSource(t12),
     gpr,
     egi,
     opex,
@@ -120,6 +123,7 @@ function buildScreeningDisposition(sourceTruthPackage = null) {
     m.reconciliationVariance !== null &&
     Math.abs(m.reconciliationVariance) >= 0.05;
   const incompleteCorePair = !m.hasT12 || !m.hasRentRoll;
+  const incompleteDecisionMetrics = [m.expenseRatio, m.noiMargin, m.breakEvenOccupancy, m.occupancy, m.reconciliationVariance].some((value) => value === null);
 
   let disposition = "ADVANCE";
   let reason = "Core operating metrics are within Screening thresholds.";
@@ -137,13 +141,17 @@ function buildScreeningDisposition(sourceTruthPackage = null) {
     disposition = "INSUFFICIENT EVIDENCE";
     reason = "Only one core operating source is available for this Screening.";
     nextStep = `Obtain the missing ${m.hasT12 ? "Rent Roll" : "T12 operating statement"} before full Underwriting.`;
+  } else if (incompleteDecisionMetrics) {
+    disposition = "INSUFFICIENT EVIDENCE";
+    reason = "The available core sources do not establish every operating metric needed for a Screening decision.";
+    nextStep = "Obtain the missing operating facts before the next review decision.";
   } else if (cautions.length > 0) {
     disposition = "HOLD";
     reason = `A caution threshold requires review: ${cautions[0]}.`;
     nextStep = "Confirm the operating issue and its durability before full Underwriting.";
   }
 
-  const operatingStrength = hardRisks.length > 0 ? "Weak" : cautions.length > 0 ? "Caution" : "Strong";
+  const operatingStrength = hardRisks.length > 0 ? "Weak" : cautions.length > 0 ? "Caution" : [m.expenseRatio, m.noiMargin, m.breakEvenOccupancy].some((value) => value === null) ? "Not available" : "Strong";
   const rentPosition = m.rentGapRatio === null
     ? "Not available"
     : m.rentGapRatio > 0
@@ -153,9 +161,9 @@ function buildScreeningDisposition(sourceTruthPackage = null) {
     ? "Single core source"
     : reconciliationMaterial
       ? `${formatPercent(Math.abs(m.reconciliationVariance), 1)} material variance`
-      : "Core sources aligned";
+      : m.reconciliationVariance === null ? "Comparison not available" : "Core sources aligned";
   const cushion = m.occupancy !== null && m.breakEvenOccupancy !== null
-    ? `${((m.occupancy - m.breakEvenOccupancy) * 100).toFixed(1)} pp above break-even`
+    ? publicationCushion(m.occupancy, m.breakEvenOccupancy)
     : "Not available";
   const diligenceBurden = hardRisks.length > 0 || reconciliationMaterial || incompleteCorePair || cautions.length > 0
     ? "Elevated"
@@ -199,7 +207,7 @@ function comparisonCell(label, value) {
 }
 
 function screeningOperatingProfile(d = {}) {
-  if (!d.hasT12 || !d.hasRentRoll) return "INSUFFICIENT EVIDENCE";
+  if (!d.hasT12 || !d.hasRentRoll || [d.noiMargin, d.expenseRatio, d.occupancy].some((value) => value === null)) return "INSUFFICIENT EVIDENCE";
   if (
     (d.expenseRatio !== null && d.expenseRatio >= 0.65) ||
     (d.noiMargin !== null && d.noiMargin <= 0.30) ||
@@ -416,10 +424,12 @@ function humanizeUnderwritingCopy(html = "") {
     .replace(/Accepted evidence/gi, "Source document")
     .replace(/accepted T12 NOI/gi, "T12 NOI")
     .replace(/accepted Rent Roll/gi, "Rent Roll")
-    .replace(/accepted purchase price/gi, "purchase price")
-    .replace(/accepted going-in cap rate/gi, "going-in cap rate")
+    .replace(/Accepted Purchase Price/g, "Purchase Price")
+    .replace(/accepted purchase price/g, "purchase price")
+    .replace(/Accepted Going-In Cap Rate/g, "Going-In Cap Rate")
+    .replace(/accepted going-in cap rate/g, "going-in cap rate")
     .replace(/accepted proposed terms/gi, "proposed terms")
-    .replace(/accepted occupancy/gi, "current occupancy")
+    .replace(/accepted occupancy/g, "current occupancy")
     .replace(/Accepted occupancy/gi, "Current occupancy")
     .replace(/a 11\.16%/gi, "an 11.16%")
     .replace(/produces\s+([0-9.]+x)\s+less DSCR than current debt/gi, "produces DSCR that is $1 lower than current debt")

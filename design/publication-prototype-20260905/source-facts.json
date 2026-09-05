@@ -1,0 +1,14 @@
+{
+  "units": 64,
+  "occupied": 60,
+  "egi": 1500000,
+  "opex": 555000,
+  "noi": 945000,
+  "gpr": 1612800,
+  "in_place_rent": 1432800,
+  "market_rent": 1718400,
+  "expense_lines": 535000,
+  "purchase_price": 13500000,
+  "current_debt_service": 471000,
+  "proposed_debt_service": 676249.2
+}

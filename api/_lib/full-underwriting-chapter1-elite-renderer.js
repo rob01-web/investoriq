@@ -1,3 +1,4 @@
+import { publicationMoney as formatMoney, publicationPercent as formatPercent } from "./publication-format.js";
 import { FULL_UNDERWRITING_CHAPTER1_ELITE_CONTRACT_VERSION } from "./full-underwriting-chapter1-elite-contract.js";
 import {
   renderPublicationDecisionBand,
@@ -44,19 +45,9 @@ function finite(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function formatMoney(value) {
-  const number = finite(value);
-  if (number === null) return "Not available";
-  const normalized = Object.is(number, -0) ? 0 : number;
-  const absolute = Math.abs(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  return normalized < 0 ? `($${absolute})` : `$${absolute}`;
-}
 
-function formatPercent(value, digits = 1) {
-  const number = finite(value);
-  if (number === null) return "Not available";
-  return `${(number * 100).toFixed(digits)}%`;
-}
+
+
 
 function formatMetricValue(receipt = null) {
   if (receipt?.displayReady !== true) return "Not available";
@@ -71,7 +62,7 @@ function formatMetricValue(receipt = null) {
     case "currency_per_unit_per_year":
       return formatMoney(value);
     case "ratio":
-      return formatPercent(value, 1);
+      return formatPercent(value, /cap.*rate|interest.*rate/i.test(`${receipt.key || ""} ${receipt.label || ""}`) ? 2 : 1);
     case "ratio_delta":
       return `${(value * 100).toFixed(1)} pp`;
     case "ratio_x":
@@ -123,7 +114,7 @@ function renderExecutiveMetric(contract, key, label = null) {
   return `<div class="phase8a-exec-metric" data-iq-phase8a-exec-metric="${escapeHtml(key)}"><span>${escapeHtml(label || receipt.label || key)}</span><strong>${escapeHtml(formatMetricValue(receipt))}</strong></div>`;
 }
 
-function executiveDecisionState(primary = null) {
+export function executiveDecisionState(primary = null) {
   const code = String(primary?.code || "");
   if (code === "PRIMARY_SOURCE_RECONCILIATION_REQUIRED") return "RECONCILIATION REQUIRED";
   if (code === "CURRENT_DEBT_DSCR_BELOW_1X" || code === "PROPOSED_FINANCING_DSCR_BELOW_1X") return "FINANCING REVIEW REQUIRED";
@@ -493,7 +484,7 @@ function renderSourceReconciliationAlert(contract) {
     { label: "T12 Gross Potential Rent", value: formatMoney(section.t12GrossPotentialRent) },
     { label: "Rent Roll Annual In-Place Rent", value: formatMoney(section.rentRollAnnualInPlaceRent) },
     { label: "Rent Roll less T12", value: formatMoney(section.differenceAmount) },
-    { label: "Variance", value: formatPercent(section.varianceRatio, 2) },
+    { label: "Variance", value: formatPercent(section.varianceRatio, 1) },
   ];
   return renderSection({
     title: "Primary Source Reconciliation Alert",

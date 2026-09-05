@@ -28,8 +28,8 @@ for (const [lane, html] of Object.entries({ screening, underwriting })) {
 
 assert.match(screening, /InvestorIQ Screening Report/);
 assert.match(screening, /<span>Review Classification<\/span>\s*<strong>HOLD<\/strong>/);
-assert.match(screening, /<span>Operating Profile<\/span>\s*<strong>LIGHT VALUE-ADD CANDIDATE \| Multifamily \| 48 Units<\/strong>/);
-assert.match(screening, /<span>Evidence Basis<\/span>\s*<strong>2 core operating sources<\/strong>/);
+assert.match(screening, /<span>Property Scale<\/span>\s*<strong>48 Units<\/strong>/);
+assert.match(screening, /<span>Evidence Basis<\/span>\s*<strong>2 core sources<\/strong>/);
 assert.match(screening, /Document-Backed Property Screening/);
 assert.match(screening, /data-iq-elite-section="screeningDecisionSnapshot"/);
 assert.match(screening, /class="phase8b-screening-decision-band"/);

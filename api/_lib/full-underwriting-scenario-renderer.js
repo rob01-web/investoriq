@@ -1,3 +1,4 @@
+import { publicationMoney as money, publicationPercent as percent } from "./publication-format.js";
 import { validateFullUnderwritingScenarioEngineV1 } from "./full-underwriting-scenario-engine-v1.js";
 
 function escapeHtml(value) {
@@ -23,19 +24,9 @@ function customerCopy(value) {
     .replace(/\bgoverned\b/gi, "defined");
 }
 
-function money(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "Not available";
-  const normalized = Object.is(n, -0) ? 0 : n;
-  const absolute = Math.abs(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  return normalized < 0 ? `($${absolute})` : `$${absolute}`;
-}
 
-function percent(value, digits = 1) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "Not available";
-  return `${(n * 100).toFixed(digits)}%`;
-}
+
+
 
 function multiple(value) {
   const n = Number(value);

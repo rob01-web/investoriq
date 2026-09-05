@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { resolveAuthenticatedActor } from './_lib/authenticated-actor.js';
+import { resolveAuthenticatedActor } from './authenticated-actor.js';
 
 function clampLimit(value, fallback = 25) {
   const parsed = Number(value);

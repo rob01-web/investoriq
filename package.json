@@ -29,7 +29,7 @@
     "qa:component:parsers": "node tests/qa/rent-roll-alias-smoke.js && node tests/qa/t12-core-summary-smoke.js && node tests/qa/t12-line-items-smoke.js && node tests/qa/property-tax-parser-smoke.js",
     "qa:component:recovery": "node tests/qa/appraisal-support-recovery-smoke.js && node tests/qa/supporting-doc-recovery-smoke.js",
     "qa:component:routing": "node tests/qa/qa-fix-routing-smoke.js && node tests/qa/qa-director-review-smoke.js",
-    "qa:phase6:lifecycle": "node tests/qa/phase6-lifecycle-certification-contract-smoke.js",
+    "qa:component:lifecycle": "node tests/qa/phase6-lifecycle-certification-contract-smoke.js",
     "test:e2e": "node tests/qa/phase6-lifecycle-certification-contract-smoke.js",
     "test:e2e:legacy": "node tests/e2e/run-e2e.js",
     "test:e2e:report": "node tests/e2e/run-e2e.js --profile underwriting-dscr-constrained",

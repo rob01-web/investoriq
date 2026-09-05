@@ -1,3 +1,4 @@
+import { handleCustomerReportDownload } from "./customer-report-download-handler.js";
 import {
   isInvestorIQAdmin,
   resolveAuthenticatedResourceOwnership,
@@ -352,38 +353,6 @@ async function handleCustomerReportRemoval({ req, res, auth, supabase }) {
     success: true,
     removal_mode: 'retained_hidden',
     reports: reportIds.map((id) => ({ id })),
-  });
-}
-
-async function handleCustomerReportDownload({ req, res, auth, supabase }) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const storagePath = String(req.body?.storage_path || req.body?.storagePath || '').trim();
-  if (!storagePath) return res.status(400).json({ error: 'STORAGE_PATH_REQUIRED' });
-
-  const { data: report, error: reportError } = await supabase
-    .from('customer_published_report_projection')
-    .select('id, user_id, storage_path, publication_receipt_id, publication_job_id, publication_state')
-    .eq('user_id', auth.actor.id)
-    .eq('storage_path', storagePath)
-    .eq('publication_state', 'published')
-    .maybeSingle();
-  if (reportError) return res.status(500).json({ error: 'DOWNLOAD_REPORT_LOOKUP_FAILED' });
-  if (!report) return res.status(404).json({ error: 'CURRENT_REPORT_NOT_FOUND' });
-
-  const { data, error } = await supabase.storage.from('generated_reports').createSignedUrl(storagePath, 300);
-  if (error || !data?.signedUrl) return res.status(409).json({ error: 'DOWNLOAD_ARTIFACT_UNAVAILABLE' });
-
-  return res.status(200).json({
-    success: true,
-    signedUrl: data.signedUrl,
-    expiresIn: 300,
-    report_id: report.id,
-    publication_receipt_id: report.publication_receipt_id,
-    publication_job_id: report.publication_job_id,
   });
 }
 

@@ -1,3 +1,4 @@
+import { reconcileExpenseSource } from "./expense-source-reconciliation.js";
 import {
   applySectionDisposition,
   SECTION_CLASSIFICATIONS,
@@ -179,6 +180,7 @@ function normalizeExpenseLines(sourceTruthPackage, operatingExpenses, units) {
     .map((row) => ({ ...row }));
   const total = operatingExpenses?.displayReady ? operatingExpenses.value : null;
   const unitCount = units?.displayReady && units.value > 0 ? units.value : null;
+  const sourceReconciliation = reconcileExpenseSource(sourceTruthPackage?.core?.t12?.accepted_facts);
   const positiveSum = rows.reduce((sum, row) => sum + (row.amount > 0 ? row.amount : 0), 0);
   const compositionEligible = Boolean(
     total !== null &&
@@ -201,6 +203,7 @@ function normalizeExpenseLines(sourceTruthPackage, operatingExpenses, units) {
   return {
     rows: normalized,
     positiveLineItemSum: positiveSum,
+    sourceReconciliation,
     compositionEligible,
     largest: compositionEligible && ranked.length > 0 ? ranked[0] : null,
     topThreeShare:
@@ -212,7 +215,9 @@ function normalizeExpenseLines(sourceTruthPackage, operatingExpenses, units) {
     qualification:
       normalized.length === 0
         ? "Detailed expense lines were not established by the accepted T12."
-        : compositionEligible
+        : sourceReconciliation.requiresReconciliation
+          ? "The listed expense lines do not reconcile to stated total operating expenses. The stated total and NOI remain unchanged pending source clarification."
+          : compositionEligible
           ? null
           : "Expense line-item concentration is not calculated because accepted line items do not reconcile closely enough to stated total operating expenses.",
   };
@@ -226,7 +231,10 @@ function normalizeIncomeLines(sourceTruthPackage) {
 }
 
 function normalizeUnitMixRows(sourceTruthPackage) {
-  const raw = sourceTruthPackage?.core?.rent_roll?.accepted_facts?.unit_mix;
+  const facts = sourceTruthPackage?.core?.rent_roll?.accepted_facts || {};
+  const raw = facts.unit_mix;
+  const units = Array.isArray(facts.units) ? facts.units : [];
+  const category = (row) => text(row.unit_type ?? row.unitType ?? row.label ?? row.type).toLowerCase();
   return (Array.isArray(raw) ? raw : [])
     .map((row, index) => {
       if (!row || typeof row !== "object") return null;
@@ -235,17 +243,31 @@ function normalizeUnitMixRows(sourceTruthPackage) {
         row.bedroom_type ?? row.bedroomType ?? row.bedrooms ?? row.beds
       ) || `Unit Mix ${index + 1}`;
       const count = finite(row.count ?? row.unit_count ?? row.units ?? row.quantity);
-      const inPlaceMonthly = finite(
+      let inPlaceMonthly = finite(
         row.current_rent ?? row.currentRent ?? row.in_place_rent ?? row.inPlaceRent ?? row.rent
       );
-      const marketMonthly = finite(
+      let marketMonthly = finite(
         row.market_rent ?? row.marketRent ?? row.market_rent_monthly ?? row.marketRentMonthly ?? row.market
       );
       if (count === null && inPlaceMonthly === null && marketMonthly === null) return null;
+      // Complete accepted unit rows outrank rounded category averages. Never
+      // extrapolate an observed subset across an entire unit category.
+      const categoryUnits = units.filter((unit) => category(unit) === label.toLowerCase());
+      const completeRows = count > 0 && categoryUnits.length === count;
+      const currentValues = categoryUnits.map((unit) => finite(unit.in_place_rent ?? unit.current_rent));
+      const marketValues = categoryUnits.map((unit) => finite(unit.market_rent));
+      const currentComplete = completeRows && currentValues.every((value) => value !== null);
+      const marketComplete = completeRows && marketValues.every((value) => value !== null);
+      if (currentComplete) inPlaceMonthly = currentValues.reduce((sum, value) => sum + value, 0) / count;
+      if (marketComplete) marketMonthly = marketValues.reduce((sum, value) => sum + value, 0) / count;
+      const currentCoverage = currentComplete || (categoryUnits.length === 0 &&
+        (row.current_rent_count == null || finite(row.current_rent_count) === count));
+      const marketCoverage = marketComplete || (categoryUnits.length === 0 &&
+        (row.market_rent_count == null || finite(row.market_rent_count) === count));
       const annualInPlaceContribution =
-        count !== null && count > 0 && inPlaceMonthly !== null ? count * inPlaceMonthly * 12 : null;
+        currentCoverage && count !== null && count > 0 && inPlaceMonthly !== null ? count * inPlaceMonthly * 12 : null;
       const annualMarketContribution =
-        count !== null && count > 0 && marketMonthly !== null ? count * marketMonthly * 12 : null;
+        marketCoverage && count !== null && count > 0 && marketMonthly !== null ? count * marketMonthly * 12 : null;
       const annualRentGapContribution =
         annualInPlaceContribution !== null && annualMarketContribution !== null
           ? annualMarketContribution - annualInPlaceContribution
@@ -633,7 +655,7 @@ function buildInterpretation({ metrics, expenseStructure, concentration, histori
   if (expenseStructure.largest) {
     items.push(interpretation({
       code: "LARGEST_EXPENSE_CATEGORY",
-      statement: `${expenseStructure.largest.label} is the largest reconciled accepted expense line at $${Math.round(expenseStructure.largest.amount).toLocaleString("en-US")}${expenseStructure.largest.shareOfOperatingExpenses !== null ? ` (${(expenseStructure.largest.shareOfOperatingExpenses * 100).toFixed(1)}% of stated operating expenses)` : ""}.`,
+      statement: `${expenseStructure.largest.label} is the largest listed expense line at $${Math.round(expenseStructure.largest.amount).toLocaleString("en-US")}${expenseStructure.largest.shareOfOperatingExpenses !== null ? ` (${(expenseStructure.largest.shareOfOperatingExpenses * 100).toFixed(1)}% of stated operating expenses)` : ""}.`,
       metrics: ["operatingExpenses"],
       provenance: [expenseStructure.largest.authorityPath],
     }));
@@ -826,6 +848,7 @@ export function buildFullUnderwritingOperatingIntelligenceContract({
       largestExpenseCategory: expenseStructure.largest,
       topThreeExpenseShare: expenseStructure.topThreeShare,
       lineItemCoverageRatio: expenseStructure.lineItemCoverageRatio,
+      sourceReconciliation: expenseStructure.sourceReconciliation,
       compositionEligible: expenseStructure.compositionEligible,
       qualification: expenseStructure.qualification,
     },

@@ -1,3 +1,6 @@
+import customerReports from './_lib/customer-reports-handler.js';
+import customerReportDownload from './_lib/customer-report-download-handler.js';
+import requestRevision from './_lib/request-revision-handler.js';
 import { createClient } from '@supabase/supabase-js';
 import { resolveAuthenticatedActor } from './_lib/authenticated-actor.js';
 import { handleCustomerBoundaryRoute } from './_lib/customer-boundary-handler.js';
@@ -10,6 +13,12 @@ import {
 
 export default async function handler(req, res) {
   try {
+    // Existing public URLs share a function; each handler retains its own
+    // method, authentication, ownership and publication checks.
+    const customerRoute = String(req.query?.customer_route || '').trim();
+    if (customerRoute === 'reports') return await customerReports(req, res);
+    if (customerRoute === 'report_download') return await customerReportDownload(req, res);
+    if (customerRoute === 'request_revision') return await requestRevision(req, res);
     if (!['GET', 'POST'].includes(req.method)) {
       res.setHeader('Allow', 'GET, POST');
       return res.status(405).json({ error: 'Method not allowed' });

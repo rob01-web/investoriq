@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { resolveAuthenticatedActor } from './_lib/authenticated-actor.js';
+import { resolveAuthenticatedActor } from './authenticated-actor.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -25,6 +25,16 @@ export default async function handler(req, res) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  return handleCustomerReportDownload({ req, res, auth, supabase });
+}
+
+export async function handleCustomerReportDownload({ req, res, auth, supabase }) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  const storagePath = String(req.body?.storage_path || req.body?.storagePath || '').trim();
+  if (!storagePath) return res.status(400).json({ error: 'STORAGE_PATH_REQUIRED' });
   const { data: report, error: reportError } = await supabase
     .from('customer_published_report_projection')
     .select('id, user_id, storage_path, publication_receipt_id, publication_job_id, publication_state, storage_object_id')

@@ -1,3 +1,4 @@
+import { publicationMoney as money, publicationPercent as percent } from "./publication-format.js";
 import { validateFullUnderwritingOperatingIntelligenceContract } from "./full-underwriting-operating-intelligence-contract.js";
 
 function escapeHtml(value) {
@@ -16,18 +17,9 @@ function customerCopy(value) {
     .replace(/operating-intelligence contract/gi, "operating analysis");
 }
 
-function money(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "Not available";
-  const abs = Math.abs(Object.is(n, -0) ? 0 : n).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  return n < 0 ? `($${abs})` : `$${abs}`;
-}
 
-function percent(value, digits = 1) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "Not available";
-  return `${(Math.abs(n) <= 1.5 ? n * 100 : n).toFixed(digits)}%`;
-}
+
+
 
 function pp(value) {
   const n = Number(value);
@@ -100,7 +92,9 @@ function renderExpenseStructure(contract) {
   const rows = [
     s.operatingExpenses.displayReady ? noteRow("Total Operating Expenses", money(s.operatingExpenses.value)) : "",
     s.expenseRatio.displayReady ? noteRow("Expense Ratio", percent(s.expenseRatio.value)) : "",
-    s.largestExpenseCategory ? noteRow("Largest Reconciled Expense Category", `${s.largestExpenseCategory.label} - ${money(s.largestExpenseCategory.amount)}`, s.largestExpenseCategory.shareOfOperatingExpenses !== null ? percent(s.largestExpenseCategory.shareOfOperatingExpenses) : "") : "",
+    s.sourceReconciliation?.requiresReconciliation ? noteRow("Listed Expense Lines", money(s.sourceReconciliation.lineTotal)) : "",
+    s.sourceReconciliation?.requiresReconciliation ? noteRow("Stated Total Less Listed Lines", money(s.sourceReconciliation.difference), "Requires source clarification; stated NOI unchanged") : "",
+    s.largestExpenseCategory ? noteRow("Largest Listed Expense Category", `${s.largestExpenseCategory.label} - ${money(s.largestExpenseCategory.amount)}`, s.largestExpenseCategory.shareOfOperatingExpenses !== null ? percent(s.largestExpenseCategory.shareOfOperatingExpenses) : "") : "",
     Number.isFinite(Number(s.topThreeExpenseShare)) ? noteRow("Top Three Expense Share", percent(s.topThreeExpenseShare), "Share of stated operating expenses") : "",
   ].filter(Boolean).join("");
   const detailRows = (Array.isArray(s.rows) ? s.rows : [])
@@ -147,7 +141,7 @@ function renderConcentration(contract) {
     s.largestPositiveRentGapCategory ? row("Largest Positive Gross Rent Gap Category", `${s.largestPositiveRentGapCategory.label} - ${money(s.largestPositiveRentGapCategory.annualRentGapContribution)}`) : "",
   ].filter(Boolean).join("");
   const detailRows = (Array.isArray(s.rows) ? s.rows : [])
-    .map((mix) => `<tr><td>${escapeHtml(mix.label)}</td><td>${mix.count !== null ? `${escapeHtml(String(Math.round(mix.count)))}${mix.unitShare !== null ? ` / ${escapeHtml(percent(mix.unitShare))}` : ""}` : "Not available"}</td><td>${mix.inPlaceMonthly !== null ? escapeHtml(money(mix.inPlaceMonthly)) : "Not available"}</td><td>${mix.marketMonthly !== null ? escapeHtml(money(mix.marketMonthly)) : "Not available"}</td><td>${mix.annualRentGapContribution !== null ? escapeHtml(money(mix.annualRentGapContribution)) : "Not available"}</td></tr>`)
+    .map((mix) => `<tr><td>${escapeHtml(mix.label)}</td><td>${mix.count !== null ? `${escapeHtml(String(Math.round(mix.count)))}${mix.unitShare !== null ? ` / ${escapeHtml(percent(mix.unitShare))}` : ""}` : "Not available"}</td><td>${mix.inPlaceMonthly !== null ? escapeHtml(money(mix.inPlaceMonthly, 2)) : "Not available"}</td><td>${mix.marketMonthly !== null ? escapeHtml(money(mix.marketMonthly, 2)) : "Not available"}</td><td>${mix.annualRentGapContribution !== null ? escapeHtml(money(mix.annualRentGapContribution)) : "Not available"}</td></tr>`)
     .join("");
   return section(
     "Unit / Rent Concentration",

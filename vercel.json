@@ -4,19 +4,16 @@
     "api/admin-run-worker.js": { "maxDuration": 300 },
     "api/**/*.js": { "maxDuration": 60 }
   },
-  
   "routes": [
     { "handle": "filesystem" },
-
+    { "src": "^/api/customer-reports/?$", "dest": "/api/legal-acceptance?customer_route=reports" },
+    { "src": "^/api/jobs/request-revision/?$", "dest": "/api/legal-acceptance?customer_route=request_revision" },
     { "src": "^/api/customer-job-status/?$", "dest": "/api/legal-acceptance?customer_route=job_status" },
     { "src": "^/api/customer-report-removal/?$", "dest": "/api/legal-acceptance?customer_route=report_removal" },
     { "src": "^/api/customer-report-download/?$", "dest": "/api/legal-acceptance?customer_route=report_download" },
     { "src": "^/api/admin/quality-incidents/?$", "dest": "/api/admin/queue-metrics?admin_route=quality_incidents" },
-
     { "src": "^/api/(.*)$", "dest": "/api/$1" },
-
     { "src": "^/assets/(.*)$", "dest": "/assets/$1" },
-
     { "src": "^/(.*)$", "dest": "/index.html" }
   ]
 }

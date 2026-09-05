@@ -31,6 +31,7 @@ function makeHangingPost(expectedTimeoutMs, expectedBodyTest) {
     assert.equal(url, "https://api.docraptor.com/docs");
     assert.equal(body.test, expectedBodyTest);
     assert.equal(body.document_type, "pdf");
+    assert.equal(body.ignore_resource_errors, false);
     assert.equal(body.name, "InvestorIQ-ClientReport.pdf");
     assert.equal(typeof body.document_content, "string");
     assert.equal(options.timeout, expectedTimeoutMs);

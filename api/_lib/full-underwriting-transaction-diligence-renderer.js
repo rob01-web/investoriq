@@ -1,3 +1,4 @@
+import { publicationMoney as money, publicationPercent as percent } from "./publication-format.js";
 import { FULL_UNDERWRITING_TRANSACTION_DILIGENCE_VERSION } from "./full-underwriting-transaction-diligence-v1.js";
 
 function escapeHtml(value) {
@@ -10,18 +11,9 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-function money(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  const abs = Math.abs(Object.is(n, -0) ? 0 : n).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  return n < 0 ? `($${abs})` : `$${abs}`;
-}
 
-function percent(value, digits = 1) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  return `${(n * 100).toFixed(digits)}%`;
-}
+
+
 
 function displayMetric(receipt) {
   if (!receipt?.displayReady) return "";

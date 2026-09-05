@@ -1,3 +1,6 @@
+import { INVESTORIQ_PUBLICATION_BASE_CSS } from "./investoriq-publication-base-css.js";
+import { INVESTORIQ_PUBLICATION_PARITY_CSS } from "./investoriq-publication-parity-css.js";
+import { publicationMoney as formatMoney, publicationPercent as formatPercent, publicationDate, publicationCushion } from "./publication-format.js";
 import {
   INVESTORIQ_PUBLICATION_DESIGN_SYSTEM_VERSION,
   renderPublicationCover,
@@ -27,18 +30,6 @@ function coreEvidenceCount(sourceTruthPackage = null) {
   return [sourceTruthPackage?.core?.t12, sourceTruthPackage?.core?.rent_roll]
     .filter((source) => source?.accepted_facts && Object.keys(source.accepted_facts).length > 0)
     .length;
-}
-
-function formatPercent(value, digits = 1) {
-  const n = Number(value);
-  return Number.isFinite(n) ? `${(n * 100).toFixed(digits)}%` : "Not available";
-}
-
-function formatMoney(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "Not available";
-  const absolute = Math.abs(Math.round(n)).toLocaleString("en-US");
-  return n < 0 ? `($${absolute})` : `$${absolute}`;
 }
 
 function escapeText(value = "") {
@@ -74,7 +65,7 @@ function buildScreeningDecisionPage(sourceTruthPackage = null) {
     "Confirm both core operating sources remain current.",
   ].filter(Boolean);
   const operatingCushion = Number.isFinite(d.occupancy) && Number.isFinite(d.breakEvenOccupancy)
-    ? `${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} pp above break-even`
+    ? publicationCushion(d.occupancy, d.breakEvenOccupancy)
     : "Not available";
 
   const decisionBand = renderPublicationDecisionBand({
@@ -146,10 +137,10 @@ function renderScreeningCover(html = "", sourceTruthPackage = null) {
     propertyName,
     reportTitle: "InvestorIQ Screening Report",
     classification: decision.disposition,
-    profileLabel: "Operating Profile",
-    profileValue: `${decision.operatingProfile} | Multifamily | ${units}`,
-    evidenceBasis: `${sourceCount} core operating ${sourceCount === 1 ? "source" : "sources"}`,
-    preparedLabel,
+    profileLabel: "Property Scale",
+    profileValue: units,
+    evidenceBasis: `${sourceCount} core ${sourceCount === 1 ? "source" : "sources"}`,
+    preparedLabel: publicationDate(preparedLabel),
     footerRight: "Document-Backed Property Screening",
   });
   return `<!-- COVER PAGE -->\n${cover}\n<!-- END COVER PAGE -->`;
@@ -183,10 +174,10 @@ function buildScreeningEvidencePages(sourceTruthPackage = null) {
   const evidenceMap = renderPublicationEvidenceMap({
     intro: "Where this Screening supports each operating decision question.",
     rows: [
-      { domain: "Operating Strength", coverage: "Presented", sections: "Key Metrics Snapshot; Screening Observations" },
-      { domain: "Rent Position", coverage: "Presented", sections: "Key Metrics Snapshot; Screening Observations" },
-      { domain: "Source Consistency", coverage: d.reconciliationMaterial ? "Reconciliation Required" : "Presented", sections: "Source Reconciliation; Diligence Priorities" },
-      { domain: "Operating Cushion", coverage: "Presented", sections: "Key Metrics Snapshot" },
+      { domain: "Operating Strength", coverage: d.hasT12 ? "Presented" : "Not available", sections: "Key Metrics Snapshot; Screening Observations" },
+      { domain: "Rent Position", coverage: Number.isFinite(d.annualInPlace) && Number.isFinite(d.annualMarket) ? "Presented" : "Not available", sections: "Key Metrics Snapshot; Screening Observations" },
+      { domain: "Source Consistency", coverage: d.reconciliationVariance === null ? "Not available" : d.reconciliationMaterial ? "Reconciliation Required" : "Presented", sections: "Source Reconciliation; Diligence Priorities" },
+      { domain: "Operating Cushion", coverage: Number.isFinite(d.occupancy) && Number.isFinite(d.breakEvenOccupancy) ? "Presented" : "Not available", sections: "Key Metrics Snapshot" },
       { domain: "Diligence Burden", coverage: d.diligenceBurden, sections: "Screening Observations; Diligence Priorities" },
     ],
     note: "This map organizes facts already presented in the report. It does not add assumptions or fill missing evidence.",
@@ -227,32 +218,34 @@ function buildScreeningEvidencePages(sourceTruthPackage = null) {
   const observations = renderPublicationObservationGrid({
     groups: [
       { label: "Operating Signals", items: [
-        { code: "OCCUPANCY_SIGNAL", statement: `Occupancy is ${formatPercent(d.occupancy)} across ${Number.isFinite(d.units) ? Math.round(d.units) : "the reported"} units.` },
-        { code: "MARGIN_SIGNAL", statement: `NOI margin is ${formatPercent(d.noiMargin)} and expense ratio is ${formatPercent(d.expenseRatio)}.` },
-        { code: "CUSHION_SIGNAL", statement: `Occupancy is ${operatingCushion} above operating break-even occupancy.` },
+        { code: "OCCUPANCY_SIGNAL", statement: Number.isFinite(d.occupancy) && Number.isFinite(d.units) ? `Occupancy is ${formatPercent(d.occupancy)} across ${Number.isFinite(d.units) ? Math.round(d.units) : "the reported"} units.` : null },
+        { code: "MARGIN_SIGNAL", statement: Number.isFinite(d.noiMargin) && Number.isFinite(d.expenseRatio) ? `NOI margin is ${formatPercent(d.noiMargin)} and expense ratio is ${formatPercent(d.expenseRatio)}.` : null },
+        { code: "CUSHION_SIGNAL", statement: Number.isFinite(d.occupancy) && Number.isFinite(d.breakEvenOccupancy) ? `Occupancy is ${publicationCushion(d.occupancy, d.breakEvenOccupancy)}.` : null },
       ] },
       { label: "Rent Position Signals", items: [
-        { code: "RENT_GAP_SIGNAL", statement: `Documented market rent exceeds in-place rent by ${formatMoney(grossRentDifference)} annually, or ${formatPercent(d.rentGapRatio)}.` },
-        { code: "RENT_SCOPE_SIGNAL", statement: "The reported rent gap remains a gross operating signal until the practical capture path is validated." },
+        { code: "RENT_GAP_SIGNAL", statement: grossRentDifference === null ? null : `Documented market rent is ${formatMoney(Math.abs(grossRentDifference))} ${grossRentDifference < 0 ? "below" : "above"} in-place rent annually${d.rentGapRatio === null ? "" : ` (${formatPercent(Math.abs(d.rentGapRatio))})`}.` },
+        { code: "RENT_SCOPE_SIGNAL", statement: grossRentDifference > 0 ? "The reported rent gap remains a gross operating signal until the practical capture path is validated." : null },
       ] },
       { label: "Constraint Signals", items: [
         { code: "RECONCILIATION_SIGNAL", statement: d.reason, qualification: "InvestorIQ does not infer the cause or force the sources to agree." },
+        { code: "EXPENSE_RECONCILIATION_SIGNAL", statement: d.expenseReconciliation.requiresReconciliation ? `Listed expense lines total ${formatMoney(d.expenseReconciliation.lineTotal)} versus stated operating expenses of ${formatMoney(d.expenseReconciliation.statedTotal)}. The ${formatMoney(Math.abs(d.expenseReconciliation.difference))} difference requires source clarification; stated NOI is unchanged.` : null },
       ] },
       { label: "Evidence Status", items: [
-        { code: "T12_STATUS", statement: `${sourceTruthPackage?.core?.t12?.original_filename || "T12 operating statement"} supports the current operating results.` },
-        { code: "RENT_ROLL_STATUS", statement: `${sourceTruthPackage?.core?.rent_roll?.original_filename || "Rent Roll"} supports unit, occupancy, and rent-position facts.` },
+        { code: "T12_STATUS", statement: d.hasT12 ? `${sourceTruthPackage?.core?.t12?.original_filename || "T12 operating statement"} supports the current operating results.` : "T12 operating evidence is not available." },
+        { code: "RENT_ROLL_STATUS", statement: d.hasRentRoll ? `${sourceTruthPackage?.core?.rent_roll?.original_filename || "Rent Roll"} supports the available unit and rent facts.` : "Rent Roll evidence is not available." },
       ] },
     ],
   });
   const reconciliation = renderPublicationReconciliationAlert({
+    title: d.reconciliationMaterial ? "Source Reconciliation Required" : "Core Source Reconciliation",
     disclosure: d.reconciliationMaterial
       ? `The two core income bases differ by ${formatPercent(Math.abs(d.reconciliationVariance))}. The Screening remains on hold until the difference is reconciled.`
-      : "The two core income bases are within the current Screening tolerance.",
+      : d.reconciliationVariance === null ? "The available evidence does not establish both income bases for comparison." : "The two core income bases are within the current Screening tolerance.",
     metrics: [
       { label: "T12 Gross Potential Rent", value: formatMoney(d.gpr) },
       { label: "Rent Roll Annual In-Place", value: formatMoney(d.annualInPlace) },
-      { label: "Difference", value: grossRentDifference === null || !Number.isFinite(d.gpr) ? "Not available" : formatMoney(d.annualInPlace - d.gpr) },
-      { label: "Variance", value: formatPercent(d.reconciliationVariance, 2) },
+      { label: "Difference", value: !Number.isFinite(d.annualInPlace) || !Number.isFinite(d.gpr) ? "Not available" : formatMoney(d.annualInPlace - d.gpr) },
+      { label: "Variance", value: formatPercent(d.reconciliationVariance, 1) },
     ],
   });
   const diligenceItems = [
@@ -286,7 +279,7 @@ function buildScreeningGovernancePage(sourceTruthPackage = null) {
   const rentRollName = sourceTruthPackage?.core?.rent_roll?.original_filename || "Rent Roll not provided";
   const limitation = d.reconciliationMaterial
     ? `The T12 and Rent Roll income bases differ by ${formatPercent(Math.abs(d.reconciliationVariance))}. InvestorIQ does not infer the cause or force the sources to agree.`
-    : "No material core-source reconciliation issue is identified by the current Screening rules.";
+    : d.reconciliationVariance === null ? "The available evidence does not establish both income bases for comparison. Missing facts remain unavailable." : "No material core-source reconciliation issue is identified by the current Screening rules.";
   const qualityManifest = renderPublicationMetricMatrix({
     className: "phase8b-quality-manifest",
     rows: [
@@ -297,22 +290,22 @@ function buildScreeningGovernancePage(sourceTruthPackage = null) {
       ],
       [
         { label: "Missing Facts Estimated", value: "No" },
-        { label: "Source Difference Disclosed", value: d.reconciliationMaterial ? "Yes" : "Not required" },
+        { label: "Source Difference Disclosed", value: d.reconciliationVariance === null ? "Not assessable" : d.reconciliationMaterial ? "Yes" : "Not required" },
         { label: "Next Review Gate", value: d.reconciliationMaterial ? "Reconcile Sources" : d.readiness },
       ],
     ],
   });
   const body = `<div class="phase8b-governance-grid">
-    <div class="card no-break"><p class="subsection-title">Data Coverage</p><p>Two core operating sources support this Screening: the T12 operating statement and Rent Roll. The report uses stated facts and arithmetic derived from those facts.</p></div>
+    <div class="card no-break"><p class="subsection-title">Data Coverage</p><p>${coreEvidenceCount(sourceTruthPackage)} core operating ${coreEvidenceCount(sourceTruthPackage) === 1 ? "source supports" : "sources support"} this Screening. The report uses stated facts and arithmetic derived from those facts.</p></div>
     <div class="card no-break"><p class="subsection-title">Current Source Limitation</p><p>${escapeText(limitation)}</p></div>
   </div>
   <div class="phase8b-source-register"><p class="subsection-title">Source Register &amp; Document Treatment</p><table><thead><tr><th>Source</th><th>Role in Screening</th><th>Treatment</th></tr></thead><tbody>
-    <tr><td><strong>${escapeText(t12Name)}</strong></td><td>Current operating results</td><td>Presented as the source for income, operating expenses, and NOI facts.</td></tr>
-    <tr><td><strong>${escapeText(rentRollName)}</strong></td><td>Unit and rent position</td><td>Presented as the source for unit, occupancy, in-place rent, and market rent facts.</td></tr>
+    <tr><td><strong>${escapeText(t12Name)}</strong></td><td>Current operating results</td><td>${d.hasT12 ? "Supports available income, operating expenses, and NOI facts." : "Not available; dependent operating metrics are not presented."}</td></tr>
+    <tr><td><strong>${escapeText(rentRollName)}</strong></td><td>Unit and rent position</td><td>${d.hasRentRoll ? "Supports available unit, occupancy, and rent facts." : "Not available; dependent unit and rent metrics are not presented."}</td></tr>
   </tbody></table></div>
   <div class="phase8b-methodology"><p class="subsection-title">Methodology &amp; Data Transparency</p><ul>
     <li>Missing operating facts are not estimated.</li>
-    <li>Calculated fields use only the two listed core sources.</li>
+    <li>Calculated fields use only available facts from the listed core sources.</li>
     <li>Gross rent upside is not treated as NOI without a supported conversion basis.</li>
     <li>Material source differences remain visible and unresolved until supported evidence explains them.</li>
   </ul></div>
@@ -460,7 +453,9 @@ export function applyPhase8BCrossProductPublicationAuthority(html, { lane = null
     source = replaceScreeningEvidencePages(source, sourceTruthPackage);
     source = replaceScreeningGovernancePage(source, sourceTruthPackage);
   }
-  return injectStyle(addAuthorityMarker(source, lane));
+  source = injectStyle(addAuthorityMarker(source, lane));
+  if (!source.includes('id="investoriq-publication-parity"')) source = source.replace(/<\/head>/i, `<style id="investoriq-publication-parity">${INVESTORIQ_PUBLICATION_BASE_CSS}\n${INVESTORIQ_PUBLICATION_PARITY_CSS}</style></head>`);
+  return source;
 }
 
 export function phase8BCrossProductPublicationMetadata() {

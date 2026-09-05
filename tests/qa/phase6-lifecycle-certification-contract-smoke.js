@@ -25,8 +25,8 @@ const phase3Authority = read('docs/PHASE3_WORKER_RENDER_RUNTIME_RECOVERY_AUTHORI
 const uploadGate = read('src/lib/reportUploadGate.js');
 const fakeSupabase = read('tests/e2e/fake-supabase.js');
 const workerScenarios = read('tests/e2e/worker-state-scenarios.js');
-const customerReportsRoute = read('api/customer-reports.js');
-const customerDownloadRoute = read('api/customer-report-download.js');
+const customerReportsRoute = read('api/_lib/customer-reports-handler.js');
+const customerDownloadRoute = read('api/_lib/customer-report-download-handler.js');
 
 // Phase 1 is the forward admission authority. Either usable core source survives.
 assert.match(phase1Authority, /t12_minimum_core[\s\S]*admissible/i);

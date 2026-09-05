@@ -1,3 +1,4 @@
+import { publicationMoney as money, publicationPercent as percent } from "./publication-format.js";
 import {
   FULL_UNDERWRITING_DEBT_INTELLIGENCE_VERSION,
   validateFullUnderwritingDebtIntelligenceV1,
@@ -22,21 +23,9 @@ function customerCopy(value) {
     .replace(/\bgoverned\b/gi, "defined");
 }
 
-function money(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  const normalized = Object.is(n, -0) ? 0 : n;
-  const absolute = Math.abs(normalized).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  return normalized < 0 ? `($${absolute})` : `$${absolute}`;
-}
 
-function percent(value, digits = 1) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "";
-  const rounded = Number((n * 100).toFixed(digits));
-  const normalized = Object.is(rounded, -0) ? 0 : rounded;
-  return `${normalized.toFixed(digits)}%`;
-}
+
+
 
 function surfacePercent(value) {
   const n = Number(value);

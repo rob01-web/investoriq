@@ -1834,12 +1834,14 @@ export const parseRentRollFromRowMatrices = (rowMatrices, options = {}) => {
       const row = {
         unit_type,
         count,
+        current_rent_count: inPlace.length,
+        market_rent_count: market.length,
       };
       if (inPlace.length) {
-        row.current_rent = Math.round(inPlace.reduce((a, b) => a + b, 0) / inPlace.length);
+        row.current_rent = inPlace.reduce((a, b) => a + b, 0) / inPlace.length;
       }
       if (market.length) {
-        row.market_rent = Math.round(market.reduce((a, b) => a + b, 0) / market.length);
+        row.market_rent = market.reduce((a, b) => a + b, 0) / market.length;
       }
       return row;
     });

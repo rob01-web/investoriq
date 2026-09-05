@@ -41,6 +41,7 @@ export async function requestDocRaptorPdf({
         document_content: String(documentContent || ""),
         name: "InvestorIQ-ClientReport.pdf",
         document_type: "pdf",
+        ignore_resource_errors: false,
       },
       {
         headers: {

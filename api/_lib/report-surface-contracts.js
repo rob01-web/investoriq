@@ -1,12 +1,8 @@
+import { publicationNumber as coerceNumber } from "./publication-format.js";
 const HIDDEN_OUTPUT_CHARACTERS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u00AD\u200B\u200C\u200D\u2060\uFEFF\uFFFD\uFFFE\uFFFF]/g;
 
 function latestArtifactPayload(artifacts, type) {
   return (Array.isArray(artifacts) ? artifacts : []).find((row) => row?.type === type)?.payload || null;
-}
-
-function coerceNumber(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
 }
 
 function normalizeText(value) {
@@ -114,7 +110,7 @@ export function buildSourceReconciliationRenderState({
 function rowRentValueForMetric(row, metricKey) {
   if (!row || typeof row !== "object") return null;
   if (metricKey === "market") {
-    return coerceNumber(row?.market_rent ?? row?.market_rate ?? row?.asking_rent ?? row?.rent ?? row?.monthly_rent);
+    return coerceNumber(row?.market_rent ?? row?.market_rate ?? row?.asking_rent);
   }
   return coerceNumber(row?.in_place_rent ?? row?.current_rent ?? row?.rent ?? row?.monthly_rent ?? row?.actual_rent);
 }
@@ -177,12 +173,18 @@ function resolveCanonicalRentRollAnnualMetric({
     rowCoveragePartial ||
     sampleOrExcerptSignal ||
     explicitControllingSummarySignal;
-  const rowAnnual = rows.reduce((sum, row) => {
+  const rowMetricComplete = rows.length > 0 && !propertyWidePartialSignal && rows.every((row) => {
+    const value = rowRentValueForMetric(row, metricKey);
+    const count = coerceNumber(row?.count);
+    const observed = coerceNumber(metricKey === "market" ? row?.market_rent_count : row?.current_rent_count);
+    return value !== null && value >= 0 && (observed === null || count === null || observed === count);
+  });
+  const rowAnnual = rowMetricComplete ? rows.reduce((sum, row) => {
     const rent = rowRentValueForMetric(row, metricKey);
     const count = coerceNumber(row?.count);
     const multiplier = Number.isFinite(count) && count > 0 ? count : 1;
     return Number.isFinite(rent) && rent > 0 ? sum + (rent * multiplier * 12) : sum;
-  }, 0);
+  }, 0) : null;
   const unitMix = Array.isArray(computedRentRoll?.unit_mix) && computedRentRoll.unit_mix.length > 0
     ? computedRentRoll.unit_mix
     : Array.isArray(rentRollPayload?.unit_mix)
@@ -195,15 +197,16 @@ function resolveCanonicalRentRollAnnualMetric({
     for (const row of unitMix) {
       const count = coerceNumber(row?.count);
       const rent = metricKey === "market"
-        ? coerceNumber(row?.market_rent ?? row?.avg_market_rent ?? row?.rent)
+        ? coerceNumber(row?.market_rent ?? row?.avg_market_rent)
         : coerceNumber(row?.current_rent ?? row?.in_place_rent ?? row?.avg_in_place_rent ?? row?.rent);
-      if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(rent) || rent <= 0) continue;
+      const observed = coerceNumber(metricKey === "market" ? row?.market_rent_count : row?.current_rent_count);
+      if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(rent) || rent < 0 || (observed !== null && observed !== count)) continue;
       weightedSum += count * rent;
       countSum += count;
     }
-    if (countSum > 0) weightedAvgRent = weightedSum / countSum;
+    if (!propertyWidePartialSignal && countSum > 0 && (!Number.isFinite(totalUnits) || countSum === totalUnits)) weightedAvgRent = weightedSum / countSum;
   }
-  if (!Number.isFinite(weightedAvgRent) && Number.isFinite(rowAnnual) && rowAnnual > 0 && Number.isFinite(totalUnits) && totalUnits > 0) {
+  if (!Number.isFinite(weightedAvgRent) && Number.isFinite(rowAnnual) && rowAnnual >= 0 && Number.isFinite(totalUnits) && totalUnits > 0) {
     weightedAvgRent = rowAnnual / totalUnits / 12;
   }
   const weightedAnnual = Number.isFinite(weightedAvgRent) && Number.isFinite(totalUnits) && totalUnits > 0
@@ -220,22 +223,22 @@ function resolveCanonicalRentRollAnnualMetric({
       : rentRollTotals?.in_place_rent_monthly ?? rentRollTotals?.current_rent_monthly
   );
   const summaryAnnualFromMonthly =
-    Number.isFinite(summaryMonthlyCandidate) && summaryMonthlyCandidate > 0
+    Number.isFinite(summaryMonthlyCandidate) && summaryMonthlyCandidate >= 0
       ? summaryMonthlyCandidate * 12
       : null;
   const rowConflictWithSummary =
     Number.isFinite(summaryAnnualCandidate) &&
-    summaryAnnualCandidate > 0 &&
+    summaryAnnualCandidate >= 0 &&
     (
-      (Number.isFinite(rowAnnual) && rowAnnual > 0 && materiallyDifferent(summaryAnnualCandidate, rowAnnual)) ||
-      (Number.isFinite(weightedAnnual) && weightedAnnual > 0 && materiallyDifferent(summaryAnnualCandidate, weightedAnnual))
+      (Number.isFinite(rowAnnual) && rowAnnual >= 0 && materiallyDifferent(summaryAnnualCandidate, rowAnnual)) ||
+      (Number.isFinite(weightedAnnual) && weightedAnnual >= 0 && materiallyDifferent(summaryAnnualCandidate, weightedAnnual))
     );
   const summaryDeterministicallySane =
     !(
       Number.isFinite(summaryAnnualCandidate) &&
-      summaryAnnualCandidate > 0 &&
+      summaryAnnualCandidate >= 0 &&
       Number.isFinite(weightedAnnual) &&
-      weightedAnnual > 0 &&
+      weightedAnnual >= 0 &&
       Number.isFinite(totalUnits) &&
       totalUnits > 0 &&
       representedUnitCount >= totalUnits &&
@@ -249,7 +252,7 @@ function resolveCanonicalRentRollAnnualMetric({
       computedRentRoll?.status_summary_present === true
     ) &&
     (
-      (Number.isFinite(summaryAnnualCandidate) && summaryAnnualCandidate > 0) ||
+      (Number.isFinite(summaryAnnualCandidate) && summaryAnnualCandidate >= 0) ||
       Number.isFinite(summaryAnnualFromMonthly)
     ) &&
     summaryDeterministicallySane &&
@@ -270,9 +273,7 @@ function resolveCanonicalRentRollAnnualMetric({
       kind: "summary_annual",
     },
     {
-      value: metricKey === "market"
-        ? rentRollTotals?.market_rent_monthly
-        : rentRollTotals?.in_place_rent_monthly ?? rentRollTotals?.current_rent_monthly,
+      value: summaryAnnualFromMonthly,
       source_path: metricKey === "market"
         ? "rentRollPayload.totals.market_rent_monthly"
         : "rentRollPayload.totals.in_place_rent_monthly",
@@ -311,13 +312,13 @@ function resolveCanonicalRentRollAnnualMetric({
   const contradictions = [];
   const suppressedValues = [];
   const references = [
-    Number.isFinite(rowAnnual) && rowAnnual > 0 ? { label: "row_derived", value: rowAnnual } : null,
-    Number.isFinite(weightedAnnual) && weightedAnnual > 0 ? { label: "weighted_avg_implied", value: weightedAnnual } : null,
+    Number.isFinite(rowAnnual) && rowAnnual >= 0 ? { label: "row_derived", value: rowAnnual } : null,
+    Number.isFinite(weightedAnnual) && weightedAnnual >= 0 ? { label: "weighted_avg_implied", value: weightedAnnual } : null,
   ].filter(Boolean);
 
   for (const candidate of candidates) {
     const value = coerceNumber(candidate?.value);
-    if (!Number.isFinite(value) || value <= 0) continue;
+    if (!Number.isFinite(value) || value < 0) continue;
     const impliedMonthly = Number.isFinite(totalUnits) && totalUnits > 0 ? value / totalUnits / 12 : null;
     const matchesReferences = references.filter((reference) => !materiallyDifferent(value, reference.value));
     const propertyWideCandidate = ["summary_annual", "summary_monthly", "payload_total_annual", "computed_total_annual"].includes(candidate.kind);
@@ -325,7 +326,7 @@ function resolveCanonicalRentRollAnnualMetric({
       (preferTrustedSummaryAuthority && (candidate.kind === "summary_annual" || candidate.kind === "summary_monthly")) ||
       (propertyWidePartialSignal && propertyWideCandidate) ||
       matchesReferences.length > 0 ||
-      ((!(Number.isFinite(rowAnnual) && rowAnnual > 0)) && (!(Number.isFinite(weightedAnnual) && weightedAnnual > 0)));
+      ((!(Number.isFinite(rowAnnual) && rowAnnual >= 0)) && (!(Number.isFinite(weightedAnnual) && weightedAnnual >= 0)));
     const candidateRecord = {
       value,
       source_path: candidate.source_path,
@@ -375,7 +376,7 @@ function resolveCanonicalRentRollAnnualMetric({
       ]);
   coherentCandidates.sort((a, b) => preferenceOrder.get(a.kind) - preferenceOrder.get(b.kind));
   const selected = coherentCandidates[0] || null;
-  const selectedValue = Number.isFinite(selected?.value) && selected.value > 0 ? selected.value : null;
+  const selectedValue = Number.isFinite(selected?.value) && selected.value >= 0 ? selected.value : null;
   const selectedSourcePath = selected?.source_path || null;
   const selectedReason = selected
     ? selected.kind === "row_derived_annual"
@@ -405,9 +406,9 @@ function resolveCanonicalRentRollAnnualMetric({
     contradictions,
     suppressed_values: suppressedValues,
     trusted_summary_totals: trustedSummaryTotals,
-    row_derived_annual: Number.isFinite(rowAnnual) && rowAnnual > 0 ? rowAnnual : null,
-    weighted_avg_implied_annual: Number.isFinite(weightedAnnual) && weightedAnnual > 0 ? weightedAnnual : null,
-    weighted_avg_rent: Number.isFinite(weightedAvgRent) && weightedAvgRent > 0 ? weightedAvgRent : null,
+    row_derived_annual: Number.isFinite(rowAnnual) && rowAnnual >= 0 ? rowAnnual : null,
+    weighted_avg_implied_annual: Number.isFinite(weightedAnnual) && weightedAnnual >= 0 ? weightedAnnual : null,
+    weighted_avg_rent: Number.isFinite(weightedAvgRent) && weightedAvgRent >= 0 ? weightedAvgRent : null,
     total_units: Number.isFinite(totalUnits) && totalUnits > 0 ? totalUnits : null,
     has_summary_annual_candidate: candidates.some((candidate) => Number.isFinite(coerceNumber(candidate?.value)) && candidate.kind === "summary_annual"),
     has_summary_candidate: candidates.some((candidate) => Number.isFinite(coerceNumber(candidate?.value)) && String(candidate.kind || "").startsWith("summary_")),

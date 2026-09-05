@@ -1,0 +1,33 @@
+{
+  "renderer": "WeasyPrint 66, not DocRaptor/Prince",
+  "pdf_sha256": "573ba7cffb7b268c64243b51b11ebd0b577a5f0cd0b3c61bd242078f66ee43a2",
+  "pages": [
+    {
+      "page": 1,
+      "body_bottom": 654.4396362304688
+    },
+    {
+      "page": 2,
+      "body_bottom": 707.9085083007812
+    },
+    {
+      "page": 3,
+      "body_bottom": 654.4396362304688
+    },
+    {
+      "page": 4,
+      "body_bottom": 732.822509765625
+    },
+    {
+      "page": 5,
+      "body_bottom": 730.092529296875
+    }
+  ],
+  "embedded_fonts": [
+    "ENLVWM+Study-Serif",
+    "GISNCR+Study-Sans",
+    "ZNINBE+Study-Sans-Bold"
+  ],
+  "brand_fonts": "Not available; intentional P052/Nimbus Sans study substitutes",
+  "production_changes": false
+}

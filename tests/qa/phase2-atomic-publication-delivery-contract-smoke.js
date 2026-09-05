@@ -45,11 +45,11 @@ assert.ok(manifestInsert >= 0 && receiptInsert > manifestInsert, 'Final manifest
 assert.ok(publishedUpdate > receiptInsert, 'Receipt must be established before the job is committed published.');
 assert.ok(currentPromotion > publishedUpdate, 'Current revision must be established in the same finalizer transaction after publication lineage exists.');
 
-const customerReportsApi = read('api/customer-reports.js');
+const customerReportsApi = read('api/_lib/customer-reports-handler.js');
 assert.match(customerReportsApi, /customer_published_report_projection/);
 assert.doesNotMatch(customerReportsApi, /\.from\(['"]reports['"]\)/);
 
-const downloadApi = read('api/customer-report-download.js');
+const downloadApi = read('api/_lib/customer-report-download-handler.js');
 assert.match(downloadApi, /customer_published_report_projection/);
 assert.match(downloadApi, /generated_reports/);
 assert.match(downloadApi, /createSignedUrl/);

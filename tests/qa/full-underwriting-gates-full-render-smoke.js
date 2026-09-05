@@ -379,15 +379,15 @@ assert.match(
 );
 assert.match(
   handlerValuationHtml,
-  /Accepted T12 NOI<\/td><td>\$680,000<\/td>/i
+  /T12 NOI<\/td><td>\$680,000<\/td>/i
 );
 assert.match(
   handlerValuationHtml,
-  /Accepted Going-In Cap Rate<\/td><td>7\.00%<\/td>/i
+  /Going-In Cap Rate<\/td><td>7\.00%<\/td>/i
 );
 assert.match(
   handlerValuationHtml,
-  /InvestorIQ Implied Value<\/td>\s*<td[^>]*>\$9,714,286<\/td>/i
+  /NOI \/ Cap-Rate Cross-Check Value<\/td>\s*<td[^>]*>\$9,714,286<\/td>/i
 );
 
 assert.match(
@@ -417,7 +417,7 @@ assert.match(
 );
 assert.match(
   handlerValuationHtml,
-  /Appraised Value Less InvestorIQ Implied Value<\/td><td>\(\$7,814,286\)<\/td>/i
+  /Appraised Value Less NOI \/ Cap-Rate Cross-Check<\/td><td>\(\$7,814,286\)<\/td>/i
 );
 assert.match(
   handlerValuationHtml,
