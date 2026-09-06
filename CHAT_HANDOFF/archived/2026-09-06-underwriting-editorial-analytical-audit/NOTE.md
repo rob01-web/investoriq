@@ -1,0 +1,1 @@
+This dated archive preserves the 2026-09-06 Underwriting editorial and analytical repair authority. Current canonical status is in the root CHAT_HANDOFF files.
