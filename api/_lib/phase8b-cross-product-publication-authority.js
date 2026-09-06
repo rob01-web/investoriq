@@ -1,5 +1,6 @@
 import { INVESTORIQ_PUBLICATION_BASE_CSS } from "./investoriq-publication-base-css.js";
 import { INVESTORIQ_PUBLICATION_PARITY_CSS } from "./investoriq-publication-parity-css.js";
+import { INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS } from "./investoriq-visual-elite-typography-css.js";
 import { publicationMoney as formatMoney, publicationPercent as formatPercent, publicationDate, publicationCushion } from "./publication-format.js";
 import {
   INVESTORIQ_PUBLICATION_DESIGN_SYSTEM_VERSION,
@@ -455,7 +456,7 @@ export function applyPhase8BCrossProductPublicationAuthority(html, { lane = null
     source = replaceScreeningGovernancePage(source, sourceTruthPackage);
   }
   source = injectStyle(addAuthorityMarker(source, lane));
-  if (!source.includes('id="investoriq-publication-parity"')) source = source.replace(/<\/head>/i, `<style id="investoriq-publication-parity">${INVESTORIQ_PUBLICATION_BASE_CSS}\n${INVESTORIQ_PUBLICATION_PARITY_CSS}</style></head>`);
+  if (!source.includes('id="investoriq-publication-parity"')) source = source.replace(/<\/head>/i, `<style id="investoriq-publication-parity">${INVESTORIQ_PUBLICATION_BASE_CSS}\n${INVESTORIQ_PUBLICATION_PARITY_CSS}\n${INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS}</style></head>`);
   return source;
 }
 
