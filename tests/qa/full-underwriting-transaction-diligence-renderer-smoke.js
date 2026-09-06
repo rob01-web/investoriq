@@ -19,7 +19,7 @@ const model = {
     currentDebtContext: s({ current_outstanding_balance: 5000000, maturity_date: "2029-12-01" }, "Debt.pdf"),
     appraisalContext: s({ appraisal_value: 12500000, stabilized_noi: 800000, stabilized_cap_rate: 0.064 }, "Appraisal.pdf"),
     marketSurveyContext: s({ market_rent_ranges: [{ unit_type: "2BR", low_monthly_rent: 2000, high_monthly_rent: 2300 }] }, "Market.pdf"),
-    environmentalContext: s({ phase_i_status: "No RECs identified in summary" }, "PhaseI.pdf"),
+    environmentalContext: s({ phase_i_status: "none_identified_in_summary" }, "PhaseI.pdf"),
     renovationContext: s({ total_renovation_budget: 600000, capital_plan_duration_months: 12 }, "CapEx.pdf"),
   },
 };
@@ -27,7 +27,7 @@ const contract = buildFullUnderwritingTransactionDiligenceV1({ customerSurfaceMo
 const html = renderFullUnderwritingTransactionDiligenceV1Html(contract);
 match(html, /Transaction &amp; Diligence Intelligence/);
 match(html, /Transaction Snapshot/);
-match(html, /Diligence Coverage/);
+match(html, /Tracked Diligence Coverage/);
 match(html, /Third-Party \/ Support Context/);
 match(html, /\$12,000,000/);
 match(html, /\$7,800,000/);
@@ -44,7 +44,16 @@ match(html, /Renovation \/ CapEx support/);
 noMatch(html, /(?:Purchase|Debt|Appraisal|Market|PhaseI|CapEx)\.pdf/i);
 match(html, /Third-party valuation context/i);
 match(html, /does not replace Rent Roll evidence/i);
+match(html, /Tracked Areas Documented/);
+match(html, /These counts apply only to the 6 diligence areas listed below/i);
+match(html, /not a certification that overall transaction diligence, reserves, closing costs, or analyses outside these tracked areas are complete/i);
+match(html, /Recognized Environmental Conditions \(source summary\)/i);
+match(html, /None identified in this summary/i);
+match(html, /Environmental source boundary/i);
+match(html, /not independent verification of site condition, legal compliance, remediation need, or conditions outside the cited summary/i);
+noMatch(html, /Environmental \/ Phase I Status/i);
 match(html, /does not by itself invalidate otherwise sufficient core underwriting/i);
+noMatch(html, /\bgoverned\b/i);
 noMatch(html, /\bBUY\b|\bSELL\b|\bHOLD\b|IRR|MOIC/i);
 noMatch(html, /customerSurfaceModel|canonical_source_truth_package|raw parser/i);
 eq(renderFullUnderwritingTransactionDiligenceV1Html(null), "");
@@ -54,6 +63,7 @@ partial.sections.environmentalContext = { facts: {}, factAvailability: { require
 const partialHtml = renderFullUnderwritingTransactionDiligenceV1Html(buildFullUnderwritingTransactionDiligenceV1({ customerSurfaceModel: partial }));
 match(partialHtml, /Key Investor Questions/);
 match(partialHtml, /environmental \/ Phase I ESA diligence/i);
-match(partialHtml, /Not provided/);
+match(partialHtml, /Not provided in tracked scope/);
+match(partialHtml, /These counts apply only to the 6 diligence areas listed below/i);
 
 console.log(`PASS full-underwriting-transaction-diligence-renderer-smoke (${checks}/${checks})`);
