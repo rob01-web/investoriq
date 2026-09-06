@@ -1,0 +1,1 @@
+Archive creation checkpoint. Canonical root files are refreshed separately on the isolated next-phase branch.
