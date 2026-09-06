@@ -1,0 +1,93 @@
+name: TEMP Visual ELITE Prince Grid Certification
+
+on:
+  push:
+    branches:
+      - internal-visual-elite-step6-prince-grid-normalization-20260906-r1
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-visual-elite-step6-prince-grid-normalization-20260906-r1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+
+      - name: Run Visual ELITE guards
+        shell: bash
+        run: |
+          set -e
+          for f in tests/qa/investoriq-visual-elite-*.js; do
+            echo "=== $f ==="
+            node "$f"
+          done
+
+      - name: Production build
+        run: npm run build
+
+      - name: Restore temporary Stonebridge preview helper
+        shell: bash
+        run: |
+          git fetch origin internal-visual-elite-step6-orphan-heading-20260905-r1 --depth=1
+          git show origin/internal-visual-elite-step6-orphan-heading-20260905-r1:scripts/visual-elite-step6-dual-lane-html.mjs > scripts/visual-elite-step6-dual-lane-html.mjs
+          test -s scripts/visual-elite-step6-dual-lane-html.mjs
+
+      - name: Generate exact Stonebridge dual-lane HTML
+        run: node scripts/visual-elite-step6-dual-lane-html.mjs
+
+      - name: Audit final HTML for Prince-safe override injection
+        shell: bash
+        run: |
+          set -e
+          for html in step6-pagination-preview/Stonebridge_screening.html step6-pagination-preview/Stonebridge_underwriting.html; do
+            grep -q 'investoriq-visual-elite-prince-layout-v1' "$html" || true
+            grep -q 'iq-ic-metric-grid' "$html"
+            grep -q 'display:flex !important' "$html"
+          done
+
+      - name: Render exact candidate with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in step6-pagination-preview/Stonebridge_screening.html step6-pagination-preview/Stonebridge_underwriting.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+
+      - name: Record preview page counts
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import pdfParse from 'pdf-parse';
+          for (const lane of ['screening','underwriting']) {
+            const p = `step6-pagination-preview/Stonebridge_${lane}.pdf`;
+            const parsed = await pdfParse(fs.readFileSync(p));
+            console.log(`${lane}: pages=${parsed.numpages}`);
+          }
+          NODE
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-elite-prince-grid-preview-${{ github.run_id }}
+          path: |
+            step6-pagination-preview/Stonebridge_screening.pdf
+            step6-pagination-preview/Stonebridge_underwriting.pdf
+          if-no-files-found: error
+          retention-days: 7
