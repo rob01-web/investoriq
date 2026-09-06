@@ -1,3 +1,5 @@
+import { INVESTORIQ_VISUAL_ELITE_PRINCE_LAYOUT_CSS } from "./investoriq-visual-elite-prince-layout-css.js";
+
 export const INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS_VERSION = "investoriq-visual-elite-typography-v1";
 
 export const INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS = `
@@ -92,4 +94,6 @@ export const INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS = `
   break-inside:avoid-page !important;
   page-break-inside:avoid !important;
 }
+
+${INVESTORIQ_VISUAL_ELITE_PRINCE_LAYOUT_CSS}
 `;
