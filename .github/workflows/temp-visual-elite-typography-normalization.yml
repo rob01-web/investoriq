@@ -1,0 +1,251 @@
+name: TEMP Visual ELITE Typography Normalization
+
+on:
+  push:
+    branches:
+      - internal-visual-elite-step6-typography-normalization-20260906-r1
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-visual-elite-step6-typography-normalization-20260906-r1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+
+      - name: Add shared Visual ELITE typography normalization
+        shell: bash
+        run: |
+          cat > api/_lib/investoriq-visual-elite-typography-css.js <<'EOF'
+          export const INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS_VERSION = "investoriq-visual-elite-typography-v1";
+
+          export const INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS = `
+          /* Visual ELITE typography normalization. Presentation only. */
+          .iq-phase8b {
+            font-kerning:normal !important;
+            font-variant-numeric:proportional-nums !important;
+            font-feature-settings:"kern" 1, "pnum" 1 !important;
+            word-spacing:normal !important;
+          }
+          .iq-phase8b p,
+          .iq-phase8b li,
+          .iq-phase8b .body-copy {
+            letter-spacing:normal !important;
+            word-spacing:0 !important;
+            font-kerning:normal !important;
+            font-variant-numeric:proportional-nums !important;
+            font-feature-settings:"kern" 1, "pnum" 1 !important;
+          }
+
+          /* Keep tabular numerals only where column alignment is useful. */
+          .iq-phase8b table,
+          .iq-phase8b .numeric,
+          .iq-phase8b .numeric-value {
+            font-variant-numeric:tabular-nums !important;
+            font-feature-settings:"kern" 1, "tnum" 1 !important;
+          }
+
+          /* Executive/customer-facing values use proportional numerals and tighter tracking. */
+          .iq-phase8b .cover-classification strong,
+          .iq-phase8b .cover-meta-grid strong,
+          .iq-phase8b .phase8b-screening-decision-band strong,
+          .iq-phase8b .phase8a-investment-decision-band strong,
+          .iq-phase8b .phase8b-screening-metric-matrix td strong,
+          .iq-phase8b .phase8b-evidence-metric-matrix td strong,
+          .iq-phase8b .phase8a-investment-snapshot-table td strong,
+          .iq-phase8b .summary-strip strong,
+          .iq-phase8b .iq-ic-metric-value {
+            font-kerning:normal !important;
+            font-variant-numeric:proportional-nums !important;
+            font-feature-settings:"kern" 1, "pnum" 1 !important;
+            word-spacing:0 !important;
+            letter-spacing:-.014em !important;
+          }
+          .iq-phase8b .phase8b-screening-metric-matrix tr:first-child td strong,
+          .iq-phase8b .phase8a-investment-snapshot-table tr:first-child td strong {
+            letter-spacing:-.022em !important;
+          }
+          .iq-phase8b .cover-meta-grid strong { letter-spacing:-.012em !important; }
+          .iq-phase8b .phase8b-screening-decision-band > div:first-child strong,
+          .iq-phase8b .phase8a-investment-decision-band > div:first-child strong {
+            letter-spacing:-.018em !important;
+          }
+
+          /* Technical labels remain differentiated, but not over-tracked. */
+          .iq-phase8b .chapter-heading,
+          .iq-phase8b .section-header-eyebrow,
+          .iq-phase8b .institutional-eyebrow,
+          .iq-phase8b .subsection-title,
+          .iq-phase8b .iq-ic-metric-label {
+            letter-spacing:.055em !important;
+            word-spacing:0 !important;
+          }
+          .iq-phase8b .cover-classification span,
+          .iq-phase8b .cover-meta-grid span {
+            letter-spacing:.05em !important;
+            word-spacing:0 !important;
+          }
+          .iq-phase8b .phase8b-screening-decision-band span,
+          .iq-phase8b .phase8a-investment-decision-band span {
+            letter-spacing:.045em !important;
+            word-spacing:0 !important;
+          }
+          .iq-phase8b .phase8b-screening-metric-matrix td span,
+          .iq-phase8b .phase8b-evidence-metric-matrix td span,
+          .iq-phase8b .phase8a-investment-snapshot-table td span,
+          .iq-phase8b table th {
+            letter-spacing:.035em !important;
+            word-spacing:0 !important;
+          }
+          .iq-phase8b .cover-footer-text,
+          .iq-phase8b .iq-scenario-label,
+          .iq-phase8b .iq-evidence-badge {
+            letter-spacing:.03em !important;
+            word-spacing:0 !important;
+          }
+
+          /* Confirmed short sections stay intact so Prince cannot strand the heading. */
+          .iq-phase8b section[data-iq-elite-section="keyMetricsSnapshot"],
+          .iq-phase8b section[data-iq-elite-operating="noi-margin-analysis"],
+          .iq-phase8b section[data-iq-elite-scenario-section="operating-expense-stress"] {
+            break-inside:avoid-page !important;
+            page-break-inside:avoid !important;
+          }
+          `;
+          EOF
+
+      - name: Wire typography authority after shared publication CSS
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('api/_lib/phase8b-cross-product-publication-authority.js')
+          s = p.read_text()
+          import_marker = 'import { INVESTORIQ_PUBLICATION_PARITY_CSS } from "./investoriq-publication-parity-css.js";\n'
+          import_line = 'import { INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS } from "./investoriq-visual-elite-typography-css.js";\n'
+          if import_line not in s:
+              if import_marker not in s:
+                  raise SystemExit('parity import marker missing')
+              s = s.replace(import_marker, import_marker + import_line, 1)
+          old = '${INVESTORIQ_PUBLICATION_BASE_CSS}\\n${INVESTORIQ_PUBLICATION_PARITY_CSS}</style></head>`);'
+          new = '${INVESTORIQ_PUBLICATION_BASE_CSS}\\n${INVESTORIQ_PUBLICATION_PARITY_CSS}\\n${INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS}</style></head>`);'
+          if new not in s:
+              if old not in s:
+                  raise SystemExit('publication css injection marker missing')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+
+      - name: Add typography and pagination regression guard
+        shell: bash
+        run: |
+          cat > tests/qa/investoriq-visual-elite-typography-spacing-smoke.js <<'EOF'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          import { INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS } from "../../api/_lib/investoriq-visual-elite-typography-css.js";
+          import { applyPhase8BCrossProductPublicationAuthority } from "../../api/_lib/phase8b-cross-product-publication-authority.js";
+
+          const authority = fs.readFileSync("api/_lib/phase8b-cross-product-publication-authority.js", "utf8");
+          const css = INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS;
+
+          assert.match(css, /font-variant-numeric:proportional-nums !important;/, "Customer-facing typography must override global tabular numerals.");
+          assert.match(css, /font-feature-settings:"kern" 1, "pnum" 1 !important;/, "Customer-facing typography must enable kerning and proportional numerals.");
+          assert.match(css, /\.iq-phase8b table,[\s\S]*?font-variant-numeric:tabular-nums !important;/, "Technical tables must retain tabular numerals.");
+          assert.match(css, /phase8a-investment-snapshot-table tr:first-child td strong[\s\S]*?letter-spacing:-\.022em !important;/, "Large underwriting KPI values must use tighter tracking.");
+          assert.match(css, /phase8a-investment-decision-band span[\s\S]*?letter-spacing:\.045em !important;/, "Decision labels must not retain excessive tracking.");
+          assert.match(css, /data-iq-elite-section="keyMetricsSnapshot"[\s\S]*?data-iq-elite-operating="noi-margin-analysis"[\s\S]*?data-iq-elite-scenario-section="operating-expense-stress"[\s\S]*?break-inside:avoid-page !important;/, "Confirmed short Prince sections must remain atomic with their headings.");
+          assert.match(authority, /INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS/, "Phase 8B authority must import shared typography normalization.");
+
+          const sample = '<html><head></head><body><div class="report-container"><section class="section"><div class="section-header"><span class="section-header-title">Key Metrics Snapshot</span></div><div class="card allow-break"><strong>$13,500,000</strong></div></section></div></body></html>';
+          const out = applyPhase8BCrossProductPublicationAuthority(sample, { lane: "underwriting" });
+          assert.ok(out.includes(INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS), "Typography normalization must be injected into the final customer publication CSS.");
+
+          console.log("investoriq-visual-elite-typography-spacing-smoke: PASS");
+          EOF
+
+      - name: Run Visual ELITE guards
+        shell: bash
+        run: |
+          set -e
+          for f in tests/qa/investoriq-visual-elite-*.js; do
+            echo "=== $f ==="
+            node "$f"
+          done
+
+      - name: Production build
+        run: npm run build
+
+      - name: Restore temporary Stonebridge preview helper
+        shell: bash
+        run: |
+          git fetch origin internal-visual-elite-step6-orphan-heading-20260905-r1 --depth=1
+          git show origin/internal-visual-elite-step6-orphan-heading-20260905-r1:scripts/visual-elite-step6-dual-lane-html.mjs > scripts/visual-elite-step6-dual-lane-html.mjs
+          test -s scripts/visual-elite-step6-dual-lane-html.mjs
+
+      - name: Generate exact Stonebridge dual-lane HTML
+        run: node scripts/visual-elite-step6-dual-lane-html.mjs
+
+      - name: Render exact candidate with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in step6-pagination-preview/Stonebridge_screening.html step6-pagination-preview/Stonebridge_underwriting.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+
+      - name: Record preview page counts
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import pdfParse from 'pdf-parse';
+          for (const lane of ['screening','underwriting']) {
+            const p = `step6-pagination-preview/Stonebridge_${lane}.pdf`;
+            const parsed = await pdfParse(fs.readFileSync(p));
+            console.log(`${lane}: pages=${parsed.numpages}`);
+          }
+          NODE
+
+      - name: Remove temporary helper and diff safety
+        shell: bash
+        run: |
+          rm -f scripts/visual-elite-step6-dual-lane-html.mjs
+          rm -rf step6-pagination-preview/*.html
+          git diff --check
+          status="$(git status --short)"
+          echo "$status"
+          unexpected="$(printf '%s\n' "$status" | grep -vE '^( M api/_lib/phase8b-cross-product-publication-authority\.js|\?\? api/_lib/investoriq-visual-elite-typography-css\.js|\?\? tests/qa/investoriq-visual-elite-typography-spacing-smoke\.js|\?\? step6-pagination-preview/)' || true)"
+          test -z "$unexpected"
+
+      - name: Commit bounded typography repair
+        shell: bash
+        run: |
+          git config user.name 'investoriq-visual-elite-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add api/_lib/phase8b-cross-product-publication-authority.js api/_lib/investoriq-visual-elite-typography-css.js tests/qa/investoriq-visual-elite-typography-spacing-smoke.js
+          git diff --cached --check
+          git commit -m 'Visual ELITE Step 6: normalize executive typography spacing'
+          git push origin HEAD:internal-visual-elite-step6-typography-normalization-20260906-r1
+
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-elite-typography-preview-${{ github.run_id }}
+          path: |
+            step6-pagination-preview/Stonebridge_screening.pdf
+            step6-pagination-preview/Stonebridge_underwriting.pdf
+          if-no-files-found: error
+          retention-days: 7
