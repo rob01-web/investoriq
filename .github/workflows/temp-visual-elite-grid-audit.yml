@@ -1,0 +1,20 @@
+name: TEMP Visual ELITE Grid Audit
+
+on:
+  push:
+    branches:
+      - internal-visual-elite-step6-grid-audit-20260906-r1
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit report-facing CSS Grid usage
+        shell: bash
+        run: |
+          echo '=== GRID DECLARATIONS IN REPORT LIBRARY ==='
+          grep -RInE 'display[[:space:]]*:[[:space:]]*grid|grid-template-columns|grid-template-rows|grid-column|grid-row' api/_lib --include='*.js' | sort || true
