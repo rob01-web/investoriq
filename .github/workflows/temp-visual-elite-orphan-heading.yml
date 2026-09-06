@@ -1,0 +1,105 @@
+name: TEMP Visual ELITE Orphan Heading
+
+on:
+  push:
+    branches:
+      - internal-visual-elite-step6-orphan-heading-20260905-r1
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-visual-elite-step6-orphan-heading-20260905-r1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Apply Prince-safe section heading keep-with-next
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('api/_lib/investoriq-visual-elite-css.js')
+          s = p.read_text()
+          old = """.iq-phase8b .section-header {\n  margin:0 0 14px !important;\n  padding:0 0 11px !important;\n  border-bottom:1px solid var(--iq-ve-rule) !important;\n}\n"""
+          new = """.iq-phase8b .section-header {\n  margin:0 0 14px !important;\n  padding:0 0 11px !important;\n  border-bottom:1px solid var(--iq-ve-rule) !important;\n  break-after:avoid-page !important;\n  page-break-after:avoid !important;\n}\n"""
+          n = s.count(old)
+          if n != 1:
+              raise SystemExit(f'section-header block: expected 1 match, found {n}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Strengthen orphan-heading regression guard
+        shell: bash
+        run: |
+          cat >> tests/qa/investoriq-visual-elite-decision-pagination-smoke.js <<'EOF'
+
+          assert.match(
+            visualCss,
+            /\.iq-phase8b \.section-header \{[\s\S]*?break-after:avoid-page !important;[\s\S]*?page-break-after:avoid !important;/,
+            "Major section headings must remain attached to the first meaningful content block in Prince pagination."
+          );
+          console.log("investoriq-visual-elite-orphan-heading: PASS");
+          EOF
+      - name: Run Visual ELITE guards
+        shell: bash
+        run: |
+          set -e
+          for f in tests/qa/investoriq-visual-elite-*.js; do
+            echo "=== $f ==="
+            node "$f"
+          done
+      - name: Production build
+        run: npm run build
+      - name: Generate exact Stonebridge dual-lane HTML
+        run: node scripts/visual-elite-step6-dual-lane-html.mjs
+      - name: Render exact candidate with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in step6-pagination-preview/Stonebridge_screening.html step6-pagination-preview/Stonebridge_underwriting.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+      - name: Record page counts
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import pdfParse from 'pdf-parse';
+          for (const lane of ['screening','underwriting']) {
+            const p = `step6-pagination-preview/Stonebridge_${lane}.pdf`;
+            const parsed = await pdfParse(fs.readFileSync(p));
+            console.log(`${lane}: pages=${parsed.numpages}`);
+          }
+          NODE
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit bounded source repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'investoriq-visual-elite-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add api/_lib/investoriq-visual-elite-css.js tests/qa/investoriq-visual-elite-decision-pagination-smoke.js
+          git diff --cached --check
+          git commit -m 'Visual ELITE Step 6: prevent orphan section headings'
+          git push origin HEAD:internal-visual-elite-step6-orphan-heading-20260905-r1
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-elite-orphan-heading-preview-${{ github.run_id }}
+          path: |
+            step6-pagination-preview/Stonebridge_screening.pdf
+            step6-pagination-preview/Stonebridge_underwriting.pdf
+          if-no-files-found: error
+          retention-days: 7
