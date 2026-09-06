@@ -56,3 +56,10 @@ assert.match(
   "Major section headings must remain attached to the first meaningful content block in Prince pagination."
 );
 console.log("investoriq-visual-elite-orphan-heading: PASS");
+
+assert.match(
+  visualCss,
+  /\.iq-phase8b \.section > \.card \{[\s\S]*?break-before:avoid-page !important;[\s\S]*?page-break-before:avoid !important;/,
+  "Section body must not begin on a new Prince page immediately after its own heading."
+);
+console.log("investoriq-visual-elite-section-body-keep: PASS");

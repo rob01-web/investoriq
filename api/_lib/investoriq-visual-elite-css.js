@@ -200,6 +200,10 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
   height:1.5px !important;
   background:var(--iq-ve-gold) !important;
 }
+.iq-phase8b .section > .card {
+  break-before:avoid-page !important;
+  page-break-before:avoid !important;
+}
 .iq-phase8b .section-header-title {
   padding-right:0 !important;
   font-family:var(--font-display) !important;
