@@ -31,10 +31,6 @@ function customerCopy(value) {
     .replace(/\bgoverned\b/gi, "defined");
 }
 
-
-
-
-
 function multiple(value) {
   const n = Number(value);
   return Number.isFinite(n) ? `${n.toFixed(2)}x` : "Not available";
@@ -66,7 +62,30 @@ function driverEvidenceLabel(driver) {
     operating_expense_stress: "Operating-expense stress",
     cap_rate_value_sensitivity: "Cap-rate sensitivity",
   };
-  return familyLabels[driver?.scenarioFamily] || "Scenario analysis";
+  return familyLabels[driver?.scenarioFamily] || "Sensitivity analysis";
+}
+
+function deferredDriverReason(driver) {
+  const key = String(driver?.driverKey || "");
+  if (key === "interestRate") {
+    return "Proposed-financing interest-rate sensitivity is presented in Debt Capacity & Coverage when accepted proposed financing terms support it; it is outside this driver matrix.";
+  }
+  if (key === "debtAmount") {
+    return "Debt amount and debt-service capacity are addressed in Debt Capacity & Coverage when supported. A separate debt-amount stress case is not included in this driver matrix.";
+  }
+  if (key === "rent") {
+    return "A standalone rent sensitivity is not included in this driver matrix. Rent Roll market positioning remains source evidence, not a modeled NOI assumption.";
+  }
+  if (key === "majorCapEx") {
+    return "A standalone capital-burden sensitivity is not included in this driver matrix. Documented capital-plan facts remain in the capital and diligence sections.";
+  }
+  if (key === "taxExpense") {
+    return "A standalone tax-expense sensitivity is not included in this driver matrix. Accepted tax or expense facts remain in the operating analysis.";
+  }
+  if (key === "purchasePrice") {
+    return "A standalone purchase-price sensitivity is not included in this driver matrix unless the defined sensitivity framework supplies one.";
+  }
+  return customerCopy(driver?.reason || "This driver is outside the current driver matrix.");
 }
 
 function renderDriverTable(contract) {
@@ -114,9 +133,9 @@ function renderDeferredDrivers(contract) {
   const disposition = contract.sectionDispositions?.deferredDrivers;
   if (!Array.isArray(contract.deferredDrivers) || !contract.deferredDrivers.length || isCollapsed(disposition)) return "";
   const items = contract.deferredDrivers
-    .map((driver) => `<li style="margin-bottom:5px;"><strong>${escapeHtml(driver.label)}:</strong> ${escapeHtml(customerCopy(driver.reason))}</li>`)
+    .map((driver) => `<li style="margin-bottom:5px;"><strong>${escapeHtml(driver.label)}:</strong> ${escapeHtml(deferredDriverReason(driver))}</li>`)
     .join("");
-  return `<div class="iq-boundary-list allow-break" data-iq-elite-driver-boundaries="true" data-iq-disposition="${escapeHtml(dispositionValue(disposition))}"><p class="subsection-title">Drivers Outside Current Sensitivity Scope</p><ul style="margin:0;padding-left:18px;">${items}</ul><p class="footer-note">These drivers remain outside the current sensitivity set until a defined test is available.</p></div>`;
+  return `<div class="iq-boundary-list allow-break" data-iq-elite-driver-boundaries="true" data-iq-disposition="${escapeHtml(dispositionValue(disposition))}"><p class="subsection-title">Sensitivity Families Outside This Driver Matrix</p><ul style="margin:0;padding-left:18px;">${items}</ul><p class="footer-note">Outside this matrix does not mean absent from the report. Dedicated debt, operating, capital, and diligence sections may present their own supported analyses.</p></div>`;
 }
 
 export function renderFullUnderwritingDriverAnalysisV1Html(contract) {
