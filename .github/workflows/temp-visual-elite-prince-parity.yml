@@ -1,0 +1,115 @@
+name: TEMP Visual ELITE Prince Parity
+
+on:
+  push:
+    branches:
+      - internal-visual-elite-step6-prince-parity-20260905-r1
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-visual-elite-step6-prince-parity-20260905-r1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Apply Prince-safe publication layout repair
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('api/_lib/investoriq-visual-elite-css.js')
+          s = p.read_text()
+
+          def one(old, new, label):
+              global s
+              n = s.count(old)
+              if n != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 match, found {n}')
+              s = s.replace(old, new, 1)
+
+          one(
+          """  display:grid !important;\n  grid-template-columns:repeat(3,minmax(0,1fr)) !important;\n  gap:.28in !important;\n""",
+          """  display:table !important;\n  table-layout:fixed !important;\n  width:calc(100% - 1.24in) !important;\n  border-spacing:0 !important;\n""",
+          'cover meta grid')
+
+          marker = ".iq-phase8b .cover-meta-grid span {"
+          insert = """.iq-phase8b .cover-meta-grid > div {\n  display:table-cell !important;\n  width:33.333% !important;\n  padding-right:.28in !important;\n  vertical-align:top !important;\n}\n.iq-phase8b .cover-meta-grid > div:last-child { padding-right:0 !important; }\n"""
+          if marker not in s:
+              raise SystemExit('cover meta child marker missing')
+          s = s.replace(marker, insert + marker, 1)
+
+          one(
+          """  display:grid !important;\n  grid-template-columns:repeat(2,minmax(0,1fr)) !important;\n  width:100% !important;\n""",
+          """  display:table !important;\n  table-layout:fixed !important;\n  caption-side:top !important;\n  width:100% !important;\n""",
+          'decision band grid')
+
+          one(
+          """  display:block !important;\n  width:auto !important;\n  padding:10px 14px !important;\n""",
+          """  display:table-cell !important;\n  width:50% !important;\n  vertical-align:top !important;\n  padding:10px 14px !important;\n""",
+          'decision band cells')
+
+          one(
+          """  grid-column:1 / -1 !important;\n  padding:14px 18px 15px !important;\n""",
+          """  display:table-caption !important;\n  caption-side:top !important;\n  width:auto !important;\n  padding:14px 18px 15px !important;\n""",
+          'decision band lead caption')
+
+          one(
+          """.iq-phase8b .phase8b-screening-profile-strip { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:0 16px !important; margin:0 0 16px !important; padding:9px 0 4px !important; border-top:1px solid var(--iq-ve-rule) !important; }\n.iq-phase8b .phase8b-screening-profile-strip > div { padding:4px 0 7px !important; border-bottom:1px solid #e1e5e1 !important; }\n""",
+          """.iq-phase8b .phase8b-screening-profile-strip { display:flex !important; flex-wrap:wrap !important; gap:0 !important; margin:0 0 16px !important; padding:9px 0 4px !important; border-top:1px solid var(--iq-ve-rule) !important; }\n.iq-phase8b .phase8b-screening-profile-strip > div { width:33.333% !important; box-sizing:border-box !important; padding:4px 16px 7px 0 !important; border-bottom:1px solid #e1e5e1 !important; }\n""",
+          'screening profile grid')
+
+          one(
+          """.iq-phase8b .phase8b-screening-decision-panels,\n.iq-phase8b .phase8a-exec-columns { display:grid !important; grid-template-columns:1.25fr 1.25fr .9fr !important; gap:0 !important; margin-top:2px !important; border-top:1px solid var(--iq-ve-rule) !important; }\n.iq-phase8b .phase8a-exec-panel { padding:12px 16px 0 0 !important; border-top:0 !important; background:#fff !important; }\n""",
+          """.iq-phase8b .phase8b-screening-decision-panels,\n.iq-phase8b .phase8a-exec-columns { display:table !important; table-layout:fixed !important; width:100% !important; border-spacing:0 !important; margin-top:2px !important; border-top:1px solid var(--iq-ve-rule) !important; }\n.iq-phase8b .phase8a-exec-panel { display:table-cell !important; width:37% !important; vertical-align:top !important; padding:12px 16px 0 0 !important; border-top:0 !important; background:#fff !important; }\n.iq-phase8b .phase8a-exec-panel:nth-child(3) { width:26% !important; }\n""",
+          'decision panels grid')
+
+          p.write_text(s)
+          PY
+
+      - name: Strengthen Prince parity regression guard
+        shell: bash
+        run: |
+          cat >> tests/qa/investoriq-visual-elite-decision-pagination-smoke.js <<'EOF'
+
+          assert.match(visualCss, /\.cover-meta-grid \{[\s\S]*?display:table !important;[\s\S]*?table-layout:fixed !important;/,
+            "Cover metadata must use a Prince-safe table layout instead of CSS Grid.");
+          assert.match(visualCss, /\.phase8b-screening-decision-band,[\s\S]*?display:table !important;[\s\S]*?caption-side:top !important;/,
+            "Decision status band must use a Prince-safe table/caption layout.");
+          assert.match(visualCss, /\.phase8b-screening-profile-strip \{[^}]*display:flex !important;[^}]*flex-wrap:wrap !important;/,
+            "Screening profile matrix must use Prince-safe wrapping flex layout.");
+          assert.match(visualCss, /\.phase8b-screening-decision-panels,[\s\S]*?\.phase8a-exec-columns \{[^}]*display:table !important;[^}]*table-layout:fixed !important;/,
+            "Decision panels must use Prince-safe table layout.");
+          assert.doesNotMatch(visualCss, /\.phase8b-screening-decision-panels,[\s\S]{0,220}?display:grid !important;/,
+            "Decision panels must not regress to CSS Grid in the Prince-critical opening.");
+          console.log("investoriq-visual-elite-prince-parity: PASS");
+          EOF
+      - name: Run Visual ELITE guards
+        shell: bash
+        run: |
+          set -e
+          for f in tests/qa/investoriq-visual-elite-*.js; do
+            echo "=== $f ==="
+            node "$f"
+          done
+      - name: Build
+        run: npm run build
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit bounded source repair
+        shell: bash
+        run: |
+          git config user.name 'investoriq-visual-elite-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add api/_lib/investoriq-visual-elite-css.js tests/qa/investoriq-visual-elite-decision-pagination-smoke.js
+          git diff --cached --check
+          git commit -m 'Visual ELITE Step 6: add Prince-safe opening layouts'
+          git push origin HEAD:internal-visual-elite-step6-prince-parity-20260905-r1
