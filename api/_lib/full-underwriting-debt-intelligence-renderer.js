@@ -23,10 +23,6 @@ function customerCopy(value) {
     .replace(/\bgoverned\b/gi, "defined");
 }
 
-
-
-
-
 function surfacePercent(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
@@ -68,7 +64,8 @@ function row(receipt, marker, options = {}) {
   if (!receipt?.displayReady) return "";
   const rendered = display(receipt, options);
   if (!rendered) return "";
-  return `<tr data-iq-elite07-metric="${escapeHtml(marker || receipt.key)}" data-iq-evidence-class="${escapeHtml(receipt.evidenceClass)}"><td>${escapeHtml(receipt.label)}</td><td>${escapeHtml(rendered)}</td></tr>`;
+  const label = options.label || receipt.label;
+  return `<tr data-iq-elite07-metric="${escapeHtml(marker || receipt.key)}" data-iq-evidence-class="${escapeHtml(receipt.evidenceClass)}"><td>${escapeHtml(label)}</td><td>${escapeHtml(rendered)}</td></tr>`;
 }
 
 function renderCoverageHeadroom(contract) {
@@ -149,24 +146,32 @@ function renderMaturity(contract) {
 function renderCapacity(contract) {
   const capacity = contract?.capacityInterpretation || {};
   if (!capacity.displayReady || collapsed(contract?.sectionDispositions?.capacityInterpretation)) return "";
-  const preferred = [
-    "proposedDebtYield",
-    "proposedMortgageConstant",
-    "currentDebtInclusiveBreakEvenOccupancy",
-    "proposedDebtInclusiveBreakEvenOccupancy",
-    "currentDebtInclusiveBreakEvenMonthlyRentPerUnit",
-    "proposedDebtInclusiveBreakEvenMonthlyRentPerUnit",
-    "governedCapacityResult",
-    "governedBindingConstraint",
-  ];
-  const rows = preferred
-    .map((key) => row(capacity.metrics?.[key], key, { ratioFormatter: (value) => percent(value, 1) }))
-    .filter(Boolean)
-    .join("");
+  const metrics = capacity.metrics || {};
+  const rows = [
+    row(metrics.proposedDebtYield, "proposedDebtYield", { ratioFormatter: (value) => percent(value, 1) }),
+    row(metrics.proposedMortgageConstant, "proposedMortgageConstant", { ratioFormatter: (value) => percent(value, 1) }),
+    row(metrics.currentDebtInclusiveBreakEvenOccupancy, "currentDebtInclusiveBreakEvenOccupancy", {
+      ratioFormatter: (value) => percent(value, 1),
+      label: "Current Debt-Inclusive Cost Coverage Ratio",
+    }),
+    row(metrics.proposedDebtInclusiveBreakEvenOccupancy, "proposedDebtInclusiveBreakEvenOccupancy", {
+      ratioFormatter: (value) => percent(value, 1),
+      label: "Proposed Debt-Inclusive Cost Coverage Ratio",
+    }),
+    row(metrics.currentDebtInclusiveBreakEvenMonthlyRentPerUnit, "currentDebtInclusiveBreakEvenMonthlyRentPerUnit", {
+      label: "Current Debt-Inclusive Monthly Rent / Unit Coverage Reference",
+    }),
+    row(metrics.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit, "proposedDebtInclusiveBreakEvenMonthlyRentPerUnit", {
+      label: "Proposed Debt-Inclusive Monthly Rent / Unit Coverage Reference",
+    }),
+    row(metrics.governedCapacityResult, "governedCapacityResult"),
+    row(metrics.governedBindingConstraint, "governedBindingConstraint"),
+  ].filter(Boolean).join("");
   const observations = (Array.isArray(capacity.observations) ? capacity.observations : [])
+    .filter((item) => item?.key !== "occupancy_vs_debt_break_even")
     .map((item) => `<li data-iq-elite07-observation="${escapeHtml(item.key)}" data-iq-evidence-class="${escapeHtml(item.evidenceClass)}" style="margin-bottom:5px;">${escapeHtml(customerCopy(item.text))}</li>`)
     .join("");
-  return `<div class="subsection-block" data-iq-elite07-surface="capacity-interpretation"><p class="subsection-title">Debt Capacity and Coverage</p>${rows ? `<table class="detail-table"><tbody>${rows}</tbody></table>` : ""}${observations ? `<div class="subsection-block"><p class="subsection-title">Decision-Relevant Debt Observations</p><ul style="margin:0;padding-left:18px;">${observations}</ul></div>` : ""}<p class="footer-note">${escapeHtml(customerCopy(capacity.qualification))}</p></div>`;
+  return `<div class="subsection-block" data-iq-elite07-surface="capacity-interpretation"><p class="subsection-title">Debt Capacity and Coverage</p>${rows ? `<table class="detail-table"><tbody>${rows}</tbody></table>` : ""}<p class="footer-note"><strong>Debt-inclusive cost coverage basis:</strong> (T12 operating expenses + annual debt service) / T12 gross potential rent. This is a revenue-basis ratio, not a point-in-time physical occupancy threshold, and it should not be compared directly with accepted occupancy or occupancy sensitivity cases.</p>${observations ? `<div class="subsection-block"><p class="subsection-title">Decision-Relevant Debt Observations</p><ul style="margin:0;padding-left:18px;">${observations}</ul></div>` : ""}<p class="footer-note">${escapeHtml(customerCopy(capacity.qualification))}</p></div>`;
 }
 
 export function renderFullUnderwritingDebtIntelligenceV1Html(contract = null) {
