@@ -1,0 +1,1 @@
+The next phase must run on `internal-underwriting-editorial-analytical-elite-20260906-r1`. The provider-certified Step 6 checkpoint remains historical authority and is not a production deployment authorization.
