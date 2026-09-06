@@ -87,13 +87,21 @@ export const INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS = `
   word-spacing:0 !important;
 }
 
-/* Confirmed short sections stay intact so Prince cannot strand the heading. */
+/* Confirmed short sections stay intact where the entire bounded section fits. */
 .iq-phase8b section[data-iq-elite-section="keyMetricsSnapshot"],
-.iq-phase8b section[data-iq-elite-operating="noi-margin-analysis"],
 .iq-phase8b section[data-iq-elite-scenario-section="operating-expense-stress"] {
   break-inside:avoid-page !important;
   page-break-inside:avoid !important;
 }
+
+/* NOI is longer: keep only the heading + source-backed bridge atomic, then allow evidence rows to flow. */
+.iq-phase8b .iq-ve-noi-heading-bridge-lock {
+  break-inside:avoid-page !important;
+  page-break-inside:avoid !important;
+}
+.iq-phase8b .iq-ve-noi-heading-bridge-lock .section-header { margin-bottom:0 !important; }
+.iq-phase8b .iq-ve-noi-heading-bridge-lock .iq-ve-earnings-bridge { margin-top:0 !important; margin-bottom:10px !important; }
+.iq-phase8b .iq-ve-noi-supporting-metrics { margin-top:0 !important; padding-top:0 !important; }
 
 ${INVESTORIQ_VISUAL_ELITE_PRINCE_LAYOUT_CSS}
 `;
