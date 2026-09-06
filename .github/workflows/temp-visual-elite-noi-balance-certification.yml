@@ -1,0 +1,164 @@
+name: TEMP Visual ELITE NOI Page Balance
+
+on:
+  push:
+    branches:
+      - internal-visual-elite-step6-noi-balance-20260906-r1
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-visual-elite-step6-noi-balance-20260906-r1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+
+      - name: Structurally lock NOI heading to earnings bridge only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('api/_lib/full-underwriting-operating-intelligence-renderer.js')
+          s = p.read_text()
+          old = '''  const earningsBridge = renderVisualEliteOperatingEarningsBridge(s);\n  return section(\n    "NOI & Margin Analysis",\n    "noi-margin-analysis",\n    `${earningsBridge}<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table><p class="footer-note">Operating break-even is a deterministic operating relationship. Debt service is not included here unless separately analyzed in the debt chapter.</p>`,\n    dispositionValue(s)\n  );'''
+          new = '''  const earningsBridge = renderVisualEliteOperatingEarningsBridge(s);\n  const supportingBody = `<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table><p class="footer-note">Operating break-even is a deterministic operating relationship. Debt service is not included here unless separately analyzed in the debt chapter.</p>`;\n  const disposition = dispositionValue(s);\n  if (!earningsBridge) {\n    return section(\n      "NOI & Margin Analysis",\n      "noi-margin-analysis",\n      supportingBody,\n      disposition\n    );\n  }\n  return `<section class="section" data-iq-elite-operating="noi-margin-analysis" data-iq-disposition="${escapeHtml(disposition)}">\n    <div class="iq-ve-noi-heading-bridge-lock no-break">\n      <div class="section-header"><span class="section-header-title">NOI &amp; Margin Analysis</span></div>\n      ${earningsBridge}\n    </div>\n    <div class="card allow-break iq-ve-noi-supporting-metrics">${supportingBody}</div>\n  </section>`;'''
+          if old not in s:
+              raise SystemExit('NOI renderer marker missing')
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('api/_lib/investoriq-visual-elite-typography-css.js')
+          s = p.read_text()
+          old = '''/* Confirmed short sections stay intact so Prince cannot strand the heading. */\n.iq-phase8b section[data-iq-elite-section="keyMetricsSnapshot"],\n.iq-phase8b section[data-iq-elite-operating="noi-margin-analysis"],\n.iq-phase8b section[data-iq-elite-scenario-section="operating-expense-stress"] {\n  break-inside:avoid-page !important;\n  page-break-inside:avoid !important;\n}\n'''
+          new = '''/* Confirmed short sections stay intact where the entire bounded section fits. */\n.iq-phase8b section[data-iq-elite-section="keyMetricsSnapshot"],\n.iq-phase8b section[data-iq-elite-scenario-section="operating-expense-stress"] {\n  break-inside:avoid-page !important;\n  page-break-inside:avoid !important;\n}\n\n/* NOI is longer: keep only the heading + source-backed bridge atomic, then allow evidence rows to flow. */\n.iq-phase8b .iq-ve-noi-heading-bridge-lock {\n  break-inside:avoid-page !important;\n  page-break-inside:avoid !important;\n}\n.iq-phase8b .iq-ve-noi-heading-bridge-lock .section-header { margin-bottom:0 !important; }\n.iq-phase8b .iq-ve-noi-heading-bridge-lock .iq-ve-earnings-bridge { margin-top:0 !important; margin-bottom:10px !important; }\n.iq-phase8b .iq-ve-noi-supporting-metrics { margin-top:0 !important; padding-top:0 !important; }\n'''
+          if old not in s:
+              raise SystemExit('typography atomic-section marker missing')
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('tests/qa/investoriq-visual-elite-typography-spacing-smoke.js')
+          s = p.read_text()
+          old = 'assert.match(css, /data-iq-elite-section="keyMetricsSnapshot"[\\s\\S]*?data-iq-elite-operating="noi-margin-analysis"[\\s\\S]*?data-iq-elite-scenario-section="operating-expense-stress"[\\s\\S]*?break-inside:avoid-page !important;/, "Confirmed short Prince sections must remain atomic with their headings.");'
+          new = 'assert.match(css, /data-iq-elite-section="keyMetricsSnapshot"[\\s\\S]*?data-iq-elite-scenario-section="operating-expense-stress"[\\s\\S]*?break-inside:avoid-page !important;/, "Confirmed short Prince sections must remain atomic with their headings.");\nassert.doesNotMatch(css, /section\\[data-iq-elite-operating="noi-margin-analysis"\\][^{]*\\{[\\s\\S]*?break-inside:avoid-page !important;/, "The entire NOI section must not be made atomic because its evidence rows need natural pagination.");\nassert.match(css, /\\.iq-phase8b \\.iq-ve-noi-heading-bridge-lock \\{[\\s\\S]*?break-inside:avoid-page !important;[\\s\\S]*?page-break-inside:avoid !important;/, "NOI heading and earnings bridge must remain an atomic publication lead.");'
+          if old not in s:
+              raise SystemExit('typography smoke marker missing')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Add NOI page-balance regression guard
+        shell: bash
+        run: |
+          cat > tests/qa/investoriq-visual-elite-noi-page-balance-smoke.js <<'EOF'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+          import { INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS } from "../../api/_lib/investoriq-visual-elite-typography-css.js";
+
+          const renderer = fs.readFileSync("api/_lib/full-underwriting-operating-intelligence-renderer.js", "utf8");
+          const css = INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS;
+
+          assert.match(renderer, /iq-ve-noi-heading-bridge-lock no-break/, "NOI heading and earnings bridge must share a bounded structural wrapper.");
+          assert.match(renderer, /iq-ve-noi-supporting-metrics/, "NOI supporting metrics must live outside the bounded bridge wrapper.");
+          assert.match(renderer, /card allow-break iq-ve-noi-supporting-metrics/, "NOI evidence table must remain free to paginate naturally.");
+          assert.doesNotMatch(css, /section\[data-iq-elite-operating="noi-margin-analysis"\][^{]*\{[\s\S]*?break-inside:avoid-page !important;/,
+            "The whole NOI section must not be atomic.");
+          assert.match(css, /\.iq-phase8b \.iq-ve-noi-heading-bridge-lock \{[\s\S]*?break-inside:avoid-page !important;/,
+            "The bounded NOI lead must remain atomic in paged output.");
+
+          console.log("investoriq-visual-elite-noi-page-balance-smoke: PASS");
+          EOF
+
+      - name: Run Visual ELITE guards
+        shell: bash
+        run: |
+          set -e
+          for f in tests/qa/investoriq-visual-elite-*.js; do
+            echo "=== $f ==="
+            node "$f"
+          done
+
+      - name: Production build
+        run: npm run build
+
+      - name: Restore temporary Stonebridge preview helper
+        shell: bash
+        run: |
+          git fetch origin internal-visual-elite-step6-orphan-heading-20260905-r1 --depth=1
+          git show origin/internal-visual-elite-step6-orphan-heading-20260905-r1:scripts/visual-elite-step6-dual-lane-html.mjs > scripts/visual-elite-step6-dual-lane-html.mjs
+          test -s scripts/visual-elite-step6-dual-lane-html.mjs
+
+      - name: Generate exact Stonebridge dual-lane HTML
+        run: node scripts/visual-elite-step6-dual-lane-html.mjs
+
+      - name: Assert final HTML contains structural NOI seam
+        shell: bash
+        run: |
+          grep -q 'iq-ve-noi-heading-bridge-lock no-break' step6-pagination-preview/Stonebridge_underwriting.html
+          grep -q 'card allow-break iq-ve-noi-supporting-metrics' step6-pagination-preview/Stonebridge_underwriting.html
+          if grep -Eq 'section\[data-iq-elite-operating="noi-margin-analysis"\][^{]*\{[^}]*break-inside:avoid-page' step6-pagination-preview/Stonebridge_underwriting.html; then
+            echo 'Whole NOI section is still atomic' >&2
+            exit 1
+          fi
+
+      - name: Render exact candidate with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in step6-pagination-preview/Stonebridge_screening.html step6-pagination-preview/Stonebridge_underwriting.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+
+      - name: Record preview page counts
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import pdfParse from 'pdf-parse';
+          for (const lane of ['screening','underwriting']) {
+            const p = `step6-pagination-preview/Stonebridge_${lane}.pdf`;
+            const parsed = await pdfParse(fs.readFileSync(p));
+            console.log(`${lane}: pages=${parsed.numpages}`);
+          }
+          NODE
+
+      - name: Remove helper and diff safety
+        shell: bash
+        run: |
+          rm -f scripts/visual-elite-step6-dual-lane-html.mjs
+          rm -rf step6-pagination-preview/*.html
+          git diff --check
+          status="$(git status --short)"
+          echo "$status"
+          unexpected="$(printf '%s\n' "$status" | grep -vE '^( M api/_lib/full-underwriting-operating-intelligence-renderer\.js| M api/_lib/investoriq-visual-elite-typography-css\.js| M tests/qa/investoriq-visual-elite-typography-spacing-smoke\.js|\?\? tests/qa/investoriq-visual-elite-noi-page-balance-smoke\.js|\?\? step6-pagination-preview/)' || true)"
+          test -z "$unexpected"
+
+      - name: Commit bounded NOI balance repair
+        shell: bash
+        run: |
+          git config user.name 'investoriq-visual-elite-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add api/_lib/full-underwriting-operating-intelligence-renderer.js api/_lib/investoriq-visual-elite-typography-css.js tests/qa/investoriq-visual-elite-typography-spacing-smoke.js tests/qa/investoriq-visual-elite-noi-page-balance-smoke.js
+          git diff --cached --check
+          git commit -m 'Visual ELITE Step 6: balance NOI exhibit pagination'
+          git push origin HEAD:internal-visual-elite-step6-noi-balance-20260906-r1
+
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-elite-noi-balance-preview-${{ github.run_id }}
+          path: |
+            step6-pagination-preview/Stonebridge_screening.pdf
+            step6-pagination-preview/Stonebridge_underwriting.pdf
+          if-no-files-found: error
+          retention-days: 7
