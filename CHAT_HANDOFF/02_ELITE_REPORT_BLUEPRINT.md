@@ -1,511 +1,294 @@
-# Dated status update: 2026-09-05 UTC - OWNER APPROVED VISUAL DIRECTION / IMPLEMENTATION NEXT
-
-**Rob approved the five-page prototype appearance. Composition selection is CLOSED.** Implement that visual direction throughout Screening and Underwriting using the regular approved Cormorant Garamond / DM Sans / DM Mono fonts. Prototype substitute fonts are not approved for the products. Read [the owner approval and implementation sequence](archived/2026-09-05-owner-rejection-audit/VISUAL_APPROVAL_AND_IMPLEMENTATION.md).
-
-**Exact next action:** In the fresh chat, restore this chat's local checkpoint if necessary, then obtain/embed approved complete font assets and re-render the accepted design with them. Continue the documented bounded sequence: shared publication components and both covers; both decision summaries; operating/SVG and remaining analyses; source/navigation styling; content-length/actual-provider/every-page acceptance. Do not ask Rob to select the already-approved composition again. Implementation of the complete pipelines is not yet done.
-
-**No hard page caps:** report length follows supported relevant analysis from accepted uploaded documents and readable pagination. No fixed minimum, arbitrary truncation or filler. The five prototype pages are sample exhibits only. Never copy their fixed-height sheets into production as a content limit. Verify existing caps/clamps during integration and use flowing, continuing sections and tables.
-
-**Continuity:** this chat's commits remain local, not pushed to GitHub. For this fresh-chat transition, provide the refreshed recovery ZIP; it includes the cumulative patch, this authority, source prototype and approved visual PDF. Once the repository is synchronized, the canonical fresh-chat prompt resumes its normal role as the only required starting file.
-
-All prior math, source, archive-preservation and launch holds remain. No production authorization, actual DocRaptor acceptance, or final pipeline certification is implied. Earlier DocRaptor disclosure rejection remains in effect. Previous status entries below are preserved history.
-
----
-
-# Dated status update: 2026-09-05 UTC - FIVE-PAGE VISUAL PROTOTYPE CREATED
-
-Rob authorized completing the next bounded visual steps. A standalone five-page Stonebridge design study now exists at `design/publication-prototype-20260905/`: matching Screening/Underwriting covers, both decision summaries, and an Underwriting operating page with a substantial inline SVG earnings bridge and matching table. This is completed prototype work, not merely recommendations. The report pipelines were not changed during this visual step.
-
-The PDF is `InvestorIQ_Visual_Prototype.pdf`. Local WeasyPrint preview: five pages, personally inspected; source differences retained; page overflow and footnote collisions repaired. **Font limitation remains:** approved brand fonts could not be downloaded. The study deliberately embeds P052/Nimbus Sans as composition substitutes, documented in its README and verification receipt. This is not final brand-font or DocRaptor acceptance.
-
-**Exact next action:** Rob reviews/selects the visual direction from this concrete PDF; obtain approved font assets and render the selected composition with them before propagating it through both products. Then complete the existing actual-provider and every-page/source-bound acceptance gates. Do not restart the completed 32/32 local audit checks for this isolated design prototype. Earlier open audit items remain recorded in the September 5 checkpoint.
-
-**Holds unchanged:** no launch certification, no production action, no merge/push/deployment/migration/scheduler activation. Earlier DocRaptor disclosure approval rejection remains; no retry was made. New work is local and is included in the refreshed recovery ZIP. Previous authority and history follow unchanged.
-
----
-
-# Dated status update: 2026-09-05 UTC — WHOLE-PUBLICATION VISUAL DIRECTION
-
-Rob clarified that the premium-quality target covers the entire appearance of BOTH reports, not just charts. Read [the visual direction brief](archived/2026-09-05-owner-rejection-audit/VISUAL_DIRECTION_BRIEF.md) alongside the audit checkpoint. It records the quick DocRaptor capability review and prioritized composition/typography/table/chart/navigation recommendations.
-
-**New confirmed visual blocker:** the newest local WeasyPrint preview substituted DejaVu fonts for the approved Cormorant Garamond / DM families. This preview is not accepted; embed/pin approved fonts and inspect actual PDF font output. This is not a verified live DocRaptor failure.
-
-**Next visual action:** prototype three coordinated same-property pages (Screening decision, Underwriting decision, Underwriting operating analysis), review them at 100% scale, and obtain owner design selection before propagating the redesign. This visual task does not reopen completed analytical phases or authorize new unsupported financial content. Actual provider and launch holds remain unchanged. No report code or production settings changed during this quick review; recommendations are not implemented work.
-
-Previous authority and history follow unchanged.
-
----
-
-# Dated status update: 2026-09-05 UTC — OWNER REJECTION AUDIT / LOCAL REPAIR CHECKPOINT
-
-**Governing current status: Phase 8B repair and launch audit remain OPEN. Launch and production HOLD.** Rob rejected the previous visual acceptance and explicitly requested a full cross-product/math/delivery audit. His latest instruction prioritizes preserving today's work for a fresh chat because Astra usage is exhausted.
-
-Read [the complete September 5 audit checkpoint](archived/2026-09-05-owner-rejection-audit/AUDIT_CHECKPOINT.md) after the five canonical files. It preserves changes, evidence, limitations, source math, blocked actions, working paths and Rob's new DocRaptor/SVG chart design request. Pre-update copies of all five canonical files are preserved byte-for-byte in that directory's `authority-before/`.
-
-Locally implemented: shared publication typography/cover/table authority; missing-value and financial rounding corrections; actual-XLSX unit-mix precision fix; annualization and missing-market/partial-row protections; the $20,000 Stonebridge expense-source discrepancy disclosed without changing NOI; same-property HTML proof; debt overlap/capital pagination repairs; secure customer-route consolidation to the 12/12 function budget; expanded 32-check launch suite. Thirteen financial-intelligence diagnostics and the frontend build passed. Final QA details are in the checkpoint. These facts do not certify a live customer pipeline or complete visual acceptance.
-
-**Exact next action:** Resume the repaired code and the checkpoint's OPEN items: finish repeated-metric precision and customer-copy comparison, review a source-backed SVG chart improvement, generate and personally inspect the exact final same-property pair, and establish actual provider/customer-delivery proof. Do not restart completed phases or repeat unchanged certified work.
-
-**Blocked:** Automatic approval review rejected sending full generated report HTML to DocRaptor TEST mode without explicit disclosure authorization. Do not retry or bypass that rejection; ask for authorization for those exact fixture HTML files before retrying. Chromium also lacks socket permission. No provider or live finalizer/storage/customer-download receipt was produced.
-
-**Holds:** Owner acceptance, actual DocRaptor/Prince render proof, full real customer-path lifecycle proof, and exact production authorization. No merge, push, deployment, migration, scheduler activation or production change occurred. Do not add unsupported IRR, capital-stack allocations, forecasts or investment recommendations to imitate Gemini's example. Preserve portrait/forest-gold doctrine pending a reviewed design decision.
-
-Everything below is preserved prior authority/history; this dated update takes precedence where status or next action differs.
-
----
-
-# InvestorIQ ELITE Report Blueprint — Phase 8B Publication Update
-
-**Updated:** 2026-09-04
-**Status:** Phase 8B canonical cross-product publication system CLOSED / CERTIFIED LOCALLY
-
-> This update records the implemented Phase 8B publication authority. The detailed Phase 8A blueprint remains intact below. If implementation status conflicts with the earlier prospective wording, this update governs.
-
-## Implemented publication authority
-
-Phase 8B established `api/_lib/investoriq-publication-design-system.js` as the canonical shared publication-design seam. Screening consumes that system rather than maintaining a parallel visual language.
-
-Closed publication slices:
-
-| Slice | Implemented result | Commit |
-|---|---|---|
-| 8B-A | Canonical design system extracted from Underwriting | `24a3345` |
-| 8B-B | Screening cover aligned to canonical cover system | `3ebfe09` |
-| 8B-C | Screening decision page rebuilt from canonical decision cockpit | `2bdc7a1` |
-| 8B-D | Screening evidence, observations, reconciliation, and diligence unified | `e93f07d` |
-| 8B-E | Screening governance ending unified | `4a150f3` |
-| 8B-F | Exact artifacts regenerated and visually certified | `01dc75a` |
-
-## Final visual authority
-
-- White-first institutional cover family.
-- Dark decision band followed by compact metric grammar and three decision panels.
-- Shared evidence-map, observation, reconciliation, diligence, source, methodology, and quality-governance grammar.
-- Screening stays a five-page triage product and exposes no Underwriting-only concepts.
-- Underwriting retains its twenty-page analytical depth.
-- The two products remain visibly one InvestorIQ family when property names, figures, and product labels are blurred.
-
-The exact accepted-file candidates and hashes are recorded in `00_CURRENT_HANDOFF.md` and the Phase 8B certification. Owner acceptance remains distinct from local visual certification.
-
-## Permanent acceptance rule
-
-Future changes to shared publication tokens, cover geometry, decision hierarchy, evidence grammar, or governance components must validate both products. A change that improves one report by silently diverging the other is a regression.
-
----
-
-## Preserved Phase 8A blueprint body
-
 # InvestorIQ ELITE Report Blueprint
 
-**Updated:** 2026-09-04
-**Status:** Current report-design authority for Phase 8A Owner-Acceptance Recovery
-**Scope:** Screening and Underwriting information architecture, decision density, source discipline, strategy classification, visual quality, DocRaptor publishing, and acceptance criteria
+**Updated:** 2026-09-06  
+**Status:** Governing blueprint for Underwriting Editorial + Analytical ELITE Closeout  
+**Scope:** Root-cause repair of reusable Screening/Underwriting reporting behavior
 
-## 1. Product family purpose
+## 1. Product identity
 
-InvestorIQ turns uploaded property documents into two related but distinct investor products:
+InvestorIQ produces related but distinct institutional decision-support products:
 
 - `InvestorIQ Screening Report`
 - `InvestorIQ Underwriting Report`
 
-They must share one premium visual family and one source-governance system while serving different decision depths.
+They share one premium publication family and one evidence/calculation governance system while serving different decision depths.
 
-The reports are decision-support products, not page-count products.
+The products are **not page-count products**.
 
-## 2. Core design doctrine
+## 2. Root-cause publication doctrine
 
-The first analytical page must answer the product's primary customer decision immediately.
+A generated test PDF is evidence. It is never the code target.
+
+Every repair must remain correct when:
+
+- the property changes;
+- source documents change;
+- amounts and precision change;
+- the number of support documents changes;
+- text becomes longer or shorter;
+- a data field is missing;
+- a ranking contains a tie;
+- a table gains more rows;
+- the final page count changes.
+
+The system must not contain customer-output logic whose purpose is merely to make one known fixture look correct.
+
+## 3. Core information hierarchy
 
 Permanent hierarchy:
 
-> conclusion first, evidence second, explanation third.
+**Decision first. Facts before prose.**
 
-Permanent rules:
+Customer-facing sections should prefer:
 
-- decision first;
-- facts before prose;
-- no forced conclusions;
-- strategy classifications are evidence-bound;
-- material findings bubble upward to the first analytical page;
-- detailed provenance remains available without dominating the investor-facing layer.
+1. fact;
+2. decision relevance / interpretation;
+3. unresolved issue or limitation;
+4. required next evidence/action;
+5. supporting source traceability.
 
-## 3. Screening mission
+Internal governance language should remain in code, tests, methodology records, or audit evidence unless a reader truly needs it to understand the conclusion.
 
-Screening helps an investor rapidly narrow a shortlist and decide whether a property deserves deeper Underwriting attention.
+## 4. Current Underwriting product title
 
-It should answer, in roughly 15-30 seconds on the first analytical page where evidence supports it:
+Current editorial recommendation:
 
-- Should I advance this property?
-- What is the single biggest reason?
-- Is the property fundamentally healthy?
-- Is there documented rent upside?
-- Can I trust the operating story?
-- What is most likely to waste my time?
-- What exactly should happen next?
+# InvestorIQ Underwriting Report
 
-## 4. Screening Decision Snapshot
+Optional subtitle:
 
-The first analytical page is the `Screening Decision Snapshot`.
+**Prepared for investment review**
 
-Disposition values:
+Do not use `Investment Committee Memorandum` as the primary title merely because it sounds more premium. The report may earn that title later if the opening genuinely operates as a committee decision brief: clear decision requested, supported rationale, material risks, funding/capital picture where supported, unresolved conditions, and evidence needed before the next decision.
 
-- `ADVANCE`
-- `HOLD`
-- `DO NOT ADVANCE`
-- `INSUFFICIENT EVIDENCE`
+No arbitrary page length or single metric determines whether a report qualifies as an IC memorandum.
 
-If the source package does not safely support a disposition, show `INSUFFICIENT EVIDENCE`. Never manufacture a recommendation to avoid an empty field.
+## 5. Underwriting opening
 
-Where supported, the page should include:
+The first analytical page remains `Investment Decision Snapshot`.
 
-### Decision band
+Remove redundant competing introduction labels. One quiet running header plus one main page title is sufficient.
 
-- disposition;
-- one-line primary reason;
-- exact next action;
-- Underwriting readiness.
+The opening should prioritize the most decision-critical supported facts, not every available metric.
 
-### Operating snapshot
+For the audited class of issue, distinguish clearly between:
 
-- units;
-- occupancy;
-- NOI;
-- NOI margin;
-- expense ratio;
-- break-even occupancy / operating cushion.
+- cross-basis/source-period differences that require explanation; and
+- true subtotal/total reconciliation gaps that require supporting schedules.
 
-### Rent and source snapshot
+A plain-language reader-facing status such as **Source differences require review** is preferred to unexplained process terminology such as `RECONCILIATION REQUIRED`.
 
-- annual in-place rent;
-- annual market rent;
-- gross rent gap dollars;
-- gross rent gap percent;
-- T12 versus Rent Roll consistency;
-- material reconciliation variance.
+Never infer the cause of a source difference without evidence.
 
-### Bottom decision panels
+## 6. Screening continuity
 
-Compact surfaces such as:
+Screening remains the faster triage product and must not inherit Underwriting-only analysis merely because a shared visual component changes.
 
-- `WHY IT MAY WORK`
-- `WHAT CAN KILL IT`
-- `NEXT ACTION`
+However, shared publication rules should remain visibly continuous across both products, including:
 
-Each should use bullets or one-line statements, not paragraphs.
+- wordmark;
+- type hierarchy;
+- metric styling;
+- rule/separator system;
+- source-status language;
+- numeric-format policy;
+- footers/running furniture;
+- source-register behavior where applicable;
+- pagination primitives.
 
-## 5. Screening strategy boundary
+Every shared change must be evaluated against both lanes.
 
-Because Screening may be generated from only T12 and/or Rent Roll, it must not infer transaction strategies requiring facts that were not uploaded.
+## 7. Typography and readability
 
-Permitted operating-profile labels, only when objectively supported, may include:
+Approved publication families remain:
 
-- `STABILIZED`
-- `LIGHT VALUE-ADD CANDIDATE`
-- `OPERATING PRESSURE`
-- `INSUFFICIENT EVIDENCE`
+- Cormorant Garamond;
+- DM Sans;
+- DM Mono.
 
-Do not classify a Screening property as BRRRR, fix-and-flip, refinance, short-hold resale, or another transaction strategy unless the product requirements and source package are deliberately expanded in the future.
+Use them consistently by semantic role.
 
-## 6. Screening report length
+Design targets at intended print size:
 
-A high-quality Screening report may naturally compress to cover plus roughly 2-3 analytical pages if all material evidence is still represented.
+- body copy approximately 10-11pt where practical;
+- table text approximately 9-10pt where practical;
+- notes approximately 8-9pt where practical.
 
-This is not a contractual page cap.
+These are readability targets, not hard constants. Essential meaning must not depend on ~5pt text.
 
-Screening should be short because the decision is simple, not because evidence is hidden or deleted.
+Reflow content. Do not shrink text simply to preserve a historical page count.
 
-## 7. Underwriting mission
+Executive KPIs should use the approved proportional-numeral treatment where visual density benefits. Technical tabular data may use tabular figures where alignment genuinely helps.
 
-Underwriting helps the investor decide how to pursue the property, on what basis, with what strategy, and what can kill or materially reprice the deal.
+## 8. Rule and border system
 
-The first analytical page should let an experienced investor understand the core transaction without hunting elsewhere in the memo.
+Permanent doctrine:
 
-## 8. Investment Decision Snapshot
+# One boundary, one separator.
 
-The first analytical page is the `Investment Decision Snapshot`.
+Do not stack a heading accent, another section rule, a container border, and a heavy table top border at the same visual boundary.
 
-Where supported, it should surface 5-10 decision-critical items selected from:
+Use:
 
-### Current decision state
+- restrained gold only for deliberate accent/meaning;
+- quiet green/neutral rules for structure;
+- stronger rules for totals or major chapter transitions only;
+- meaningful chart connectors where they convey data relationships.
 
-Examples:
+The owner’s September 6 concern was not em-dash punctuation. The audited PDF contained zero em dashes and zero en dashes in searchable customer-facing text. Preserve that customer-copy standard while treating visual rules separately.
 
-- `PURSUE`
-- `RECONCILIATION REQUIRED`
-- `TERMS NEED REVISION`
-- `MATERIAL DILIGENCE REQUIRED`
-- `INSUFFICIENT EVIDENCE`
+## 9. Numeric precision and ranking semantics
 
-Avoid unsupported BUY/SELL/HOLD investment advice.
+Calculation precision and display precision are separate concerns.
 
-### Transaction / operating basis
+Rules:
 
-- purchase price;
-- price per unit;
-- T12 NOI;
-- occupancy;
-- going-in cap rate;
-- appraisal/valuation context where supported.
+- calculations use canonical source/derived precision;
+- display formatting must not alter the value used in related totals/charts;
+- if visible rounded rows can no longer reproduce a displayed total, provide a consistent rounding policy or retain sufficient precision;
+- charts, tables, summaries, and narrative must draw from one governed value source;
+- tie-aware rankings must describe ties as ties rather than silently selecting the first matching row;
+- percentage-point and basis-point labels must be explicit where relevant.
 
-### Debt
+No fixture-specific rounding logic.
 
-- proposed loan;
-- LTV;
-- current DSCR;
-- proposed DSCR;
-- debt yield where supported;
-- debt-service burden and material maturity/term issue where supported.
+## 10. Calculation-basis transparency
 
-### Value creation
+Terms such as `break-even occupancy`, `debt-inclusive occupancy coverage`, `NOI margin`, and scenario outputs must disclose enough basis that a sophisticated reader can understand what is being measured.
 
-- documented rent gap;
-- affected renovation units;
-- stated capital plan;
-- documented gross rent lift;
-- capital timing;
-- transparent simple arithmetic where useful and clearly labelled.
+If two valid metrics use different revenue bases, they must be named as different concepts rather than made numerically identical.
 
-### Strategy fit
+For any changed calculation concept, the engineering record must identify:
 
-Evidence-bound classifications may include:
+- formula;
+- source inputs;
+- numerator/denominator;
+- exclusions;
+- display label;
+- test coverage.
 
-- `STABILIZED HOLD`
-- `LIGHT VALUE-ADD HOLD`
-- `MAJOR VALUE-ADD / REPOSITION`
-- `REHAB / REFINANCE / HOLD`
-- `SHORT-HOLD / RESALE`
-- `INSUFFICIENT EVIDENCE`
+Never change a formula only because another page uses a different model.
 
-Secondary shorthand such as Buy & Hold or BRRRR may be shown only when the uploaded purchase, capital, debt/refinance, and execution facts genuinely support that strategy.
+## 11. Source differences and unresolved evidence
 
-### Decision panels
+Customer-facing status language must state what differs and why it matters.
 
-Compact surfaces such as:
+Do not collapse unlike issues into one generic warning.
 
-- `INVESTMENT THESIS`
-- `DEAL BREAKERS / NEGOTIATION LEVERS`
-- `WHAT MUST BE TRUE`
-- `NEXT ACTION`
+For example, a T12 GPR versus annualized Rent Roll in-place comparison is a cross-basis comparison unless source authority proves otherwise. A listed-expense subtotal that is below stated operating expenses is a different type of reconciliation issue.
 
-## 9. Page 2 visual architecture
+The report should identify each issue, preserve accepted source facts, state what conclusions are affected, and request the required evidence without inventing a cause.
 
-Do not place all meat-and-potatoes information inside one giant card.
+## 12. Source periods, currency, and context
 
-Use a full-page institutional editorial composition:
+Where available from canonical source authority, make visible:
 
-1. **Top 15-20%:** full-width decision band.
-2. **Middle 50-60%:** structured transaction/operating/debt/value-creation table or metric grid with strong numeric hierarchy.
-3. **Bottom 20-30%:** two or three compact decision panels.
+- T12 reporting period;
+- Rent Roll as-of date;
+- appraisal date;
+- market-survey date/period;
+- report generation date;
+- currency designation.
 
-Visual rules:
+Do not use report-generation date as a substitute for source currency/currentness. If a source date or currency is unavailable, disclose that accurately.
 
-- white / near-white page;
-- restrained forest green and gold;
-- thin rules rather than heavy boxes;
-- subtle warm-gray or paper-toned fills;
-- tabular numeric alignment;
-- large key numbers, small labels;
-- little or no paragraph prose;
-- no oversized rounded SaaS cards;
-- no drop-shadow dashboard chrome;
-- no decorative pills or badges without meaning;
-- no chart unless it answers a decision question;
-- no empty whitespace that could carry important evidence.
+## 13. Charts and visuals
 
-The page should feel like a professionally typeset investment-committee memo, not a software dashboard printed to PDF.
+Keep visuals only when they answer a real investment question.
 
-## 10. Underwriting chapter architecture after the snapshot
+The source-backed earnings bridge is approved as a useful pattern.
 
-The remainder of Underwriting exists to prove and deepen the Investment Decision Snapshot.
+Charts must preserve:
 
-### Chapter 1 - Investment Committee Overview
+- source precision;
+- stable semantic colors;
+- readable labels;
+- no unsupported forecasts or probabilities;
+- no arbitrary decorative graphics;
+- no mismatch between chart values and governing tables.
 
-- Investment Decision Snapshot;
-- key metrics if not already represented;
-- concise thesis / constraints;
-- immediate diligence questions.
+## 14. Page flow
 
-### Chapter 2 - Operating Performance
+No hard page caps.
 
-- operating visuals;
-- unit mix and rent positioning;
-- operating-statement analysis;
-- revenue quality;
-- expense structure;
-- NOI and margin analysis;
-- Rent Roll evidence;
-- market-rent context;
-- source reconciliation.
+Use content-driven pagination:
 
-### Chapter 3 - Scenario & Underwriting Drivers
+- heading with first meaningful content;
+- short schedules kept intact when practical;
+- totals kept with the schedule they summarize;
+- long tables may continue with repeated headers;
+- continuations should be recognizable where context would otherwise be lost;
+- long sections may break naturally;
+- avoid whole-section no-break rules that create large dead zones;
+- do not remove evidence to make a page look fuller or shorter.
 
-- base-case framing;
-- occupancy stress;
-- operating-expense stress;
-- cap-rate / value sensitivity where authorized;
-- compound downside context where supported.
+The prior 5-page Screening / 21-page Underwriting Stonebridge proof is not a page-count authority.
 
-Do not create a false #1/#2/#3 ranking across unlike shock magnitudes and unlike target outputs. Show comparable cases honestly and state the limits of comparison.
+## 15. Source register and Quality Manifest
 
-### Chapter 4 - Transaction Context
+Source identity must remain auditable.
 
-- acquisition context;
-- supported transaction assumptions;
-- diligence context;
-- environmental context where supported.
+Rules:
 
-### Chapter 5 - Debt & Capital Structure
+- never silently truncate filenames in a way that destroys source identity;
+- long filenames/tokens must wrap safely;
+- clear columns/gutters must prevent collisions;
+- distinguish `available/received` from `reliable/verified`;
+- explain source role, report use, and limitations concisely;
+- preserve methodology and Quality Manifest substance;
+- customer-facing labels should explain actual unresolved status rather than merely state that a disclosure exists;
+- technical publication receipts/certification should be shown to the reader only where useful and genuinely available.
 
-- current debt;
-- proposed financing;
-- debt coverage;
-- DSCR sensitivity where supported;
-- maturity/term context;
-- capital plan;
-- renovation/CapEx economics from supported facts.
+## 16. System-facing language
 
-### Chapter 6 - Valuation & Reconciliation
+Remove or relocate customer copy that describes implementation mechanics instead of the investment.
 
-- NOI/cap-rate consistency cross-check;
-- purchase-price comparison;
-- appraisal context;
-- cap-rate sensitivity;
-- source reconciliation.
+Examples of language to scrutinize:
 
-If the going-in cap rate is itself a transaction input, do not present NOI divided by that cap rate as an independent valuation opinion. Label it as a consistency cross-check.
+- “may establish this label”;
+- “integrated replacement surface”;
+- “current sensitivity set” when the reader only needs scope;
+- “InvestorIQ source-bound calculation framework” when a plain methodology statement would do;
+- feature-roadmap language such as analyses that “do not exist yet.”
 
-### Chapter 7 - Source Appendix
+Translate into actual report scope, limitation, and next action.
 
-- concise Source Register;
-- document treatment;
-- Methodology and Data Transparency;
-- Quality Manifest / exact-artifact transparency where useful.
+## 17. Accessibility and navigation
 
-## 11. Source-boundary authority
+Preserve useful PDF bookmarks and searchable text.
 
-### T12
+Where the publication system supports it, improve tagged reading order/table structure as a usability enhancement. This must not compromise visual rendering or source integrity.
 
-Use for accepted operating-statement facts such as GPR, EGI, operating expenses, and NOI.
+## 18. Two-gate acceptance model
 
-### Rent Roll
+A report is not customer-accepted merely because the PDF provider rendered it correctly.
 
-Use for accepted property-wide and unit-level facts such as units, occupancy, in-place rent, market rent, and unit mix.
+Separate gates:
 
-### Purchase / transaction assumptions
+### Gate A: provider/render certification
 
-Use only for transaction terms and proposed financing supported by the uploaded source.
+- valid PDF;
+- correct fonts;
+- no clipping/overlap;
+- correct pagination geometry;
+- correct provider behavior.
 
-### Current debt
+### Gate B: editorial/investment-review acceptance
 
-Keep current debt separate from proposed financing.
+- facts and calculations internally governed;
+- copy grammatically clean and useful;
+- no contradictions;
+- no unnecessary duplication;
+- decision framing strong;
+- visual hierarchy disciplined;
+- tables/charts readable;
+- source/register/methodology ending deliberate;
+- every page reviewed at normal reading scale.
 
-### Appraisal
+Both gates must pass before calling the product customer-ready.
 
-Third-party valuation context unless a stronger rule explicitly authorizes a specific appraisal fact for a calculation.
+## 19. Production hold
 
-### Market survey
+This blueprint authorizes no production mutation.
 
-Use as external context. It may be compared with Rent Roll market rents but must not silently replace them.
-
-### Renovation plan
-
-Use source-stated budget, scope, timing, affected units, and rent lift. Deterministic arithmetic from these facts may be shown when labelled accurately. Do not invent NOI lift, ROI, IRR, value creation, or refinance proceeds without the necessary inputs and authorized method.
-
-## 12. Customer-writing authority
-
-If a fact can be communicated accurately in a number, short label, table cell, matrix, chart, or one-line observation, do not turn it into a paragraph.
-
-Paragraphs are reserved for nuance that cannot be reduced without losing meaning.
-
-Continue to avoid:
-
-- em dash punctuation;
-- en dash prose punctuation;
-- generic AI filler;
-- robotic transitions;
-- repetitive caveats;
-- internal engineering terms;
-- internal governance language where customer language works;
-- fake confidence;
-- promotional copy.
-
-## 13. Blackstone benchmark doctrine
-
-Blackstone remains a benchmark for:
-
-- decision density;
-- information hierarchy;
-- professional restraint;
-- transaction tables;
-- charts and timelines;
-- sensitivity matrices;
-- investment-committee readability;
-- page rhythm.
-
-Do not copy Blackstone branding, wording, proprietary analysis, or exact layouts.
-
-InvestorIQ should exceed the benchmark by combining equally strong decision presentation with superior source truth, reconciliation, provenance, and non-invention.
-
-## 14. DocRaptor / Prince ELITE publishing doctrine
-
-The final customer PDF should intentionally exploit the publishing capabilities available through DocRaptor/Prince rather than merely converting browser HTML.
-
-Evaluate and use, when they improve the report:
-
-- named page classes;
-- dedicated cover / snapshot / chapter / appendix page rules;
-- CSS margin boxes;
-- running chapter or section headers;
-- controlled footers and page counters;
-- widow and orphan controls;
-- keep-with-next and break control;
-- repeated table headers and clean table continuation;
-- page floats for charts/source notes where useful;
-- PDF bookmarks and internal navigation;
-- cross-references where they add value;
-- full-bleed cover treatment where appropriate;
-- mixed portrait/landscape orientation only for genuinely wide matrices;
-- vector SVG and print-safe chart assets;
-- professional font embedding and numeric typography.
-
-The goal is to look like a purpose-built institutional publication and materially exceed a generic HTML-to-PDF output.
-
-Chrome/headless rendering can remain a CI sanity check. Final owner acceptance should inspect the customer rendering path intended for launch.
-
-## 15. Visual family
-
-Screening and Underwriting must look like siblings.
-
-Shared:
-
-- white-first surfaces;
-- restrained forest green and gold;
-- same typographic family;
-- same table language;
-- same numeric hierarchy;
-- same header/footer DNA;
-- same source-note treatment;
-- same print quality.
-
-Different emphasis:
-
-- Screening is faster, tighter, comparative, and triage-oriented.
-- Underwriting is deeper, more analytical, and transaction/strategy oriented.
-
-## 16. Acceptance standard
-
-No report improvement closes because source code looks right or a smoke test passes.
-
-Closure requires:
-
-- source truth preserved;
-- artifact identity preserved;
-- focused regressions;
-- production build;
-- real handler/source-bound artifact generation;
-- customer-path PDF rendering;
-- exact hashes;
-- page-by-page visual inspection;
-- owner acceptance of the exact files.
-
-Historical detail remains preserved in `CHAT_HANDOFF/archived/`.
+No `main` merge, deployment, migration, scheduler activation, Storage mutation, Stripe/pricing change, or other production change without separate owner authorization.

@@ -1,358 +1,172 @@
-# Dated status update: 2026-09-05 UTC - OWNER APPROVED VISUAL DIRECTION / IMPLEMENTATION NEXT
-
-**Rob approved the five-page prototype appearance. Composition selection is CLOSED.** Implement that visual direction throughout Screening and Underwriting using the regular approved Cormorant Garamond / DM Sans / DM Mono fonts. Prototype substitute fonts are not approved for the products. Read [the owner approval and implementation sequence](archived/2026-09-05-owner-rejection-audit/VISUAL_APPROVAL_AND_IMPLEMENTATION.md).
-
-**Exact next action:** In the fresh chat, restore this chat's local checkpoint if necessary, then obtain/embed approved complete font assets and re-render the accepted design with them. Continue the documented bounded sequence: shared publication components and both covers; both decision summaries; operating/SVG and remaining analyses; source/navigation styling; content-length/actual-provider/every-page acceptance. Do not ask Rob to select the already-approved composition again. Implementation of the complete pipelines is not yet done.
-
-**No hard page caps:** report length follows supported relevant analysis from accepted uploaded documents and readable pagination. No fixed minimum, arbitrary truncation or filler. The five prototype pages are sample exhibits only. Never copy their fixed-height sheets into production as a content limit. Verify existing caps/clamps during integration and use flowing, continuing sections and tables.
-
-**Continuity:** this chat's commits remain local, not pushed to GitHub. For this fresh-chat transition, provide the refreshed recovery ZIP; it includes the cumulative patch, this authority, source prototype and approved visual PDF. Once the repository is synchronized, the canonical fresh-chat prompt resumes its normal role as the only required starting file.
-
-All prior math, source, archive-preservation and launch holds remain. No production authorization, actual DocRaptor acceptance, or final pipeline certification is implied. Earlier DocRaptor disclosure rejection remains in effect. Previous status entries below are preserved history.
-
----
-
-# Dated status update: 2026-09-05 UTC - FIVE-PAGE VISUAL PROTOTYPE CREATED
-
-Rob authorized completing the next bounded visual steps. A standalone five-page Stonebridge design study now exists at `design/publication-prototype-20260905/`: matching Screening/Underwriting covers, both decision summaries, and an Underwriting operating page with a substantial inline SVG earnings bridge and matching table. This is completed prototype work, not merely recommendations. The report pipelines were not changed during this visual step.
-
-The PDF is `InvestorIQ_Visual_Prototype.pdf`. Local WeasyPrint preview: five pages, personally inspected; source differences retained; page overflow and footnote collisions repaired. **Font limitation remains:** approved brand fonts could not be downloaded. The study deliberately embeds P052/Nimbus Sans as composition substitutes, documented in its README and verification receipt. This is not final brand-font or DocRaptor acceptance.
-
-**Exact next action:** Rob reviews/selects the visual direction from this concrete PDF; obtain approved font assets and render the selected composition with them before propagating it through both products. Then complete the existing actual-provider and every-page/source-bound acceptance gates. Do not restart the completed 32/32 local audit checks for this isolated design prototype. Earlier open audit items remain recorded in the September 5 checkpoint.
-
-**Holds unchanged:** no launch certification, no production action, no merge/push/deployment/migration/scheduler activation. Earlier DocRaptor disclosure approval rejection remains; no retry was made. New work is local and is included in the refreshed recovery ZIP. Previous authority and history follow unchanged.
-
----
-
-# Dated status update: 2026-09-05 UTC — WHOLE-PUBLICATION VISUAL DIRECTION
-
-Rob clarified that the premium-quality target covers the entire appearance of BOTH reports, not just charts. Read [the visual direction brief](archived/2026-09-05-owner-rejection-audit/VISUAL_DIRECTION_BRIEF.md) alongside the audit checkpoint. It records the quick DocRaptor capability review and prioritized composition/typography/table/chart/navigation recommendations.
-
-**New confirmed visual blocker:** the newest local WeasyPrint preview substituted DejaVu fonts for the approved Cormorant Garamond / DM families. This preview is not accepted; embed/pin approved fonts and inspect actual PDF font output. This is not a verified live DocRaptor failure.
-
-**Next visual action:** prototype three coordinated same-property pages (Screening decision, Underwriting decision, Underwriting operating analysis), review them at 100% scale, and obtain owner design selection before propagating the redesign. This visual task does not reopen completed analytical phases or authorize new unsupported financial content. Actual provider and launch holds remain unchanged. No report code or production settings changed during this quick review; recommendations are not implemented work.
-
-Previous authority and history follow unchanged.
-
----
-
-# Dated status update: 2026-09-05 UTC — OWNER REJECTION AUDIT / LOCAL REPAIR CHECKPOINT
-
-**Governing current status: Phase 8B repair and launch audit remain OPEN. Launch and production HOLD.** Rob rejected the previous visual acceptance and explicitly requested a full cross-product/math/delivery audit. His latest instruction prioritizes preserving today's work for a fresh chat because Astra usage is exhausted.
-
-Read [the complete September 5 audit checkpoint](archived/2026-09-05-owner-rejection-audit/AUDIT_CHECKPOINT.md) after the five canonical files. It preserves changes, evidence, limitations, source math, blocked actions, working paths and Rob's new DocRaptor/SVG chart design request. Pre-update copies of all five canonical files are preserved byte-for-byte in that directory's `authority-before/`.
-
-Locally implemented: shared publication typography/cover/table authority; missing-value and financial rounding corrections; actual-XLSX unit-mix precision fix; annualization and missing-market/partial-row protections; the $20,000 Stonebridge expense-source discrepancy disclosed without changing NOI; same-property HTML proof; debt overlap/capital pagination repairs; secure customer-route consolidation to the 12/12 function budget; expanded 32-check launch suite. Thirteen financial-intelligence diagnostics and the frontend build passed. Final QA details are in the checkpoint. These facts do not certify a live customer pipeline or complete visual acceptance.
-
-**Exact next action:** Resume the repaired code and the checkpoint's OPEN items: finish repeated-metric precision and customer-copy comparison, review a source-backed SVG chart improvement, generate and personally inspect the exact final same-property pair, and establish actual provider/customer-delivery proof. Do not restart completed phases or repeat unchanged certified work.
-
-**Blocked:** Automatic approval review rejected sending full generated report HTML to DocRaptor TEST mode without explicit disclosure authorization. Do not retry or bypass that rejection; ask for authorization for those exact fixture HTML files before retrying. Chromium also lacks socket permission. No provider or live finalizer/storage/customer-download receipt was produced.
-
-**Holds:** Owner acceptance, actual DocRaptor/Prince render proof, full real customer-path lifecycle proof, and exact production authorization. No merge, push, deployment, migration, scheduler activation or production change occurred. Do not add unsupported IRR, capital-stack allocations, forecasts or investment recommendations to imitate Gemini's example. Preserve portrait/forest-gold doctrine pending a reviewed design decision.
-
-Everything below is preserved prior authority/history; this dated update takes precedence where status or next action differs.
-
----
-
-# InvestorIQ Master Plan — Phase 8B Closeout Update
-
-**Updated:** 2026-09-04
-**Current program state:** Phase 8B CLOSED / LOCALLY CERTIFIED. One deliberate release sequence remains gated.
-
-> This update is the current execution authority. The complete earlier plan is retained below without deletion. Where status or sequencing differs, this update governs.
-
-## Current program position
-
-The customer-facing report family now has one canonical cross-product publication system. Screening and Underwriting share cover geometry, decision-first hierarchy, evidence-map grammar, observations/reconciliation grammar, and governance language while retaining distinct product depth.
-
-Certified product authority:
-
-- branch: `internal-phase8b-cross-product-publication-system-20260904`
-- HEAD: `01dc75a1a732780a70da3eae9ed2dc1b69468756`
-- tree: `783e73559e11ac955774d4b08f37d1282bde7e1c`
-- certification: `docs/PHASE8B_CROSS_PRODUCT_PUBLICATION_CERTIFICATION_2026-09-04.md`
-
-## Release doctrine
-
-Do not treat Vercel as a backup destination. Preserve work in Git, validate a non-production candidate, and promote the exact proven artifact once.
-
-The authorized sequence is:
-
-1. exact-artifact owner acceptance;
-2. resolve the Vercel Hobby `15/12` function-budget gate without weakening route or lifecycle authority;
-3. re-run launch QA and production build;
-4. push only the isolated candidate branch;
-5. create and inspect a preview tied to the exact candidate SHA;
-6. verify customer-path PDF generation and critical application flows;
-7. explicitly authorize and perform one production synchronization/promotion;
-8. capture deployment URL, target, status, SHA, alias, and post-deploy evidence.
-
-No report-design closeout authorizes database migrations, scheduler activation, production Storage mutation, Stripe/pricing changes, or historical job cleanup. Those remain separately governed operations.
-
-## Active blockers
-
-| Gate | State | Required action |
-|---|---|---|
-| Phase 8B local certification | PASS | Preserve exact product HEAD and artifacts |
-| Owner acceptance | PENDING | Rob accepts the two exact Phase 8B PDFs |
-| Vercel function budget | FAIL (`15/12`) | Consolidate deployable routes or change the documented deployment plan |
-| Isolated branch on remote | PASS | Initial transport `f8a9a103`; tree `e173e49b` matches local `cb5497c` exactly |
-| Preview deployment | NOT RUN | Create after branch push; require `READY` |
-| Production deployment | NOT AUTHORIZED | Promote only after preview proof and explicit authorization |
-
----
-
-## Preserved pre-closeout master plan
-
 # InvestorIQ Master Plan
 
-**Updated:** 2026-09-04
-**Current program state:** Phase 8 artifact integrity RECOVERED. Phase 8A Owner-Acceptance Recovery ACTIVE. Slices A and B CLOSED. Slice C IN PROGRESS.
+**Updated:** 2026-09-06  
+**Phase:** Underwriting Editorial + Analytical ELITE Closeout  
+**Working branch:** `internal-underwriting-editorial-analytical-elite-20260906-r1`
 
-## 1. Product mission
+## Mission
 
-InvestorIQ is a document-driven real-estate decision-support system with two customer products:
+Take the provider-certified Visual ELITE publication foundation and finish the **actual reusable Underwriting product** to a premium institutional standard.
 
-- Screening
-- Underwriting
+The September 6 Stonebridge audit is a defect-discovery instrument. It is not a request to hand-tune Stonebridge. The objective is to remove the underlying systemic causes so future properties with different facts, source packages, text lengths, document counts, and page counts render and read correctly.
 
-The authority chain remains:
+## Permanent doctrine
 
-uploaded documents -> canonical Source Truth -> product analysis -> publication authority -> customer PDF -> exact-artifact validation -> delivery.
+- Decision first. Facts before prose.
+- Root causes before fixture cosmetics.
+- Source truth before copy.
+- Calculation authority before harmonized display.
+- Shared publication behavior before one-off page styling.
+- Content-driven pagination only. No hard page caps.
+- Preserve evidence, source identities, methodology, Quality Manifest, and historical authority.
+- A test/build/provider PASS is necessary but not sufficient for customer acceptance.
 
-Do not create competing authority paths.
+## Phase A: Audit-to-code control matrix
 
-## 2. Immutable integrity authority
+Create one live matrix for A01-A10, V01-V04, E01-E02, and D01.
 
-The exact Phase 8 artifact-integrity recovery is preserved at:
+Required columns:
 
-- branch: `internal-phase8-artifact-integrity-recovery-20260903`
-- HEAD: `4e9d01648aeb7a0f0616f20d8a72264cbea13443`
-- tree: `fa99e62e1e67fde1bb854e59f6cf0b46e142bec7`
+`Audit ID | Artifact symptom | Root-cause hypothesis | Source authority needed | Code owner/component | Shared Screening impact | Repair class | Regression proof | Fresh rendered proof | Status`
 
-Current owner-acceptance work occurs on:
+Do not change production code until each P1 item has an identified code/source owner or is explicitly marked source-verification pending.
 
-`internal-phase8a-owner-acceptance-recovery-20260903-r1`
+## Phase B: P1 factual-presentation integrity
 
-Never weaken the recovered property/source identity gates to make visual work pass.
+Repair reusable logic for:
 
-## 3. Decision-first constitution
+- precision propagation from source/calculation layers to summaries, tables, and charts;
+- generic tie-aware ranking/concentration language;
+- scenario-section presence/cross-reference truth;
+- robust long-filename/source-register wrapping;
+- Quality Manifest gutter and readable block geometry;
+- executive synthesis that separates cross-basis rent comparison from expense subtotal discrepancy;
+- coverage/document-count semantics that do not overstate completeness;
+- environmental wording only after source verification;
+- explicit source period/as-of/currency handling.
 
-The first analytical page of each report must answer the report's primary customer decision immediately.
+No fixture-specific literals or conditionals.
 
-Permanent rules:
+## Phase C: Calculation-governance closeout
 
-1. Decision first.
-2. Facts before prose.
-3. Prefer numbers, short labels, tables, matrices, compact charts, and one-line conclusions over paragraphs.
-4. Never force a conclusion when evidence is insufficient.
-5. Strategy classification is shown only to the precision supported by uploaded documents.
-6. A material finding anywhere in the report must surface on the first analytical page if it could change the decision.
-7. Investor-facing pages show the decision layer; detailed provenance remains available in the audit/source layer.
+A07 is a calculation-governance task, not a copy-edit task.
 
-## 4. Screening mission
+Inspect canonical formulas and tests for:
 
-Screening answers:
+- operating break-even occupancy;
+- occupancy-stress revenue basis;
+- current debt-inclusive occupancy coverage;
+- proposed debt-inclusive occupancy coverage;
+- displayed “occupancy above break-even/headroom” comparisons.
 
-> Is this property worth more of the investor's time and a full Underwriting review?
+For each concept, document:
 
-Its first analytical page is the `Screening Decision Snapshot`.
+1. formula;
+2. numerator/denominator;
+3. source inputs;
+4. whether the result is an operating ratio, modeled physical-occupancy threshold, or lender-style capacity reference;
+5. exclusions and limitations;
+6. display label.
 
-Permitted evidence-bound disposition states:
+Do not silently replace GPR with EGI, or vice versa, to force two numbers to match. If two valid concepts use different bases, label them as different concepts.
 
-- `ADVANCE`
-- `HOLD`
-- `DO NOT ADVANCE`
-- `INSUFFICIENT EVIDENCE`
+## Phase D: Shared editorial + visual system repair
 
-Screening normally relies on T12 and/or Rent Roll core evidence. Therefore it must not infer purchase, rehab, financing, refinance, exit, or BRRRR strategy facts that are not present.
+Apply the September 6 design findings through reusable publication authority where shared:
 
-Where supported, Screening may classify the operating profile with concise labels such as:
+- **one boundary, one separator**;
+- consistent KPI number family, weight, color, and spacing;
+- readable minimum text targets; reflow rather than shrink;
+- stable current/market and income/expense color semantics;
+- real gutters in tables, source registers, two-column blocks, and manifests;
+- headings kept with first meaningful content;
+- short tables kept intact where practical;
+- long tables flow with repeated headers and useful continuation titles;
+- full filenames preserved and safely wrapped;
+- bookmarks/navigation preserved;
+- no unnecessary decorative line stacks.
 
-- `STABILIZED`
-- `LIGHT VALUE-ADD CANDIDATE`
-- `INSUFFICIENT EVIDENCE`
+Review every shared change against both Screening and Underwriting.
 
-A compact 2-3 analytical-page Screening report is desirable when the available evidence can be communicated without losing decision value. This is not a fixed page cap.
+## Phase E: Decision opening + product language
 
-## 5. Underwriting mission
+Rebuild the opening as an investor decision brief, not a system-status dashboard.
 
-Underwriting answers:
+Current direction:
 
-> How should the investor pursue this property, on what basis, with what strategy, and what can kill the deal?
+- title: `InvestorIQ Underwriting Report`;
+- optional subtitle: `Prepared for investment review`;
+- cover status: plain-language source-review status, not unexplained `RECONCILIATION REQUIRED`;
+- page 2: one `Investment Decision Snapshot` title; remove redundant `INVESTMENT COMMITTEE OVERVIEW`;
+- executive status must distinguish the $180,000 cross-basis rent comparison from the separate $20,000 expense subtotal difference;
+- findings should read as **fact -> meaning -> unresolved issue -> required next evidence/action**;
+- remove system-governance language that belongs in code/tests/internal methodology rather than the investment narrative;
+- do not invent a BUY/SELL grade, IRR, equity multiple, forecast, strategy, or unsupported recommendation.
 
-Its first analytical page is the `Investment Decision Snapshot`.
+Only reconsider `Investment Committee Memorandum` after the finished opening genuinely earns that title.
 
-Where supported, it should surface transaction basis, operating economics, debt, value creation, capital plan, downside, negotiation leverage, closing conditions, and strategy fit.
+## Phase F: Duplication and analytical communication
 
-Evidence-bound strategy classifications may include:
+Perform a complete cross-section copy/logic pass to remove contradictions and repeated process language while preserving unique evidence.
 
-- `STABILIZED HOLD`
-- `LIGHT VALUE-ADD HOLD`
-- `MAJOR VALUE-ADD / REPOSITION`
-- `REHAB / REFINANCE / HOLD`
-- `SHORT-HOLD / RESALE`
-- `INSUFFICIENT EVIDENCE`
+Examples from the audit that must be solved generically:
 
-Terms such as Buy & Hold or BRRRR may appear only as secondary comparable labels when uploaded transaction, capital, financing/refinance, and execution facts genuinely support them.
+- stale “interest-rate stress deferred” wording despite rate sensitivity later;
+- duplicate KPI blocks with conflicting visual hierarchy;
+- repeated reconciliation warnings that do not add information;
+- repeated source-coverage inventories in body and appendix;
+- “availability” language presented as “reliability”;
+- internal implementation/scope roadmap language exposed to customers;
+- precision changes between analytical table and chart surfaces.
 
-## 6. Source truth and non-invention
+## Phase G: Appendix, source register, methodology, Quality Manifest
 
-InvestorIQ may calculate deterministic arithmetic from accepted facts, but it may not create evidence.
+The ending must feel intentional and institutionally readable.
 
-Protected rules:
+Required outcomes:
 
-- T12 owns accepted operating-statement facts.
-- Rent Roll owns accepted unit, occupancy, tenancy, in-place rent, and market-rent facts.
-- Purchase/transaction assumptions remain distinct from operating source truth.
-- Current debt remains distinct from proposed financing.
-- Appraisal remains third-party valuation context unless a governed rule explicitly uses a stated appraisal fact.
-- Market surveys remain context and do not silently override Rent Roll facts.
-- Renovation plans remain source facts unless deterministic arithmetic is explicitly authorized.
-- Scenario outputs never become source evidence.
-- Missing facts are never gap-filled merely to complete a report surface.
+- long source identities never collide or truncate evidence;
+- source role/use/limitations are concise and distinct;
+- source dates/periods/currency appear where authority provides them;
+- methodology language distinguishes source acceptance/validation from independent verification;
+- Quality Manifest states unresolved issues and actual scope plainly;
+- technical traceability is preserved without crowding customer-facing text;
+- report identity/revision/publication evidence is shown only where genuinely available.
 
-## 7. Customer-facing information density
+## Phase H: Fresh cross-product regeneration and acceptance
 
-Customer-facing copy should be concise, financially literate, and immediately scannable.
+Do not validate by manually editing the audited PDF.
 
-Preferred order:
+After root-cause fixes:
 
-1. number or decision label;
-2. short interpretation;
-3. one-line implication if needed;
-4. detailed explanation only when the reader genuinely needs it.
+1. run meaningful regressions;
+2. build production code locally/CI without production deployment;
+3. generate fresh Underwriting and Screening artifacts through the real lanes;
+4. use Stonebridge only as one regression fixture, not the only evidence;
+5. include generalized fixtures/tests for tie handling, long filenames, precision, missing data, and pagination where practical;
+6. inspect every page at full-page and reading scale;
+7. verify calculations, source references, copy, rules, typography, continuations, navigation, source register, methodology, and Quality Manifest;
+8. run actual DocRaptor/Prince proof only when authorized;
+9. close editorial acceptance separately from provider acceptance.
 
-Avoid paragraphs when a table cell, badge, matrix, compact chart, or one-line observation communicates the same fact accurately.
+Page counts are whatever supported content and readable pagination require.
 
-Continue to prohibit customer-facing em dash punctuation, en dash prose punctuation, internal engineering jargon, repetitive caveats, generic AI filler, and fake certainty.
+## Phase I: Production decision
 
-## 8. Page 2 visual doctrine
+Production remains a separate owner decision after all acceptance gates close.
 
-The first analytical page should look like an institutional editorial cockpit, not a SaaS dashboard and not one oversized card.
+Do not merge `main`, deploy, migrate, activate scheduler, mutate Storage, or change Stripe/pricing during Phases A-H without explicit owner authorization.
 
-Use:
+## Forbidden shortcuts
 
-- a full-width decision band at the top;
-- a dense but calm numeric grid/table in the middle;
-- a small number of bottom decision panels for thesis, risks, conditions, negotiation leverage, or next action;
-- strong typographic hierarchy;
-- aligned financial figures;
-- restrained forest green and gold;
-- thin rules and subtle fills;
-- almost no decorative chrome.
+Never:
 
-Avoid excessive rounded cards, shadows, pills, giant empty whitespace, and decorative charts.
-
-## 9. DocRaptor / Prince publishing standard
-
-DocRaptor must be treated as a professional publishing engine rather than a final conversion button.
-
-Relevant Phase 8A capabilities to deliberately evaluate include:
-
-- named pages;
-- page-specific `@page` rules;
-- running headers and footers;
-- section-aware page furniture;
-- widow/orphan control;
-- deliberate break and keep behavior;
-- page floats where useful;
-- PDF bookmarks and internal navigation;
-- page counters;
-- full-bleed/specialty cover treatment;
-- mixed orientation only for genuinely wide analytical content;
-- vector SVG/chart output;
-- professional table continuation behavior;
-- print-quality typography and spacing.
-
-The visual goal is an original InvestorIQ report family that exceeds a generic browser-printed memo and competes above the Blackstone benchmark on both appearance and decision usability.
-
-## 10. Blackstone benchmark
-
-Borrow institutional habits, not branding or proprietary content.
-
-Key lesson:
-
-> conclusion first, evidence second, explanation third.
-
-Benchmark strengths to exceed:
-
-- decision density;
-- transaction tables;
-- immediate key metrics;
-- sensitivity matrices;
-- charts that answer a decision question;
-- professional restraint;
-- page rhythm;
-- investment-committee readability.
-
-InvestorIQ should exceed Blackstone on source transparency, reconciliation, non-invention, and document-driven auditability.
-
-## 11. Phase 8A current state
-
-Slice A CLOSED:
-
-- shared white-first cover family;
-- forest-green Screening cover defect fixed;
-- Underwriting gold-square collision fixed;
-- Screening evidence-bound triage disposition introduced.
-
-Slice B CLOSED:
-
-- Underwriting executive page rebuilt into a decision-first investment summary;
-- real Stonebridge artifact inspected and accepted as a materially stronger direction.
-
-Slice C IN PROGRESS:
-
-- capital-plan economics;
-- market-survey synthesis;
-- honest sensitivity framing;
-- readiness/source wording;
-- Screening decision-density repair;
-- pagination/editorial compaction.
-
-## 12. Report-length doctrine
-
-No hard page count exists.
-
-A shorter report is better when it communicates the same evidence and decision support more efficiently.
-
-A longer report is acceptable when additional uploaded evidence and analysis earn the pages.
-
-Forbidden:
-
-- filler;
-- duplicated narrative;
-- shrinking typography to force page count;
-- blank/near-empty pages;
-- decorative charts without decision value;
-- deleting supported analysis only to make a report shorter.
-
-## 13. Production sequencing
-
-The owner wants one deliberate synchronization to `main` and Vercel, not repeated production pushes.
-
-GitHub already preserves current work. Do not use production deployment as a backup mechanism.
-
-Preferred sequence:
-
-1. finish Phase 8A;
-2. generate the actual launch-path Screening and Underwriting PDFs;
-3. validate exact property/source identity and exact hashes;
-4. inspect every page at full resolution;
-5. obtain owner acceptance of those exact files;
-6. perform one deliberate `main` + Vercel production synchronization.
-
-No migrations, scheduler changes, production Storage mutations, or Stripe changes belong to this report-design closeout.
-
-## 14. Historical preservation
-
-Root authority stays simple:
-
-- `00_CURRENT_HANDOFF.md`
-- `01_MASTER_PLAN.md`
-- `02_ELITE_REPORT_BLUEPRINT.md`
-- `03_FRESH_CHAT_PROMPT.md`
-- `README.md`
-
-Everything superseded is preserved under `CHAT_HANDOFF/archived/`. Never delete history merely to make the folder look cleaner.
+- hardcode Stonebridge values to satisfy the audit;
+- add fixture-specific CSS;
+- hide a failing section;
+- change a formula because a screenshot looks inconsistent;
+- delete evidence to reduce pages;
+- force reports to 5, 21, 25, 30, or any other page count;
+- treat DocRaptor TEST watermarks as a product defect;
+- loosen regression tests merely to accommodate broken behavior;
+- call the product accepted without the final editorial gate.
