@@ -99,6 +99,7 @@ export function renderFullUnderwritingQualityManifestV1Html(contract = null) {
 
   return `<section class="section" id="quality-manifest-title" data-iq-section="quality-manifest" style="page-break-before:always;break-before:page;">
     <style>
+      .source-register-table .source-filename { white-space:normal !important; overflow-wrap:anywhere !important; word-break:break-word !important; max-width:100% !important; }
       #quality-manifest-title .iq-manifest-pair { width:100%; table-layout:fixed; border-collapse:collapse; margin-top:12px; }
       #quality-manifest-title .iq-manifest-pair > tbody > tr > td { width:50%; vertical-align:top; min-width:0; border:0; background:#fff; padding:0; overflow-wrap:anywhere; word-break:break-word; }
       #quality-manifest-title .iq-manifest-pair > tbody > tr > td:first-child { padding-right:10px; }
