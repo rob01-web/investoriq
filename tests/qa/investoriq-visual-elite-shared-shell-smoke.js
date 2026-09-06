@@ -9,7 +9,8 @@ assert.equal(INVESTORIQ_VISUAL_ELITE_CSS_VERSION, "investoriq-visual-elite-shell
 assert.ok(parity.includes(css));
 assert.ok(css.includes("background:var(--iq-ve-forest) !important"));
 assert.ok(css.includes("font-size:52pt !important"));
-assert.ok(css.includes("grid-template-columns:repeat(3,minmax(0,1fr))"));
+assert.match(css, /\.cover-meta-grid \{[\s\S]*?display:table !important;[\s\S]*?table-layout:fixed !important;/);
+assert.match(css, /\.cover-meta-grid > div \{[\s\S]*?width:33\.333% !important;/);
 assert.ok(css.includes("font-family:var(--font-display) !important"));
 assert.ok(css.includes("font-family:var(--font-mono) !important"));
 assert.ok(css.includes("display:table-header-group"));
