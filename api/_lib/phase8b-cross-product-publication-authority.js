@@ -123,6 +123,7 @@ function buildScreeningDecisionPage(sourceTruthPackage = null) {
     disposition: d.disposition.toLowerCase().replace(/\s+/g, "-"),
     bodyHtml: `${decisionBand}${metricMatrix}${profile}${panels}<p class="phase8b-screening-boundary">Screening determines whether operating facts and source consistency support deeper review. Missing facts are not estimated.</p>`,
     legacySectionLabel: "Executive Summary",
+    allowBreak: true,
     bodyClass: "phase8b-screening-decision-page",
   });
 }
