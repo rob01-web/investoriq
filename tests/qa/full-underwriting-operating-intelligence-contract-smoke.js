@@ -68,15 +68,24 @@ assert.equal(contract.metrics.expenseRatio.value, 555000 / 1500000);
 assert.equal(contract.metrics.noiMargin.value, 945000 / 1500000);
 assert.equal(contract.metrics.noiPerUnit.value, 945000 / 64);
 assert.equal(contract.metrics.breakEvenOccupancy.value, 555000 / 1612800);
-assert.equal(contract.metrics.occupancyBreakEvenSpread.value, 0.9375 - (555000 / 1612800));
+assert.equal(contract.metrics.breakEvenOccupancy.label, "Operating Cost Coverage Ratio");
+assert.match(contract.metrics.breakEvenOccupancy.qualification, /operating expenses \/ accepted T12 gross potential rent/i);
+assert.equal(contract.metrics.occupancyBreakEvenSpread.displayReady, false);
+assert.equal(contract.metrics.occupancyBreakEvenSpread.value, null);
 assert.equal(contract.noiAnalysis.noiIdentityReconciles, true);
 assert.equal(contract.expenseStructure.largestExpenseCategory.label, "Property Taxes");
 assert.ok(contract.expenseStructure.topThreeExpenseShare > 0);
 assert.equal(contract.unitRentConcentration.largestUnitCategory.unitShare, 0.5);
+assert.equal(contract.unitRentConcentration.largestUnitCategoryTied, true);
+assert.equal(contract.unitRentConcentration.largestUnitCategoryUnique, false);
+assert.equal(contract.unitRentConcentration.largestUnitCategories.length, 2);
+assert.deepEqual(contract.unitRentConcentration.largestUnitCategories.map((row) => row.label).sort(), ["1BR", "2BR"]);
 assert.equal(contract.unitRentConcentration.largestPositiveRentGapCategory.label, "2BR");
 assert.equal(contract.unitRentConcentration.occupancyConcentrationEstablished, false);
 assert.match(contract.unitRentConcentration.occupancyConcentrationQualification, /not inferred/i);
 assert.ok(contract.operatingInterpretation.items.length >= 5);
+assert.equal(contract.operatingInterpretation.items.some((item) => item.code === "OCCUPANCY_BREAK_EVEN_POSITION"), false);
+assert.match(contract.operatingInterpretation.items.find((item) => item.code === "UNIT_MIX_CONCENTRATION")?.statement || "", /1BR and 2BR are tied/i);
 assert.equal(contract.ttmOperatingStatement.historicalTrendAvailable, false);
 
 const withHistory = baseSourceTruth();
@@ -126,4 +135,4 @@ for (const forbidden of ["\"BUY\"", "\"SELL\"", "\"HOLD\"", "IRR", "MOIC"]) {
   assert.equal(serialized.includes(forbidden), false, `forbidden token leaked: ${forbidden}`);
 }
 
-console.log("PASS full-underwriting-operating-intelligence-contract-smoke (32/32)");
+console.log("PASS full-underwriting-operating-intelligence-contract-smoke");
