@@ -20,7 +20,7 @@ const contract = buildFullUnderwritingQualityManifestV1({
     disclosures: [],
   },
   customerSurfaceModel: {
-    identity: { propertyName: "Quality House", reportTitle: "Underwriting Report" },
+    identity: { propertyName: "Quality House with a Deliberately Long Institutional Asset Name for Print Geometry", reportTitle: "Underwriting Report" },
     qualityManifest: {
       sectionDispositionEntries: [
         { sectionKey: "operatingStatementTTMSummary", finalDisposition: "include" },
@@ -57,6 +57,14 @@ assert.match(html, /publication record/i);
 assert.doesNotMatch(html, /secret-filename-do-not-render\.pdf/i);
 assert.doesNotMatch(html, /excluded-secret-name\.pdf/i);
 assert.doesNotMatch(html, /[–—]/, "Quality Manifest must use publication-safe punctuation");
+assert.match(html, /class="iq-manifest-pair"/);
+assert.match(html, /table-layout:fixed/);
+assert.match(html, /overflow-wrap:anywhere/);
+assert.match(html, /word-break:break-word/);
+assert.match(html, /padding-right:10px/);
+assert.match(html, /padding-left:10px/);
+assert.doesNotMatch(html, /class="grid-2-balanced"/, "Quality Manifest must not rely on the brittle equal-width CSS grid");
+assert.match(html, /Quality House with a Deliberately Long Institutional Asset Name for Print Geometry/);
 for (const internalPhrase of [
   /canonical source truth/i,
   /source-backed/i,
