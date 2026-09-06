@@ -1,0 +1,106 @@
+name: TEMP Visual ELITE Section Body Keep
+
+on:
+  push:
+    branches:
+      - internal-visual-elite-step6-orphan-heading-20260905-r1
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal-visual-elite-step6-orphan-heading-20260905-r1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Apply Prince-safe section body keep-with-heading
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('api/_lib/investoriq-visual-elite-css.js')
+          s = p.read_text()
+          marker = ".iq-phase8b .section-header-title {"
+          rule = """.iq-phase8b .section > .card {\n  break-before:avoid-page !important;\n  page-break-before:avoid !important;\n}\n"""
+          if rule in s:
+              raise SystemExit('section body keep rule already present')
+          if marker not in s:
+              raise SystemExit('section header title marker missing')
+          s = s.replace(marker, rule + marker, 1)
+          p.write_text(s)
+          PY
+      - name: Strengthen permanent regression guard
+        shell: bash
+        run: |
+          cat >> tests/qa/investoriq-visual-elite-decision-pagination-smoke.js <<'EOF'
+
+          assert.match(
+            visualCss,
+            /\.iq-phase8b \.section > \.card \{[\s\S]*?break-before:avoid-page !important;[\s\S]*?page-break-before:avoid !important;/,
+            "Section body must not begin on a new Prince page immediately after its own heading."
+          );
+          console.log("investoriq-visual-elite-section-body-keep: PASS");
+          EOF
+      - name: Run Visual ELITE guards
+        shell: bash
+        run: |
+          set -e
+          for f in tests/qa/investoriq-visual-elite-*.js; do
+            echo "=== $f ==="
+            node "$f"
+          done
+      - name: Production build
+        run: npm run build
+      - name: Generate exact Stonebridge dual-lane HTML
+        run: node scripts/visual-elite-step6-dual-lane-html.mjs
+      - name: Render exact candidate with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          for html in step6-pagination-preview/Stonebridge_screening.html step6-pagination-preview/Stonebridge_underwriting.html; do
+            pdf="${html%.html}.pdf"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer --print-to-pdf="$pdf" "file://$(realpath "$html")"
+            test -s "$pdf"
+          done
+      - name: Record page counts
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import pdfParse from 'pdf-parse';
+          for (const lane of ['screening','underwriting']) {
+            const p = `step6-pagination-preview/Stonebridge_${lane}.pdf`;
+            const parsed = await pdfParse(fs.readFileSync(p));
+            console.log(`${lane}: pages=${parsed.numpages}`);
+          }
+          NODE
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit bounded source repair
+        shell: bash
+        run: |
+          git config user.name 'investoriq-visual-elite-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add api/_lib/investoriq-visual-elite-css.js tests/qa/investoriq-visual-elite-decision-pagination-smoke.js
+          git diff --cached --check
+          git commit -m 'Visual ELITE Step 6: keep section bodies with headings'
+          git push origin HEAD:internal-visual-elite-step6-orphan-heading-20260905-r1
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-elite-section-body-keep-preview-${{ github.run_id }}
+          path: |
+            step6-pagination-preview/Stonebridge_screening.pdf
+            step6-pagination-preview/Stonebridge_underwriting.pdf
+          if-no-files-found: error
+          retention-days: 7
