@@ -1,0 +1,1 @@
+Archive checkpoint completed before canonical handoff root rewrite.
