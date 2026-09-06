@@ -42,25 +42,31 @@ noMatch(text, /\bgoverned\b/i, "internal governed engineering terminology is pro
 noMatch(text, /\bIRR\b|\bMOIC\b/i, "unsupported return metrics are prohibited");
 noMatch(text, /investment recommendations?/i, "recommendation boilerplate is prohibited");
 match(text, /None identified in this summary/i, "accepted environmental status remains visible in human language");
+match(text, /Recognized Environmental Conditions \(source summary\)/i, "environmental status retains its source-summary subject");
+match(text, /not independent verification of site condition/i, "environmental source boundary remains explicit");
 
 // Global visual system: reduce nested boxes/rules and enforce balanced summary geometry.
 match(html, /\.section\s*>\s*\.card\s*\{[^}]*border\s*:\s*0[^}]*padding\s*:\s*0/i, "ordinary sections render without nested card boxes");
 match(html, /\.section\[data-iq-elite-operating="overview"\]\s+\.summary-strip\s*\{[^}]*grid-template-columns\s*:\s*repeat\(4/i, "operating overview uses a balanced four-metric rail");
 match(html, /\.institutional-visual-grid\s*\{[^}]*grid-template-columns\s*:\s*repeat\(3/i, "operating evidence visuals use balanced three-column geometry");
 match(html, /\.summary-strip\s+div\s*\{[^}]*border\s*:\s*0[^}]*border-top/i, "summary metrics avoid boxed-dashboard treatment");
-match(html, /\.source-register-table\s+\.source-filename\s*\{[^}]*overflow-wrap\s*:\s*normal[^}]*word-break\s*:\s*normal/i, "source filenames use controlled wrap behavior");
-noMatch(html, /source-register-table[\s\S]{0,500}overflow-wrap\s*:\s*anywhere/i, "source register must not split filenames arbitrarily");
-match(html, /Institutional_<wbr>T12_<wbr>Operating_/i, "long source filenames contain controlled soft-break opportunities");
+match(html, /\.source-register-table\s+\.source-filename\s*\{[^}]*overflow-wrap\s*:\s*normal[^}]*word-break\s*:\s*normal/i, "legacy base filename rule remains visible for migration detection");
+match(html, /\.source-register-table\s+\.source-filename\s*\{[^}]*white-space\s*:\s*normal\s*!important[^}]*overflow-wrap\s*:\s*anywhere\s*!important[^}]*word-break\s*:\s*break-word\s*!important/i, "publication-wide filename overflow protection supersedes the legacy collision-prone rule");
+match(html, /Institutional_<wbr>T12_<wbr>Operating_/i, "long source filenames retain controlled soft-break opportunities");
 
 // Known duplicate/orphan surfaces removed or consolidated.
 noMatch(text, /Rent Position \/ Whole-Property Value Context/i, "duplicative rent/value orphan surface is removed");
 noMatch(text, /Governed Debt Capacity Result/i, "raw governed debt-capacity object row is removed");
 noMatch(text, /Governed Binding Constraint/i, "raw governed binding-constraint object row is removed");
-match(text, /Drivers Outside Current Sensitivity Scope/i, "deferred drivers remain visible without internal version labels");
+match(text, /Sensitivity Families Outside This Driver Matrix/i, "driver-matrix boundaries remain visible without implying absence elsewhere in the report");
+match(text, /Proposed-financing interest-rate sensitivity is presented in Debt Capacity & Coverage when accepted proposed financing terms support it/i, "rate-stress cross-reference is accurate and conditional");
 match(text, /Scenario Analysis - Not Source Evidence/i, "scenario/evidence boundary remains explicit");
 ok((text.match(/Scenario Analysis - Not Source Evidence/gi) || []).length <= 2, "scenario boundary labeling is not repeated on every scenario table");
-match(text, /Occupancy Above Break-Even/i, "customer-facing occupancy spread label is polished");
+match(text, /Operating Cost Coverage Ratio/i, "operating GPR-basis coverage metric is precisely labeled");
+match(text, /total operating expenses \/ T12 gross potential rent/i, "operating coverage formula is printed");
+match(text, /not a point-in-time physical occupancy threshold/i, "operating coverage ratio is not misrepresented as physical occupancy");
 noMatch(text, /Occupancy less Break-Even Occupancy/i, "mechanical occupancy spread label is removed");
+noMatch(text, /Occupancy vs Operating Break-Even/i, "cross-basis occupancy comparison is removed");
 match(text, /Base \$[0-9,]+\s*\|\s*Operating-expense stress/i, "operating-expense driver base retains its dollar sign");
 noMatch(text, /Acquisition Request Context/i, "legacy acquisition request presentation is suppressed when transaction intelligence renders");
 noMatch(text, /Debt \/ Financing Context/i, "legacy debt context presentation is suppressed when debt intelligence renders");
@@ -72,6 +78,8 @@ noMatch(text, /Future maturity|Maturity Position\s*future/i, "raw maturity statu
 noMatch(text, /-0\.0%/i, "display-rounded negative zero is normalized");
 noMatch(text, /Not shown because supporting evidence is unavailable:\s*cap-rate sensitivity/i, "visible scenario sensitivity cannot be called unavailable in valuation");
 noMatch(text, /Reduced \/ omitted sections:\s*Core Source Reconciliation|Reduced \/ omitted sections:[\s\S]{0,100}Debt Capacity & Coverage/i, "manifest does not misstate integrated replacement coverage");
+match(text, /Tracked Diligence Coverage/i, "diligence summary identifies its tracked scope");
+match(text, /not a certification that overall transaction diligence, reserves, closing costs, or analyses outside these tracked areas are complete/i, "diligence counts cannot imply overall completeness");
 match(text, /Methodology & Data Transparency/i, "methodology remains compactly included in the Source Appendix");
 
 // Certified seven-chapter architecture remains intact.
@@ -91,7 +99,7 @@ for (const key of chapterKeys) {
   previous = index;
 }
 
-// Source-register completeness survives soft wrapping.
+// Source-register completeness survives safe wrapping.
 for (const filename of [
   "Institutional_T12_Operating_Statement_With_Long_Source_Name.xlsx",
   "Institutional_Rent_Roll_With_Long_Source_Name.xlsx",
