@@ -11,7 +11,9 @@ assert.match(css, /font-feature-settings:"kern" 1, "pnum" 1 !important;/, "Custo
 assert.match(css, /\.iq-phase8b table,[\s\S]*?font-variant-numeric:tabular-nums !important;/, "Technical tables must retain tabular numerals.");
 assert.match(css, /phase8a-investment-snapshot-table tr:first-child td strong[\s\S]*?letter-spacing:-\.022em !important;/, "Large underwriting KPI values must use tighter tracking.");
 assert.match(css, /phase8a-investment-decision-band span[\s\S]*?letter-spacing:\.045em !important;/, "Decision labels must not retain excessive tracking.");
-assert.match(css, /data-iq-elite-section="keyMetricsSnapshot"[\s\S]*?data-iq-elite-operating="noi-margin-analysis"[\s\S]*?data-iq-elite-scenario-section="operating-expense-stress"[\s\S]*?break-inside:avoid-page !important;/, "Confirmed short Prince sections must remain atomic with their headings.");
+assert.match(css, /data-iq-elite-section="keyMetricsSnapshot"[\s\S]*?data-iq-elite-scenario-section="operating-expense-stress"[\s\S]*?break-inside:avoid-page !important;/, "Confirmed short Prince sections must remain atomic with their headings.");
+assert.doesNotMatch(css, /section\[data-iq-elite-operating="noi-margin-analysis"\][^{]*\{[\s\S]*?break-inside:avoid-page !important;/, "The entire NOI section must not be made atomic because its evidence rows need natural pagination.");
+assert.match(css, /\.iq-phase8b \.iq-ve-noi-heading-bridge-lock \{[\s\S]*?break-inside:avoid-page !important;[\s\S]*?page-break-inside:avoid !important;/, "NOI heading and earnings bridge must remain an atomic publication lead.");
 assert.match(authority, /INVESTORIQ_VISUAL_ELITE_TYPOGRAPHY_CSS/, "Phase 8B authority must import shared typography normalization.");
 
 const sample = '<html><head></head><body><div class="report-container"><section class="section"><div class="section-header"><span class="section-header-title">Key Metrics Snapshot</span></div><div class="card allow-break"><strong>$13,500,000</strong></div></section></div></body></html>';
