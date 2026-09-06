@@ -1,0 +1,31 @@
+{
+  "authority": "investoriq_visual_elite_step6_provider_certification_v1",
+  "date": "2026-09-06",
+  "recovery_checkpoint": "c595fcaca1e8c23482c6fa527a798f5ee24881e6",
+  "step5_restore_point": "32c639d2006e1ef15b533526028d2d174367f7d8",
+  "provider_tested_candidate": "0587d51552711ab6541822bc694008aaecd32cdf",
+  "temporary_proof_commit": "5e32b7725d0dcf3a197e65e8fec185ed5ccd78da",
+  "docraptor_mode": "test",
+  "production_provider_allowed": false,
+  "screening": {
+    "pages": 5,
+    "bytes": 292998,
+    "sha256": "7cbbefd7d6f1d587d352b7f2bccab0557fb68f398bb58ade051c41a4a3f6be1a",
+    "provider_http_status": 200
+  },
+  "underwriting": {
+    "pages": 21,
+    "bytes": 382012,
+    "sha256": "ebf59fbb538a2114fe543d839a3df93e283c33e2694f1d13d0bcc921453f620b",
+    "provider_http_status": 200
+  },
+  "provider_receipt_sha256": "b9485e7cb51fb8323c8a40ada0fd9bbfe4ef5b9e92f7442eb906ed7a55fe0534",
+  "visual_pages_inspected": 26,
+  "approved_fonts_only": true,
+  "customer_copy_em_dashes": 0,
+  "customer_copy_en_dashes": 0,
+  "hard_page_cap_added": false,
+  "content_truncated_for_layout": false,
+  "production_mutation_performed": false,
+  "status": "CLOSED_AND_PROVIDER_CERTIFIED_IN_DOCRAPTOR_TEST_MODE"
+}
