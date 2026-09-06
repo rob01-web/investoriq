@@ -11,10 +11,6 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-
-
-
-
 function displayMetric(receipt) {
   if (!receipt?.displayReady) return "";
   if (receipt.units === "currency") return money(receipt.value);
@@ -25,10 +21,10 @@ function displayMetric(receipt) {
 
 function statusLabel(status) {
   const labels = {
-    documented: "Documented",
+    documented: "Documented in tracked scope",
     documented_with_limitations: "Documented with limitations",
     received_not_display_ready: "Received; quantitative use limited",
-    not_provided: "Not provided",
+    not_provided: "Not provided in tracked scope",
   };
   return labels[status] || String(status || "").replace(/_/g, " ");
 }
@@ -83,7 +79,8 @@ function renderCoverage(contract) {
   const disposition = contract?.sectionDispositions?.diligenceCoverage?.disposition;
   if (disposition === "omit" || disposition === "collapse") return "";
   const summary = contract.coverageSummary || {};
-  const rows = (Array.isArray(contract.diligenceCoverage) ? contract.diligenceCoverage : [])
+  const coverageRows = Array.isArray(contract.diligenceCoverage) ? contract.diligenceCoverage : [];
+  const rows = coverageRows
     .map(
       (entry) => `<tr data-iq-elite06-diligence="${escapeHtml(entry.key)}" data-iq-diligence-status="${escapeHtml(entry.status)}">
         <td>${escapeHtml(entry.label)}</td>
@@ -94,12 +91,13 @@ function renderCoverage(contract) {
     )
     .join("");
   return `<div class="subsection-block" data-iq-elite06-surface="diligence-coverage">
-    <p class="subsection-title">Diligence Coverage</p>
+    <p class="subsection-title">Tracked Diligence Coverage</p>
     <div class="summary-strip">
-      <div><span>Documented</span><strong>${escapeHtml(summary.documented ?? 0)}</strong></div>
-      <div><span>Limited / Received</span><strong>${escapeHtml((summary.documentedWithLimitations ?? 0) + (summary.receivedNotDisplayReady ?? 0))}</strong></div>
-      <div><span>Not Provided</span><strong>${escapeHtml(summary.notProvided ?? 0)}</strong></div>
+      <div><span>Tracked Areas Documented</span><strong>${escapeHtml(summary.documented ?? 0)}</strong></div>
+      <div><span>Tracked Areas Limited</span><strong>${escapeHtml((summary.documentedWithLimitations ?? 0) + (summary.receivedNotDisplayReady ?? 0))}</strong></div>
+      <div><span>Tracked Areas Not Provided</span><strong>${escapeHtml(summary.notProvided ?? 0)}</strong></div>
     </div>
+    <p class="body-copy"><strong>Scope:</strong> These counts apply only to the ${escapeHtml(String(coverageRows.length))} diligence areas listed below. They are not a certification that overall transaction diligence, reserves, closing costs, or analyses outside these tracked areas are complete.</p>
     <table class="detail-table diligence-coverage-table" style="margin-top:10px;"><thead><tr><th>Diligence Area</th><th>Status</th><th>Treatment</th><th>Source</th></tr></thead><tbody>${rows}</tbody></table>
   </div>`;
 }
@@ -107,19 +105,26 @@ function renderCoverage(contract) {
 function renderThirdPartyContext(contract) {
   const ctx = contract.thirdPartyContext || {};
   const rows = [];
+  let environmentalIncluded = false;
   if (ctx.appraisal?.displayReady) {
     if (Number.isFinite(Number(ctx.appraisal.appraisalValue))) rows.push(`<tr><td>Appraisal Value Context</td><td>${escapeHtml(money(ctx.appraisal.appraisalValue))}</td></tr>`);
     if (Number.isFinite(Number(ctx.appraisal.stabilizedNoi))) rows.push(`<tr><td>Appraisal Stabilized NOI Context</td><td>${escapeHtml(money(ctx.appraisal.stabilizedNoi))}</td></tr>`);
     if (Number.isFinite(Number(ctx.appraisal.stabilizedCapRate))) rows.push(`<tr><td>Appraisal Stabilized Cap Rate Context</td><td>${escapeHtml(percent(ctx.appraisal.stabilizedCapRate, 2))}</td></tr>`);
   }
   if (ctx.marketSurvey?.displayReady) rows.push(`<tr><td>Market Survey Ranges</td><td>${escapeHtml(ctx.marketSurvey.rangeCount)} documented range${Number(ctx.marketSurvey.rangeCount) === 1 ? "" : "s"}</td></tr>`);
-  if (ctx.environmental?.displayReady) rows.push(`<tr><td>Environmental / Phase I Status</td><td>${escapeHtml(humanizeContextValue(ctx.environmental.phaseIStatus))}</td></tr>`);
+  if (ctx.environmental?.displayReady) {
+    environmentalIncluded = true;
+    rows.push(`<tr><td>Recognized Environmental Conditions (source summary)</td><td>${escapeHtml(humanizeContextValue(ctx.environmental.phaseIStatus))}</td></tr>`);
+  }
   if (ctx.renovation?.displayReady) {
     if (Number.isFinite(Number(ctx.renovation.totalRenovationBudget))) rows.push(`<tr><td>Renovation / CapEx Budget Context</td><td>${escapeHtml(money(ctx.renovation.totalRenovationBudget))}</td></tr>`);
     if (Number.isFinite(Number(ctx.renovation.durationMonths))) rows.push(`<tr><td>Stated Capital Plan Duration</td><td>${escapeHtml(Math.round(Number(ctx.renovation.durationMonths)))} months</td></tr>`);
   }
   if (!rows.length) return "";
-  return `<div class="subsection-block" data-iq-elite06-surface="third-party-context"><p class="subsection-title">Third-Party / Support Context</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table><p class="footer-note">These items are contextual support and do not replace the accepted T12, Rent Roll, or InvestorIQ deterministic analysis.</p></div>`;
+  const environmentalBoundary = environmentalIncluded
+    ? `<p class="footer-note"><strong>Environmental source boundary:</strong> the REC wording above reproduces the accepted source-summary subject only. It is not independent verification of site condition, legal compliance, remediation need, or conditions outside the cited summary.</p>`
+    : "";
+  return `<div class="subsection-block" data-iq-elite06-surface="third-party-context"><p class="subsection-title">Third-Party / Support Context</p><table class="detail-table"><tbody>${rows.join("")}</tbody></table><p class="footer-note">These items are contextual support and do not replace the accepted T12, Rent Roll, or InvestorIQ deterministic analysis.</p>${environmentalBoundary}</div>`;
 }
 
 function renderOpenItems(contract) {
@@ -149,7 +154,7 @@ export function renderFullUnderwritingTransactionDiligenceV1Html(contract = null
   return `<section class="section" data-iq-elite="transaction-diligence-v1">
     <div class="section-header"><span class="section-header-title">Transaction &amp; Diligence Intelligence</span></div>
     <div class="card allow-break">
-      <p class="body-copy">Transaction terms, financing readiness, support-document coverage, and unresolved diligence items are summarized from governed report facts only.</p>
+      <p class="body-copy">Transaction terms, financing readiness, tracked support-document coverage, and unresolved diligence items are summarized from accepted report facts only.</p>
       ${body}
       <p class="footer-note">Missing or incomplete optional diligence limits only the dependent diligence analysis; it does not by itself invalidate otherwise sufficient core underwriting.</p>
     </div>
