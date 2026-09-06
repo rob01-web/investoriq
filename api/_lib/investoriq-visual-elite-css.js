@@ -18,7 +18,9 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
   color:var(--iq-ve-copy);
   font-size:9pt;
   line-height:1.43;
+  font-variant-numeric:normal !important;
 }
+.iq-phase8b * { font-variant-numeric:normal !important; }
 
 /* Shared cover identity for Screening and Underwriting. */
 .iq-phase8b .cover-wrap {
@@ -184,7 +186,11 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
 }
 
 /* Editorial body hierarchy and quiet institutional furniture. */
-.iq-phase8b .section { background:#fff !important; }
+.iq-phase8b .section {
+  background:#fff !important;
+  break-inside:avoid-page !important;
+  page-break-inside:avoid !important;
+}
 .iq-phase8b .section-header {
   margin:0 0 14px !important;
   padding:0 0 11px !important;
@@ -239,7 +245,7 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
   background:var(--iq-ve-paper-alt) !important;
   padding:12px 15px !important;
 }
-.iq-phase8b table { border-collapse:collapse !important; }
+.iq-phase8b table { border-collapse:collapse !important; font-variant-numeric:normal !important; }
 .iq-phase8b table thead { display:table-header-group; }
 .iq-phase8b table tr { break-inside:avoid; page-break-inside:avoid; }
 .iq-phase8b table th {
