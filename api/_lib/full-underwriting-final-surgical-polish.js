@@ -16,8 +16,20 @@ function polishCustomerText(value = "") {
     .replace(/(\$?\d[\d,.%]*)\s+-\s+(\$?\d[\d,.%]*)/g, `$1${RANGE_SENTINEL}$2`)
     .replace(/\s+-\s+/g, ": ")
     .replace(new RegExp(RANGE_SENTINEL, "g"), " - ")
+    .replace(/\bELITE-\d+(?:\s+v\d+)?\b/gi, "analysis")
+    .replace(/\bcanonical source truth(?: package)?\b/gi, "accepted source evidence")
+    .replace(/\bcanonical\b/gi, "accepted")
+    .replace(/\bgoverned\b/gi, "verified")
+    .replace(/\bsource-backed\b/gi, "source-supported")
+    .replace(/\bsource_backed\b/gi, "source-supported")
+    .replace(/\bdisplay-ready\b/gi, "available")
+    .replace(/\bversioned\b/gi, "defined")
+    .replace(/\bdeterministic calculations?\b/gi, "calculated results")
+    .replace(/\bdeterministic\b/gi, "calculated")
+    .replace(/\braw parser\b/gi, "source processing")
     .replace(/\s+([,.;:])/g, "$1")
-    .replace(/;\s*;/g, ";");
+    .replace(/;\s*;/g, ";")
+    .replace(/[ \t]{2,}/g, " ");
 }
 
 function collapseDuplicateCapRateWrapper(html = "") {
@@ -41,6 +53,33 @@ function sanitizeMarkupText(markup = "") {
     .join("");
 }
 
+function plainText(markup = "") {
+  return String(markup || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function dedupeRepeatedBoundaryNotes(html = "") {
+  const seen = new Set();
+  return String(html || "").replace(
+    /<p\s+class="footer-note(?:\s+[^"]*)?"[^>]*>[\s\S]*?<\/p>/gi,
+    (paragraph) => {
+      const normalized = plainText(paragraph);
+      if (normalized.length < 60) return paragraph;
+      if (!/(scenario|source evidence|accepted inputs|calculated|publication record|not a forecast|not a lender|does not infer|source facts)/i.test(normalized)) {
+        return paragraph;
+      }
+      if (seen.has(normalized)) return "";
+      seen.add(normalized);
+      return paragraph;
+    }
+  );
+}
+
 export function polishFullUnderwritingFinalHtml(html, { reportMode = null, sourceTruthPackage = null } = {}) {
   const source = String(html || "");
   if (!isFullUnderwritingMode(reportMode)) return source;
@@ -53,5 +92,6 @@ export function polishFullUnderwritingFinalHtml(html, { reportMode = null, sourc
     .split(/(<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>)/gi)
     .map((part) => (/^<(?:style|script)\b/i.test(part) ? part : sanitizeMarkupText(part)))
     .join("");
-  return applyPhase8CustomerFacingVisualAuthority(legacySanitized, { reportMode, sourceTruthPackage });
+  const deduped = dedupeRepeatedBoundaryNotes(legacySanitized);
+  return applyPhase8CustomerFacingVisualAuthority(deduped, { reportMode, sourceTruthPackage });
 }
