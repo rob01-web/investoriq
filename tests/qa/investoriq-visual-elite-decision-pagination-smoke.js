@@ -37,3 +37,15 @@ assert.match(
 );
 
 console.log("investoriq-visual-elite-decision-pagination-smoke: PASS");
+
+assert.match(visualCss, /\.cover-meta-grid \{[\s\S]*?display:table !important;[\s\S]*?table-layout:fixed !important;/,
+  "Cover metadata must use a Prince-safe table layout instead of CSS Grid.");
+assert.match(visualCss, /\.phase8b-screening-decision-band,[\s\S]*?display:table !important;[\s\S]*?caption-side:top !important;/,
+  "Decision status band must use a Prince-safe table/caption layout.");
+assert.match(visualCss, /\.phase8b-screening-profile-strip \{[^}]*display:flex !important;[^}]*flex-wrap:wrap !important;/,
+  "Screening profile matrix must use Prince-safe wrapping flex layout.");
+assert.match(visualCss, /\.phase8b-screening-decision-panels,[\s\S]*?\.phase8a-exec-columns \{[^}]*display:table !important;[^}]*table-layout:fixed !important;/,
+  "Decision panels must use Prince-safe table layout.");
+assert.doesNotMatch(visualCss, /\.phase8b-screening-decision-panels,[\s\S]{0,220}?display:grid !important;/,
+  "Decision panels must not regress to CSS Grid in the Prince-critical opening.");
+console.log("investoriq-visual-elite-prince-parity: PASS");
