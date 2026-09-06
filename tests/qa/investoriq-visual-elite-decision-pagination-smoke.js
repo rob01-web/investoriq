@@ -49,3 +49,10 @@ assert.match(visualCss, /\.phase8b-screening-decision-panels,[\s\S]*?\.phase8a-e
 assert.doesNotMatch(visualCss, /\.phase8b-screening-decision-panels,[\s\S]{0,220}?display:grid !important;/,
   "Decision panels must not regress to CSS Grid in the Prince-critical opening.");
 console.log("investoriq-visual-elite-prince-parity: PASS");
+
+assert.match(
+  visualCss,
+  /\.iq-phase8b \.section-header \{[\s\S]*?break-after:avoid-page !important;[\s\S]*?page-break-after:avoid !important;/,
+  "Major section headings must remain attached to the first meaningful content block in Prince pagination."
+);
+console.log("investoriq-visual-elite-orphan-heading: PASS");

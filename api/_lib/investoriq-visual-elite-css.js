@@ -189,6 +189,8 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
   margin:0 0 14px !important;
   padding:0 0 11px !important;
   border-bottom:1px solid var(--iq-ve-rule) !important;
+  break-after:avoid-page !important;
+  page-break-after:avoid !important;
 }
 .iq-phase8b .section-header::after {
   left:0 !important;
