@@ -121,12 +121,23 @@ function renderNoiAnalysis(contract) {
     s.noiIdentityDifference.displayReady ? noteRow("EGI less OpEx less NOI", money(s.noiIdentityDifference.value), s.noiIdentityReconciles === true ? "Within deterministic reconciliation tolerance" : "Review accepted totals") : "",
   ].filter(Boolean).join("");
   const earningsBridge = renderVisualEliteOperatingEarningsBridge(s);
-  return section(
-    "NOI & Margin Analysis",
-    "noi-margin-analysis",
-    `${earningsBridge}<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table><p class="footer-note">Operating break-even is a deterministic operating relationship. Debt service is not included here unless separately analyzed in the debt chapter.</p>`,
-    dispositionValue(s)
-  );
+  const supportingBody = `<table class="detail-table metric-note-table"><tbody>${rows}</tbody></table><p class="footer-note">Operating break-even is a deterministic operating relationship. Debt service is not included here unless separately analyzed in the debt chapter.</p>`;
+  const disposition = dispositionValue(s);
+  if (!earningsBridge) {
+    return section(
+      "NOI & Margin Analysis",
+      "noi-margin-analysis",
+      supportingBody,
+      disposition
+    );
+  }
+  return `<section class="section" data-iq-elite-operating="noi-margin-analysis" data-iq-disposition="${escapeHtml(disposition)}">
+    <div class="iq-ve-noi-heading-bridge-lock no-break">
+      <div class="section-header"><span class="section-header-title">NOI &amp; Margin Analysis</span></div>
+      ${earningsBridge}
+    </div>
+    <div class="card allow-break iq-ve-noi-supporting-metrics">${supportingBody}</div>
+  </section>`;
 }
 
 function renderConcentration(contract) {
