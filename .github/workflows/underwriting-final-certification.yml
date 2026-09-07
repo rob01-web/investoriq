@@ -55,15 +55,25 @@ jobs:
       - name: Full Underwriting regression suite
         shell: bash
         run: |
-          set -euo pipefail
-          count=0
-          for f in tests/qa/full-underwriting-*.js; do
-            echo "==> $f"
-            node "$f"
-            count=$((count + 1))
-          done
-          test "$count" -gt 0
-          echo "Executed $count full-underwriting tests."
+          set -uo pipefail
+          artifact_dir="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts"
+          mkdir -p "$artifact_dir"
+          set +e
+          (
+            set -euo pipefail
+            count=0
+            for f in tests/qa/full-underwriting-*.js; do
+              echo "==> $f"
+              node "$f"
+              count=$((count + 1))
+            done
+            test "$count" -gt 0
+            echo "Executed $count full-underwriting tests."
+          ) 2>&1 | tee "$artifact_dir/full-underwriting-regressions.log"
+          qa_status=${PIPESTATUS[0]}
+          set -e
+          echo "Full Underwriting regression exit status: $qa_status" | tee -a "$artifact_dir/full-underwriting-regressions.log"
+          exit "$qa_status"
 
       - name: Institutional PDF contract diagnostics
         run: npm run qa:diagnostic:institutional-pdf
