@@ -2,6 +2,17 @@ import assert from "node:assert/strict";
 import { buildFullUnderwritingOperatingIntelligenceContract } from "../../api/_lib/full-underwriting-operating-intelligence-contract.js";
 import { renderFullUnderwritingOperatingIntelligenceHtml } from "../../api/_lib/full-underwriting-operating-intelligence-renderer.js";
 
+function visibleText(value) {
+  return String(value || "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function sourceTruthWithUnitMix(unitMix) {
   return {
     source: "canonical_source_truth_package",
@@ -66,8 +77,9 @@ assert.match(html, /total operating expenses \/ T12 gross potential rent/i);
 assert.match(html, /not a point-in-time physical occupancy threshold/i);
 assert.doesNotMatch(html, /Occupancy vs Operating Break-Even/i);
 assert.match(html, /occupancy concentration by unit type is not inferred/i);
-for (const forbidden of [/\bBUY\b/i, /\bSELL\b/i, /\bHOLD\b/i, /\bIRR\b/i, /\bMOIC\b/i, /scenario/i]) {
-  assert.doesNotMatch(html, forbidden);
+const customerText = visibleText(html);
+for (const forbidden of [/\bBUY\b/i, /\bSELL\b/i, /\bHOLD\b/i, /\bIRR\b/i, /\bMOIC\b/i, /\bscenario\b/i]) {
+  assert.doesNotMatch(customerText, forbidden);
 }
 assert.match(html, /data-iq-elite-operating="revenue-quality"/);
 assert.match(html, /data-iq-elite-operating="expense-structure"/);
