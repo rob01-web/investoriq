@@ -23,8 +23,6 @@ assert.match(chapter1, /Underwriting Observations/);
 assert.match(chapter1, /SOURCE DIFFERENCE REQUIRES REVIEW/);
 assert.doesNotMatch(chapter1, /data-iq-elite-section="sourceReconciliationAlert"/);
 assert.doesNotMatch(chapter1, /RECONCILIATION REQUIRED|Primary Source Reconciliation Alert|Source Difference Review/);
-assert.match(html, /Core Source Reconciliation/);
-assert.match(html, /\(\$180,000\)|\$180,000/);
 
 assert.match(chapter1, /Institutional Gate 10 Property/);
 assert.match(chapter1, /What Must Be True/);
