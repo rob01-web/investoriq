@@ -3,9 +3,11 @@ import fs from "node:fs";
 
 import { INSTITUTIONAL_PDF_CONSTITUTION } from "../../api/_lib/institutional-pdf-constitution.js";
 
-const documentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
+const wrapperSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
+const documentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document-base.js", "utf8");
 const docRaptorSource = fs.readFileSync("api/_lib/docraptor-request.js", "utf8");
 
+assert.match(wrapperSource, /from "\.\/acquisition-memo-v2-document-base\.js"/i);
 assert.match(documentSource, /data-iq-visual-system="institutional-v1"/i);
 assert.match(documentSource, /data-iq-design-system="elite-10a-global-v1"/i);
 assert.match(documentSource, /data-iq-composition="content-driven-v1"/i);
