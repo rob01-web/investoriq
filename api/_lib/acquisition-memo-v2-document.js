@@ -1,12 +1,6 @@
 import { renderCompleteAcquisitionMemoV2Html as renderBaseCompleteAcquisitionMemoV2Html } from "./acquisition-memo-v2-document-base.js";
 
-export {
-  renderAcquisitionMemo,
-  buildAcquisitionMemoV2DocumentTreatmentSummaryHtml,
-  buildAcquisitionMemoV2PreliminaryFinancingReadinessSummaryHtml,
-  buildAcquisitionMemoV2AcquisitionFinancingAssumptionsHtml,
-  buildAcquisitionMemoV2AcquisitionFinancingReadinessHtml,
-} from "./acquisition-memo-v2-document-base.js";
+export * from "./acquisition-memo-v2-document-base.js";
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
