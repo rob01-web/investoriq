@@ -36,7 +36,10 @@ assert.match(html, /data-iq-section="eliteValuationReconciliation"/i);
 assert.match(html, /data-iq-subsection="accepted-value-indication"/i);
 assert.match(html, /Accepted T12 NOI[\s\S]{0,180}\$945,000/i);
 assert.match(html, /Accepted Going-In Cap Rate[\s\S]{0,180}7\.00%/i);
-assert.match(html, /InvestorIQ Implied Value[\s\S]{0,180}\$13,500,000/i);
+assert.match(
+  html,
+  /<tr>\s*<td>NOI \/ Cap-Rate Cross-Check Value<\/td>\s*<td[^>]*>\$13,500,000<\/td>[\s\S]*?<\/tr>/i
+);
 assert.match(html, /Implied Value Per Unit[\s\S]{0,180}\$210,938/i);
 assert.equal((html.match(/data-iq-cap-rate-row="accepted"/gi) || []).length, 0);
 assert.doesNotMatch(html, /<tr[^>]*><td>5\.0%<\/td>/i);
