@@ -16,6 +16,7 @@ function polishCustomerText(value = "") {
     .replace(/(\$?\d[\d,.%]*)\s+-\s+(\$?\d[\d,.%]*)/g, `$1${RANGE_SENTINEL}$2`)
     .replace(/\s+-\s+/g, ": ")
     .replace(new RegExp(RANGE_SENTINEL, "g"), " - ")
+    .replace(/\bnot ROI,\s*IRR,\s*or a value-creation forecast\b/gi, "not a return metric or a value-creation forecast")
     .replace(/\bELITE-\d+(?:\s+v\d+)?\b/gi, "analysis")
     .replace(/\bcanonical source truth(?: package)?\b/gi, "accepted source evidence")
     .replace(/\bcanonical\b/gi, "accepted")
