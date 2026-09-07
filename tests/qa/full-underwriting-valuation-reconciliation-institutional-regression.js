@@ -124,6 +124,8 @@ const sectionHtml = renderFullUnderwritingValuationReconciliation(model);
 
 check(model.disposition === "full", "institutional valuation model is full");
 check(sectionHtml.includes("Valuation Position &amp; Reconciliation") || sectionHtml.includes("Valuation Position & Reconciliation"), "institutional title rendered");
+check(sectionHtml.includes("NOI / Cap-Rate Cross-Check"), "accepted-basis cross-check rendered");
+check(!sectionHtml.includes("Accepted-Basis Value Indication"), "valuation section does not imply an independent valuation opinion");
 check(sectionHtml.includes("$10,000,000"), "deterministic implied value rendered");
 check(sectionHtml.includes("$9,500,000"), "purchase price rendered");
 check(sectionHtml.includes("$10,250,000"), "appraisal value rendered");
@@ -166,7 +168,8 @@ const fullHtml = renderCompleteAcquisitionMemoV2Html({
 check(typeof fullHtml === "string" && fullHtml.length > 0, "full report rendered");
 check(fullHtml.includes('data-iq-chapter="valuation-reconciliation"'), "valuation chapter preserved in full report");
 check(fullHtml.includes('data-iq-section="eliteValuationReconciliation"'), "ELITE-08 wired into full institutional report");
-check(fullHtml.includes("Accepted-Basis Value Indication"), "accepted valuation basis appears in full report");
+check(fullHtml.includes("NOI / Cap-Rate Cross-Check"), "accepted valuation cross-check appears in full report");
+check(!fullHtml.includes("Accepted-Basis Value Indication"), "full report does not overstate cross-check as independent valuation");
 check(fullHtml.includes("Purchase Price Reconciliation"), "purchase reconciliation appears in full report");
 check(fullHtml.includes("Appraisal Reconciliation"), "appraisal reconciliation appears in full report");
 check(fullHtml.includes("Core Source Reconciliation") || fullHtml.includes("Appraisal / Valuation Context"), "existing Chapter 6 context remains available");
