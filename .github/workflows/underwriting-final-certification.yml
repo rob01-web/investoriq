@@ -148,16 +148,20 @@ jobs:
           test -n "$underwriting_html"
           test -s "$artifact_dir/$screening_html"
           test -s "$artifact_dir/$underwriting_html"
-          echo "Rendering Screening HTML: $screening_html"
-          echo "Rendering Underwriting HTML: $underwriting_html"
+          screening_pdf="${screening_html%.html}.pdf"
+          underwriting_pdf="${underwriting_html%.html}.pdf"
+          test -n "$screening_pdf"
+          test -n "$underwriting_pdf"
+          echo "Rendering Screening HTML: $screening_html -> $screening_pdf"
+          echo "Rendering Underwriting HTML: $underwriting_html -> $underwriting_pdf"
           "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer \
-            --print-to-pdf="$artifact_dir/screening-source-fixture.pdf" \
+            --print-to-pdf="$artifact_dir/$screening_pdf" \
             "file://$artifact_dir/$screening_html"
           "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer \
-            --print-to-pdf="$artifact_dir/underwriting-source-fixture.pdf" \
+            --print-to-pdf="$artifact_dir/$underwriting_pdf" \
             "file://$artifact_dir/$underwriting_html"
-          test -s "$artifact_dir/screening-source-fixture.pdf"
-          test -s "$artifact_dir/underwriting-source-fixture.pdf"
+          test -s "$artifact_dir/$screening_pdf"
+          test -s "$artifact_dir/$underwriting_pdf"
 
       - name: Validate rendered PDFs
         shell: bash
