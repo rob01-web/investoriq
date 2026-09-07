@@ -6,6 +6,8 @@ import { validateAcquisitionMemoV2HtmlAgainstCustomerSurfaceModel } from "../../
 function visibleText(html) {
   return String(html || "")
     .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
     .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/gi, "&")
