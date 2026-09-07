@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const source = fs.readFileSync(new URL("../../api/_lib/acquisition-memo-v2-document.js", import.meta.url), "utf8");
+const wrapperSource = fs.readFileSync(new URL("../../api/_lib/acquisition-memo-v2-document.js", import.meta.url), "utf8");
+const source = fs.readFileSync(new URL("../../api/_lib/acquisition-memo-v2-document-base.js", import.meta.url), "utf8");
+assert.match(wrapperSource, /from "\.\/acquisition-memo-v2-document-base\.js"/);
 assert.match(source, /buildFullUnderwritingOperatingIntelligenceContract/);
 assert.match(source, /renderFullUnderwritingOperatingIntelligenceHtml/);
 assert.match(source, /let eliteOperatingIntelligenceContract = null;/);
@@ -13,4 +15,4 @@ assert.match(source, /Operating Statement \/ TTM Summary/);
 assert.match(source, /\$\{marketSurveyContextSection\}/);
 assert.match(source, /\$\{valueSensitivitySection\}/);
 assert.doesNotMatch(source, /full-underwriting-operating-intelligence[^\n]*(worker|publication|delivery|revision)/i);
-console.log("PASS full-underwriting-operating-intelligence-document-wiring-smoke (11/11)");
+console.log("PASS full-underwriting-operating-intelligence-document-wiring-smoke (12/12)");
