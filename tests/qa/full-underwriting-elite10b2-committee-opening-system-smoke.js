@@ -20,14 +20,14 @@ assert.match(chapter1, /data-iq-elite10b2="investment-committee-opening-v1"/);
 assert.match(chapter1, /Investment Decision Snapshot/);
 assert.match(chapter1, /Key Metrics Snapshot/);
 assert.match(chapter1, /Underwriting Observations/);
-assert.match(chapter1, /Source Difference Review/);
 assert.match(chapter1, /SOURCE DIFFERENCE REQUIRES REVIEW/);
-assert.doesNotMatch(chapter1, /RECONCILIATION REQUIRED/);
-assert.doesNotMatch(chapter1, /Primary Source Reconciliation Alert/);
+assert.doesNotMatch(chapter1, /data-iq-elite-section="sourceReconciliationAlert"/);
+assert.doesNotMatch(chapter1, /RECONCILIATION REQUIRED|Primary Source Reconciliation Alert|Source Difference Review/);
+assert.match(html, /Core Source Reconciliation/);
+assert.match(html, /\(\$180,000\)|\$180,000/);
 
 assert.match(chapter1, /Institutional Gate 10 Property/);
 assert.match(chapter1, /What Must Be True/);
-assert.match(chapter1, /class="iq-callout iq-ic-reconciliation-callout" data-iq-tone="constraint"/);
 
 const signalCodes = [...chapter1.matchAll(/data-iq-elite-signal="([^"]+)"/g)].map((match) => match[1]);
 for (const code of ["OPERATING_OCCUPANCY_ESTABLISHED", "OPERATING_NOI_ESTABLISHED", "DOCUMENTED_GROSS_RENT_GAP", "PRIMARY_SOURCE_RECONCILIATION_REQUIRED"]) {
@@ -62,6 +62,7 @@ assert.match(publicationCssSource, /\.section-header::after \{ display:none !imp
 assert.match(publicationCssSource, /font-size:7\.25pt !important/i);
 
 assert.match(publicRendererSource, /SOURCE DIFFERENCE REQUIRES REVIEW/);
+assert.match(publicRendererSource, /removeDuplicateExecutiveSourceDifferenceReview/);
 assert.match(baseRendererSource, /\.slice\(0, 6\)/);
 assert.match(baseRendererSource, /bodyClass: "iq-ic-summary-card phase8a-executive-summary"/);
 assert.match(baseDocumentSource, /INVESTORIQ_UNDERWRITING_OPENING_CSS/);
@@ -91,7 +92,7 @@ assert.equal(chapter1Contract.metrics.occupancyBreakEvenSpread.displayReady, fal
 assert.ok(chapter1Contract.principalRisksAndConstraints.items.some((item) => item.code === "T12_EXPENSE_LINE_RECONCILIATION_REQUIRED"));
 
 const visible = chapter1.replace(/<[^>]+>/g, " ");
-assert.doesNotMatch(visible, /[—–]/);
+assert.doesNotMatch(visible, /[\u2014\u2013]/);
 assert.doesNotMatch(visible, /\bgoverned\b|\bcanonical\b|display-ready|source_backed/i);
 for (const token of ["BUY", "SELL", "HOLD", "IRR", "MOIC", "FINAL RECOMMENDATION"]) {
   const regex = new RegExp(`(?:^|[^A-Z])${token}(?:[^A-Z]|$)`, "i");
