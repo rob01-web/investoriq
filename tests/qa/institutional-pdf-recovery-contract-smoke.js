@@ -77,29 +77,53 @@ assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.orderedExactGlyphFragmentTol
 assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.inferredValueReconstructionAllowed, false);
 
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
+const workerSource = fs.readFileSync("api/admin-run-worker.js", "utf8");
 const deliverySource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
-const boundedRecoveryStart = generatorSource.indexOf(
-  "const boundedRecovery = await runBoundedPdfCertificationRecovery({"
+
+assert.match(
+  generatorSource,
+  /renderer_ownership:\s*"worker_artifact_authority"/,
+  "renderer must hand sealed artifact authority to the worker"
 );
-const boundedRecoveryEnd = generatorSource.indexOf(
-  "const boundedRecoveryRequiresRetry =",
+assert.match(workerSource, /ensureReportDownloadArtifact\(\{/);
+assert.match(
+  workerSource,
+  /finalHtml:\s*reportData\?\.final_html\s*\|\|\s*""/,
+  "worker must pass the renderer's sealed final_html into artifact publication"
+);
+
+const artifactOwnerStart = deliverySource.indexOf(
+  "export async function ensureReportDownloadArtifact({"
+);
+const boundedRecoveryStart = deliverySource.indexOf(
+  "const boundedRecovery = await runBoundedPdfCertificationRecovery({",
+  artifactOwnerStart
+);
+const boundedRecoveryEnd = deliverySource.indexOf(
+  "if (boundedRecovery.terminalError)",
   boundedRecoveryStart
 );
-assert.ok(boundedRecoveryStart >= 0, "bounded PDF certification recovery call must exist");
+assert.ok(artifactOwnerStart >= 0, "worker-owned artifact publication function must exist");
+assert.ok(
+  boundedRecoveryStart > artifactOwnerStart,
+  "worker-owned artifact publication must invoke bounded PDF certification recovery"
+);
 assert.ok(
   boundedRecoveryEnd > boundedRecoveryStart,
-  "bounded PDF certification recovery call must complete before its retry guard"
+  "bounded recovery invocation must complete before its terminal-error handling"
 );
-const boundedRecoveryCall = generatorSource.slice(boundedRecoveryStart, boundedRecoveryEnd);
+const boundedRecoveryCall = deliverySource.slice(boundedRecoveryStart, boundedRecoveryEnd);
 assert.match(
   boundedRecoveryCall,
-  /finalHtml:\s*docHtml\b/,
-  "bounded PDF certification recovery must recertify the exact approved docHtml"
+  /\bfinalHtml\s*,/,
+  "bounded PDF certification recovery must receive the same sealed finalHtml"
 );
+assert.match(boundedRecoveryCall, /\binitialPdfBuffer\s*,/);
+assert.match(boundedRecoveryCall, /\bcertifyPdf\s*,/);
 assert.match(deliverySource, /export async function runBoundedPdfCertificationRecovery/);
 assert.match(deliverySource, /buildInstitutionalPdfRecoveryHtml/);
 assert.match(deliverySource, /isInstitutionalPdfRecoveryEligible/);
 assert.match(deliverySource, /approvedHtml:\s*finalHtml/);
-assert.doesNotMatch(`${generatorSource}\n${deliverySource}`, /Stonebridge|RETEST\s*31|Final Attack Test/i);
+assert.doesNotMatch(`${generatorSource}\n${workerSource}\n${deliverySource}`, /Stonebridge|RETEST\s*31|Final Attack Test/i);
 
 console.log("Gate 10R institutional PDF recovery contract smoke PASS");
