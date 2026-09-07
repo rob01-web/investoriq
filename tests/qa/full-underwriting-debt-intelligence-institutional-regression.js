@@ -5,6 +5,8 @@ import { runAcquisitionMemoV2Pipeline } from "../../api/_lib/acquisition-memo-v2
 function visibleText(html) {
   return String(html || "")
     .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
     .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/gi, "&")
@@ -106,8 +108,11 @@ noMatch(eliteHtml, /customerSurfaceModel|canonical_source_truth_package|sourceBa
 noMatch(eliteHtml, /[—–]/, "ELITE-07 customer punctuation normalized");
 noMatch(eliteHtml, /high risk|moderate risk|low risk/i, "ELITE-07 creates no risk grade");
 noMatch(eliteHtml, /\brefinance\b|\brefi\b/i, "ELITE-07 creates no forbidden refinance/refi surface");
-noMatch(eliteHtml, /\bBreak[- ]Even Occupancy\b/i, "ELITE-07 does not collide with canonical Break-Even Occupancy label");
-match(eliteHtml, /Debt-Inclusive Occupancy Coverage Point/i, "ELITE-07 uses distinct debt-inclusive occupancy coverage terminology");
+noMatch(eliteHtml, /\bBreak[- ]Even Occupancy\b/i, "ELITE-07 does not misstate a GPR-basis ratio as physical occupancy");
+match(eliteHtml, /Current Debt-Inclusive Cost Coverage Ratio/i, "current debt-inclusive GPR-basis ratio uses accurate cost-coverage terminology");
+match(eliteHtml, /Proposed Debt-Inclusive Cost Coverage Ratio/i, "proposed debt-inclusive GPR-basis ratio uses accurate cost-coverage terminology");
+noMatch(eliteHtml, /Debt-Inclusive Occupancy Coverage Point/i, "obsolete occupancy-coverage terminology does not return");
+match(eliteHtml, /not a point-in-time physical occupancy threshold/i, "debt-inclusive ratio boundary remains explicit");
 match(eliteHtml, /Amortization Remaining/i, "unique current amortization detail survives legacy suppression");
 match(eliteHtml, /Monthly Payment/i, "unique current monthly payment survives legacy suppression");
 match(eliteHtml, /Maturity Date/i, "unique maturity date survives legacy suppression");
