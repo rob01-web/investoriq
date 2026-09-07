@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const source = readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
+const wrapperSource = readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
+const source = readFileSync("api/_lib/acquisition-memo-v2-document-base.js", "utf8");
 let passed = 0;
 function check(condition, message) { assert.ok(condition, message); passed += 1; }
 
+check(wrapperSource.includes('from "./acquisition-memo-v2-document-base.js"'), "public document wrapper delegates to preserved base implementation");
 check(source.includes('buildFullUnderwritingDebtIntelligenceV1'), "engine import/wiring present");
 check(source.includes('renderFullUnderwritingDebtIntelligenceV1Html'), "renderer import/wiring present");
 check(source.includes('let eliteDebtIntelligenceContract = null;'), "debt contract build present");
