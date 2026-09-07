@@ -16,7 +16,8 @@ function has(regex, label) {
   checks += 1;
 }
 
-has(/from "\.\/acquisition-memo-v2-document-base\.js"/, "public document wrapper delegates to preserved base implementation", wrapperText);
+assert.match(wrapperText, /from "\.\/acquisition-memo-v2-document-base\.js"/, "public document wrapper delegates to preserved base implementation");
+checks += 1;
 one(/import \{ buildFullUnderwritingTransactionDiligenceV1 \} from "\.\/full-underwriting-transaction-diligence-v1\.js";/g, "ELITE-06 builder import");
 one(/import \{ renderFullUnderwritingTransactionDiligenceV1Html \} from "\.\/full-underwriting-transaction-diligence-renderer\.js";/g, "ELITE-06 renderer import");
 one(/let eliteTransactionDiligenceContract = null;/g, "ELITE-06 contract variable");
