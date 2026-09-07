@@ -56,6 +56,12 @@ function display(receipt, { ratioFormatter = null } = {}) {
   return String(value ?? "");
 }
 
+function receiptNumber(receipt) {
+  if (!receipt?.displayReady) return null;
+  const value = Number(receipt.value);
+  return Number.isFinite(value) ? value : null;
+}
+
 function collapsed(disposition) {
   return ["collapse", "omit"].includes(disposition?.disposition || disposition);
 }
@@ -66,6 +72,58 @@ function row(receipt, marker, options = {}) {
   if (!rendered) return "";
   const label = options.label || receipt.label;
   return `<tr data-iq-elite07-metric="${escapeHtml(marker || receipt.key)}" data-iq-evidence-class="${escapeHtml(receipt.evidenceClass)}"><td>${escapeHtml(label)}</td><td>${escapeHtml(rendered)}</td></tr>`;
+}
+
+function renderDebtServiceCoverageVisual(contract) {
+  const current = contract?.baseProfiles?.currentDebt || {};
+  const proposed = contract?.baseProfiles?.proposedFinancing || {};
+  const series = [
+    {
+      label: "Current Debt Service",
+      value: receiptNumber(current.annualDebtService),
+      sourcePath: "customerSections.debtServiceCoverage.facts.currentDebt.annualDebtService",
+    },
+    {
+      label: "Proposed Debt Service",
+      value: receiptNumber(proposed.annualDebtService),
+      sourcePath: "customerSections.debtServiceCoverage.facts.proposedFinancing.annualDebtService",
+    },
+  ].filter((item) => Number.isFinite(item.value) && item.value >= 0);
+  if (!series.length) return "";
+  const maxValue = Math.max(...series.map((item) => item.value));
+  if (!Number.isFinite(maxValue) || maxValue <= 0) return "";
+
+  const bars = series.map((item, index) => {
+    const geometryPercent = Math.max(0, Math.min(100, (item.value / maxValue) * 100));
+    return `<div class="evidence-chart-row" data-iq-value="${item.value}" data-iq-source-path="${escapeHtml(item.sourcePath)}">
+      <div class="evidence-chart-label">${escapeHtml(item.label)}</div>
+      <div class="evidence-chart-track"><div class="evidence-chart-bar evidence-chart-bar-${(index % 3) + 1}" style="width:${geometryPercent.toFixed(4)}%;"></div></div>
+      <div class="evidence-chart-value">${escapeHtml(money(item.value))}</div>
+    </div>`;
+  }).join("");
+
+  const stats = [
+    {
+      label: "Current DSCR",
+      value: receiptNumber(current.dscr),
+      sourcePath: "customerSections.debtServiceCoverage.facts.currentDebt.dscr",
+    },
+    {
+      label: "Proposed Financing DSCR",
+      value: receiptNumber(proposed.dscr),
+      sourcePath: "customerSections.debtServiceCoverage.facts.proposedFinancing.dscr",
+    },
+  ].filter((item) => Number.isFinite(item.value)).map((item) => {
+    const rounded = Number(item.value.toFixed(2));
+    return `<div class="evidence-chart-stat" data-iq-value="${rounded}" data-iq-source-path="${escapeHtml(item.sourcePath)}"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(multiple(item.value))}</strong></div>`;
+  }).join("");
+
+  return `<div class="evidence-chart no-break" data-iq-chart="debt-service-and-coverage" data-iq-chart-receipt="debt-service-and-coverage" data-iq-source-paths="customerSections.debtServiceCoverage.facts.currentDebt|customerSections.debtServiceCoverage.facts.proposedFinancing">
+    <p class="subsection-title">Annual Debt Service &amp; Coverage</p>
+    <div class="evidence-chart-plot">${bars}</div>
+    ${stats ? `<div class="evidence-chart-stats">${stats}</div>` : ""}
+    <p class="footer-note">Debt-service bars and DSCR statistics use the same accepted inputs and deterministic calculations as the debt tables below. No lender covenant threshold is inferred.</p>
+  </div>`;
 }
 
 function renderCoverageHeadroom(contract) {
@@ -182,6 +240,7 @@ export function renderFullUnderwritingDebtIntelligenceV1Html(contract = null) {
   }
   if (!contract?.availability?.chapterDisplayReady) return "";
   const body = [
+    renderDebtServiceCoverageVisual(contract),
     renderCoverageHeadroom(contract),
     renderRateSensitivity(contract),
     renderMaturity(contract),
