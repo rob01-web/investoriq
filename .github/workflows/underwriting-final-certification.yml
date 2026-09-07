@@ -140,12 +140,22 @@ jobs:
         run: |
           set -euo pipefail
           artifact_dir="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts"
-          "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+          manifest="$artifact_dir/phase8-visual-authority-manifest.json"
+          test -s "$manifest"
+          screening_html=$(node -e 'const fs=require("fs"); const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(String(m?.screening?.file||""));' "$manifest")
+          underwriting_html=$(node -e 'const fs=require("fs"); const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(String(m?.underwriting?.file||""));' "$manifest")
+          test -n "$screening_html"
+          test -n "$underwriting_html"
+          test -s "$artifact_dir/$screening_html"
+          test -s "$artifact_dir/$underwriting_html"
+          echo "Rendering Screening HTML: $screening_html"
+          echo "Rendering Underwriting HTML: $underwriting_html"
+          "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer \
             --print-to-pdf="$artifact_dir/screening-source-fixture.pdf" \
-            "file://$artifact_dir/screening-source-fixture.html"
-          "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            "file://$artifact_dir/$screening_html"
+          "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-pdf-header-footer \
             --print-to-pdf="$artifact_dir/underwriting-source-fixture.pdf" \
-            "file://$artifact_dir/underwriting-source-fixture.html"
+            "file://$artifact_dir/$underwriting_html"
           test -s "$artifact_dir/screening-source-fixture.pdf"
           test -s "$artifact_dir/underwriting-source-fixture.pdf"
 
