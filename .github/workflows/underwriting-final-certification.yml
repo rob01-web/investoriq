@@ -60,15 +60,31 @@ jobs:
           mkdir -p "$artifact_dir"
           set +e
           (
-            set -euo pipefail
+            set -uo pipefail
             count=0
+            failed=0
+            failed_files=()
             for f in tests/qa/full-underwriting-*.js; do
               echo "==> $f"
               node "$f"
+              status=$?
               count=$((count + 1))
+              if [ "$status" -ne 0 ]; then
+                failed=$((failed + 1))
+                failed_files+=("$f")
+                echo "FAIL $f (exit $status)"
+              fi
             done
-            test "$count" -gt 0
-            echo "Executed $count full-underwriting tests."
+            if [ "$count" -eq 0 ]; then
+              echo "No full-underwriting tests were found."
+              exit 1
+            fi
+            echo "Executed $count full-underwriting tests; failures: $failed."
+            if [ "$failed" -ne 0 ]; then
+              printf 'Failed tests:\n'
+              printf ' - %s\n' "${failed_files[@]}"
+              exit 1
+            fi
           ) 2>&1 | tee "$artifact_dir/full-underwriting-regressions.log"
           qa_status=${PIPESTATUS[0]}
           set -e
