@@ -78,9 +78,23 @@ assert.equal(FINAL_PDF_PUBLICATION_QUALITY_CONTRACT.inferredValueReconstructionA
 
 const generatorSource = fs.readFileSync("api/_lib/generate-client-report-impl.js", "utf8");
 const deliverySource = fs.readFileSync("api/_lib/report-delivery-output.js", "utf8");
+const boundedRecoveryStart = generatorSource.indexOf(
+  "const boundedRecovery = await runBoundedPdfCertificationRecovery({"
+);
+const boundedRecoveryEnd = generatorSource.indexOf(
+  "const boundedRecoveryRequiresRetry =",
+  boundedRecoveryStart
+);
+assert.ok(boundedRecoveryStart >= 0, "bounded PDF certification recovery call must exist");
+assert.ok(
+  boundedRecoveryEnd > boundedRecoveryStart,
+  "bounded PDF certification recovery call must complete before its retry guard"
+);
+const boundedRecoveryCall = generatorSource.slice(boundedRecoveryStart, boundedRecoveryEnd);
 assert.match(
-  generatorSource,
-  /const boundedRecovery = await runBoundedPdfCertificationRecovery\(\{[\s\S]{0,320}finalHtml:\s*docHtml/,
+  boundedRecoveryCall,
+  /finalHtml:\s*docHtml\b/,
+  "bounded PDF certification recovery must recertify the exact approved docHtml"
 );
 assert.match(deliverySource, /export async function runBoundedPdfCertificationRecovery/);
 assert.match(deliverySource, /buildInstitutionalPdfRecoveryHtml/);
