@@ -150,8 +150,14 @@ function injectSourceProvenance(html, sourceTruthPackage) {
   return html.replace(/<\/body>/i, `${provenance}\n</body>`);
 }
 
+function polishDirectCustomerBoundaryLanguage(html = "") {
+  return String(html || "")
+    .replace(/\bnot ROI,\s*IRR,\s*or a value-creation forecast\b/gi, "not a return metric or a value-creation forecast");
+}
+
 export function renderCompleteAcquisitionMemoV2Html(args = {}) {
   const enriched = withPrecisionAuthoritativeUnitMix(args);
   const html = renderBaseCompleteAcquisitionMemoV2Html(enriched);
-  return injectSourceProvenance(html, args.sourceTruthPackage);
+  const withProvenance = injectSourceProvenance(html, args.sourceTruthPackage);
+  return polishDirectCustomerBoundaryLanguage(withProvenance);
 }
