@@ -26,6 +26,12 @@ function money(value) {
   return `$${Math.abs(Math.round(number)).toLocaleString("en-US")}`;
 }
 
+function normalizeDecisionLanguage(result) {
+  if (String(result?.decisionSnapshotContext?.strategyFit || "").trim().toUpperCase() === "LIGHT VALUE-ADD HOLD") {
+    result.decisionSnapshotContext.strategyFit = "LIGHT VALUE-ADD";
+  }
+}
+
 function buildExpenseLineReconciliationIssue(sourceTruthPackage = null) {
   const facts = sourceTruthPackage?.core?.t12?.accepted_facts || {};
   const reconciliation = reconcileExpenseSource(facts);
@@ -164,6 +170,7 @@ function addExpenseLineReconciliationIssue(result, issue) {
 
 export function buildFullUnderwritingChapter1EliteContract(args = {}) {
   const result = clone(buildBaseFullUnderwritingChapter1EliteContract(args));
+  normalizeDecisionLanguage(result);
   removeCrossBasisOccupancyComparison(result);
   addExpenseLineReconciliationIssue(result, buildExpenseLineReconciliationIssue(args.sourceTruthPackage));
   return deepFreeze(result);
