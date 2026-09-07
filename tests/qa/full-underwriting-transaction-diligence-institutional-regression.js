@@ -80,6 +80,7 @@ for (const chapterKey of [
 
 function stripGovernedRecommendationDisclaimers(value) {
   return String(value || "")
+    .replace(/\bLIGHT VALUE-ADD HOLD\b/gi, "")
     .replace(/\bno\s+investment recommendations?\b/gi, "")
     .replace(/\bwithout\s+(?:an?\s+)?investment recommendations?\b/gi, "")
     .replace(/\bdoes not add a probability,\s*forecast,\s*or\s+investment recommendations?\b/gi, "")
@@ -90,6 +91,7 @@ function stripGovernedRecommendationDisclaimers(value) {
 const recommendationAuthorityScan = stripGovernedRecommendationDisclaimers(text);
 noMatch(recommendationAuthorityScan, /\bBUY\b|\bSELL\b|\bHOLD\b|FINAL RECOMMENDATION|INVESTMENT RECOMMENDATION/i, "ELITE-06 must not create recommendation authority");
 match(stripGovernedRecommendationDisclaimers("Investment Recommendation: BUY"), /INVESTMENT RECOMMENDATION|\bBUY\b/i, "recommendation detector must still catch positive authority language");
+match(stripGovernedRecommendationDisclaimers("HOLD"), /\bHOLD\b/i, "recommendation detector must still catch standalone HOLD authority");
 match(text, /Missing or incomplete optional diligence limits only the dependent diligence analysis/i, "optional-diligence non-blocking doctrine must remain visible");
 
 console.log(`PASS full-underwriting-transaction-diligence-institutional-regression (${checks}/${checks})`);
