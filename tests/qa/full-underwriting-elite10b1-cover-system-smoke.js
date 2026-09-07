@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { buildInstitutionalGate10ReportFixture } from "./fixtures/institutional-gate-10-report.js";
 
-const documentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
+const wrapperSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document.js", "utf8");
+const documentSource = fs.readFileSync("api/_lib/acquisition-memo-v2-document-base.js", "utf8");
+assert.match(wrapperSource, /from "\.\/acquisition-memo-v2-document-base\.js"/i);
 const coverFunction = documentSource.match(
   /function renderBrandCoverSection\([\s\S]*?\n\}\n\nfunction renderExecutiveSummarySection/,
 )?.[0] || "";
