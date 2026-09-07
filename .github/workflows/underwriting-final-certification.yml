@@ -40,7 +40,17 @@ jobs:
         run: npm ci
 
       - name: Canonical launch QA
-        run: npm run qa
+        shell: bash
+        run: |
+          set -uo pipefail
+          artifact_dir="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts"
+          mkdir -p "$artifact_dir"
+          set +e
+          npm run qa 2>&1 | tee "$artifact_dir/canonical-qa.log"
+          qa_status=${PIPESTATUS[0]}
+          set -e
+          echo "Canonical QA exit status: $qa_status" | tee -a "$artifact_dir/canonical-qa.log"
+          exit "$qa_status"
 
       - name: Full Underwriting regression suite
         shell: bash
