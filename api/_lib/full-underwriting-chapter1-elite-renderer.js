@@ -15,7 +15,8 @@ function polishExecutiveSourceLanguage(html = "") {
     .replace(/RECONCILIATION REQUIRED/g, "SOURCE DIFFERENCE REQUIRES REVIEW")
     .replace(/Primary source reconciliation required/gi, "Source difference requires review")
     .replace(/Primary Source Reconciliation Alert/gi, "Source Difference Review")
-    .replace(/Source Reconciliation Required/gi, "Source Difference Requires Review");
+    .replace(/Source Reconciliation Required/gi, "Source Difference Requires Review")
+    .replace(/\bLIGHT VALUE-ADD HOLD\b/gi, "LIGHT VALUE-ADD");
 }
 
 export function renderFullUnderwritingChapter1EliteHtml(contract = null) {
