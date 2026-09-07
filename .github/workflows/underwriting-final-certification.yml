@@ -1,0 +1,145 @@
+name: Underwriting Final Certification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - internal-underwriting-editorial-analytical-elite-20260906-r1
+    paths:
+      - ".github/workflows/underwriting-final-certification.yml"
+      - "api/_lib/**"
+      - "tests/qa/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: underwriting-final-certification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  certify:
+    name: Underwriting read-only certification
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact branch commit
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Canonical launch QA
+        run: npm run qa
+
+      - name: Full Underwriting regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          for f in tests/qa/full-underwriting-*.js; do
+            echo "==> $f"
+            node "$f"
+            count=$((count + 1))
+          done
+          test "$count" -gt 0
+          echo "Executed $count full-underwriting tests."
+
+      - name: Institutional PDF contract diagnostics
+        run: npm run qa:diagnostic:institutional-pdf
+
+      - name: Production build proof
+        run: npm run build
+
+      - name: Generate fresh certification HTML artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PHASE7_ARTIFACT_DIR="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts"
+          node scripts/phase7-generate-visual-artifacts.js
+
+      - name: Validate deterministic HTML artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          PHASE8_ARTIFACT_DIR="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts" node scripts/phase8-validate-visual-artifacts.js
+
+      - name: Install Chromium and PDF inspection tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser poppler-utils || sudo apt-get install -y chromium poppler-utils
+          if command -v chromium-browser >/dev/null 2>&1; then
+            echo "BROWSER_BIN=$(command -v chromium-browser)" >> "$GITHUB_ENV"
+          elif command -v chromium >/dev/null 2>&1; then
+            echo "BROWSER_BIN=$(command -v chromium)" >> "$GITHUB_ENV"
+          else
+            echo "Chromium was not found after installation." >&2
+            exit 1
+          fi
+
+      - name: Render fresh Screening and Underwriting PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_dir="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts"
+          "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --print-to-pdf="$artifact_dir/screening-source-fixture.pdf" \
+            "file://$artifact_dir/screening-source-fixture.html"
+          "$BROWSER_BIN" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --print-to-pdf="$artifact_dir/underwriting-source-fixture.pdf" \
+            "file://$artifact_dir/underwriting-source-fixture.html"
+          test -s "$artifact_dir/screening-source-fixture.pdf"
+          test -s "$artifact_dir/underwriting-source-fixture.pdf"
+
+      - name: Validate rendered PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          PHASE8_ARTIFACT_DIR="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts" node scripts/phase8-validate-rendered-pdfs.js
+
+      - name: Record certification metadata
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_dir="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts"
+          mkdir -p "$artifact_dir"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const dir = path.join(process.env.GITHUB_WORKSPACE, 'final-underwriting-certification-artifacts');
+          fs.mkdirSync(dir, { recursive: true });
+          const metadata = {
+            commit: process.env.GITHUB_SHA,
+            ref: process.env.GITHUB_REF,
+            workflow: process.env.GITHUB_WORKFLOW,
+            runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            generatedAtUtc: new Date().toISOString(),
+            node: process.version,
+            productionMutationAllowed: false,
+            deploymentPerformed: false,
+          };
+          fs.writeFileSync(path.join(dir, 'certification-metadata.json'), JSON.stringify(metadata, null, 2) + '\n');
+          NODE
+
+      - name: Upload certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: underwriting-final-certification-${{ github.sha }}
+          path: final-underwriting-certification-artifacts
+          if-no-files-found: warn
+          retention-days: 14
