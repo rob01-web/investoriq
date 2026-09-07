@@ -53,11 +53,24 @@ function rowHasPrecisionCompatibleSpread(htmlText, row = {}) {
   if (!label || !Number.isFinite(currentRent) || !Number.isFinite(marketRent)) return false;
 
   const normalized = String(htmlText || "");
-  const index = normalized.toLowerCase().indexOf(label.toLowerCase());
-  if (index < 0) return false;
-  const segment = normalized.slice(index, index + 360);
+  const lower = normalized.toLowerCase();
+  const needle = label.toLowerCase();
   const expectedSpread = marketRent - currentRent;
-  return moneyValues(segment).some((value) => Math.abs(value - expectedSpread) <= 0.51);
+  let start = 0;
+  let index = lower.indexOf(needle, start);
+
+  while (index >= 0) {
+    const segment = normalized.slice(index, index + 520);
+    const values = moneyValues(segment);
+    const hasCurrent = values.some((value) => Math.abs(value - currentRent) <= 0.51);
+    const hasMarket = values.some((value) => Math.abs(value - marketRent) <= 0.51);
+    const hasSpread = values.some((value) => Math.abs(value - expectedSpread) <= 0.51);
+    if (hasCurrent && hasMarket && hasSpread) return true;
+    start = index + needle.length;
+    index = lower.indexOf(needle, start);
+  }
+
+  return false;
 }
 
 function allUnitMixSpreadsRemainRepresented(html = "", model = null) {
