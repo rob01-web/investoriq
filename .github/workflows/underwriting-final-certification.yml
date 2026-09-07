@@ -92,7 +92,17 @@ jobs:
           exit "$qa_status"
 
       - name: Institutional PDF contract diagnostics
-        run: npm run qa:diagnostic:institutional-pdf
+        shell: bash
+        run: |
+          set -uo pipefail
+          artifact_dir="$GITHUB_WORKSPACE/final-underwriting-certification-artifacts"
+          mkdir -p "$artifact_dir"
+          set +e
+          npm run qa:diagnostic:institutional-pdf 2>&1 | tee "$artifact_dir/institutional-pdf-diagnostics.log"
+          qa_status=${PIPESTATUS[0]}
+          set -e
+          echo "Institutional PDF diagnostic exit status: $qa_status" | tee -a "$artifact_dir/institutional-pdf-diagnostics.log"
+          exit "$qa_status"
 
       - name: Production build proof
         run: npm run build
