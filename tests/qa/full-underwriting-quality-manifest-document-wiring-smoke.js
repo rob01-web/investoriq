@@ -5,8 +5,10 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../..");
-const documentSource = fs.readFileSync(path.join(repoRoot, "api/_lib/acquisition-memo-v2-document.js"), "utf8");
+const wrapperSource = fs.readFileSync(path.join(repoRoot, "api/_lib/acquisition-memo-v2-document.js"), "utf8");
+const documentSource = fs.readFileSync(path.join(repoRoot, "api/_lib/acquisition-memo-v2-document-base.js"), "utf8");
 
+assert.match(wrapperSource, /from "\.\/acquisition-memo-v2-document-base\.js"/);
 assert.match(documentSource, /buildFullUnderwritingQualityManifestV1/);
 assert.match(documentSource, /renderFullUnderwritingQualityManifestV1Html/);
 assert.match(documentSource, /scenarioEngine:\s*eliteScenarioEngineContract/);
