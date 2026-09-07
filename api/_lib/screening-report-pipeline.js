@@ -2,6 +2,7 @@ import { isCanonicalSourceTruthPackage } from "./source-truth-package.js";
 import { applyPhase7EliteReportPresentation } from "./phase7-elite-report-presentation.js";
 import { applyPhase7DecisionSupport } from "./phase7-decision-support.js";
 import { applyPhase8CustomerFacingVisualAuthority } from "./phase8-customer-facing-visual-authority.js";
+import { applyInvestorIqFinalHumanPublicationAuthority } from "./investoriq-final-human-publication-authority.js";
 
 function removeEmptyScreeningSupportContextSection(html = "") {
   const source = String(html || "");
@@ -78,8 +79,12 @@ export function runScreeningReportPipeline({
     reportMode,
     sourceTruthPackage,
   });
+  const finalCustomerHtml = applyInvestorIqFinalHumanPublicationAuthority(phase8Html, {
+    lane: "screening",
+    sourceTruthPackage,
+  });
   return {
-    html: phase8Html,
+    html: finalCustomerHtml,
     reportMode,
     sealedLane: "screening_lane",
     sealedCustomerOutput: true,
