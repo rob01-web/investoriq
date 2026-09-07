@@ -93,12 +93,10 @@ const reconciledHtml = renderFullUnderwritingChapter1EliteHtml(reconciled);
 assert.equal(executiveDecisionState(reconciled.executiveInvestmentSummary.primaryConstraint), "SOURCE DIFFERENCE REQUIRES REVIEW");
 assert.equal(reconciled.sourceReconciliationAlert.varianceRatio, -60000 / 1440000);
 assert.match(reconciledHtml, /SOURCE DIFFERENCE REQUIRES REVIEW/);
-assert.match(reconciledHtml, /Source Difference Review/);
-assert.match(reconciledHtml, /\(\$60,000\)/);
-assert.match(reconciledHtml, /-4\.2%/);
-assert.match(reconciledHtml, /does not infer the cause/);
-assert.doesNotMatch(reconciledHtml, /RECONCILIATION REQUIRED/);
 assert.match(reconciledHtml, /data-iq-elite-signal="PRIMARY_SOURCE_RECONCILIATION_REQUIRED"/);
+assert.doesNotMatch(reconciledHtml, /data-iq-elite-section="sourceReconciliationAlert"/);
+assert.doesNotMatch(reconciledHtml, /Primary Source Reconciliation Alert|Source Difference Review/);
+assert.doesNotMatch(reconciledHtml, /RECONCILIATION REQUIRED/);
 
 const purchaseHtml = renderFullUnderwritingChapter1EliteHtml(build({ sourceTruth: { support: { accepted: [purchaseSupport()], advisory: [] } } }));
 assert.match(purchaseHtml, /data-iq-elite-metric="purchasePrice"/);
