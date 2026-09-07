@@ -6,12 +6,21 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.cwd();
 const documentPath = path.resolve(repoRoot, "api/_lib/acquisition-memo-v2-document.js");
+const baseDocumentPath = path.resolve(repoRoot, "api/_lib/acquisition-memo-v2-document-base.js");
 assert.equal(fs.existsSync(documentPath), true, `missing document renderer: ${documentPath}`);
-const source = fs.readFileSync(documentPath, "utf8");
+assert.equal(fs.existsSync(baseDocumentPath), true, `missing preserved document renderer: ${baseDocumentPath}`);
+
+const publicSource = fs.readFileSync(documentPath, "utf8");
+const source = fs.readFileSync(baseDocumentPath, "utf8");
 let checks = 0;
 
+assert.match(publicSource, /import \{ renderCompleteAcquisitionMemoV2Html as renderBaseCompleteAcquisitionMemoV2Html \} from "\.\/acquisition-memo-v2-document-base\.js";/);
+assert.match(publicSource, /export \* from "\.\/acquisition-memo-v2-document-base\.js";/);
+assert.match(publicSource, /const html = renderBaseCompleteAcquisitionMemoV2Html\(enriched\);/);
+checks += 1;
+
 assert.match(source, /import \{ buildFullUnderwritingChapter1EliteContract \} from "\.\/full-underwriting-chapter1-elite-contract\.js";/);
-assert.match(source, /import \{ renderFullUnderwritingChapter1EliteHtml \} from "\.\/full-underwriting-chapter1-elite-renderer\.js";/);
+assert.match(source, /import \{ renderFullUnderwritingChapter1EliteHtml, executiveDecisionState \} from "\.\/full-underwriting-chapter1-elite-renderer\.js";/);
 checks += 1;
 
 assert.match(source, /sourcePackage = null,\s*sourceTruthPackage = null,\s*t12Payload = null,/);
@@ -40,5 +49,5 @@ checks += 1;
 assert.match(source, /data-iq-chapter="committee-overview"[\s\S]*?Investment Committee Overview[\s\S]*?\$\{committeeOverviewHtml\}/);
 checks += 1;
 
-assert.equal(checks, 8);
-console.log("PASS full-underwriting-chapter1-elite-document-wiring-smoke (8/8)");
+assert.equal(checks, 9);
+console.log("PASS full-underwriting-chapter1-elite-document-wiring-smoke (9/9, wrapper-aware)");
