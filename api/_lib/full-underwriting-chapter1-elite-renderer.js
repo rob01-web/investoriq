@@ -18,8 +18,16 @@ function polishExecutiveSourceLanguage(html = "") {
     .replace(/Source Reconciliation Required/gi, "Source Difference Requires Review");
 }
 
+function removeDuplicateExecutiveSourceDifferenceReview(html = "") {
+  return String(html || "").replace(
+    /<section\s+class="section"\s+data-iq-elite-section="sourceReconciliationAlert"[\s\S]*?<\/section>/i,
+    ""
+  );
+}
+
 export function renderFullUnderwritingChapter1EliteHtml(contract = null) {
-  return polishExecutiveSourceLanguage(renderBaseChapter1Html(contract));
+  const polished = polishExecutiveSourceLanguage(renderBaseChapter1Html(contract));
+  return removeDuplicateExecutiveSourceDifferenceReview(polished);
 }
 
 export default renderFullUnderwritingChapter1EliteHtml;
