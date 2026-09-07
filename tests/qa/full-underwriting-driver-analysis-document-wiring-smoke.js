@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const path = "api/_lib/acquisition-memo-v2-document.js";
-const text = fs.readFileSync(path, "utf8");
+const wrapperPath = "api/_lib/acquisition-memo-v2-document.js";
+const basePath = "api/_lib/acquisition-memo-v2-document-base.js";
+const wrapperText = fs.readFileSync(wrapperPath, "utf8");
+const text = fs.readFileSync(basePath, "utf8");
 let passed = 0;
 function check(condition, message) {
   assert.ok(condition, message);
@@ -14,6 +16,7 @@ function exactlyOnce(pattern, message) {
   passed += 1;
 }
 
+check(wrapperText.includes('from "./acquisition-memo-v2-document-base.js"'), "public document wrapper delegates to preserved base implementation");
 exactlyOnce(/import \{ buildFullUnderwritingDriverAnalysisV1 \} from "\.\/full-underwriting-driver-analysis-v1\.js";/g, "driver builder import");
 exactlyOnce(/import \{ renderFullUnderwritingDriverAnalysisV1Html \} from "\.\/full-underwriting-driver-analysis-renderer\.js";/g, "driver renderer import");
 exactlyOnce(/let eliteDriverAnalysisContract = null;/g, "driver contract declaration");
