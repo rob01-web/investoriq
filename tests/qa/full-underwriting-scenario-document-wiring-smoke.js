@@ -5,13 +5,16 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../..");
-const documentPath = path.join(repoRoot, "api/_lib/acquisition-memo-v2-document.js");
+const wrapperPath = path.join(repoRoot, "api/_lib/acquisition-memo-v2-document.js");
+const documentPath = path.join(repoRoot, "api/_lib/acquisition-memo-v2-document-base.js");
+const wrapperText = fs.readFileSync(wrapperPath, "utf8");
 const text = fs.readFileSync(documentPath, "utf8");
 
 let checks = 0;
 function match(regex, message) { checks += 1; assert.match(text, regex, message); }
 function check(condition, message) { checks += 1; assert.ok(condition, message); }
 
+check(wrapperText.includes('from "./acquisition-memo-v2-document-base.js"'), "public document wrapper delegates to preserved base implementation");
 match(/buildFullUnderwritingScenarioEngineV1/);
 match(/renderFullUnderwritingScenarioEngineV1Html/);
 match(/let eliteScenarioEngineContract = null;/);
