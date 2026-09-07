@@ -1,6 +1,7 @@
 import { applyPhase7EliteReportPresentation } from "./phase7-elite-report-presentation.js";
 import { applyPhase7DecisionSupport } from "./phase7-decision-support.js";
 import { applyPhase8CustomerFacingVisualAuthority } from "./phase8-customer-facing-visual-authority.js";
+import { applyInvestorIqFinalHumanPublicationAuthority } from "./investoriq-final-human-publication-authority.js";
 
 function isFullUnderwritingMode(value = "") {
   const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -94,5 +95,9 @@ export function polishFullUnderwritingFinalHtml(html, { reportMode = null, sourc
     .map((part) => (/^<(?:style|script)\b/i.test(part) ? part : sanitizeMarkupText(part)))
     .join("");
   const deduped = dedupeRepeatedBoundaryNotes(legacySanitized);
-  return applyPhase8CustomerFacingVisualAuthority(deduped, { reportMode, sourceTruthPackage });
+  const phase8Html = applyPhase8CustomerFacingVisualAuthority(deduped, { reportMode, sourceTruthPackage });
+  return applyInvestorIqFinalHumanPublicationAuthority(phase8Html, {
+    lane: "underwriting",
+    sourceTruthPackage,
+  });
 }
