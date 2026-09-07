@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const documentPath = new URL("../../api/_lib/acquisition-memo-v2-document.js", import.meta.url);
+const wrapperPath = new URL("../../api/_lib/acquisition-memo-v2-document.js", import.meta.url);
+const documentPath = new URL("../../api/_lib/acquisition-memo-v2-document-base.js", import.meta.url);
+const wrapperSource = fs.readFileSync(wrapperPath, "utf8");
 const source = fs.readFileSync(documentPath, "utf8");
 let assertions = 0;
 function check(condition, message) {
@@ -9,6 +11,7 @@ function check(condition, message) {
   assert.ok(condition, message);
 }
 
+check(wrapperSource.includes('from "./acquisition-memo-v2-document-base.js"'), "public document wrapper delegates to preserved base implementation");
 check(source.includes('from "./full-underwriting-valuation-reconciliation-v1.js"'), "valuation engine import wired");
 check(source.includes('from "./full-underwriting-valuation-reconciliation-renderer.js"'), "valuation renderer import wired");
 check(source.includes("buildFullUnderwritingValuationReconciliationV1({"), "valuation engine invoked");
