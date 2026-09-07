@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const path = "api/_lib/acquisition-memo-v2-document.js";
-const text = fs.readFileSync(path, "utf8");
+const wrapperPath = "api/_lib/acquisition-memo-v2-document.js";
+const basePath = "api/_lib/acquisition-memo-v2-document-base.js";
+const wrapperText = fs.readFileSync(wrapperPath, "utf8");
+const text = fs.readFileSync(basePath, "utf8");
 let checks = 0;
 function one(regex, label) {
   const matches = text.match(regex) || [];
@@ -14,6 +16,7 @@ function has(regex, label) {
   checks += 1;
 }
 
+has(/from "\.\/acquisition-memo-v2-document-base\.js"/, "public document wrapper delegates to preserved base implementation", wrapperText);
 one(/import \{ buildFullUnderwritingTransactionDiligenceV1 \} from "\.\/full-underwriting-transaction-diligence-v1\.js";/g, "ELITE-06 builder import");
 one(/import \{ renderFullUnderwritingTransactionDiligenceV1Html \} from "\.\/full-underwriting-transaction-diligence-renderer\.js";/g, "ELITE-06 renderer import");
 one(/let eliteTransactionDiligenceContract = null;/g, "ELITE-06 contract variable");
