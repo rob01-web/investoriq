@@ -9,6 +9,8 @@ import {
 } from "./phase8-artifact-identity-fingerprint.js";
 import { buildPhase8CertificationRequests } from "./phase8-visual-certification-fixtures.js";
 
+import { assertScreeningReconciliationArtifact } from "./phase8-reconciliation-artifact-contract.js";
+
 const artifactDir = path.resolve(process.env.PHASE8_ARTIFACT_DIR || "phase8-artifacts");
 const artifacts = {
   screening: path.join(artifactDir, "phase7-screening-harbourstone.html"),
@@ -54,7 +56,7 @@ if (/Capital Intelligence Memorandum/i.test(screeningText)) throw new Error("PHA
 if (!/Decision Evidence (?:&|and) Key Metrics/i.test(screeningText)) throw new Error("PHASE8_SCREENING_EVIDENCE_SECTION_MISSING");
 if (!/Gross Potential Rent/i.test(screeningText)) throw new Error("PHASE8_SCREENING_T12_EVIDENCE_MISSING");
 if (!/Annual In-Place Rent/i.test(screeningText)) throw new Error("PHASE8_SCREENING_RENT_ROLL_EVIDENCE_MISSING");
-if (!/Source Reconciliation/i.test(screeningText)) throw new Error("PHASE8_SCREENING_RECONCILIATION_MISSING");
+const screeningReconciliation = assertScreeningReconciliationArtifact(screeningHtml, PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS.screening);
 if (!/Diligence Priorities/i.test(screeningText)) throw new Error("PHASE8_SCREENING_DILIGENCE_PRIORITIES_MISSING");
 const screeningIdentity = assertPhase8ArtifactIdentity({ report: "screening", html: screeningHtml });
 const screeningSourceBinding = assertPhase8SourceBindingIdentity({ report: "screening", request: certificationRequests.screening });
@@ -77,6 +79,7 @@ const manifest = {
     bytes: fs.statSync(artifacts.screening).size,
     identity: "InvestorIQ Screening Report",
     evidence_section: true,
+    reconciliation_validation: screeningReconciliation,
     identity_fingerprint: PHASE8_ARTIFACT_IDENTITY_FINGERPRINTS.screening,
     identity_validation: screeningIdentity,
     source_binding_validation: screeningSourceBinding,
