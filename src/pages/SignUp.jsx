@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Mail, Lock, User } from "lucide-react";
 import { supabase } from "@/lib/customSupabaseClient";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { buildAuthRoute, resolveAuthReturnPath } from "@/lib/authReturnPath";
 
 // ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
 const T = {
@@ -36,6 +37,8 @@ export default function SignUpPage() {
   const [errorMsg, setErrorMsg]   = useState("");
   const [focusedField, setFocused] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnPath = resolveAuthReturnPath(location.search);
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -49,7 +52,7 @@ export default function SignUpPage() {
     if (error) {
       setErrorMsg(error.message);
     } else {
-      navigate("/dashboard");
+      navigate(returnPath);
     }
     setLoading(false);
   };
@@ -369,7 +372,7 @@ export default function SignUpPage() {
             }}>
               Already have an account?{' '}
               <Link
-                to="/login"
+                to={buildAuthRoute('/login', returnPath)}
                 style={{
                   fontFamily:   "'DM Mono', monospace",
                   fontSize:     10,
