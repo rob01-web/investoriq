@@ -1,0 +1,46 @@
+name: InvestorIQ Launch Readiness Customer Journey
+
+on:
+  push:
+    branches:
+      - internal-underwriting-editorial-analytical-elite-20260906-r1
+    paths:
+      - 'src/**'
+      - 'api/**'
+      - 'lib/**'
+      - 'tests/qa/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/launch-readiness-customer-journey.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: investoriq-launch-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  launch-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run canonical launch QA
+        run: npm run test:qa
+
+      - name: Build production bundle
+        run: npm run build
