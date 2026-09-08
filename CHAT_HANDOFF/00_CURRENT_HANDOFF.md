@@ -1,5 +1,25 @@
 # InvestorIQ Current Handoff
 
+
+## Customer admission constitution - GOVERNING OWNER AUTHORITY
+
+This section is current owner authority and controls wherever older plans, tests, migrations, historical notes, or downstream source-mode language conflict.
+
+### Screening admission
+
+A Screening Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll before generation may begin. Screening accepts only those two core document categories. Supporting or additional due-diligence documents are not part of the Screening upload package and must not be admitted for Screening.
+
+### Underwriting admission
+
+An Underwriting Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll, **plus at least one additional readable supporting due-diligence document**, before generation may begin.
+
+### Admission is not downstream survivability
+
+`dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, and `insufficient_core` describe downstream source-truth / publication-survivability states **after a job has already been validly admitted**. They do not reduce or replace the customer upload requirements above.
+
+If an admitted core source later becomes constrained or unusable during governed parsing/validation, downstream analysis may qualify, collapse, omit, or follow the applicable publication/failure doctrine. That downstream behavior does not make a one-core-document customer submission valid at intake.
+
+
 **Updated:** 2026-09-08  
 **Current phase:** Underwriting Editorial + Analytical ELITE Closeout  
 **Working branch:** `internal-underwriting-editorial-analytical-elite-20260906-r1`
