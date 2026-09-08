@@ -203,6 +203,7 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
 .iq-phase8b .section > .card {
   break-before:avoid-page !important;
   page-break-before:avoid !important;
+  border-top:0 !important;
 }
 .iq-phase8b .section-header-title {
   padding-right:0 !important;
@@ -217,7 +218,7 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
 .iq-phase8b .institutional-eyebrow,
 .iq-phase8b .subsection-title {
   font-family:var(--font-mono) !important;
-  font-size:6pt !important;
+  font-size:6.5pt !important;
   font-weight:500 !important;
   letter-spacing:.11em !important;
   text-transform:uppercase !important;
@@ -248,7 +249,7 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
   border-bottom:1px solid var(--iq-ve-rule-strong) !important;
   background:#fff !important;
   font-family:var(--font-mono) !important;
-  font-size:5.8pt !important;
+  font-size:6.2pt !important;
   font-weight:500 !important;
   letter-spacing:.06em !important;
   color:var(--iq-ve-muted) !important;
@@ -329,11 +330,11 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
 .iq-phase8b .phase8a-investment-decision-band p { margin:6px 0 0 !important; font-size:7.7pt !important; line-height:1.42 !important; color:var(--iq-ve-copy) !important; }
 
 .iq-phase8b .phase8b-screening-metric-matrix,
-.iq-phase8b .phase8a-investment-snapshot-table { margin:0 0 18px !important; table-layout:fixed !important; border-top:0 !important; border-bottom:1px solid var(--iq-ve-gold) !important; }
+.iq-phase8b .phase8a-investment-snapshot-table { margin:0 0 18px !important; table-layout:fixed !important; border-top:0 !important; border-bottom:0 !important; }
 .iq-phase8b .phase8b-screening-metric-matrix tr:first-child td,
 .iq-phase8b .phase8a-investment-snapshot-table tr:first-child td { padding:8px 10px 14px 0 !important; border-bottom:1px solid var(--iq-ve-gold-soft) !important; background:#fff !important; vertical-align:top !important; }
 .iq-phase8b .phase8b-screening-metric-matrix tr:first-child td span,
-.iq-phase8b .phase8a-investment-snapshot-table tr:first-child td span { display:block !important; min-height:0 !important; font-family:var(--font-mono) !important; font-size:5.5pt !important; font-weight:500 !important; letter-spacing:.055em !important; color:var(--iq-ve-muted) !important; }
+.iq-phase8b .phase8a-investment-snapshot-table tr:first-child td span { display:block !important; min-height:0 !important; font-family:var(--font-mono) !important; font-size:6.2pt !important; font-weight:500 !important; letter-spacing:.055em !important; color:var(--iq-ve-muted) !important; }
 .iq-phase8b .phase8b-screening-metric-matrix tr:first-child td strong,
 .iq-phase8b .phase8a-investment-snapshot-table tr:first-child td strong { display:block !important; margin-top:5px !important; font-family:var(--font-body) !important; font-size:18pt !important; font-weight:400 !important; line-height:1.05 !important; color:var(--iq-ve-ink) !important; }
 .iq-phase8b .phase8b-screening-metric-matrix tr:first-child td em,
@@ -343,13 +344,13 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
 .iq-phase8b .phase8b-screening-metric-matrix tr:not(:first-child) td strong,
 .iq-phase8b .phase8a-investment-snapshot-table tr:not(:first-child) td strong { font-family:var(--font-body) !important; font-size:8.3pt !important; font-weight:500 !important; color:var(--iq-ve-ink) !important; }
 .iq-phase8b .phase8b-screening-metric-matrix tr:not(:first-child) td span,
-.iq-phase8b .phase8a-investment-snapshot-table tr:not(:first-child) td span { font-family:var(--font-mono) !important; font-size:5.2pt !important; font-weight:500 !important; color:var(--iq-ve-muted) !important; }
+.iq-phase8b .phase8a-investment-snapshot-table tr:not(:first-child) td span { font-family:var(--font-mono) !important; font-size:6.2pt !important; font-weight:500 !important; color:var(--iq-ve-muted) !important; }
 .iq-phase8b .phase8b-screening-metric-matrix tr:not(:first-child) td em,
-.iq-phase8b .phase8a-investment-snapshot-table tr:not(:first-child) td em { display:block !important; font-size:5.2pt !important; font-style:normal !important; color:var(--iq-ve-muted) !important; }
+.iq-phase8b .phase8a-investment-snapshot-table tr:not(:first-child) td em { display:block !important; font-size:6pt !important; font-style:normal !important; color:var(--iq-ve-muted) !important; }
 
 .iq-phase8b .phase8b-screening-profile-strip { display:flex !important; flex-wrap:wrap !important; gap:0 !important; margin:0 0 16px !important; padding:9px 0 4px !important; border-top:1px solid var(--iq-ve-rule) !important; }
 .iq-phase8b .phase8b-screening-profile-strip > div { width:33.333% !important; box-sizing:border-box !important; padding:4px 16px 7px 0 !important; border-bottom:1px solid #e1e5e1 !important; }
-.iq-phase8b .phase8b-screening-profile-strip span { font-family:var(--font-mono) !important; font-size:5.2pt !important; font-weight:500 !important; color:var(--iq-ve-muted) !important; }
+.iq-phase8b .phase8b-screening-profile-strip span { font-family:var(--font-mono) !important; font-size:6.2pt !important; font-weight:500 !important; color:var(--iq-ve-muted) !important; }
 .iq-phase8b .phase8b-screening-profile-strip strong { margin-top:3px !important; font-size:7.8pt !important; font-weight:500 !important; color:var(--iq-ve-ink) !important; }
 
 .iq-phase8b .phase8b-screening-decision-panels,
