@@ -31,6 +31,8 @@ const launchCriticalSuite = [
   ['source spreadsheet math and publication continuity', 'publication-math-continuity-smoke.js'],
   ['customer dispatch runtime', 'customer-route-dispatch-runtime-smoke.js'],
   ['core admission contract', 'phase1-admission-core-mode-contract-smoke.js'],
+  ['report admission UI gate', 'report-upload-gate-smoke.js'],
+  ['customer failure messaging', 'job-failure-messaging-smoke.js'],
   ['checkout runtime', 'phase4-checkout-runtime-smoke.js'],
   ['webhook entitlement runtime', 'phase4-webhook-runtime-smoke.js'],
   ['checkout status runtime', 'phase4-checkout-status-runtime-smoke.js'],
