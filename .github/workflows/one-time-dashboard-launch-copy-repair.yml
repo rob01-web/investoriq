@@ -20,6 +20,11 @@ jobs:
           ref: internal-underwriting-editorial-analytical-elite-20260906-r1
           fetch-depth: 0
 
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Apply exact bounded replacements
         shell: python
         run: |
@@ -75,9 +80,10 @@ jobs:
           git diff --check
           git diff -- src/pages/Dashboard.jsx
 
-      - name: Run customer upload and failure regressions
+      - name: Run customer admission and journey regressions
         run: |
           node tests/qa/report-upload-gate-smoke.js
+          node tests/qa/phase1-admission-core-mode-contract-smoke.js
           node tests/qa/job-failure-messaging-smoke.js
           node tests/qa/launch-readiness-customer-journey-smoke.js
 
