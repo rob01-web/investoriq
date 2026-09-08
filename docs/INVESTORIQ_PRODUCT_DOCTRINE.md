@@ -1,5 +1,15 @@
 # InvestorIQ Product Doctrine
 
+
+## September 8, 2026 owner admission clarification - CURRENT AUTHORITY
+
+This clarification is current owner authority for customer intake and controls wherever older doctrine prose, plans, migrations, tests, or historical notes conflict. Historical material below remains preserved as history and must not be rewritten to erase earlier states.
+
+- **Screening admission:** both a usable T12 / operating statement and a usable Rent Roll are required before generation may begin. Screening accepts only those two core document categories. Supporting or additional due-diligence documents are not admitted for Screening.
+- **Underwriting admission:** both a usable T12 / operating statement and a usable Rent Roll are required, plus at least one additional readable supporting due-diligence document, before generation may begin.
+- **Admission is separate from downstream survivability:** `dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, and `insufficient_core` are downstream source-truth / publication-survivability states after a job has already been validly admitted. They do not reduce or replace the customer upload requirements above.
+- A downstream survivor state may qualify, collapse, omit, or otherwise govern dependent analysis after admission. It does not retroactively make a one-core-document customer submission valid at intake.
+
 ## H0 Owner and Authority Freeze - July 27, 2026
 
 The controlling H0 owner decisions are recorded in

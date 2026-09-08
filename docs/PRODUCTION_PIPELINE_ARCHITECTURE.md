@@ -3,6 +3,17 @@
 **Status:** Current architecture authority
 **Date:** 2026-08-18
 
+
+## September 8, 2026 admission authority clarification
+
+Customer admission is strict and is separate from downstream source-survivor modes:
+
+- **Screening:** both a usable T12 / operating statement and a usable Rent Roll are required. Screening admits no supporting or additional due-diligence documents.
+- **Underwriting:** both a usable T12 / operating statement and a usable Rent Roll are required, plus at least one additional readable supporting due-diligence document.
+- `t12_minimum_core` and `rent_roll_minimum_core` remain valid only as downstream source-truth / publication-survivability states after valid admission. They do not authorize customer intake with one core document.
+
+This clarification controls the current admission boundary wherever older architecture notes, migrations, or tests conflict.
+
 ## Constitutional chain
 
 `authenticated customer`
