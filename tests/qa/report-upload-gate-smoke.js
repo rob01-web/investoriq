@@ -1,113 +1,114 @@
-import assert from "node:assert/strict";
-import fs from "node:fs/promises";
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 
-import { formatReportUploadGateErrorMessage, resolveCoreUploadDocType, resolveReportUploadGate } from "../../src/lib/reportUploadGate.js";
+import {
+  formatReportUploadGateErrorMessage,
+  resolveCoreUploadDocType,
+  resolveReportUploadGate,
+} from '../../src/lib/reportUploadGate.js';
 
-const screeningGate = resolveReportUploadGate({
-  reportType: "screening",
+const row = (docType, originalName = '') => ({ docType, original_name: originalName });
+
+for (const reportType of ['screening', 'underwriting']) {
+  const dualSource = resolveReportUploadGate({
+    reportType,
+    uploadedFiles: [row('rent_roll'), row('t12')],
+  });
+  assert.equal(dualSource.canGenerate, true);
+  assert.equal(dualSource.coreMode, 'dual_source_core');
+  assert.equal(dualSource.isMissingCoreDocs, false);
+  assert.equal(dualSource.isMissingSupportDocs, false);
+  assert.equal(dualSource.underwritingRequiresSupport, false);
+
+  const rentRollOnly = resolveReportUploadGate({
+    reportType,
+    uploadedFiles: [row('rent_roll')],
+  });
+  assert.equal(rentRollOnly.canGenerate, true);
+  assert.equal(rentRollOnly.coreMode, 'rent_roll_minimum_core');
+  assert.equal(rentRollOnly.isMissingSupportDocs, false);
+
+  const t12Only = resolveReportUploadGate({
+    reportType,
+    uploadedFiles: [row('t12')],
+  });
+  assert.equal(t12Only.canGenerate, true);
+  assert.equal(t12Only.coreMode, 't12_minimum_core');
+  assert.equal(t12Only.isMissingSupportDocs, false);
+}
+
+const underwritingWithOptionalSupport = resolveReportUploadGate({
+  reportType: 'underwriting',
   uploadedFiles: [
-    { docType: "rent_roll" },
-    { docType: "t12" },
+    row('t12'),
+    row('supporting_documents', 'Appraisal.pdf'),
   ],
 });
-assert.equal(screeningGate.canGenerate, true);
-assert.equal(screeningGate.blockedMessage, "");
-assert.equal(screeningGate.isMissingCoreDocs, false);
-assert.equal(screeningGate.isMissingSupportDocs, false);
+assert.equal(underwritingWithOptionalSupport.canGenerate, true);
+assert.equal(underwritingWithOptionalSupport.hasSupportDocs, true);
+assert.equal(underwritingWithOptionalSupport.underwritingRequiresSupport, false);
 
-const screeningMissingT12 = resolveReportUploadGate({
-  reportType: "screening",
-  uploadedFiles: [{ docType: "rent_roll" }],
-});
-assert.equal(screeningMissingT12.canGenerate, false);
-assert.equal(screeningMissingT12.blockedReasonCode, "MISSING_REQUIRED_CORE_DOCUMENTS");
-assert.match(screeningMissingT12.blockedMessage, /Upload a T12 to generate/i);
-
-const underwritingCoreOnly = resolveReportUploadGate({
-  reportType: "underwriting",
+const underwritingWithUiSupport = resolveReportUploadGate({
+  reportType: 'underwriting',
   uploadedFiles: [
-    { docType: "rent_roll" },
-    { docType: "t12" },
+    row('rent_roll'),
+    row('supporting_documents_ui', 'Loan Terms.pdf'),
   ],
 });
-assert.equal(underwritingCoreOnly.canGenerate, false);
-assert.equal(underwritingCoreOnly.blockedReasonCode, "MISSING_REQUIRED_SUPPORTING_DOCUMENT");
-assert.match(underwritingCoreOnly.blockedMessage, /supporting document/i);
-
-const underwritingWithSupport = resolveReportUploadGate({
-  reportType: "underwriting",
-  uploadedFiles: [
-    { docType: "rent_roll" },
-    { docType: "t12" },
-    { docType: "supporting_documents" },
-  ],
-});
-assert.equal(underwritingWithSupport.canGenerate, true);
-assert.equal(underwritingWithSupport.blockedMessage, "");
-
-const underwritingWithCoreMislabeledAsSupport = resolveReportUploadGate({
-  reportType: "underwriting",
-  uploadedFiles: [
-    { docType: "rent_roll" },
-    { docType: "t12" },
-    { docType: "supporting_documents_ui" },
-  ],
-});
-assert.equal(underwritingWithCoreMislabeledAsSupport.canGenerate, true);
-assert.equal(underwritingWithCoreMislabeledAsSupport.hasSupportDocs, true);
-assert.equal(underwritingWithCoreMislabeledAsSupport.hasCoreDocs, true);
+assert.equal(underwritingWithUiSupport.canGenerate, true);
+assert.equal(underwritingWithUiSupport.hasSupportDocs, true);
+assert.equal(underwritingWithUiSupport.hasCoreDocs, true);
 
 const swappedCoreUploads = resolveReportUploadGate({
-  reportType: "screening",
+  reportType: 'screening',
   uploadedFiles: [
-    { docType: "rent_roll", original_name: "Acme_T12_Operating_Statement.pdf" },
-    { docType: "t12", original_name: "Acme_Rent_Roll.xlsx" },
+    row('rent_roll', 'Acme_T12_Operating_Statement.pdf'),
+    row('t12', 'Acme_Rent_Roll.xlsx'),
   ],
 });
 assert.equal(swappedCoreUploads.canGenerate, true);
-assert.equal(swappedCoreUploads.blockedMessage, "");
-assert.equal(resolveCoreUploadDocType({ docType: "rent_roll", original_name: "Acme_T12_Operating_Statement.pdf" }), "t12");
-assert.equal(resolveCoreUploadDocType({ docType: "t12", original_name: "Acme_Rent_Roll.xlsx" }), "rent_roll");
+assert.equal(swappedCoreUploads.coreMode, 'dual_source_core');
+assert.equal(
+  resolveCoreUploadDocType(row('rent_roll', 'Acme_T12_Operating_Statement.pdf')),
+  't12',
+);
+assert.equal(
+  resolveCoreUploadDocType(row('t12', 'Acme_Rent_Roll.xlsx')),
+  'rent_roll',
+);
 
-const ambiguousCoreUploads = resolveReportUploadGate({
-  reportType: "screening",
+const supportingOnly = resolveReportUploadGate({
+  reportType: 'underwriting',
   uploadedFiles: [
-    { docType: "supporting_documents", original_name: "Notes.pdf" },
-    { docType: "supporting_documents", original_name: "Context.pdf" },
+    row('supporting_documents', 'Appraisal.pdf'),
+    row('supporting_documents', 'Loan Terms.pdf'),
   ],
 });
-assert.equal(ambiguousCoreUploads.canGenerate, false);
-assert.equal(ambiguousCoreUploads.blockedReasonCode, "MISSING_REQUIRED_CORE_DOCUMENTS");
+assert.equal(supportingOnly.canGenerate, false);
+assert.equal(supportingOnly.coreMode, 'insufficient_core');
+assert.equal(supportingOnly.blockedReasonCode, 'MISSING_REQUIRED_CORE_DOCUMENTS');
+assert.match(supportingOnly.blockedMessage, /Rent Roll or a T12/i);
 
 assert.equal(
-  formatReportUploadGateErrorMessage("MISSING_REQUIRED_CORE_DOCUMENTS", "screening"),
-  "Upload a Rent Roll and T12 to generate."
+  formatReportUploadGateErrorMessage('MISSING_REQUIRED_CORE_DOCUMENTS', 'screening'),
+  'Upload a Rent Roll or a T12 to generate.',
 );
 assert.equal(
-  formatReportUploadGateErrorMessage("MISSING_REQUIRED_CORE_DOCUMENTS", "underwriting"),
-  "Upload a Rent Roll, T12, and at least one supporting document to generate."
+  formatReportUploadGateErrorMessage('MISSING_REQUIRED_CORE_DOCUMENTS', 'underwriting'),
+  'Upload a Rent Roll or a T12 to generate.',
 );
 assert.equal(
-  formatReportUploadGateErrorMessage("MISSING_REQUIRED_SUPPORTING_DOCUMENT", "underwriting"),
-  "Underwriting also requires at least one supporting document."
+  formatReportUploadGateErrorMessage('MISSING_REQUIRED_SUPPORTING_DOCUMENT', 'underwriting'),
+  '',
 );
 
-const consumeSql = await fs.readFile("supabase/migrations/20260210100140_consume_purchase_and_create_job.sql", "utf8");
-assert.match(consumeSql, /MISSING_REQUIRED_CORE_DOCUMENTS/);
-assert.match(consumeSql, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/);
-assert.match(consumeSql, /v_has_supporting_docs/);
-assert.match(consumeSql, /p_report_type = 'underwriting' and not v_has_supporting_docs/);
-assert.match(consumeSql, /v_payload_doc_type in \('supporting', 'supporting_documents', 'supporting_documents_ui'\)/);
-assert.match(consumeSql, /'queued'/);
-assert.equal(/'needs_documents'/.test(consumeSql), false);
+const currentAdmissionMigration = await fs.readFile(
+  'supabase/migrations/20260828233000_phase1_admission_core_modes_and_upload_policy.sql',
+  'utf8',
+);
+assert.match(currentAdmissionMigration, /not v_has_t12 and not v_has_rent_roll/i);
+assert.doesNotMatch(currentAdmissionMigration, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/i);
+assert.doesNotMatch(currentAdmissionMigration, /p_report_type\s*=\s*'underwriting'\s+and\s+not\s+v_has_supporting_docs/i);
+assert.match(currentAdmissionMigration, /file_size_limit\s*=\s*52428800/i);
 
-const queueSql = await fs.readFile("supabase/migrations/20260214_0930_queue_job_for_processing.sql", "utf8");
-assert.match(queueSql, /MISSING_REQUIRED_CORE_DOCUMENTS/);
-assert.match(queueSql, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/);
-assert.match(queueSql, /analysis_job_files/);
-assert.match(queueSql, /v_has_supporting_docs/);
-assert.match(queueSql, /v_report_type = 'underwriting' and not coalesce\(v_has_supporting_docs, false\)/);
-assert.match(queueSql, /v_prev_status not in \('queued', 'needs_documents'\)/);
-assert.match(queueSql, /status in \('queued', 'needs_documents'\)/);
-
-console.log("report upload gate smoke PASS");
+console.log('report upload gate smoke PASS');
