@@ -44,38 +44,69 @@ function resolveCoreMode({ hasRentRoll, hasT12 }) {
   return 'insufficient_core';
 }
 
-function buildCoreUploadMessage(coreMode) {
-  if (coreMode !== 'insufficient_core') return '';
-  return 'Upload a Rent Roll or a T12 to generate.';
+function buildBlockedState({ reportType, hasRequiredCoreDocs, hasSupportDocs }) {
+  if (!hasRequiredCoreDocs) {
+    return {
+      blockedReasonCode: 'MISSING_REQUIRED_CORE_DOCUMENTS',
+      blockedMessage: 'Upload both a Rent Roll and a T12 to generate.',
+    };
+  }
+
+  if (reportType === 'screening' && hasSupportDocs) {
+    return {
+      blockedReasonCode: 'SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED',
+      blockedMessage: 'Screening accepts only a Rent Roll and a T12. Remove supporting documents to continue.',
+    };
+  }
+
+  if (reportType === 'underwriting' && !hasSupportDocs) {
+    return {
+      blockedReasonCode: 'MISSING_REQUIRED_SUPPORTING_DOCUMENT',
+      blockedMessage: 'Upload at least one supporting due diligence document to generate Underwriting.',
+    };
+  }
+
+  return { blockedReasonCode: null, blockedMessage: '' };
 }
 
 export function resolveReportUploadGate({ reportType = 'screening', uploadedFiles = [] } = {}) {
+  const normalizedReportType = String(reportType || 'screening').trim().toLowerCase();
   const rows = Array.isArray(uploadedFiles) ? uploadedFiles : [];
   const normalizedRows = rows.map((row) => ({
     docType: normalizeUploadedDocType(row?.docType ?? row?.doc_type),
     coreDocType: resolveCoreUploadDocType(row),
   }));
+
   const hasRentRoll = normalizedRows.some((row) => row.coreDocType === 'rent_roll');
   const hasT12 = normalizedRows.some((row) => row.coreDocType === 't12');
   const hasSupportDocs = normalizedRows.some((row) => isSupportDocType(row.docType));
   const coreMode = resolveCoreMode({ hasRentRoll, hasT12 });
-  const hasCoreDocs = coreMode !== 'insufficient_core';
-  const blockedMessage = buildCoreUploadMessage(coreMode);
 
-  void reportType;
+  // Admission is strict even though downstream source truth may later resolve to
+  // t12_minimum_core or rent_roll_minimum_core after a valid job has been admitted.
+  const hasRequiredCoreDocs = hasRentRoll && hasT12;
+  const underwritingRequiresSupport = normalizedReportType === 'underwriting';
+  const screeningHasForbiddenSupport = normalizedReportType === 'screening' && hasSupportDocs;
+  const isMissingSupportDocs = underwritingRequiresSupport && !hasSupportDocs;
+  const { blockedReasonCode, blockedMessage } = buildBlockedState({
+    reportType: normalizedReportType,
+    hasRequiredCoreDocs,
+    hasSupportDocs,
+  });
 
   return {
     hasRentRoll,
     hasT12,
-    hasCoreDocs,
+    hasCoreDocs: hasRequiredCoreDocs,
     hasSupportDocs,
     coreMode,
-    underwritingRequiresSupport: false,
-    canGenerate: hasCoreDocs,
-    isMissingCoreDocs: !hasCoreDocs,
-    isMissingSupportDocs: false,
+    underwritingRequiresSupport,
+    screeningHasForbiddenSupport,
+    canGenerate: blockedReasonCode === null,
+    isMissingCoreDocs: !hasRequiredCoreDocs,
+    isMissingSupportDocs,
     blockedMessage,
-    blockedReasonCode: !hasCoreDocs ? 'MISSING_REQUIRED_CORE_DOCUMENTS' : null,
+    blockedReasonCode,
   };
 }
 
@@ -86,13 +117,19 @@ export function formatReportUploadGateErrorMessage(errorMessage) {
     raw.includes('BOTH RENT ROLL AND T12 ARE REQUIRED') ||
     raw.includes('BOTH A RENT ROLL AND A T12 ARE REQUIRED')
   ) {
-    return 'Upload a Rent Roll or a T12 to generate.';
+    return 'Upload both a Rent Roll and a T12 to generate.';
   }
   if (
     raw.includes('MISSING_REQUIRED_SUPPORTING_DOCUMENT') ||
     raw.includes('AT LEAST ONE SUPPORTING DOCUMENT IS REQUIRED FOR UNDERWRITING')
   ) {
-    return 'We could not start this report. Please try again.';
+    return 'Upload at least one supporting due diligence document to generate Underwriting.';
+  }
+  if (
+    raw.includes('SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED') ||
+    raw.includes('SUPPORTING DOCUMENTS ARE NOT ALLOWED FOR SCREENING')
+  ) {
+    return 'Screening accepts only a Rent Roll and a T12. Remove supporting documents to continue.';
   }
   if (raw.includes('INVALID_STAGED_FILES') || raw.includes('ADMISSION_STAGED_OBJECT_METADATA_MISMATCH')) {
     return 'Uploaded files could not be validated. Please review the files and try again.';
