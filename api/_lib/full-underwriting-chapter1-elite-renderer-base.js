@@ -257,7 +257,9 @@ function renderExecutiveInvestmentSummary(contract) {
       {
         label: "Current Decision State",
         value: decisionState,
-        detail: primary?.title || "Evidence-bound underwriting review",
+        detail: String(primary?.code || "") === "PRIMARY_SOURCE_RECONCILIATION_REQUIRED"
+          ? "Primary source variance remains unresolved; review the reconciliation evidence below."
+          : (primary?.title || "Evidence-bound underwriting review"),
       },
       {
         label: "Strategy Fit",
@@ -513,3 +515,4 @@ export function renderFullUnderwritingChapter1EliteHtml(contract = null) {
 }
 
 export default renderFullUnderwritingChapter1EliteHtml;
+

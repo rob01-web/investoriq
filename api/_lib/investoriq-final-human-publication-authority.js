@@ -88,7 +88,7 @@ function polishVisibleText(html = "", lane = null, sourceTruthPackage = null) {
 }
 
 const FINAL_HUMAN_PUBLICATION_STYLE = `<style id="investoriq-final-human-publication-authority">
-.iq-phase8 .cover-brand-name::after { content:none !important; display:none !important; }
+.iq-phase8 .cover-brand-name::after { content:'.' !important; color:#bfa367 !important; display:inline !important; }
 .iq-phase8 .header-strip::before { content:none !important; display:none !important; }
 .iq-phase8 .section-header::after { content:none !important; display:none !important; }
 .iq-phase8 .section-header { border-bottom:1px solid #ded9cd !important; }
@@ -128,3 +128,4 @@ export function finalHumanPublicationAuthorityMetadata() {
     customerFacingPresentationOnly: true,
   });
 }
+
