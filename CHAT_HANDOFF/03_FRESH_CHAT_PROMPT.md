@@ -16,6 +16,10 @@ Certified handoff/deployment checkpoint:
 
 `c07c1da8cef64fab95f825746bddecb03c1b14e8`
 
+Current handoff documentation commit:
+
+`d7b6965214729dc3434cc095861d4d1f168659bf`
+
 Production deployment:
 
 `dpl_DYQ7rXuyb93SU17zp4X5899vuvzy` (`READY`)
