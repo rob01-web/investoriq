@@ -1,4 +1,4 @@
-# INVESTORIQ FRESH CHAT PROMPT - 2026-09-06
+# INVESTORIQ FRESH CHAT PROMPT - 2026-09-08
 
 We are continuing InvestorIQ from the isolated branch:
 
@@ -11,6 +11,14 @@ Provider-certified Visual ELITE Step 6 base:
 Recovery checkpoint:
 
 `c595fcaca1e8c23482c6fa527a798f5ee24881e6`
+
+Certified handoff/deployment checkpoint:
+
+`c07c1da8cef64fab95f825746bddecb03c1b14e8`
+
+Production deployment:
+
+`dpl_DYQ7rXuyb93SU17zp4X5899vuvzy` (`READY`)
 
 ## Read first
 
@@ -33,11 +41,11 @@ If needed, retrieve that exact uploaded file from File Library rather than askin
 
 **Visual ELITE publication engine / provider rendering:** provider-certified in DocRaptor TEST mode.
 
-**Underwriting editorial + analytical customer acceptance:** CLOSED on isolated branch commit `94dc287ca56f4b7239658407c119bd2123140050` after fresh rendered-artifact review.
+**Underwriting editorial + analytical customer acceptance:** CLOSED after fresh rendered-artifact review and complete certification run `34267290022`.
 
-**Production:** HOLD.
+**Production:** DEPLOYED and `READY` at `https://investoriq.tech`.
 
-The final certification evidence includes executable gates plus page-by-page visual review. Do not promote production; the production hold remains active.
+The final certification evidence includes executable gates plus page-by-page visual review. The certified release candidate is live. Do not restart the audit or certification chain.
 
 ## Non-negotiable owner command
 
@@ -59,9 +67,11 @@ Forbidden:
 
 Stonebridge may remain one regression fixture. Fresh artifacts generated through the real pipelines must prove the repair is generic.
 
-## First task
+## First task for any future session
 
-Before changing code, build a live repair matrix for:
+First read all five canonical files in `CHAT_HANDOFF/`, then verify the live baseline and identify the smallest owner-approved next change. Do not begin by rebuilding the old audit matrix unless a new defect requires it.
+
+If a new change is requested, build a bounded repair matrix for:
 
 `A01-A10, V01-V04, E01-E02, D01`
 
@@ -124,7 +134,7 @@ The next phase is about Gate 2 plus any source/calculation repairs it uncovers. 
 
 ## Holds
 
-Do not merge `main`, deploy, migrate, activate scheduler, mutate Storage, change Stripe/pricing, or perform any production mutation without separate explicit owner authorization.
+Do not merge `main`, migrate, activate scheduler, mutate Storage, change Stripe/pricing, or perform any further production mutation without separate explicit owner authorization. The production deployment above is already complete.
 
 ## Desired work style
 

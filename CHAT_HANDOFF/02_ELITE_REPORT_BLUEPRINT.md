@@ -1,8 +1,12 @@
 # InvestorIQ ELITE Report Blueprint
 
-**Updated:** 2026-09-06  
+**Updated:** 2026-09-08  
 **Status:** Governing blueprint for Underwriting Editorial + Analytical ELITE Closeout  
-**Scope:** Root-cause repair of reusable Screening/Underwriting reporting behavior
+**Scope:** Certified reusable Screening/Underwriting reporting behavior and post-deployment change control
+
+## 0. Certification and deployment baseline
+
+The current baseline is the certified isolated branch commit `c07c1da8cef64fab95f825746bddecb03c1b14e8`, deployed to Vercel production as `dpl_DYQ7rXuyb93SU17zp4X5899vuvzy`. Future changes must preserve the completed executable gates, fresh-artifact evidence, and page-by-page visual acceptance recorded in the current handoff.
 
 ## 1. Product identity
 
@@ -292,3 +296,4 @@ Both gates must pass before calling the product customer-ready.
 This blueprint authorizes no production mutation.
 
 No `main` merge, deployment, migration, scheduler activation, Storage mutation, Stripe/pricing change, or other production change without separate owner authorization.
+

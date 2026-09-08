@@ -1,8 +1,12 @@
 # InvestorIQ Master Plan
 
-**Updated:** 2026-09-06  
+**Updated:** 2026-09-08  
 **Phase:** Underwriting Editorial + Analytical ELITE Closeout  
 **Working branch:** `internal-underwriting-editorial-analytical-elite-20260906-r1`
+
+## Closeout status
+
+The September 6 Underwriting editorial and analytical repair sequence is closed on the isolated branch. Fresh certification run `34267290022` passed every executable gate and the reviewed release candidate was deployed to Vercel production as deployment `dpl_DYQ7rXuyb93SU17zp4X5899vuvzy`. Do not restart the audit. Any future work begins as a new bounded change against the live certified baseline.
 
 ## Mission
 
@@ -170,3 +174,4 @@ Never:
 - treat DocRaptor TEST watermarks as a product defect;
 - loosen regression tests merely to accommodate broken behavior;
 - call the product accepted without the final editorial gate.
+

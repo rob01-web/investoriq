@@ -24,7 +24,11 @@ Fresh certification commit `94dc287ca56f4b7239658407c119bd2123140050` passed Git
 
 Fresh artifact: `underwriting-final-certification-94dc287ca56f4b7239658407c119bd2123140050` (artifact `10072396447`, digest `sha256:604f4c0279ca4e39b20f44a3ea71b3db36fbee28ce25b3233a45611ba66a5c45`). The rendered Screening (5 pages) and Underwriting (23 pages) PDFs were inspected page by page and at normal reading scale. The final review confirmed the gold brand dot, clear source-variance wording, `Underwriting Report` title, readable pagination, consistent KPI typography, source-register wrapping, Quality Manifest layout, and zero customer-facing em/en dashes.
 
-The only validator repair was legitimate: the final-publication smoke test had a stale expectation that the approved gold brand dot remained suppressed. It now asserts the reusable gold-dot invariant. Production remains held.
+The only validator repair was legitimate: the final-publication smoke test had a stale expectation that the approved gold brand dot remained suppressed. It now asserts the reusable gold-dot invariant.
+
+### CLOSED / production deployment
+
+The certified release candidate was deployed to Vercel production from a clean worktree at `c07c1da8cef64fab95f825746bddecb03c1b14e8` using prebuilt output. Deployment `dpl_DYQ7rXuyb93SU17zp4X5899vuvzy` is `READY` and aliases `investoriq.tech`, `www.investoriq.tech`, `investoriq.vercel.app`, and the project alias. The live site returned HTTP 200, and no runtime errors were found in the first-hour check.
 
 ### CLOSED / certified foundation
 
@@ -33,13 +37,13 @@ The only validator repair was legitimate: the final-publication smoke test had a
 - Prince-specific grid, typography-spacing, pagination, and NOI page-balance defects discovered during Step 6 were repaired and provider-proven.
 - The final Step 6 proof produced a 5-page Screening report and 21-page Underwriting report with content-driven pagination. Those page counts are evidence from that fixture, not product limits.
 
-### OPEN / launch hold
+### OPEN / post-deployment closeout
 
-**Underwriting editorial + analytical customer acceptance is complete for this isolated certification branch. Production promotion remains HOLD.**
+**Underwriting editorial + analytical customer acceptance and the authorized Vercel production deployment are complete.**
 
 The deeper 21-page September 6 audit found material issues that were outside the earlier provider-render certification scope: factual-presentation inconsistencies, calculation-basis ambiguity, source/context wording, duplicated system-facing prose, small essential text, redundant line hierarchy, source-register and Quality Manifest crowding, and weak decision framing.
 
-Screening has not yet been re-certified against every shared editorial/system change that will come out of this repair phase.
+Future work should be limited to post-deployment observation, owner-approved product improvements, and any newly evidenced defects. Do not restart the completed audit or certification chain.
 
 ## 3. Non-negotiable root-cause doctrine
 
@@ -142,7 +146,7 @@ Customer-facing acceptance requires all of the following separately:
 
 A provider-render PASS alone is not enough.
 
-## 9. Production holds
+## 9. Remaining production holds
 
-No merge to `main`, deployment, migration, scheduler activation, Storage mutation, Stripe/pricing change, or other production mutation is authorized.
+No merge to `main`, migration, scheduler activation, Storage mutation, Stripe/pricing change, or other production mutation is authorized without a new explicit owner decision. The single authorized deployment recorded above is complete.
 
