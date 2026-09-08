@@ -18,16 +18,17 @@ const systemFailureJob = {
 };
 const systemFailureCopy = buildCustomerFailureMessage(systemFailureJob, { creditRestored: true });
 assert.equal(systemFailureCopy.title, 'Generation failed - credit restored');
-assert.match(systemFailureCopy.body, /Generation failed before publication/i);
-assert.match(systemFailureCopy.body, /returned to your account/i);
-assert.match(systemFailureCopy.nextStep, /try generating again/i);
+assert.match(systemFailureCopy.body, /encountered a system error while processing your report/i);
+assert.match(systemFailureCopy.body, /uploaded documents do not need to be changed/i);
+assert.match(systemFailureCopy.body, /report credit has been restored/i);
+assert.match(systemFailureCopy.nextStep, /retry the same report/i);
 assert.equal(systemFailureCopy.referenceCode, 'REPORT_GENERATION_FAILED');
 assert.match(systemFailureCopy.creditLine, /returned to your account/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(systemFailureCopy)), false);
 
 const systemFailureUnrestored = buildCustomerFailureMessage({ ...systemFailureJob, report_type: 'screening' });
 assert.equal(systemFailureUnrestored.title, 'Generation failed');
-assert.match(systemFailureUnrestored.body, /Generation failed before publication/i);
+assert.match(systemFailureUnrestored.body, /encountered a system error while processing your report/i);
 assert.match(systemFailureUnrestored.body, /will be restored automatically/i);
 assert.equal(systemFailureUnrestored.creditLine, null);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(systemFailureUnrestored)), false);
@@ -62,8 +63,7 @@ const t12MissingCopy = buildCustomerFailureMessage({
 });
 assert.equal(t12MissingCopy.title, 'T12 / operating statement could not be verified');
 assert.match(t12MissingCopy.body, /uploaded T12 \/ operating statement could not be verified as usable for this report/i);
-assert.match(t12MissingCopy.nextStep, /readable T12 \/ operating statement or a usable Rent Roll/i);
-assert.match(t12MissingCopy.nextStep, /Provide both when available/i);
+assert.match(t12MissingCopy.nextStep, /readable T12 \/ operating statement and a usable Rent Roll/i);
 assert.match(t12MissingCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(t12MissingCopy)), false);
 
@@ -73,21 +73,29 @@ const rentRollMissingCopy = buildCustomerFailureMessage({
 });
 assert.equal(rentRollMissingCopy.title, 'Rent roll could not be verified');
 assert.match(rentRollMissingCopy.body, /uploaded rent roll could not be verified as usable for this report/i);
-assert.match(rentRollMissingCopy.nextStep, /readable Rent Roll or a usable T12 \/ operating statement/i);
-assert.match(rentRollMissingCopy.nextStep, /Provide both when available/i);
+assert.match(rentRollMissingCopy.nextStep, /readable Rent Roll and a usable T12 \/ operating statement/i);
 assert.match(rentRollMissingCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(rentRollMissingCopy)), false);
+
+const missingSupportingDocumentCopy = buildCustomerFailureMessage({
+  report_type: 'underwriting',
+  error_code: 'MISSING_REQUIRED_SUPPORTING_DOCUMENT',
+  failure_reason: 'Underwriting requires at least one supporting document.',
+});
+assert.equal(missingSupportingDocumentCopy.title, 'Supporting document required for Underwriting');
+assert.match(missingSupportingDocumentCopy.body, /both core documents plus at least one readable supporting due diligence document/i);
+assert.match(missingSupportingDocumentCopy.nextStep, /add at least one readable supporting due diligence document to the required T12 and Rent Roll/i);
+assert.match(missingSupportingDocumentCopy.nextStep, /reports@investoriq.tech/i);
+assert.equal(missingSupportingDocumentCopy.referenceCode, 'MISSING_REQUIRED_SUPPORTING_DOCUMENT');
 
 const legacySupportingDocumentCopy = buildCustomerFailureMessage({
   report_type: 'underwriting',
   error_code: 'MISSING_REQUIRED_DOCUMENTS',
   failure_reason: 'Full Underwriting requires at least one usable supporting document in addition to the T12 and rent roll.',
 });
-assert.equal(legacySupportingDocumentCopy.title, 'Source package could not be verified');
-assert.match(legacySupportingDocumentCopy.body, /could not verify a usable core source for publication/i);
-assert.match(legacySupportingDocumentCopy.nextStep, /readable Rent Roll or T12/i);
-assert.match(legacySupportingDocumentCopy.nextStep, /supporting diligence when available/i);
-assert.equal(/requires at least one usable supporting document/i.test(JSON.stringify(legacySupportingDocumentCopy)), false);
+assert.equal(legacySupportingDocumentCopy.title, 'Supporting document required for Underwriting');
+assert.match(legacySupportingDocumentCopy.body, /at least one readable supporting due diligence document/i);
+assert.match(legacySupportingDocumentCopy.nextStep, /required T12 and Rent Roll/i);
 assert.match(legacySupportingDocumentCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(legacySupportingDocumentCopy)), false);
 
@@ -96,9 +104,8 @@ const sourcePackageMissingCopy = buildCustomerFailureMessage({
   failure_reason: 'The uploaded source package could not be verified as complete and usable for this report.',
 });
 assert.equal(sourcePackageMissingCopy.title, 'Source package could not be verified');
-assert.match(sourcePackageMissingCopy.body, /could not verify a usable core source for publication/i);
-assert.match(sourcePackageMissingCopy.nextStep, /readable Rent Roll or T12/i);
-assert.match(sourcePackageMissingCopy.nextStep, /Provide both when available/i);
+assert.match(sourcePackageMissingCopy.body, /required T12 and Rent Roll source package/i);
+assert.match(sourcePackageMissingCopy.nextStep, /both a readable Rent Roll and T12/i);
 assert.match(sourcePackageMissingCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(sourcePackageMissingCopy)), false);
 
@@ -110,8 +117,8 @@ const coreValidLegacyMissingCopy = buildCustomerFailureMessage(
   { coreValidRequiredCoverage: true, creditRestored: true }
 );
 assert.equal(coreValidLegacyMissingCopy.title, 'Generation failed - credit restored');
-assert.match(coreValidLegacyMissingCopy.body, /Generation failed before publication/i);
-assert.match(coreValidLegacyMissingCopy.body, /returned to your account/i);
+assert.match(coreValidLegacyMissingCopy.body, /encountered a system error while processing your report/i);
+assert.match(coreValidLegacyMissingCopy.body, /report credit has been restored/i);
 assert.equal(/source package|rent roll|additional required documents|clearer or more complete documents/i.test(JSON.stringify(coreValidLegacyMissingCopy)), false);
 
 const reviewCopy = buildCustomerFailureMessage({
@@ -119,7 +126,7 @@ const reviewCopy = buildCustomerFailureMessage({
   failure_reason: 'Admin review required.',
 });
 assert.equal(reviewCopy.title, 'Generation failed');
-assert.match(reviewCopy.body, /Generation failed before publication/i);
+assert.match(reviewCopy.body, /encountered a system error while processing your report/i);
 assert.equal(reviewCopy.creditLine, null);
 assert.equal(/under review|admin review|needs documents/i.test(JSON.stringify(reviewCopy)), false);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(reviewCopy)), false);
