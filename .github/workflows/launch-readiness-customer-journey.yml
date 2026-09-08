@@ -40,7 +40,7 @@ jobs:
         run: npm ci
 
       - name: Run canonical launch QA
-        run: npm run test:qa
+        run: npm run qa
 
       - name: Build production bundle
         run: npm run build
