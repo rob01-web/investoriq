@@ -96,6 +96,9 @@ const html = renderCompleteAcquisitionMemoV2Html({
 
 assert.match(html, /2BR In-Place[\s\S]{0,500}\$1,881\.25/i, "unit-rent visual must use exact canonical category average");
 assert.doesNotMatch(html, /2BR In-Place[\s\S]{0,500}>\$1,881<\/div>/i, "rounded category rent cannot replace exact canonical average");
+const unitTable = html.match(/<section[^>]*id="unit-mix-title"[\s\S]*?<\/section>/)?.[0] || html.slice(html.indexOf('Unit Mix and Rent Positioning'));
+assert.match(unitTable, /2BR<\/td>[\s\S]{0,200}\$1,881\.25/, "unit table must retain the same exact canonical average as chart and annual totals");
+assert.match(unitTable, /\$543\.75/, "monthly gap must be computed from exact category rents");
 assert.match(html, /Source Period &amp; Currency/);
 assert.match(html, /2025-07-01 to 2026-06-30/);
 assert.match(html, /CAD/);

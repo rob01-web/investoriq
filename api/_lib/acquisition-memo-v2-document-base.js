@@ -840,6 +840,7 @@ function renderEvidenceBarChart({ chartKey, title, series = [], sourcePaths = []
       label: String(item?.label || "").trim(),
       value: Number(item?.value),
       sourcePath: String(item?.sourcePath || "").trim(),
+      colorIndex: item?.colorIndex,
     }))
     .filter((item) => item.label && Number.isFinite(item.value) && item.value >= 0 && item.sourcePath);
   if (!chartKey || !title || acceptedSeries.length === 0) return "";
@@ -850,7 +851,7 @@ function renderEvidenceBarChart({ chartKey, title, series = [], sourcePaths = []
     const geometryPercent = Math.max(0, Math.min(100, (Math.abs(item.value) / maxValue) * 100));
     return `<div class="evidence-chart-row" data-iq-value="${item.value}" data-iq-source-path="${escapeHtml(item.sourcePath)}">
       <div class="evidence-chart-label">${escapeHtml(item.label)}</div>
-      <div class="evidence-chart-track"><div class="evidence-chart-bar evidence-chart-bar-${(index % 3) + 1}" style="width:${geometryPercent.toFixed(4)}%;"></div></div>
+      <div class="evidence-chart-track"><div class="evidence-chart-bar evidence-chart-bar-${item.colorIndex || (index % 3) + 1}" style="width:${geometryPercent.toFixed(4)}%;"></div></div>
       <div class="evidence-chart-value">${escapeHtml(valueFormatter(item.value))}</div>
     </div>`;
   }).join("");
@@ -894,8 +895,8 @@ function renderInstitutionalOperatingVisuals({ coreMetrics = null, sourcePackage
     .map(normalizeStructuredUnitMixRow)
     .filter(Boolean);
   const unitSeries = unitMixRows.flatMap((row, index) => [
-    Number.isFinite(row.inPlace) ? { label: `${row.label} In-Place`, value: row.inPlace, sourcePath: `core.rent_roll.accepted_facts.unit_mix.${index}.current_rent` } : null,
-    Number.isFinite(row.market) ? { label: `${row.label} Market`, value: row.market, sourcePath: `core.rent_roll.accepted_facts.unit_mix.${index}.market_rent` } : null,
+    Number.isFinite(row.inPlace) ? { label: `${row.label} In-Place`, value: row.inPlace, colorIndex: 1, sourcePath: `core.rent_roll.accepted_facts.unit_mix.${index}.current_rent` } : null,
+    Number.isFinite(row.market) ? { label: `${row.label} Market`, value: row.market, colorIndex: 2, sourcePath: `core.rent_roll.accepted_facts.unit_mix.${index}.market_rent` } : null,
   ].filter(Boolean));
   const unitChart = renderEvidenceBarChart({
     chartKey: "unit-rent-position",
@@ -1851,7 +1852,7 @@ function renderOperatingSnapshotSection({ sourcePackage = null, coreMetrics = nu
 function renderUnitMixSection({ sourcePackage = null, coreMetrics = null, bossContract = null, customerSurfaceModel = null } = {}) {
   const rentRollSource = customerSurfaceModel?.coreSources?.coreRentRoll || bossContract?.sourceTruth?.coreRentRoll || sourcePackage?.coreRentRoll || null;
   const rentRollSnippet = rentRollSource?.sourceEvidence?.textSnippet || "";
-  const rentRollFacts = rentRollSource?.extractedFacts || {};
+  const rentRollFacts = customerSurfaceModel?.sourceBackedFacts?.unitMix || rentRollSource?.extractedFacts || {};
   const structuredUnitMixRows = [
     ...(Array.isArray(rentRollFacts?.unit_mix) ? rentRollFacts.unit_mix : []),
   ].map(normalizeStructuredUnitMixRow).filter(Boolean);

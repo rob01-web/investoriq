@@ -26,7 +26,7 @@ function evidenceLabel(evidenceClass) {
   if (evidenceClass === "source_backed") return "Accepted evidence";
   if (evidenceClass === "third_party_context") return "Third-party context";
   if (evidenceClass === "scenario") return "Scenario";
-  if (evidenceClass === "deterministic_calculated") return "Deterministic calculated";
+  if (evidenceClass === "deterministic_calculated") return "Calculated";
   return "Unavailable";
 }
 

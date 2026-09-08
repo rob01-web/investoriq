@@ -525,15 +525,15 @@ export function buildFullUnderwritingScenarioEngineV1({
     deferredScenarioFamilies: [
       {
         key: "rent_stress",
-        reason: "Deferred from ELITE-04 v1 because a governed rent-to-EGI/NOI conversion basis is not universally established.",
+        reason: "Not modeled without a supported basis for converting rent changes into effective gross income and NOI.",
       },
       {
         key: "interest_rate_stress",
-        reason: "Deferred from ELITE-04 v1 to avoid expanding this packet into debt-term scenario authority.",
+        reason: "Not included in this operating sensitivity matrix. Proposed-financing rate sensitivity is addressed in Debt Intelligence when accepted financing terms support it.",
       },
       {
         key: "purchase_price_stress",
-        reason: "Deferred from ELITE-04 v1; purchase-price driver ranking belongs in later governed driver analysis.",
+        reason: "No standalone purchase-price stress is included in this matrix. The cap-rate cases show changes in implied value against the stated purchase price when available.",
       },
       {
         key: "irr_moic",
