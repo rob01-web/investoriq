@@ -64,7 +64,7 @@ assert.match(underwriting, /What explains the source difference\?/);
 
 for (const output of [screening, underwriting]) {
   assert.match(output, /id="investoriq-final-human-publication-authority"/);
-  assert.match(output, /\.cover-brand-name::after \{ content:none !important; display:none !important; \}/);
+  assert.match(output, /\.cover-brand-name::after \{ content:'\.' !important; color:#bfa367 !important; display:inline !important; \}/);
   assert.match(output, /\.header-strip::before \{ content:none !important; display:none !important; \}/);
   assert.match(output, /\.section-header::after \{ content:none !important; display:none !important; \}/);
 }
