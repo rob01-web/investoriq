@@ -1,7 +1,7 @@
 # InvestorIQ CHAT_HANDOFF
 
-**Current authority date:** 2026-09-06  
-**Current phase:** Underwriting Editorial + Analytical ELITE Closeout
+**Current authority date:** 2026-09-08  
+**Current phase:** Post-deployment Launch Readiness / Customer Journey Closeout
 
 ## Start here
 
@@ -30,14 +30,23 @@ Recovery checkpoint:
 
 `c595fcaca1e8c23482c6fa527a798f5ee24881e6`
 
+Certified deployed product checkpoint:
+
+`c07c1da8cef64fab95f825746bddecb03c1b14e8`
+
+Vercel production deployment:
+
+`dpl_DYQ7rXuyb93SU17zp4X5899vuvzy` (`READY`)
+
 ## Status
 
 - **Visual ELITE publication engine / DocRaptor rendering:** CERTIFIED in TEST mode.
-- **Underwriting editorial + analytical customer acceptance:** HOLD.
-- **Screening parity under the new shared repair work:** must be rechecked as shared changes are made.
-- **Production:** HOLD.
+- **Underwriting editorial + analytical customer acceptance:** CLOSED after final executable certification and page-by-page rendered-artifact review.
+- **Screening and Underwriting shared publication continuity:** CERTIFIED at the deployed baseline; recheck only when a new shared change affects it.
+- **Production:** DEPLOYED and READY at `https://investoriq.tech`.
+- **Next work:** new bounded, owner-approved launch-readiness/customer-journey changes only. Do not restart the September 6 audit or completed certification chain.
 
-## The central rule for the next phase
+## The central rule for future report changes
 
 **Do not patch the Stonebridge test report. Fix the reusable system.**
 
@@ -55,7 +64,7 @@ Audited provider PDF SHA256:
 
 `ebf59fbb538a2114fe543d839a3df93e283c33e2694f1d13d0bcc921453f620b`
 
-The detailed audit remains evidence. Verify source-dependent and calculation-dependent findings against canonical repository/source authority before changing behavior.
+The detailed audit remains preserved evidence. Do not reopen it unless a newly evidenced defect requires relevant historical context.
 
 ## Permanent report doctrine
 
@@ -67,4 +76,5 @@ The detailed audit remains evidence. Verify source-dependent and calculation-dep
 - One boundary, one separator.
 - Shared publication changes must be evaluated in Screening and Underwriting.
 - Provider/render certification and editorial/investment-review acceptance are separate gates.
+- Preserve zero customer-facing em/en dashes.
 - No production action without separate explicit owner authorization.
