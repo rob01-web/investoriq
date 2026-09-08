@@ -97,10 +97,12 @@ assert.equal(
   formatReportUploadGateErrorMessage('MISSING_REQUIRED_CORE_DOCUMENTS', 'underwriting'),
   'Upload a Rent Roll or a T12 to generate.',
 );
-assert.equal(
-  formatReportUploadGateErrorMessage('MISSING_REQUIRED_SUPPORTING_DOCUMENT', 'underwriting'),
-  '',
+const obsoleteSupportCodeCopy = formatReportUploadGateErrorMessage(
+  'MISSING_REQUIRED_SUPPORTING_DOCUMENT',
+  'underwriting',
 );
+assert.equal(obsoleteSupportCodeCopy, 'We could not start this report. Please try again.');
+assert.doesNotMatch(obsoleteSupportCodeCopy, /supporting document|required for underwriting/i);
 
 const currentAdmissionMigration = await fs.readFile(
   'supabase/migrations/20260828233000_phase1_admission_core_modes_and_upload_policy.sql',
