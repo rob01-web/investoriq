@@ -62,7 +62,8 @@ const t12MissingCopy = buildCustomerFailureMessage({
 });
 assert.equal(t12MissingCopy.title, 'T12 / operating statement could not be verified');
 assert.match(t12MissingCopy.body, /uploaded T12 \/ operating statement could not be verified as usable for this report/i);
-assert.match(t12MissingCopy.nextStep, /start a new report and upload a readable T12 \/ operating statement/i);
+assert.match(t12MissingCopy.nextStep, /readable T12 \/ operating statement or a usable Rent Roll/i);
+assert.match(t12MissingCopy.nextStep, /Provide both when available/i);
 assert.match(t12MissingCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(t12MissingCopy)), false);
 
@@ -72,28 +73,32 @@ const rentRollMissingCopy = buildCustomerFailureMessage({
 });
 assert.equal(rentRollMissingCopy.title, 'Rent roll could not be verified');
 assert.match(rentRollMissingCopy.body, /uploaded rent roll could not be verified as usable for this report/i);
-assert.match(rentRollMissingCopy.nextStep, /start a new report and upload a readable rent roll/i);
+assert.match(rentRollMissingCopy.nextStep, /readable Rent Roll or a usable T12 \/ operating statement/i);
+assert.match(rentRollMissingCopy.nextStep, /Provide both when available/i);
 assert.match(rentRollMissingCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(rentRollMissingCopy)), false);
 
-const supportingDocumentMissingCopy = buildCustomerFailureMessage({
+const legacySupportingDocumentCopy = buildCustomerFailureMessage({
   report_type: 'underwriting',
   error_code: 'MISSING_REQUIRED_DOCUMENTS',
   failure_reason: 'Full Underwriting requires at least one usable supporting document in addition to the T12 and rent roll.',
 });
-assert.equal(supportingDocumentMissingCopy.title, 'Full Underwriting supporting document could not be verified');
-assert.match(supportingDocumentMissingCopy.body, /requires at least one usable supporting document/i);
-assert.match(supportingDocumentMissingCopy.nextStep, /usable supporting document/i);
-assert.match(supportingDocumentMissingCopy.nextStep, /reports@investoriq.tech/i);
-assert.equal(/credit status|checking credit/i.test(JSON.stringify(supportingDocumentMissingCopy)), false);
+assert.equal(legacySupportingDocumentCopy.title, 'Source package could not be verified');
+assert.match(legacySupportingDocumentCopy.body, /could not verify a usable core source for publication/i);
+assert.match(legacySupportingDocumentCopy.nextStep, /readable Rent Roll or T12/i);
+assert.match(legacySupportingDocumentCopy.nextStep, /supporting diligence when available/i);
+assert.equal(/requires at least one usable supporting document/i.test(JSON.stringify(legacySupportingDocumentCopy)), false);
+assert.match(legacySupportingDocumentCopy.nextStep, /reports@investoriq.tech/i);
+assert.equal(/credit status|checking credit/i.test(JSON.stringify(legacySupportingDocumentCopy)), false);
 
 const sourcePackageMissingCopy = buildCustomerFailureMessage({
   error_code: 'MISSING_REQUIRED_SOURCE_DATA',
   failure_reason: 'The uploaded source package could not be verified as complete and usable for this report.',
 });
 assert.equal(sourcePackageMissingCopy.title, 'Source package could not be verified');
-assert.match(sourcePackageMissingCopy.body, /source package could not be verified as complete and usable/i);
-assert.match(sourcePackageMissingCopy.nextStep, /clearer or more complete documents/i);
+assert.match(sourcePackageMissingCopy.body, /could not verify a usable core source for publication/i);
+assert.match(sourcePackageMissingCopy.nextStep, /readable Rent Roll or T12/i);
+assert.match(sourcePackageMissingCopy.nextStep, /Provide both when available/i);
 assert.match(sourcePackageMissingCopy.nextStep, /reports@investoriq.tech/i);
 assert.equal(/credit status|checking credit/i.test(JSON.stringify(sourcePackageMissingCopy)), false);
 
