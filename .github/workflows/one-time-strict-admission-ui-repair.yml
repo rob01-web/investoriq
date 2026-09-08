@@ -34,7 +34,6 @@ jobs:
                   raise SystemExit(f'{path}: expected exactly one occurrence of {old!r}; found {count}')
               p.write_text(text.replace(old, new), encoding='utf-8')
 
-          # Safe customer RPC error boundary.
           replace_once(
               'src/lib/customerBoundarySupabase.js',
               "    raw.includes('AT LEAST ONE SUPPORTING DOCUMENT IS REQUIRED FOR UNDERWRITING')\n",
@@ -59,7 +58,6 @@ jobs:
               "  if (raw.includes('PURCHASE_NOT_AVAILABLE')) {\n",
           )
 
-          # Pricing doctrine and premium sales copy.
           replace_once(
               'src/pages/Pricing.jsx',
               "      'Start with a Rent Roll or T12',",
@@ -85,7 +83,6 @@ jobs:
               "                      { label: 'At least one supporting document required',               screening: false, underwriting: true  },",
           )
 
-          # Dashboard strict intake, upload UX, and product-switch safety.
           replace_once(
               'src/pages/Dashboard.jsx',
               "                    onClick={() => {\n"
@@ -156,8 +153,8 @@ jobs:
           text = dashboard.read_text(encoding='utf-8')
           old_fallback = "reportUploadGate.blockedMessage || 'Upload a Rent Roll or a T12 to generate.'"
           count = text.count(old_fallback)
-          if count != 2:
-              raise SystemExit(f'Dashboard fallback expected twice; found {count}')
+          if count != 3:
+              raise SystemExit(f'Dashboard fallback expected three times; found {count}')
           dashboard.write_text(text.replace(old_fallback, "reportUploadGate.blockedMessage || 'Upload both a Rent Roll and a T12 to generate.'"), encoding='utf-8')
           PY
 
