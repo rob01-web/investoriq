@@ -363,6 +363,13 @@ export const INVESTORIQ_VISUAL_ELITE_CSS = `
 .iq-phase8b .phase8b-screening-boundary,
 .iq-phase8b .phase8a-exec-boundary { margin:13px 0 0 !important; padding-top:8px !important; border-top:1px solid var(--iq-ve-rule) !important; font-family:var(--font-mono) !important; font-size:5.4pt !important; line-height:1.38 !important; color:var(--iq-ve-muted) !important; }
 
+/* Executive snapshot values stay in the shared body face, matching the decision band and opening KPIs. */
+.iq-phase8b .iq-ic-metric-value { font-family:var(--font-body) !important; font-weight:400 !important; }
+
+/* The section header supplies the outer boundary; avoid a second frame around the metric grids. */
+.iq-phase8b .iq-ic-metric-grid,
+.iq-phase8b .iq-ic-secondary-grid { border-top:0 !important; border-bottom:0 !important; }
+
 @media print {
   .iq-phase8b .cover-wrap { page:auto !important; }
   .iq-phase8b .section-header { break-after:avoid-page !important; page-break-after:avoid !important; }
