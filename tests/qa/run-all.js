@@ -35,6 +35,7 @@ const launchCriticalSuite = [
   ['webhook entitlement runtime', 'phase4-webhook-runtime-smoke.js'],
   ['checkout status runtime', 'phase4-checkout-status-runtime-smoke.js'],
   ['commerce authority', 'phase4-commerce-stripe-entitlement-contract-smoke.js'],
+  ['customer journey launch readiness', 'launch-readiness-customer-journey-smoke.js'],
   ['customer data hygiene', 'phase5-security-data-hygiene-contract-smoke.js'],
   ['artifact compensation runtime', 'phase2-artifact-compensation-regression.js'],
   ['atomic publication delivery', 'phase2-atomic-publication-delivery-contract-smoke.js'],
