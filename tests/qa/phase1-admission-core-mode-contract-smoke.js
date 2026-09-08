@@ -14,55 +14,75 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../..');
 
 const row = (docType, name) => ({ docType, original_name: name });
-const coreCases = [
-  {
-    reportType: 'screening',
-    expectedMode: 'dual_source_core',
-    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx'), row('t12', 'T12.xlsx')],
-  },
-  {
-    reportType: 'screening',
-    expectedMode: 't12_minimum_core',
-    uploadedFiles: [row('t12', 'T12.xlsx')],
-  },
-  {
-    reportType: 'screening',
-    expectedMode: 'rent_roll_minimum_core',
-    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx')],
-  },
-  {
-    reportType: 'underwriting',
-    expectedMode: 'dual_source_core',
-    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx'), row('t12', 'T12.xlsx')],
-  },
-  {
-    reportType: 'underwriting',
-    expectedMode: 't12_minimum_core',
-    uploadedFiles: [row('t12', 'T12.xlsx')],
-  },
-  {
-    reportType: 'underwriting',
-    expectedMode: 'rent_roll_minimum_core',
-    uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx')],
-  },
-];
 
-for (const testCase of coreCases) {
-  const gate = resolveReportUploadGate(testCase);
-  assert.equal(gate.canGenerate, true, `${testCase.reportType} ${testCase.expectedMode} should admit`);
-  assert.equal(gate.coreMode, testCase.expectedMode);
-  assert.equal(gate.isMissingSupportDocs, false);
-  assert.equal(gate.underwritingRequiresSupport, false);
+// Customer admission is strict. The minimum-core names remain downstream
+// source-truth survivor modes only and do not authorize customer intake.
+const screeningDual = resolveReportUploadGate({
+  reportType: 'screening',
+  uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx'), row('t12', 'T12.xlsx')],
+});
+assert.equal(screeningDual.canGenerate, true);
+assert.equal(screeningDual.coreMode, 'dual_source_core');
+assert.equal(screeningDual.hasCoreDocs, true);
+assert.equal(screeningDual.hasSupportDocs, false);
+assert.equal(screeningDual.underwritingRequiresSupport, false);
+
+for (const [docType, expectedMode] of [
+  ['t12', 't12_minimum_core'],
+  ['rent_roll', 'rent_roll_minimum_core'],
+]) {
+  const screeningSingleCore = resolveReportUploadGate({
+    reportType: 'screening',
+    uploadedFiles: [row(docType, `${docType}.xlsx`)],
+  });
+  assert.equal(screeningSingleCore.coreMode, expectedMode);
+  assert.equal(screeningSingleCore.canGenerate, false);
+  assert.equal(screeningSingleCore.blockedReasonCode, 'MISSING_REQUIRED_CORE_DOCUMENTS');
 }
 
-const underwritingWithOptionalSupport = resolveReportUploadGate({
+const screeningWithSupport = resolveReportUploadGate({
+  reportType: 'screening',
+  uploadedFiles: [
+    row('rent_roll', 'Rent Roll.xlsx'),
+    row('t12', 'T12.xlsx'),
+    row('supporting_documents', 'Appraisal.pdf'),
+  ],
+});
+assert.equal(screeningWithSupport.canGenerate, false);
+assert.equal(screeningWithSupport.blockedReasonCode, 'SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED');
+assert.equal(screeningWithSupport.screeningHasForbiddenSupport, true);
+
+const underwritingWithoutSupport = resolveReportUploadGate({
+  reportType: 'underwriting',
+  uploadedFiles: [row('rent_roll', 'Rent Roll.xlsx'), row('t12', 'T12.xlsx')],
+});
+assert.equal(underwritingWithoutSupport.canGenerate, false);
+assert.equal(underwritingWithoutSupport.coreMode, 'dual_source_core');
+assert.equal(underwritingWithoutSupport.underwritingRequiresSupport, true);
+assert.equal(underwritingWithoutSupport.isMissingSupportDocs, true);
+assert.equal(underwritingWithoutSupport.blockedReasonCode, 'MISSING_REQUIRED_SUPPORTING_DOCUMENT');
+
+const underwritingReady = resolveReportUploadGate({
+  reportType: 'underwriting',
+  uploadedFiles: [
+    row('rent_roll', 'Rent Roll.xlsx'),
+    row('t12', 'T12.xlsx'),
+    row('supporting_documents', 'Appraisal.pdf'),
+  ],
+});
+assert.equal(underwritingReady.canGenerate, true);
+assert.equal(underwritingReady.coreMode, 'dual_source_core');
+assert.equal(underwritingReady.hasSupportDocs, true);
+assert.equal(underwritingReady.underwritingRequiresSupport, true);
+assert.equal(underwritingReady.isMissingSupportDocs, false);
+
+const underwritingSingleCoreWithSupport = resolveReportUploadGate({
   reportType: 'underwriting',
   uploadedFiles: [row('t12', 'T12.xlsx'), row('supporting_documents', 'Appraisal.pdf')],
 });
-assert.equal(underwritingWithOptionalSupport.canGenerate, true);
-assert.equal(underwritingWithOptionalSupport.coreMode, 't12_minimum_core');
-assert.equal(underwritingWithOptionalSupport.hasSupportDocs, true);
-assert.equal(underwritingWithOptionalSupport.underwritingRequiresSupport, false);
+assert.equal(underwritingSingleCoreWithSupport.canGenerate, false);
+assert.equal(underwritingSingleCoreWithSupport.coreMode, 't12_minimum_core');
+assert.equal(underwritingSingleCoreWithSupport.blockedReasonCode, 'MISSING_REQUIRED_CORE_DOCUMENTS');
 
 const insufficient = resolveReportUploadGate({
   reportType: 'underwriting',
@@ -71,11 +91,19 @@ const insufficient = resolveReportUploadGate({
 assert.equal(insufficient.canGenerate, false);
 assert.equal(insufficient.coreMode, 'insufficient_core');
 assert.equal(insufficient.blockedReasonCode, 'MISSING_REQUIRED_CORE_DOCUMENTS');
-assert.match(insufficient.blockedMessage, /Rent Roll or a T12/i);
+assert.match(insufficient.blockedMessage, /both a Rent Roll and a T12/i);
 
 assert.equal(
   formatReportUploadGateErrorMessage('MISSING_REQUIRED_CORE_DOCUMENTS'),
-  'Upload a Rent Roll or a T12 to generate.',
+  'Upload both a Rent Roll and a T12 to generate.',
+);
+assert.equal(
+  formatReportUploadGateErrorMessage('MISSING_REQUIRED_SUPPORTING_DOCUMENT'),
+  'Upload at least one supporting due diligence document to generate Underwriting.',
+);
+assert.equal(
+  formatReportUploadGateErrorMessage('SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED'),
+  'Screening accepts only a Rent Roll and a T12. Remove supporting documents to continue.',
 );
 assert.equal(
   formatReportUploadGateErrorMessage('column r.created_at does not exist'),
@@ -84,15 +112,16 @@ assert.equal(
 
 const migrationPath = path.join(
   repoRoot,
-  'supabase/migrations/20260828233000_phase1_admission_core_modes_and_upload_policy.sql',
+  'supabase/migrations/20260908233000_strict_customer_admission_doctrine.sql',
 );
 const migration = fs.readFileSync(migrationPath, 'utf8');
-assert.match(migration, /not v_has_t12 and not v_has_rent_roll/i);
-assert.match(migration, /order by f\.uploaded_at, f\.id/i);
-assert.doesNotMatch(migration, /order by f\.created_at, f\.id/i);
-assert.doesNotMatch(migration, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/i);
-assert.match(migration, /file_size_limit\s*=\s*52428800/i);
-assert.match(migration, /allowed_mime_types/i);
+assert.match(migration, /not v_has_t12 or not v_has_rent_roll/i);
+assert.match(migration, /p_report_type\s*=\s*'underwriting'\s+and\s+not\s+v_has_supporting_docs/i);
+assert.match(migration, /p_report_type\s*=\s*'screening'\s+and\s+v_has_supporting_docs/i);
+assert.match(migration, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/i);
+assert.match(migration, /SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED/i);
+assert.match(migration, /downstream t12_minimum_core \/ rent_roll_minimum_core states remain valid only/i);
+assert.match(migration, /file_size_limit|52428800/i);
 
 const removed = [];
 const uploaded = [];
@@ -145,8 +174,9 @@ const failedAdmission = await customerSupabase.rpc('consume_purchase_and_create_
   p_report_type: 'underwriting',
   p_job_payload: { property_name: 'Phase 1 Test' },
   p_staged_files: [
-    { storage_path: 'staged/user/test/t12/a.xlsx', doc_type: 't12' },
-    { storage_path: 'staged/user/test/supporting/b.pdf', doc_type: 'supporting' },
+    { storage_path: 'staged/user/test/rent-roll/a.xlsx', doc_type: 'rent_roll' },
+    { storage_path: 'staged/user/test/t12/b.xlsx', doc_type: 't12' },
+    { storage_path: 'staged/user/test/supporting/c.pdf', doc_type: 'supporting' },
   ],
 });
 assert.equal(failedAdmission.data, null);
@@ -156,7 +186,11 @@ assert.match(failedAdmission.error.message, /report credit was not consumed/i);
 assert.deepEqual(removed, [
   {
     bucketName: 'staged_uploads',
-    paths: ['staged/user/test/t12/a.xlsx', 'staged/user/test/supporting/b.pdf'],
+    paths: [
+      'staged/user/test/rent-roll/a.xlsx',
+      'staged/user/test/t12/b.xlsx',
+      'staged/user/test/supporting/c.pdf',
+    ],
   },
 ]);
 
@@ -166,6 +200,7 @@ const unconfirmedAdmission = await customerSupabase.rpc('consume_purchase_and_cr
   p_job_payload: { property_name: 'Ambiguous Network Test' },
   p_staged_files: [
     { storage_path: 'staged/user/test/rent-roll/ambiguous.xlsx', doc_type: 'rent_roll' },
+    { storage_path: 'staged/user/test/t12/ambiguous.xlsx', doc_type: 't12' },
   ],
 });
 assert.equal(unconfirmedAdmission.data, null);
