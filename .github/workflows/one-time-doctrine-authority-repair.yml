@@ -1,0 +1,104 @@
+name: One-time Doctrine Authority Repair
+
+on:
+  push:
+    branches:
+      - internal-underwriting-editorial-analytical-elite-20260906-r1
+    paths:
+      - '.github/workflows/one-time-doctrine-authority-repair.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair-doctrine-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: internal-underwriting-editorial-analytical-elite-20260906-r1
+          fetch-depth: 0
+
+      - name: Insert governing admission doctrine into all five canonical handoff files
+        shell: python
+        run: |
+          from pathlib import Path
+
+          marker = '## Customer admission constitution - GOVERNING OWNER AUTHORITY'
+          block = '''## Customer admission constitution - GOVERNING OWNER AUTHORITY
+
+This section is current owner authority and controls wherever older plans, tests, migrations, historical notes, or downstream source-mode language conflict.
+
+### Screening admission
+
+A Screening Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll before generation may begin. Screening accepts only those two core document categories. Supporting or additional due-diligence documents are not part of the Screening upload package and must not be admitted for Screening.
+
+### Underwriting admission
+
+An Underwriting Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll, **plus at least one additional readable supporting due-diligence document**, before generation may begin.
+
+### Admission is not downstream survivability
+
+`dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, and `insufficient_core` describe downstream source-truth / publication-survivability states **after a job has already been validly admitted**. They do not reduce or replace the customer upload requirements above.
+
+If an admitted core source later becomes constrained or unusable during governed parsing/validation, downstream analysis may qualify, collapse, omit, or follow the applicable publication/failure doctrine. That downstream behavior does not make a one-core-document customer submission valid at intake.
+
+'''
+
+          targets = [
+              Path('CHAT_HANDOFF/03_FRESH_CHAT_PROMPT.md'),
+              Path('CHAT_HANDOFF/00_CURRENT_HANDOFF.md'),
+              Path('CHAT_HANDOFF/01_MASTER_PLAN.md'),
+              Path('CHAT_HANDOFF/02_ELITE_REPORT_BLUEPRINT.md'),
+              Path('CHAT_HANDOFF/README.md'),
+          ]
+
+          for path in targets:
+              text = path.read_text(encoding='utf-8-sig')
+              if marker in text:
+                  raise SystemExit(f'{path}: doctrine marker already present')
+              lines = text.splitlines(keepends=True)
+              insert_at = 1
+              while insert_at < len(lines) and not lines[insert_at].strip():
+                  insert_at += 1
+              new_text = ''.join(lines[:insert_at]) + '\n' + block + ''.join(lines[insert_at:])
+              path.write_text(new_text, encoding='utf-8')
+
+      - name: Verify doctrine insertion
+        shell: python
+        run: |
+          from pathlib import Path
+          targets = [
+              Path('CHAT_HANDOFF/03_FRESH_CHAT_PROMPT.md'),
+              Path('CHAT_HANDOFF/00_CURRENT_HANDOFF.md'),
+              Path('CHAT_HANDOFF/01_MASTER_PLAN.md'),
+              Path('CHAT_HANDOFF/02_ELITE_REPORT_BLUEPRINT.md'),
+              Path('CHAT_HANDOFF/README.md'),
+          ]
+          required = [
+              'Screening Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll',
+              'Supporting or additional due-diligence documents are not part of the Screening upload package',
+              'Underwriting Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll',
+              '**plus at least one additional readable supporting due-diligence document**',
+              'describe downstream source-truth / publication-survivability states **after a job has already been validly admitted**',
+          ]
+          for path in targets:
+              text = path.read_text(encoding='utf-8')
+              for needle in required:
+                  if needle not in text:
+                      raise SystemExit(f'{path}: missing doctrine text {needle!r}')
+          print('canonical handoff admission doctrine PASS')
+
+      - name: Verify bounded diff
+        run: |
+          git diff --check
+          git diff -- CHAT_HANDOFF/03_FRESH_CHAT_PROMPT.md CHAT_HANDOFF/00_CURRENT_HANDOFF.md CHAT_HANDOFF/01_MASTER_PLAN.md CHAT_HANDOFF/02_ELITE_REPORT_BLUEPRINT.md CHAT_HANDOFF/README.md
+
+      - name: Commit doctrine repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHAT_HANDOFF/03_FRESH_CHAT_PROMPT.md CHAT_HANDOFF/00_CURRENT_HANDOFF.md CHAT_HANDOFF/01_MASTER_PLAN.md CHAT_HANDOFF/02_ELITE_REPORT_BLUEPRINT.md CHAT_HANDOFF/README.md
+          git commit -m "Lock strict Screening and Underwriting admission doctrine"
+          git push origin HEAD:internal-underwriting-editorial-analytical-elite-20260906-r1
