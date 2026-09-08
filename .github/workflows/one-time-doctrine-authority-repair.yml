@@ -21,30 +21,32 @@ jobs:
           fetch-depth: 0
 
       - name: Insert governing admission doctrine into all five canonical handoff files
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           marker = '## Customer admission constitution - GOVERNING OWNER AUTHORITY'
           block = '''## Customer admission constitution - GOVERNING OWNER AUTHORITY
 
-This section is current owner authority and controls wherever older plans, tests, migrations, historical notes, or downstream source-mode language conflict.
+          This section is current owner authority and controls wherever older plans, tests, migrations, historical notes, or downstream source-mode language conflict.
 
-### Screening admission
+          ### Screening admission
 
-A Screening Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll before generation may begin. Screening accepts only those two core document categories. Supporting or additional due-diligence documents are not part of the Screening upload package and must not be admitted for Screening.
+          A Screening Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll before generation may begin. Screening accepts only those two core document categories. Supporting or additional due-diligence documents are not part of the Screening upload package and must not be admitted for Screening.
 
-### Underwriting admission
+          ### Underwriting admission
 
-An Underwriting Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll, **plus at least one additional readable supporting due-diligence document**, before generation may begin.
+          An Underwriting Report requires **both** a usable T12 / operating statement **and** a usable Rent Roll, **plus at least one additional readable supporting due-diligence document**, before generation may begin.
 
-### Admission is not downstream survivability
+          ### Admission is not downstream survivability
 
-`dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, and `insufficient_core` describe downstream source-truth / publication-survivability states **after a job has already been validly admitted**. They do not reduce or replace the customer upload requirements above.
+          `dual_source_core`, `t12_minimum_core`, `rent_roll_minimum_core`, and `insufficient_core` describe downstream source-truth / publication-survivability states **after a job has already been validly admitted**. They do not reduce or replace the customer upload requirements above.
 
-If an admitted core source later becomes constrained or unusable during governed parsing/validation, downstream analysis may qualify, collapse, omit, or follow the applicable publication/failure doctrine. That downstream behavior does not make a one-core-document customer submission valid at intake.
+          If an admitted core source later becomes constrained or unusable during governed parsing/validation, downstream analysis may qualify, collapse, omit, or follow the applicable publication/failure doctrine. That downstream behavior does not make a one-core-document customer submission valid at intake.
 
-'''
+          '''
+          block = '\n'.join(line[10:] if line.startswith('          ') else line for line in block.splitlines()) + '\n\n'
 
           targets = [
               Path('CHAT_HANDOFF/03_FRESH_CHAT_PROMPT.md'),
@@ -64,10 +66,12 @@ If an admitted core source later becomes constrained or unusable during governed
                   insert_at += 1
               new_text = ''.join(lines[:insert_at]) + '\n' + block + ''.join(lines[insert_at:])
               path.write_text(new_text, encoding='utf-8')
+          PY
 
       - name: Verify doctrine insertion
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           targets = [
               Path('CHAT_HANDOFF/03_FRESH_CHAT_PROMPT.md'),
@@ -89,6 +93,7 @@ If an admitted core source later becomes constrained or unusable during governed
                   if needle not in text:
                       raise SystemExit(f'{path}: missing doctrine text {needle!r}')
           print('canonical handoff admission doctrine PASS')
+          PY
 
       - name: Verify bounded diff
         run: |
