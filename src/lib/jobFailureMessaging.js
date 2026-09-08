@@ -41,7 +41,9 @@ function classifyMissingDocumentCategory(job = {}) {
   const code = String(job?.error_code || '').trim().toUpperCase();
   const reason = String(job?.failure_reason || job?.error_message || '').trim();
   const text = `${code} ${reason}`.trim();
-  if (/SUPPORTING DOCUMENT/i.test(text)) return 'supporting_document';
+  // Supporting diligence can deepen Underwriting but is not a blanket admission requirement.
+  // Legacy supporting-document failure reasons therefore fall back to neutral source-package copy.
+  if (/SUPPORTING DOCUMENT/i.test(text)) return 'source_package';
   if (/T12|OPERATING STATEMENT/i.test(text)) return 't12';
   if (/RENT ROLL/i.test(text)) return 'rent_roll';
   if (/RECONCILIATION|SAME PROPERTY|SAME REPORTING PERIOD|SOURCE PACKAGE|MISMATCH|INCONSISTENT/i.test(text)) return 'source_package';
@@ -147,10 +149,6 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   const creditLine = creditRestored
     ? 'Your report credit has been returned to your account.'
     : null;
-  const restoredSystemFailureBody =
-    'Generation failed before publication. No report was published, and 1 report credit has been returned to your account.';
-  const pendingSystemFailureBody =
-    'Generation failed before publication. No report was published. If this was a platform-side failure, your report credit will be restored automatically.';
   if (coreValidRequiredCoverage && classification.kind !== 'system_failure') {
     return buildNeutralSystemFailureCopy({ creditRestored, referenceCode });
   }
@@ -171,26 +169,21 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     const missingCategoryTitle = {
       t12: 'T12 / operating statement could not be verified',
       rent_roll: 'Rent roll could not be verified',
-      supporting_document: 'Full Underwriting supporting document could not be verified',
       source_package: 'Source package could not be verified',
     }[missingCategory];
     const missingCategoryBody = {
       t12: 'Generation could not be completed because the uploaded T12 / operating statement could not be verified as usable for this report.',
       rent_roll: 'Generation could not be completed because the uploaded rent roll could not be verified as usable for this report.',
-      supporting_document: 'Generation could not be completed because Full Underwriting requires at least one usable supporting document in addition to the T12 and rent roll.',
-      source_package: 'Generation could not be completed because the uploaded source package could not be verified as complete and usable for this report.',
+      source_package: 'Generation could not be completed because InvestorIQ could not verify a usable core source for publication from the uploaded documents.',
     }[missingCategory];
     const missingCategoryNextStep = {
-      t12: 'Please start a new report and upload a readable T12 / operating statement that includes income, expenses, and NOI. If you believe your document is complete, contact reports@investoriq.tech.',
-      rent_roll: 'Please start a new report and upload a readable rent roll that includes units, occupancy or status, and in-place rents. If you believe your document is complete, contact reports@investoriq.tech.',
-      supporting_document: 'Please start a new Full Underwriting report with a usable supporting document such as debt, purchase assumptions, appraisal, renovation, property tax, insurance, or related deal support. If you believe your document is complete, contact reports@investoriq.tech.',
-      source_package: 'Please start a new report with clearer or more complete documents for the same property and reporting period where possible. If you believe the documents are correct, contact reports@investoriq.tech.',
+      t12: 'Please start a new report with a readable T12 / operating statement or a usable Rent Roll for the property. Provide both when available. If you believe your document is complete, contact reports@investoriq.tech.',
+      rent_roll: 'Please start a new report with a readable Rent Roll or a usable T12 / operating statement for the property. Provide both when available. If you believe your document is complete, contact reports@investoriq.tech.',
+      source_package: 'Please start a new report with a readable Rent Roll or T12 for the property. Provide both when available, and add supporting diligence when available. If you believe the documents are correct, contact reports@investoriq.tech.',
     }[missingCategory];
     return {
       title: creditRestored ? `${missingCategoryTitle} - credit restored` : missingCategoryTitle,
-      body: creditRestored
-        ? missingCategoryBody.replace(/^Generation could not be completed because /, 'Generation could not be completed because ')
-        : missingCategoryBody,
+      body: missingCategoryBody,
       nextStep: missingCategoryNextStep,
       referenceCode,
       creditLine,
