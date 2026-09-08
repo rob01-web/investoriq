@@ -1,4 +1,5 @@
 name: One-time Dashboard Launch Copy Repair
+# Final bounded retry after aligning the legacy upload-gate smoke with current admission authority.
 
 on:
   push:
