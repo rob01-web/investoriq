@@ -10,9 +10,10 @@ import {
   getPricingAvailabilityMap,
   loadCommerceCatalog,
 } from '@/lib/pricingConfig';
+import { buildAuthRoute } from '@/lib/authReturnPath';
 import { supabase } from '@/lib/customSupabaseClient';
 
-//  DESIGN TOKENS 
+// DESIGN TOKENS
 const T = {
   green:       '#0F2318',
   gold:        '#C9A84C',
@@ -43,6 +44,26 @@ const PRICING_PAGE_STYLES = `
     letter-spacing: 0;
     text-transform: none;
   }
+
+  .pricing-card-header {
+    min-height: 86px;
+  }
+
+  .pricing-card-price {
+    min-height: 104px;
+  }
+
+  .pricing-card-description {
+    min-height: 66px;
+  }
+
+  @media (max-width: 760px) {
+    .pricing-card-header,
+    .pricing-card-price,
+    .pricing-card-description {
+      min-height: 0;
+    }
+  }
 `;
 
 const fadeUp = {
@@ -55,20 +76,19 @@ const stagger = {
   show:   { transition: { staggerChildren: 0.1 } },
 };
 
-//  TIER DATA 
+// TIER DATA
 const tiers = [
   {
     title:       'Screening Report',
     productType: 'screening',
     eyebrow:     'Acquisition Screening',
-    valueLine:   'Rapid risk screening from document-backed inputs with missing inputs disclosed.',
-    description: 'Fast, document-driven acquisition memorandum for early investment decisions.',
+    description: 'Fast, document-driven screening for early deal triage and acquisition decisions.',
     pricingNote: 'Founder’s Pricing · Early Member Access',
     features: [
-      'Built from T12 and rent roll documents with framework-constrained outputs',
-      'Clear, document-driven acquisition summary',
-      'No invented data; missing inputs disclosed',
-      'One generation per purchase',
+      'Start with a Rent Roll or T12',
+      'Core operating, occupancy, rent, and source-risk signals',
+      'Material source gaps and inconsistencies disclosed',
+      '1 Screening report credit',
     ],
     cta: 'Start Screening',
     highlight: false,
@@ -76,31 +96,29 @@ const tiers = [
   {
     title:       'Underwriting Report',
     productType: 'underwriting',
-    eyebrow:     'Investment Committee Underwriting',
-    valueLine:   'Full institutional-grade refinance and downside risk modeling.',
-    description: 'Institutional-grade underwriting memorandum built for investment committee review.',
+    eyebrow:     'Institutional Underwriting',
+    description: 'Deeper document-driven underwriting for investment review, financing analysis, and downside testing.',
     pricingNote: 'Founder’s Pricing · Early Member Access',
     features: [
-      'Built from T12, rent roll, and supporting due diligence documents',
-      'Identifies refinance shortfall risk under real-world rate and cap scenarios',
-      'Structured for investment committee review',
-      'One generation per purchase',
+      'Start with a Rent Roll or T12; add supporting diligence when available',
+      'Debt, refinance, and sensitivity analysis where supported',
+      'Decision-focused risks, source differences, and unresolved items',
+      '1 Underwriting report credit',
     ],
-    cta: 'Run Full Underwriting',
+    cta: 'Start Underwriting',
     highlight: true,
   },
   {
     title:       'Launch Bundle',
     productType: 'bundle',
-    eyebrow:     'Frozen Launch Bundle',
-    valueLine:   'Two Screening reports plus one Full Underwriting report in one fixed-price package.',
-    description: 'Two Screening reports plus one Full Underwriting report in one fixed-price package.',
-    pricingNote: 'Frozen bundle composition',
+    eyebrow:     'Three-Report Bundle',
+    description: 'Screen two opportunities and take one finalist through full Underwriting for one fixed price.',
+    pricingNote: 'Three report credits in one purchase',
     features: [
-      '2 Screening reports',
-      '1 Full Underwriting report',
-      'One checkout, one authenticated owner',
-      'Bundle composition is fixed server-side',
+      '2 Screening report credits',
+      '1 Underwriting report credit',
+      'Use the Underwriting credit on the deal that advances',
+      'One purchase, three report credits',
     ],
     cta: 'Purchase Bundle',
     highlight: false,
@@ -109,7 +127,17 @@ const tiers = [
 
 const comparisonTiers = tiers.filter((tier) => tier.productType !== 'bundle');
 
-//  PRICING TILE 
+function formatBundleSavings(pricingAvailability) {
+  const screening = pricingAvailability?.screening?.product?.unitAmount;
+  const underwriting = pricingAvailability?.underwriting?.product?.unitAmount;
+  const bundle = pricingAvailability?.bundle?.product?.unitAmount;
+  if (![screening, underwriting, bundle].every(Number.isSafeInteger)) return null;
+  const savings = (screening * 2) + underwriting - bundle;
+  if (savings <= 0) return null;
+  return `Save $${Math.round(savings / 100).toLocaleString('en-US')} versus purchasing separately`;
+}
+
+// PRICING TILE
 function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAvailable }) {
   const isLoading = loadingKey === tier.productType;
   const [hovered, setHovered] = useState(false);
@@ -135,8 +163,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
         position:     'relative',
       }}
     >
-
-      {/* Highlight badge */}
       {tier.highlight && (
         <div style={{
           position:    'absolute',
@@ -155,43 +181,41 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
         </div>
       )}
 
-      {/* Eyebrow */}
-      <p style={{
-        fontFamily:   "'DM Mono', monospace",
-        fontSize:     10,
-        letterSpacing:'0.2em',
-        textTransform:'uppercase',
-        color:        T.goldDark,
-        marginBottom: 10,
-      }}>
-        {tier.eyebrow}
-      </p>
+      <div className="pricing-card-header">
+        <p style={{
+          fontFamily:   "'DM Mono', monospace",
+          fontSize:     10,
+          letterSpacing:'0.2em',
+          textTransform:'uppercase',
+          color:        T.goldDark,
+          marginBottom: 10,
+        }}>
+          {tier.eyebrow}
+        </p>
 
-      {/* Title */}
-      <h3 style={{
-        fontFamily:   "'Cormorant Garamond', Georgia, serif",
-        fontSize:     26,
-        fontWeight:   500,
-        letterSpacing:'-0.015em',
-        color:        T.ink,
-        marginBottom: 4,
-        lineHeight:   1.1,
-      }}>
-        {tier.title}
-      </h3>
+        <h3 style={{
+          fontFamily:   "'Cormorant Garamond', Georgia, serif",
+          fontSize:     26,
+          fontWeight:   500,
+          letterSpacing:'-0.015em',
+          color:        T.ink,
+          marginBottom: 4,
+          lineHeight:   1.1,
+        }}>
+          {tier.title}
+        </h3>
 
-      {/* Hairline */}
-      <div style={{
-        width:        32,
-        height:       1.5,
-        background:   tier.highlight ? T.gold : T.hairlineMid,
-        marginBottom: 20,
-        marginTop:    6,
-        opacity:      tier.highlight ? 0.8 : 1,
-      }} />
+        <div style={{
+          width:        32,
+          height:       1.5,
+          background:   tier.highlight ? T.gold : T.hairlineMid,
+          marginBottom: 20,
+          marginTop:    6,
+          opacity:      tier.highlight ? 0.8 : 1,
+        }} />
+      </div>
 
-      {/* Price */}
-      <div style={{ marginBottom: 20 }}>
+      <div className="pricing-card-price" style={{ marginBottom: 20 }}>
         <span style={{
           fontFamily:   "'Cormorant Garamond', Georgia, serif",
           fontSize:     52,
@@ -230,8 +254,7 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
         </span>
       </div>
 
-      {/* Description */}
-      <p style={{
+      <p className="pricing-card-description" style={{
         fontFamily:   "'DM Sans', sans-serif",
         fontSize:     13,
         fontWeight:   300,
@@ -243,7 +266,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
         {tier.description}
       </p>
 
-      {/* Features */}
       <ul style={{
         listStyle:    'none',
         padding:      0,
@@ -261,7 +283,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
             alignItems: 'baseline',
             gap:        10,
           }}>
-            {/* Gold dash marker */}
             <span style={{
               fontFamily:   "'DM Mono', monospace",
               fontSize:     10,
@@ -285,7 +306,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
         ))}
       </ul>
 
-      {/* CTA Button */}
       <button
         type="button"
         onClick={() => onCheckout(tier.productType, 1)}
@@ -311,19 +331,18 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
       >
         {buttonLabel}
       </button>
-
     </motion.div>
   );
 }
 
-//  MAIN COMPONENT 
 export default function PricingPage() {
   const { session } = useAuth();
-  const [loadingKey, setLoadingKey]   = useState(null);
-  const [isAuthed, setIsAuthed]       = useState(false);
+  const [loadingKey, setLoadingKey] = useState(null);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [commerceCatalog, setCommerceCatalog] = useState(EMPTY_PRICING_CATALOG);
-  const pricingAvailability            = getPricingAvailabilityMap(commerceCatalog);
-  const hasAnyPricingAvailable         = Object.values(pricingAvailability).some((entry) => entry.ok);
+  const pricingAvailability = getPricingAvailabilityMap(commerceCatalog);
+  const hasAnyPricingAvailable = Object.values(pricingAvailability).some((entry) => entry.ok);
+  const bundleSavingsLabel = formatBundleSavings(pricingAvailability);
 
   useEffect(() => {
     let mounted = true;
@@ -335,8 +354,8 @@ export default function PricingPage() {
 
     init();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthed(Boolean(session?.user));
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, authSession) => {
+      setIsAuthed(Boolean(authSession?.user));
     });
 
     return () => {
@@ -361,27 +380,24 @@ export default function PricingPage() {
   const handleCheckout = async (productType, quantity = 1) => {
     try {
       if (!isAuthed) {
-        window.location.href = `/login?next=/pricing`;
+        window.location.href = buildAuthRoute('/login', '/pricing');
         return;
       }
 
       setLoadingKey(productType);
       const accessToken = session?.access_token || '';
       if (!accessToken) {
-        window.location.href = `/login?next=/pricing`;
+        window.location.href = buildAuthRoute('/login', '/pricing');
         return;
       }
 
       const res = await fetch('/api/create-checkout-session', {
-        method:  'POST',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          productType,
-          quantity,
-        }),
+        body: JSON.stringify({ productType, quantity }),
       });
 
       const data = await res.json();
@@ -408,20 +424,12 @@ export default function PricingPage() {
         <title>Pricing | InvestorIQ</title>
         <meta
           name="description"
-          content="Flat-fee institutional reports with transparent scope. Screening and underwriting options."
+          content="Flat-fee InvestorIQ Screening and Underwriting Reports with source-based analysis and transparent scope."
         />
       </Helmet>
 
       <main style={{ background: T.white, minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-
-        {/*  HEADER BAND  */}
-        <section style={{
-          background:   T.green,
-          position:     'relative',
-          overflow:     'hidden',
-        }}>
-
-          {/* Vertical gold thread */}
+        <section style={{ background: T.green, position: 'relative', overflow: 'hidden' }}>
           <div style={{
             position:   'absolute',
             top: 0, bottom: 0, left: 48,
@@ -434,13 +442,8 @@ export default function PricingPage() {
             variants={stagger}
             initial="hidden"
             animate="show"
-            style={{
-              maxWidth: 1100,
-              margin:   '0 auto',
-              padding:  '64px 48px 56px',
-            }}
+            style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 48px 56px' }}
           >
-
             <motion.p variants={fadeUp} style={{
               fontFamily:   "'DM Mono', monospace",
               fontSize:     10,
@@ -470,12 +473,13 @@ export default function PricingPage() {
               fontSize:     15,
               fontWeight:   300,
               color:        'rgba(255,255,255,0.45)',
-              maxWidth:     480,
+              maxWidth:     600,
               lineHeight:   1.65,
               marginBottom: isAuthed ? 20 : 0,
             }}>
-              Built from your T12, rent roll, and supporting deal documents, with assumptions constrained by uploaded source materials.
+              Start with a Rent Roll or T12. Provide both when available, and add supporting deal documents to deepen the analysis where the evidence supports it.
             </motion.p>
+
             <motion.p variants={fadeUp} style={{
               fontFamily:   "'DM Sans', sans-serif",
               fontSize:     13,
@@ -486,7 +490,7 @@ export default function PricingPage() {
               marginTop:    10,
               marginBottom: isAuthed ? 20 : 0,
             }}>
-              InvestorIQ reports are generated from the documents uploaded by the user. Where documents are incomplete, inconsistent, unsupported, or materially unreconciled, InvestorIQ does not infer missing facts or fabricate conclusions. Affected sections may be limited, qualified, or omitted, and the report will disclose the source limitation. If required core documents cannot be verified, no report will be published and the report credit will be restored.
+              InvestorIQ analyzes only what your uploaded evidence can support. Missing or conflicting inputs are disclosed, and unsupported sections are limited or omitted rather than invented. If no usable core source can be verified, no report is published and the report credit is restored.
             </motion.p>
 
             {isAuthed && (
@@ -509,21 +513,11 @@ export default function PricingPage() {
                 </Link>
               </motion.p>
             )}
-
           </motion.div>
         </section>
 
-        {/*  PRICING TILES  */}
-        <section style={{
-          background:   T.warm,
-          borderBottom: `1px solid ${T.hairline}`,
-        }}>
-          <div style={{
-            maxWidth: 1100,
-            margin:   '0 auto',
-            padding:  '72px 48px',
-          }}>
-
+        <section style={{ background: T.warm, borderBottom: `1px solid ${T.hairline}` }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '72px 48px' }}>
             {!hasAnyPricingAvailable && (
               <div style={{
                 fontFamily:   "'DM Mono', monospace",
@@ -557,6 +551,9 @@ export default function PricingPage() {
                   tier={{
                     ...tier,
                     price: pricingAvailability[tier.productType]?.product?.displayPrice || 'Unavailable',
+                    pricingNote: tier.productType === 'bundle' && bundleSavingsLabel
+                      ? bundleSavingsLabel
+                      : tier.pricingNote,
                   }}
                   onCheckout={handleCheckout}
                   loadingKey={loadingKey}
@@ -566,7 +563,6 @@ export default function PricingPage() {
               ))}
             </motion.div>
 
-            {/* Footnotes */}
             <motion.div
               variants={stagger}
               initial="hidden"
@@ -599,7 +595,7 @@ export default function PricingPage() {
                 maxWidth:     680,
               }}>
                 Reports are property-specific and document-based. Once generation begins, refunds are not available.
-                If generation fails due to a system error, InvestorIQ will regenerate the same report at no cost.
+                If generation fails due to an InvestorIQ system error, the report credit is restored automatically.
                 InvestorIQ does not provide investment advice or appraisals.
               </motion.p>
 
@@ -615,21 +611,11 @@ export default function PricingPage() {
                 Submissions received after business hours, on weekends, or on holidays begin processing on the next business day.
               </motion.p>
             </motion.div>
-
           </div>
         </section>
 
-        {/*  COMPARISON TABLE  */}
-        <section style={{
-          background:   T.white,
-          borderBottom: `1px solid ${T.hairline}`,
-        }}>
-          <div style={{
-            maxWidth: 1100,
-            margin:   '0 auto',
-            padding:  '64px 48px',
-          }}>
-
+        <section style={{ background: T.white, borderBottom: `1px solid ${T.hairline}` }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 48px' }}>
             <motion.div
               variants={stagger}
               initial="hidden"
@@ -668,7 +654,6 @@ export default function PricingPage() {
                 marginTop:    10,
               }} />
 
-              {/* Table */}
               <motion.div variants={fadeUp} style={{ overflowX: 'auto' }}>
                 <table style={{
                   width:          '100%',
@@ -708,14 +693,14 @@ export default function PricingPage() {
                   </thead>
                   <tbody>
                     {[
-                      { label: 'T12 document analysis',                 screening: true,  underwriting: true  },
-                      { label: 'Rent roll analysis',                    screening: true,  underwriting: true  },
-                      { label: 'Supporting due diligence documents',    screening: false, underwriting: true  },
-                      { label: 'Institutional format PDF output',       screening: true,  underwriting: true  },
-                      { label: 'Document-backed outputs. Missing inputs disclosed.',  screening: true,  underwriting: true  },
-                      { label: 'Investment committee depth',            screening: false, underwriting: true  },
-                      { label: 'Full underwriting memorandum',          screening: false, underwriting: true  },
-                      { label: 'One generation per purchase',           screening: true,  underwriting: true  },
+                      { label: 'Rent Roll or T12 accepted as core input',               screening: true,  underwriting: true  },
+                      { label: 'Both core sources analyzed when provided',               screening: true,  underwriting: true  },
+                      { label: 'Supporting due diligence incorporated when relevant',    screening: false, underwriting: true  },
+                      { label: 'Professional PDF report',                                screening: true,  underwriting: true  },
+                      { label: 'Source gaps and inconsistencies disclosed',               screening: true,  underwriting: true  },
+                      { label: 'Debt and refinance analysis where supported',             screening: false, underwriting: true  },
+                      { label: 'Scenario and downside analysis where supported',           screening: false, underwriting: true  },
+                      { label: '1 report credit per purchase',                            screening: true,  underwriting: true  },
                     ].map((row, i) => (
                       <tr key={i} style={{
                         borderBottom: `1px solid ${T.hairline}`,
@@ -746,12 +731,10 @@ export default function PricingPage() {
                   </tbody>
                 </table>
               </motion.div>
-
             </motion.div>
           </div>
         </section>
 
-        {/*  CLOSING CTA  */}
         <section style={{ background: T.green, position: 'relative', overflow: 'hidden' }}>
           <div style={{
             position:   'absolute',
@@ -802,7 +785,7 @@ export default function PricingPage() {
 
             <motion.div variants={fadeUp} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
               <Link
-                to="/signup"
+                to={buildAuthRoute('/signup', '/pricing')}
                 style={{
                   fontFamily:   "'DM Mono', monospace",
                   fontSize:     11,
@@ -821,7 +804,7 @@ export default function PricingPage() {
                 Create Account
               </Link>
               <Link
-                to="/login"
+                to={buildAuthRoute('/login', '/pricing')}
                 style={{
                   fontFamily:   "'DM Mono', monospace",
                   fontSize:     11,
@@ -848,7 +831,6 @@ export default function PricingPage() {
             </motion.div>
           </motion.div>
         </section>
-
       </main>
     </>
   );
