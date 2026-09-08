@@ -27,15 +27,42 @@ for (const unsafe of [
 }
 
 const pricing = read('src/pages/Pricing.jsx');
+const dashboard = read('src/pages/Dashboard.jsx');
 const login = read('src/pages/Login.jsx');
 const signup = read('src/pages/SignUp.jsx');
 const failureMessaging = read('src/lib/jobFailureMessaging.js');
+const uploadGate = read('src/lib/reportUploadGate.js');
+const customerBoundary = read('src/lib/customerBoundarySupabase.js');
+const strictMigration = read('supabase/migrations/20260908233000_strict_customer_admission_doctrine.sql');
 const indexHtml = read('index.html');
 
-// Pricing must reflect the canonical one-core-source admission contract.
-assert.match(pricing, /Start with a Rent Roll or T12/);
-assert.match(pricing, /supporting diligence when available/i);
-assert.match(pricing, /If no usable core source can be verified, no report is published and the report credit is restored/i);
+// Customer intake doctrine is strict and separate from downstream survivor modes.
+assert.match(pricing, /Requires both a Rent Roll and T12; no additional documents accepted/i);
+assert.match(pricing, /Requires both a Rent Roll and T12 plus at least one supporting document/i);
+assert.match(pricing, /Screening requires both a Rent Roll and T12\. Underwriting requires both core documents plus at least one supporting due diligence document\./i);
+assert.match(pricing, /Both Rent Roll and T12 required/i);
+assert.match(pricing, /At least one supporting document required/i);
+assert.equal(/Start with a Rent Roll or T12/i.test(pricing), false);
+assert.equal(/Provide both when available/i.test(pricing), false);
+assert.equal(/supporting diligence when available/i.test(pricing), false);
+
+assert.match(dashboard, /T12 \+ Rent Roll only/);
+assert.match(dashboard, /T12 \+ Rent Roll \+ at least 1 supporting document/);
+assert.match(dashboard, /Screening accepts only the Rent Roll and T12/i);
+assert.match(dashboard, /add at least one supporting due diligence document/i);
+assert.match(dashboard, /Upload both a Rent Roll and a T12 to unlock supporting documents/i);
+assert.match(dashboard, /At least one supporting document is required for Underwriting/i);
+assert.equal(/upload at least one core document/i.test(dashboard), false);
+assert.equal(/Supporting documents are optional/i.test(dashboard), false);
+
+assert.match(uploadGate, /const hasRequiredCoreDocs = hasRentRoll && hasT12/);
+assert.match(uploadGate, /SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED/);
+assert.match(uploadGate, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/);
+assert.match(customerBoundary, /MISSING_REQUIRED_SUPPORTING_DOCUMENT/);
+assert.match(customerBoundary, /SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED/);
+assert.match(strictMigration, /not v_has_t12 or not v_has_rent_roll/i);
+assert.match(strictMigration, /p_report_type\s*=\s*'screening'\s+and\s+v_has_supporting_docs/i);
+assert.match(strictMigration, /p_report_type\s*=\s*'underwriting'\s+and\s+not\s+v_has_supporting_docs/i);
 
 // Bundle copy must sell the customer outcome instead of leaking commerce implementation details.
 assert.match(pricing, /Three-Report Bundle/);
@@ -66,26 +93,25 @@ assert.match(login, /buildAuthRoute\('\/signup', returnPath\)/);
 assert.match(signup, /navigate\(returnPath\)/);
 assert.match(signup, /buildAuthRoute\('\/login', returnPath\)/);
 
-// Legacy support-document admission language must never reach customer failure messaging.
-assert.equal(
-  failureMessaging.includes('requires at least one usable supporting document in addition to the T12 and rent roll'),
-  false
-);
-assert.match(failureMessaging, /readable Rent Roll or T12/);
-assert.match(failureMessaging, /supporting diligence when available/);
+// Required-document failures must tell the truth; system failures remain neutral.
+assert.match(failureMessaging, /Supporting document required for Underwriting/);
+assert.match(failureMessaging, /required T12 and Rent Roll/i);
+assert.match(failureMessaging, /uploaded documents do not need to be changed/i);
 
 // Site metadata must not drift from the currently governed delivery promise.
 assert.equal(/within 48 hours|under 48 hours/i.test(indexHtml), false);
 assert.match(indexHtml, /Screening and Underwriting Reports/);
 
-// Guard the customer-facing Pricing rewrite against prohibited dash punctuation.
-const pricingCustomerPhrases = [
+// Guard new customer-facing copy against prohibited dash punctuation.
+const customerPhrases = [
   'Fast, document-driven screening for early deal triage and acquisition decisions.',
   'Deeper document-driven underwriting for investment review, financing analysis, and downside testing.',
   'Screen two opportunities and take one finalist through full Underwriting for one fixed price.',
-  'Start with a Rent Roll or T12. Provide both when available, and add supporting deal documents to deepen the analysis where the evidence supports it.',
+  'Screening requires both a Rent Roll and T12. Underwriting requires both core documents plus at least one supporting due diligence document.',
+  'Screening accepts only the Rent Roll and T12.',
+  'At least one supporting document is required for Underwriting.',
 ];
-for (const phrase of pricingCustomerPhrases) {
+for (const phrase of customerPhrases) {
   assert.equal(/[–—]/.test(phrase), false, `customer-facing dash punctuation found: ${phrase}`);
 }
 
