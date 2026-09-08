@@ -1206,7 +1206,7 @@ useEffect(() => {
       if (!reportUploadGate.canGenerate) {
         toast({
           title: 'Upload requirements not met',
-          description: reportUploadGate.blockedMessage || 'Upload a Rent Roll or a T12 to generate.',
+          description: reportUploadGate.blockedMessage || 'Upload both a Rent Roll and a T12 to generate.',
           variant: 'destructive',
         });
         setLoading(false);
@@ -1713,6 +1713,12 @@ useEffect(() => {
                     onClick={() => {
                       setSelectedReportType(type);
                       setSelectedPurchaseType(type);
+                      if (type === 'screening') {
+                        setUploadedFiles((prev) => prev.filter((item) => {
+                          const normalized = normalizeDashboardDocType(item.docType);
+                          return normalized === 'rent_roll' || normalized === 't12' || normalized === 't12_or_operating_statement';
+                        }));
+                      }
                     }}
                     style={{
                       fontFamily:   "'DM Mono', monospace",
@@ -1743,7 +1749,7 @@ useEffect(() => {
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:3, marginBottom:20 }}>
-                <span style={{ ...bodySmall, fontSize:12 }}>T12 + Rent Roll + supporting due diligence documents</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>T12 + Rent Roll + at least 1 supporting document</span>
                 <span style={{ ...bodySmall, fontSize:12 }}>Full institutional underwriting report.</span>
                 <span style={{ ...bodySmall, fontSize:12 }}>Investment committee-ready depth.</span>
               </div>
@@ -1772,7 +1778,7 @@ useEffect(() => {
               {selectedPurchaseType === 'bundle' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:3, marginTop:12 }}>
                   <span style={{ ...bodySmall, fontSize:12 }}>2 Screening reports</span>
-                  <span style={{ ...bodySmall, fontSize:12 }}>1 Full Underwriting report</span>
+                  <span style={{ ...bodySmall, fontSize:12 }}>1 Underwriting report</span>
                   <span style={{ ...bodySmall, fontSize:12 }}>
                     {commerceCatalog?.products?.bundle?.displayPrice || 'Pricing unavailable'} flat fee bundle.
                   </span>
@@ -1832,7 +1838,11 @@ useEffect(() => {
           >
             <p style={stepEyebrow}>Step 02</p>
             <span style={stepTitle}>Property and documents</span>
-            <span style={stepSub}>Enter the property name and upload at least one core document. Supporting documents are optional.</span>
+            <span style={stepSub}>
+              {selectedReportType === 'screening'
+                ? 'Enter the property name and upload both required core documents. Screening accepts only the Rent Roll and T12.'
+                : 'Enter the property name, upload both required core documents, and add at least one supporting due diligence document.'}
+            </span>
 
             <div style={hairlineRule} />
 
@@ -1966,13 +1976,13 @@ useEffect(() => {
             {selectedReportType === 'underwriting' && (
               <div style={{ marginBottom:16 }}>
                 {!requiredDocsReady && (
-                  <div style={{ ...bodySmall, fontSize:11, marginBottom:8, color:T.ink4 }}>Upload a Rent Roll or a T12 to unlock supporting documents.</div>
+                  <div style={{ ...bodySmall, fontSize:11, marginBottom:8, color:T.ink4 }}>Upload both a Rent Roll and a T12 to unlock supporting documents.</div>
                 )}
                 <div style={{ padding:'16px', border:`1px solid ${hasUnderwritingSupportDocs ? T.okBorder : T.hairline}`, background:T.white }}>
                   <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:12, flexWrap:'wrap' }}>
                     <div>
                       <div style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:500, color:T.ink, marginBottom:3 }}>Supporting Documents</div>
-                      <div style={{ ...bodySmall, fontSize:11 }}>Mortgage statements, loan terms, appraisals, tax bills, or other supporting documents.</div>
+                      <div style={{ ...bodySmall, fontSize:11 }}>At least one supporting document is required for Underwriting. Mortgage statements, loan terms, appraisals, tax bills, or other supporting documents may be provided.</div>
                     </div>
                     <PrimaryBtn
                       disabled={!hasAvailableReport || !requiredDocsReady}
@@ -2001,13 +2011,13 @@ useEffect(() => {
                 <div style={{ padding:'14px 16px', background:T.warm, border:`1px solid ${T.hairline}`, marginTop:10 }}>
                   <div style={{ ...labelMono, marginBottom:10 }}>Document preflight</div>
                   {[
-                    { label:'Rent Roll', val: hasRentRoll ? 'Present' : (hasT12 ? 'Optional' : 'Missing'), ok: hasRentRoll || hasT12, required: !hasT12 },
-                    { label:'T12 (Operating Statement)', val: hasT12 ? 'Present' : (hasRentRoll ? 'Optional' : 'Missing'), ok: hasRentRoll || hasT12, required: !hasRentRoll },
+                    { label:'Rent Roll', val: hasRentRoll ? 'Present' : 'Missing', ok: hasRentRoll, required: true },
+                    { label:'T12 (Operating Statement)', val: hasT12 ? 'Present' : 'Missing', ok: hasT12, required: true },
                     {
                       label:'Supporting Docs',
-                      val: hasUnderwritingSupportDocs ? 'Present' : 'Optional',
-                      ok: true,
-                      required: false,
+                      val: hasUnderwritingSupportDocs ? 'Present' : 'Missing',
+                      ok: hasUnderwritingSupportDocs,
+                      required: true,
                     },
                     { label:'Debt Terms', val: preflightDebtTerms ? 'Found' : 'Recommended', ok: preflightDebtTerms, required: false },
                     { label:'Property Tax', val: preflightPropertyTax ? 'Found' : 'Optional', ok: preflightPropertyTax, required: false },
@@ -2020,7 +2030,7 @@ useEffect(() => {
                   ))}
                   {preflightHardMissing && (
                     <div style={{ ...bodySmall, fontSize:12, color:T.errorRed, fontWeight:500, marginTop:10 }}>
-                      {reportUploadGate.blockedMessage || 'Upload a Rent Roll or a T12 to generate.'}
+                      {reportUploadGate.blockedMessage || 'Upload both a Rent Roll and a T12 to generate.'}
                     </div>
                   )}
                   {!preflightHardMissing && !preflightDebtTerms && (
@@ -2061,7 +2071,7 @@ useEffect(() => {
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
                     : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
                     : !reportUploadGate.canGenerate
-                    ? (reportUploadGate.blockedMessage || 'Upload a Rent Roll or a T12 to generate.')
+                    ? (reportUploadGate.blockedMessage || 'Upload both a Rent Roll and a T12 to generate.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
                 {activeJobForRuns?.status === 'failed' && !activeDeliveryDecision?.customer_message && activeFailureCopy?.nextStep && (

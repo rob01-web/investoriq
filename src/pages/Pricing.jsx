@@ -85,7 +85,7 @@ const tiers = [
     description: 'Fast, document-driven screening for early deal triage and acquisition decisions.',
     pricingNote: 'Founder’s Pricing · Early Member Access',
     features: [
-      'Start with a Rent Roll or T12',
+      'Requires both a Rent Roll and T12; no additional documents accepted',
       'Core operating, occupancy, rent, and source-risk signals',
       'Material source gaps and inconsistencies disclosed',
       '1 Screening report credit',
@@ -100,7 +100,7 @@ const tiers = [
     description: 'Deeper document-driven underwriting for investment review, financing analysis, and downside testing.',
     pricingNote: 'Founder’s Pricing · Early Member Access',
     features: [
-      'Start with a Rent Roll or T12; add supporting diligence when available',
+      'Requires both a Rent Roll and T12 plus at least one supporting document',
       'Debt, refinance, and sensitivity analysis where supported',
       'Decision-focused risks, source differences, and unresolved items',
       '1 Underwriting report credit',
@@ -477,7 +477,7 @@ export default function PricingPage() {
               lineHeight:   1.65,
               marginBottom: isAuthed ? 20 : 0,
             }}>
-              Start with a Rent Roll or T12. Provide both when available, and add supporting deal documents to deepen the analysis where the evidence supports it.
+              Screening requires both a Rent Roll and T12. Underwriting requires both core documents plus at least one supporting due diligence document.
             </motion.p>
 
             <motion.p variants={fadeUp} style={{
@@ -693,9 +693,9 @@ export default function PricingPage() {
                   </thead>
                   <tbody>
                     {[
-                      { label: 'Rent Roll or T12 accepted as core input',               screening: true,  underwriting: true  },
-                      { label: 'Both core sources analyzed when provided',               screening: true,  underwriting: true  },
-                      { label: 'Supporting due diligence incorporated when relevant',    screening: false, underwriting: true  },
+                      { label: 'Both Rent Roll and T12 required',                         screening: true,  underwriting: true  },
+                      { label: 'Additional supporting documents accepted',                screening: false, underwriting: true  },
+                      { label: 'At least one supporting document required',               screening: false, underwriting: true  },
                       { label: 'Professional PDF report',                                screening: true,  underwriting: true  },
                       { label: 'Source gaps and inconsistencies disclosed',               screening: true,  underwriting: true  },
                       { label: 'Debt and refinance analysis where supported',             screening: false, underwriting: true  },

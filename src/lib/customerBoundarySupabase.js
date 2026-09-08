@@ -76,7 +76,9 @@ function isConfirmedAdmissionRejection(rawError) {
     raw.includes('ADMISSION_') ||
     raw.includes('BOTH RENT ROLL AND T12 ARE REQUIRED') ||
     raw.includes('BOTH A RENT ROLL AND A T12 ARE REQUIRED') ||
-    raw.includes('AT LEAST ONE SUPPORTING DOCUMENT IS REQUIRED FOR UNDERWRITING')
+    raw.includes('AT LEAST ONE SUPPORTING DOCUMENT IS REQUIRED FOR UNDERWRITING') ||
+    raw.includes('MISSING_REQUIRED_SUPPORTING_DOCUMENT') ||
+    raw.includes('SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED')
   );
 }
 
@@ -87,7 +89,13 @@ function safeAdmissionError(rawError, { confirmedRejection = false } = {}) {
     raw.includes('BOTH RENT ROLL AND T12 ARE REQUIRED') ||
     raw.includes('BOTH A RENT ROLL AND A T12 ARE REQUIRED')
   ) {
-    return { message: 'Upload a Rent Roll or a T12 before starting analysis.', code: 'MISSING_REQUIRED_CORE_DOCUMENTS' };
+    return { message: 'Upload both a Rent Roll and a T12 before starting analysis.', code: 'MISSING_REQUIRED_CORE_DOCUMENTS' };
+  }
+  if (raw.includes('MISSING_REQUIRED_SUPPORTING_DOCUMENT') || raw.includes('AT LEAST ONE SUPPORTING DOCUMENT IS REQUIRED FOR UNDERWRITING')) {
+    return { message: 'Upload at least one supporting due diligence document before starting Underwriting.', code: 'MISSING_REQUIRED_SUPPORTING_DOCUMENT' };
+  }
+  if (raw.includes('SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED')) {
+    return { message: 'Screening accepts only a Rent Roll and a T12. Remove supporting documents to continue.', code: 'SCREENING_SUPPORTING_DOCUMENTS_NOT_ALLOWED' };
   }
   if (raw.includes('PURCHASE_NOT_AVAILABLE')) {
     return { message: 'No available report credit was found for this report.', code: 'PURCHASE_NOT_AVAILABLE' };
