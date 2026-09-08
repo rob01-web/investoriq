@@ -11,6 +11,7 @@ const repoRoot = path.resolve(qaDir, '../..');
 // intentionally excluded from launch authority.
 const launchCriticalSuite = [
   ['architecture authority', 'launch-critical-architecture-smoke.js'],
+  ['admission doctrine authority', 'doctrine-admission-authority-smoke.js'],
   ['customer trust boundary', 'p0-a2-customer-boundary-smoke.js'],
   ['authenticated identity', 'h1-authenticated-identity-boundary-smoke.js'],
   ['immutable staged source registration', 'h5-staged-source-registration-guard-smoke.js'],
