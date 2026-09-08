@@ -33,11 +33,11 @@ If needed, retrieve that exact uploaded file from File Library rather than askin
 
 **Visual ELITE publication engine / provider rendering:** provider-certified in DocRaptor TEST mode.
 
-**Underwriting editorial + analytical customer acceptance:** HOLD.
+**Underwriting editorial + analytical customer acceptance:** CLOSED on isolated branch commit `94dc287ca56f4b7239658407c119bd2123140050` after fresh rendered-artifact review.
 
 **Production:** HOLD.
 
-Do not call the Underwriting product finished merely because the provider-certified PDF renders correctly.
+The final certification evidence includes executable gates plus page-by-page visual review. Do not promote production; the production hold remains active.
 
 ## Non-negotiable owner command
 
@@ -90,7 +90,7 @@ Do not start by editing the Stonebridge HTML/PDF output.
 
 Validate and implement systemically where authority supports it:
 
-- remove the isolated gold dot after `INVESTORIQ` unless approved brand authority explicitly requires it;
+- preserve the approved gold dot after `INVESTORIQ` across the shared Screening and Underwriting cover system;
 - prefer reader-facing `Source differences require review` to unexplained `RECONCILIATION REQUIRED`;
 - use `InvestorIQ Underwriting Report` as the current product title, optionally `Prepared for investment review`;
 - remove redundant `INVESTMENT COMMITTEE OVERVIEW` above `Investment Decision Snapshot`;
@@ -133,3 +133,4 @@ Root cause first. One bounded repair group at a time. Preserve rollback points. 
 Goal: make the actual reusable InvestorIQ Underwriting product feel and read like a **$5K institutional underwriting deliverable**, not make one test report cosmetically pass.
 
 BOOOOOOOOOOOOOOOOOOOOOOOOOOM.
+

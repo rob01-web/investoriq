@@ -1,6 +1,6 @@
 # InvestorIQ Current Handoff
 
-**Updated:** 2026-09-06  
+**Updated:** 2026-09-08  
 **Current phase:** Underwriting Editorial + Analytical ELITE Closeout  
 **Working branch:** `internal-underwriting-editorial-analytical-elite-20260906-r1`
 
@@ -18,6 +18,14 @@ The current repair branch is isolated from `main` and begins from the provider-c
 
 ## 2. Current status
 
+### CLOSED / final Underwriting certification
+
+Fresh certification commit `94dc287ca56f4b7239658407c119bd2123140050` passed GitHub Actions run `34267290022` (job `102199741543`). Canonical QA, all Underwriting regressions, institutional PDF diagnostics, production build, fresh HTML generation, deterministic HTML validation, Chromium rendering, rendered-PDF validation, metadata, and evidence upload all passed.
+
+Fresh artifact: `underwriting-final-certification-94dc287ca56f4b7239658407c119bd2123140050` (artifact `10072396447`, digest `sha256:604f4c0279ca4e39b20f44a3ea71b3db36fbee28ce25b3233a45611ba66a5c45`). The rendered Screening (5 pages) and Underwriting (23 pages) PDFs were inspected page by page and at normal reading scale. The final review confirmed the gold brand dot, clear source-variance wording, `Underwriting Report` title, readable pagination, consistent KPI typography, source-register wrapping, Quality Manifest layout, and zero customer-facing em/en dashes.
+
+The only validator repair was legitimate: the final-publication smoke test had a stale expectation that the approved gold brand dot remained suppressed. It now asserts the reusable gold-dot invariant. Production remains held.
+
 ### CLOSED / certified foundation
 
 - Visual ELITE publication engine and provider rendering are certified in DocRaptor TEST mode.
@@ -27,7 +35,7 @@ The current repair branch is isolated from `main` and begins from the provider-c
 
 ### OPEN / launch hold
 
-**Underwriting editorial + analytical customer acceptance is HOLD.**
+**Underwriting editorial + analytical customer acceptance is complete for this isolated certification branch. Production promotion remains HOLD.**
 
 The deeper 21-page September 6 audit found material issues that were outside the earlier provider-render certification scope: factual-presentation inconsistencies, calculation-basis ambiguity, source/context wording, duplicated system-facing prose, small essential text, redundant line hierarchy, source-register and Quality Manifest crowding, and weak decision framing.
 
@@ -100,7 +108,7 @@ P2 system findings:
 
 These are current owner/audit directions to validate against code/brand authority and implement systemically:
 
-- Remove the isolated gold dot after `INVESTORIQ` unless an explicit brand authority requires it.
+- Preserve the approved gold dot after `INVESTORIQ` across the shared Screening and Underwriting cover system.
 - Replace unexplained reader-facing `RECONCILIATION REQUIRED` with clearer wording such as **Source differences require review**, followed by the actual issues and required evidence.
 - Current title recommendation: **InvestorIQ Underwriting Report**. Optional subtitle: **Prepared for investment review**. Do not call it an Investment Committee Memorandum merely because the name sounds more premium.
 - Remove redundant `INVESTMENT COMMITTEE OVERVIEW` above `Investment Decision Snapshot`.
@@ -137,3 +145,4 @@ A provider-render PASS alone is not enough.
 ## 9. Production holds
 
 No merge to `main`, deployment, migration, scheduler activation, Storage mutation, Stripe/pricing change, or other production mutation is authorized.
+
