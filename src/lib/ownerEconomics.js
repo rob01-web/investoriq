@@ -29,7 +29,7 @@ export const DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS = Object.freeze({
   // Launch-planning baseline rather than today's temporary free-tier state.
   vercelMonthlyCost: 20,
   supabaseMonthlyCost: 25,
-  docraptorMonthlyCost: 15,
+  docraptorMonthlyCost: 29,
   domainEmailMonthlyCost: 8.33,
   resendMonthlyCost: 0,
   otherMonthlyCost: 0,

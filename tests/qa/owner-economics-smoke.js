@@ -80,6 +80,6 @@ const empty = deriveOwnerEconomics({ prices, assumptions: {} });
 assert.equal(empty.grossRevenue, 0);
 assert.equal(empty.checkoutCount, 0);
 assert.equal(empty.netMarginPercent, null);
-assert.ok(Math.abs(empty.fixedMonthlyCosts - 68.33) < 1e-9);
+assert.ok(Math.abs(empty.fixedMonthlyCosts - 82.33) < 1e-9);
 
 console.log('owner-economics-smoke: ok');

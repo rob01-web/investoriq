@@ -234,7 +234,7 @@ export default function OwnerEconomicsPanel({ actualRevenueMinor = null, actualC
             <NumberField label="Underwriting Other Variable" value={assumptions.underwritingOtherVariableCost} onChange={update('underwritingOtherVariableCost')} prefix="$" step="0.01" helper="Optional per-Underwriting cost not modeled above" />
             <NumberField label="Vercel Monthly" value={assumptions.vercelMonthlyCost} onChange={update('vercelMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Pro $20/month" />
             <NumberField label="Supabase Monthly" value={assumptions.supabaseMonthlyCost} onChange={update('supabaseMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Pro $25/month" />
-            <NumberField label="DocRaptor Monthly" value={assumptions.docraptorMonthlyCost} onChange={update('docraptorMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Basic $15/month for 125 documents" />
+            <NumberField label="DocRaptor Monthly" value={assumptions.docraptorMonthlyCost} onChange={update('docraptorMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Professional $29/month for 325 documents" />
             <NumberField label="Domain + Email Monthly" value={assumptions.domainEmailMonthlyCost} onChange={update('domainEmailMonthlyCost')} prefix="$" step="0.01" helper="Hostinger planning baseline: about $100/year normalized monthly" />
             <NumberField label="Resend Monthly" value={assumptions.resendMonthlyCost} onChange={update('resendMonthlyCost')} prefix="$" step="0.01" helper="Report-ready email provider. Current launch baseline: $0" />
             <NumberField label="Other Monthly Costs" value={assumptions.otherMonthlyCost} onChange={update('otherMonthlyCost')} prefix="$" step="0.01" />
@@ -243,7 +243,7 @@ export default function OwnerEconomicsPanel({ actualRevenueMinor = null, actualC
         </div>
 
         <div style={{ margin:'4px 0 20px', padding:'11px 13px', background:T.okBg, border:`1px solid ${T.okBorder}`, color:T.okGreen, fontFamily:"'DM Sans',sans-serif", fontSize:10.5, lineHeight:1.55 }}>
-          Launch baseline as of September 9, 2026: Vercel Pro $20/month, Supabase Pro $25/month, DocRaptor Basic $15/month, Hostinger domain and email about $100/year, Resend $0/month at current launch volume, Amazon Textract AnalyzeDocument TABLES $0.015 per analyzed page, and Stripe base card processing 2.9% + US$0.30 for a USD-presented charge. AWS promotional credits are intentionally excluded. OpenAI defaults remain $0 until controlled report-level usage is measured.
+          Launch baseline as of September 9, 2026: Vercel Pro $20/month, Supabase Pro $25/month, DocRaptor Professional $29/month, Hostinger domain and email about $100/year, Resend $0/month at current launch volume, Amazon Textract AnalyzeDocument TABLES $0.015 per analyzed page, and Stripe base card processing 2.9% + US$0.30 for a USD-presented charge. AWS promotional credits are intentionally excluded. OpenAI defaults remain $0 until controlled report-level usage is measured.
         </div>
 
         <div style={{ borderTop:`1px solid ${T.hairline}`, paddingTop:20 }}>
