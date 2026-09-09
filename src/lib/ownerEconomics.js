@@ -31,6 +31,7 @@ export const DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS = Object.freeze({
   supabaseMonthlyCost: 25,
   docraptorMonthlyCost: 15,
   domainEmailMonthlyCost: 8.33,
+  resendMonthlyCost: 0,
   otherMonthlyCost: 0,
 
   cadPerUsd: 1.40,
@@ -68,6 +69,7 @@ export function normalizeOwnerEconomicsAssumptions(value = {}) {
     supabaseMonthlyCost: finiteNonNegative(value.supabaseMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.supabaseMonthlyCost),
     docraptorMonthlyCost: finiteNonNegative(value.docraptorMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.docraptorMonthlyCost),
     domainEmailMonthlyCost: finiteNonNegative(value.domainEmailMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.domainEmailMonthlyCost),
+    resendMonthlyCost: finiteNonNegative(value.resendMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.resendMonthlyCost),
     otherMonthlyCost: finiteNonNegative(value.otherMonthlyCost),
     cadPerUsd: finiteNonNegative(value.cadPerUsd, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.cadPerUsd),
   };
@@ -114,6 +116,7 @@ export function deriveOwnerEconomics({ assumptions = {}, prices = {} } = {}) {
     a.supabaseMonthlyCost +
     a.docraptorMonthlyCost +
     a.domainEmailMonthlyCost +
+    a.resendMonthlyCost +
     a.otherMonthlyCost;
 
   const netMonthlyContribution = grossRevenue - stripeFees - variableReportCosts - fixedMonthlyCosts;

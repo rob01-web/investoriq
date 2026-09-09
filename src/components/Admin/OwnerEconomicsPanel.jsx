@@ -236,13 +236,14 @@ export default function OwnerEconomicsPanel({ actualRevenueMinor = null, actualC
             <NumberField label="Supabase Monthly" value={assumptions.supabaseMonthlyCost} onChange={update('supabaseMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Pro $25/month" />
             <NumberField label="DocRaptor Monthly" value={assumptions.docraptorMonthlyCost} onChange={update('docraptorMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Basic $15/month for 125 documents" />
             <NumberField label="Domain + Email Monthly" value={assumptions.domainEmailMonthlyCost} onChange={update('domainEmailMonthlyCost')} prefix="$" step="0.01" helper="Hostinger planning baseline: about $100/year normalized monthly" />
+            <NumberField label="Resend Monthly" value={assumptions.resendMonthlyCost} onChange={update('resendMonthlyCost')} prefix="$" step="0.01" helper="Report-ready email provider. Current launch baseline: $0" />
             <NumberField label="Other Monthly Costs" value={assumptions.otherMonthlyCost} onChange={update('otherMonthlyCost')} prefix="$" step="0.01" />
             <NumberField label="CAD per USD" value={assumptions.cadPerUsd} onChange={update('cadPerUsd')} step="0.01" helper="Planning conversion for CAD-equivalent headline values" />
           </div>
         </div>
 
         <div style={{ margin:'4px 0 20px', padding:'11px 13px', background:T.okBg, border:`1px solid ${T.okBorder}`, color:T.okGreen, fontFamily:"'DM Sans',sans-serif", fontSize:10.5, lineHeight:1.55 }}>
-          Launch baseline as of September 9, 2026: Vercel Pro $20/month, Supabase Pro $25/month, DocRaptor Basic $15/month, Hostinger domain and email about $100/year, Amazon Textract AnalyzeDocument TABLES $0.015 per analyzed page, and Stripe base card processing 2.9% + US$0.30 for a USD-presented charge. AWS promotional credits are intentionally excluded. OpenAI defaults remain $0 until controlled report-level usage is measured.
+          Launch baseline as of September 9, 2026: Vercel Pro $20/month, Supabase Pro $25/month, DocRaptor Basic $15/month, Hostinger domain and email about $100/year, Resend $0/month at current launch volume, Amazon Textract AnalyzeDocument TABLES $0.015 per analyzed page, and Stripe base card processing 2.9% + US$0.30 for a USD-presented charge. AWS promotional credits are intentionally excluded. OpenAI defaults remain $0 until controlled report-level usage is measured.
         </div>
 
         <div style={{ borderTop:`1px solid ${T.hairline}`, paddingTop:20 }}>
@@ -258,7 +259,7 @@ export default function OwnerEconomicsPanel({ actualRevenueMinor = null, actualC
             <MetricCard label="Textract Costs" value={usd(economics.textractCosts, 2)} sub={`${economics.textractPagesTotal.toLocaleString('en-US')} analyzed pages at ${usd(assumptions.textractPricePerPage, 3)} each`} tone="warn" />
             <MetricCard label="Other Variable Costs" value={usd(economics.otherVariableCosts, 2)} sub="Optional per-report variable assumptions" tone="warn" />
             <MetricCard label="Total Variable Report Costs" value={usd(economics.variableReportCosts, 2)} sub="AI + Textract + other variable costs" tone="warn" />
-            <MetricCard label="Fixed Monthly Costs" value={usd(economics.fixedMonthlyCosts, 2)} sub="Vercel + Supabase + DocRaptor + domain/email + other" tone="warn" />
+            <MetricCard label="Fixed Monthly Costs" value={usd(economics.fixedMonthlyCosts, 2)} sub="Vercel + Supabase + DocRaptor + domain/email + Resend + other" tone="warn" />
             <MetricCard label="Projected Net Monthly Contribution" value={usd(economics.netMonthlyContribution, 2)} sub={`${cad(economics.netMonthlyContributionCad, 0)} CAD equivalent`} tone={economics.netMonthlyContribution >= 0 ? 'good' : 'warn'} />
             <MetricCard label="Net Contribution Margin" value={percent(economics.netMarginPercent)} sub="Projected net contribution / gross revenue" tone={economics.netMonthlyContribution >= 0 ? 'good' : 'warn'} />
             <MetricCard label="Annualized Revenue" value={usd(economics.annualizedRevenue, 0)} sub="Scenario monthly revenue x 12" />

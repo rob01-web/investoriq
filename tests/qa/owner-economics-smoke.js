@@ -32,6 +32,7 @@ const scenario = deriveOwnerEconomics({
     supabaseMonthlyCost: 25,
     docraptorMonthlyCost: 15,
     domainEmailMonthlyCost: 8.33,
+    resendMonthlyCost: 4,
     otherMonthlyCost: 10,
     cadPerUsd: 1.40,
   },
@@ -53,12 +54,12 @@ assert.equal(scenario.textractPagesTotal, 190);
 assert.ok(Math.abs(scenario.textractCosts - 2.85) < 1e-9);
 assert.equal(scenario.otherVariableCosts, 2.75);
 assert.ok(Math.abs(scenario.variableReportCosts - 23.10) < 1e-9);
-assert.ok(Math.abs(scenario.fixedMonthlyCosts - 78.33) < 1e-9);
-assert.ok(Math.abs(scenario.netMonthlyContribution - 2078.364) < 1e-9);
+assert.ok(Math.abs(scenario.fixedMonthlyCosts - 82.33) < 1e-9);
+assert.ok(Math.abs(scenario.netMonthlyContribution - 2074.364) < 1e-9);
 assert.ok(Math.abs(scenario.annualizedRevenue - 27528) < 1e-9);
-assert.ok(Math.abs(scenario.annualizedNetContribution - 24940.368) < 1e-9);
+assert.ok(Math.abs(scenario.annualizedNetContribution - 24892.368) < 1e-9);
 assert.ok(Math.abs(scenario.grossRevenueCad - 3211.6) < 1e-9);
-assert.ok(Math.abs(scenario.netMonthlyContributionCad - 2909.7096) < 1e-9);
+assert.ok(Math.abs(scenario.netMonthlyContributionCad - 2904.1096) < 1e-9);
 
 const normalized = normalizeOwnerEconomicsAssumptions({
   screeningPurchases: -1,
