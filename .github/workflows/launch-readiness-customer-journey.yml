@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - internal-underwriting-editorial-analytical-elite-20260906-r1
+      - internal-launch-readiness-customer-journey-20260909-r1
     paths:
       - 'src/**'
       - 'api/**'
