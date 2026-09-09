@@ -1,0 +1,55 @@
+name: One-time Customer Journey Pricing Polish
+
+on:
+  push:
+    branches:
+      - internal-launch-readiness-customer-journey-20260909-r1
+    paths:
+      - '.github/workflows/one-time-customer-journey-pricing-polish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: internal-launch-readiness-customer-journey-20260909-r1
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply bounded customer journey polish
+        run: python scripts/one-time-customer-journey-pricing-polish.py
+
+      - name: Verify diff hygiene
+        run: |
+          git diff --check
+          git diff -- src/pages/Pricing.jsx src/pages/Dashboard.jsx src/pages/Login.jsx src/pages/SignUp.jsx tests/qa/launch-readiness-customer-journey-smoke.js
+
+      - name: Run focused customer journey regression
+        run: node tests/qa/launch-readiness-customer-journey-smoke.js
+
+      - name: Run canonical launch QA
+        run: npm run qa
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit bounded customer journey polish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Pricing.jsx src/pages/Dashboard.jsx src/pages/Login.jsx src/pages/SignUp.jsx tests/qa/launch-readiness-customer-journey-smoke.js
+          git commit -m "Polish launch pricing and purchase journey copy"
+          git push origin HEAD:internal-launch-readiness-customer-journey-20260909-r1
