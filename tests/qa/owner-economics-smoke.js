@@ -76,6 +76,11 @@ assert.equal(normalized.stripePercent, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.strip
 assert.equal(normalized.textractPricePerPage, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.textractPricePerPage);
 assert.equal(normalized.cadPerUsd, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.cadPerUsd);
 
+assert.equal(DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.screeningAiCost, 1);
+assert.equal(DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.underwritingAiCost, 2);
+assert.equal(DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.screeningTextractPages, 34);
+assert.equal(DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.underwritingTextractPages, 100);
+
 const empty = deriveOwnerEconomics({ prices, assumptions: {} });
 assert.equal(empty.grossRevenue, 0);
 assert.equal(empty.checkoutCount, 0);

@@ -14,14 +14,14 @@ export const DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS = Object.freeze({
   // AI cost remains report-level because actual token use varies materially with
   // source quality, recovery paths and QA. Replace these zeros with observed costs
   // from controlled Screening and Underwriting generations.
-  screeningAiCost: 0,
-  underwritingAiCost: 0,
+  screeningAiCost: 1,
+  underwritingAiCost: 2,
 
   // InvestorIQ uses Amazon Textract AnalyzeDocument with TABLES. AWS charges per
   // analyzed page. Enter the average pages actually sent to Textract per report.
   textractPricePerPage: 0.015,
-  screeningTextractPages: 0,
-  underwritingTextractPages: 0,
+  screeningTextractPages: 34,
+  underwritingTextractPages: 100,
 
   screeningOtherVariableCost: 0,
   underwritingOtherVariableCost: 0,
