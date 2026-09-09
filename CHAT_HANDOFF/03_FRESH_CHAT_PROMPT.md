@@ -1,3 +1,29 @@
+## September 9, 2026 launch closeout - CURRENT STATUS AUTHORITY
+
+This is the newest current-status authority. It supersedes older branch, deployment, launch-readiness, pricing-closeout, and Owner Economics status below only where they conflict. **Preserve all historical material below.**
+
+Current working branch:
+
+`internal-owner-economics-cost-model-20260909-r2`
+
+Current production runtime SHA:
+
+`243159be4be0b34c613b51a4b00a098e75e14e31`
+
+Current Vercel production deployment:
+
+`dpl_HXd4Z538RBG1xsexqTzG9gDbVpSa` (`READY`)
+
+Detailed Sep 9 closeout authority:
+
+`CHAT_HANDOFF/archived/2026-09-09-launch-readiness-owner-economics-closeout/SEP9_CLOSEOUT_AUTHORITY.md`
+
+Production now includes the strict customer-admission repair, final owner-approved pricing/customer-journey closeout, and Owner Economics dashboard. The strict Supabase admission migration was already applied and must not be re-applied. Production mutation returns to HOLD after this authorized deployment.
+
+Fresh-chat order: read all five canonical `CHAT_HANDOFF` files completely, starting with this file, then read the Sep 9 closeout archive above. Do not restart completed Sep 6 report certification, Sep 8 admission repair, Sep 9 pricing closeout, or Sep 9 Owner Economics implementation unless a new defect requires it.
+
+Docs-only commits made after the production deployment do not change the live runtime SHA above and do not require a redeploy.
+
 # INVESTORIQ FRESH CHAT PROMPT - 2026-09-08
 
 
