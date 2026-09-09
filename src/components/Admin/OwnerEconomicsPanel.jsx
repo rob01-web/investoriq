@@ -176,7 +176,7 @@ export default function OwnerEconomicsPanel({ actualRevenueMinor = null, actualC
             onClick={reset}
             style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 10px', border:`1px solid ${T.hairlineMid}`, background:T.white, color:T.ink3, cursor:'pointer', fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:'0.12em', textTransform:'uppercase' }}
           >
-            <RefreshCcw size={11} /> Reset assumptions
+            <RefreshCcw size={11} /> Reset launch baseline
           </button>
         </div>
 
@@ -219,20 +219,30 @@ export default function OwnerEconomicsPanel({ actualRevenueMinor = null, actualC
           <SectionTitle
             eyebrow="Cost Assumptions"
             title="Enter the costs you actually expect to pay"
-            body="All cost fields are USD or USD-equivalent. Stripe defaults are planning estimates only until InvestorIQ has enough live transactions to calculate an observed effective fee rate."
+            body="Launch planning defaults use the paid infrastructure we expect to operate with, not today&apos;s temporary free tiers. Provider assumptions remain editable and should be replaced with observed production costs as sales accumulate."
           />
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))', gap:14 }}>
-            <NumberField label="Stripe Percentage" value={assumptions.stripePercent} onChange={update('stripePercent')} suffix="%" step="0.1" helper="Editable planning estimate" />
-            <NumberField label="Stripe Fixed Fee / Checkout" value={assumptions.stripeFixedPerCheckout} onChange={update('stripeFixedPerCheckout')} prefix="$" step="0.01" helper="Editable planning estimate" />
-            <NumberField label="Screening Variable Cost" value={assumptions.screeningVariableCost} onChange={update('screeningVariableCost')} prefix="$" step="0.01" helper="AI, PDF or other per-Screening cost" />
-            <NumberField label="Underwriting Variable Cost" value={assumptions.underwritingVariableCost} onChange={update('underwritingVariableCost')} prefix="$" step="0.01" helper="AI, PDF or other per-Underwriting cost" />
-            <NumberField label="Vercel Monthly" value={assumptions.vercelMonthlyCost} onChange={update('vercelMonthlyCost')} prefix="$" step="0.01" />
-            <NumberField label="Supabase Monthly" value={assumptions.supabaseMonthlyCost} onChange={update('supabaseMonthlyCost')} prefix="$" step="0.01" />
-            <NumberField label="DocRaptor Monthly" value={assumptions.docraptorMonthlyCost} onChange={update('docraptorMonthlyCost')} prefix="$" step="0.01" />
-            <NumberField label="Domain + Email Monthly" value={assumptions.domainEmailMonthlyCost} onChange={update('domainEmailMonthlyCost')} prefix="$" step="0.01" />
+            <NumberField label="Stripe Base Percentage" value={assumptions.stripePercent} onChange={update('stripePercent')} suffix="%" step="0.1" helper="Canada standard online-card baseline: 2.9%" />
+            <NumberField label="Stripe Fixed Fee / Checkout" value={assumptions.stripeFixedPerCheckout} onChange={update('stripeFixedPerCheckout')} prefix="$" step="0.01" helper="USD-presented charge baseline: US$0.30" />
+            <NumberField label="Stripe Currency Conversion" value={assumptions.stripeCurrencyConversionPercent} onChange={update('stripeCurrencyConversionPercent')} suffix="%" step="0.1" helper="Leave 0 unless Stripe currency conversion is required; current public add-on is 2%" />
+            <NumberField label="Screening AI / API Cost" value={assumptions.screeningAiCost} onChange={update('screeningAiCost')} prefix="$" step="0.01" helper="Enter observed OpenAI cost from one controlled Screening generation" />
+            <NumberField label="Underwriting AI / API Cost" value={assumptions.underwritingAiCost} onChange={update('underwritingAiCost')} prefix="$" step="0.01" helper="Enter observed OpenAI cost from one controlled Underwriting generation" />
+            <NumberField label="Textract $ / Analyzed Page" value={assumptions.textractPricePerPage} onChange={update('textractPricePerPage')} prefix="$" step="0.001" helper="AnalyzeDocument TABLES launch baseline: $0.015 per analyzed page" />
+            <NumberField label="Screening Textract Pages" value={assumptions.screeningTextractPages} onChange={update('screeningTextractPages')} step="1" helper="Average pages actually sent to Textract per Screening report" />
+            <NumberField label="Underwriting Textract Pages" value={assumptions.underwritingTextractPages} onChange={update('underwritingTextractPages')} step="1" helper="Average pages actually sent to Textract per Underwriting report" />
+            <NumberField label="Screening Other Variable" value={assumptions.screeningOtherVariableCost} onChange={update('screeningOtherVariableCost')} prefix="$" step="0.01" helper="Optional per-Screening cost not modeled above" />
+            <NumberField label="Underwriting Other Variable" value={assumptions.underwritingOtherVariableCost} onChange={update('underwritingOtherVariableCost')} prefix="$" step="0.01" helper="Optional per-Underwriting cost not modeled above" />
+            <NumberField label="Vercel Monthly" value={assumptions.vercelMonthlyCost} onChange={update('vercelMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Pro $20/month" />
+            <NumberField label="Supabase Monthly" value={assumptions.supabaseMonthlyCost} onChange={update('supabaseMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Pro $25/month" />
+            <NumberField label="DocRaptor Monthly" value={assumptions.docraptorMonthlyCost} onChange={update('docraptorMonthlyCost')} prefix="$" step="0.01" helper="Launch baseline: Basic $15/month for 125 documents" />
+            <NumberField label="Domain + Email Monthly" value={assumptions.domainEmailMonthlyCost} onChange={update('domainEmailMonthlyCost')} prefix="$" step="0.01" helper="Hostinger planning baseline: about $100/year normalized monthly" />
             <NumberField label="Other Monthly Costs" value={assumptions.otherMonthlyCost} onChange={update('otherMonthlyCost')} prefix="$" step="0.01" />
             <NumberField label="CAD per USD" value={assumptions.cadPerUsd} onChange={update('cadPerUsd')} step="0.01" helper="Planning conversion for CAD-equivalent headline values" />
           </div>
+        </div>
+
+        <div style={{ margin:'4px 0 20px', padding:'11px 13px', background:T.okBg, border:`1px solid ${T.okBorder}`, color:T.okGreen, fontFamily:"'DM Sans',sans-serif", fontSize:10.5, lineHeight:1.55 }}>
+          Launch baseline as of September 9, 2026: Vercel Pro $20/month, Supabase Pro $25/month, DocRaptor Basic $15/month, Hostinger domain and email about $100/year, Amazon Textract AnalyzeDocument TABLES $0.015 per analyzed page, and Stripe base card processing 2.9% + US$0.30 for a USD-presented charge. AWS promotional credits are intentionally excluded. OpenAI defaults remain $0 until controlled report-level usage is measured.
         </div>
 
         <div style={{ borderTop:`1px solid ${T.hairline}`, paddingTop:20 }}>
@@ -243,8 +253,11 @@ export default function OwnerEconomicsPanel({ actualRevenueMinor = null, actualC
           />
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))', gap:10 }}>
             <MetricCard label="Gross Monthly Revenue" value={usd(economics.grossRevenue, 2)} sub={`${cad(economics.grossRevenueCad, 0)} CAD equivalent`} />
-            <MetricCard label="Estimated Stripe Fees" value={usd(economics.stripeFees, 2)} sub={`${usd(economics.stripePercentFees, 2)} percentage + ${usd(economics.stripeFixedFees, 2)} fixed`} tone="warn" />
-            <MetricCard label="Variable Report Costs" value={usd(economics.variableReportCosts, 2)} sub="Screening and Underwriting per-report assumptions" tone="warn" />
+            <MetricCard label="Estimated Stripe Fees" value={usd(economics.stripeFees, 2)} sub={`${economics.stripeEffectivePercent.toFixed(1)}% effective + ${usd(economics.stripeFixedFees, 2)} fixed`} tone="warn" />
+            <MetricCard label="AI / API Costs" value={usd(economics.aiCosts, 2)} sub="Observed per-report OpenAI assumptions" tone="warn" />
+            <MetricCard label="Textract Costs" value={usd(economics.textractCosts, 2)} sub={`${economics.textractPagesTotal.toLocaleString('en-US')} analyzed pages at ${usd(assumptions.textractPricePerPage, 3)} each`} tone="warn" />
+            <MetricCard label="Other Variable Costs" value={usd(economics.otherVariableCosts, 2)} sub="Optional per-report variable assumptions" tone="warn" />
+            <MetricCard label="Total Variable Report Costs" value={usd(economics.variableReportCosts, 2)} sub="AI + Textract + other variable costs" tone="warn" />
             <MetricCard label="Fixed Monthly Costs" value={usd(economics.fixedMonthlyCosts, 2)} sub="Vercel + Supabase + DocRaptor + domain/email + other" tone="warn" />
             <MetricCard label="Projected Net Monthly Contribution" value={usd(economics.netMonthlyContribution, 2)} sub={`${cad(economics.netMonthlyContributionCad, 0)} CAD equivalent`} tone={economics.netMonthlyContribution >= 0 ? 'good' : 'warn'} />
             <MetricCard label="Net Contribution Margin" value={percent(economics.netMarginPercent)} sub="Projected net contribution / gross revenue" tone={economics.netMonthlyContribution >= 0 ? 'good' : 'warn'} />
