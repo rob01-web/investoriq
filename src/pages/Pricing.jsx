@@ -47,7 +47,7 @@ const PRICING_PAGE_STYLES = `
   }
 
   .pricing-card-header {
-    min-height: 86px;
+    min-height: 62px;
   }
 
   .pricing-card-price {
@@ -83,7 +83,6 @@ const tiers = [
   {
     title:       'Screening Report',
     productType: 'screening',
-    eyebrow:     'Acquisition Screening',
     description: 'Fast, document-driven screening for early deal triage and acquisition decisions.',
     pricingNote: 'One-time purchase | No subscription',
     features: [
@@ -98,7 +97,6 @@ const tiers = [
   {
     title:       'Underwriting Report',
     productType: 'underwriting',
-    eyebrow:     'Institutional Underwriting',
     description: 'Deeper document-driven underwriting for investment review, financing analysis, and downside testing.',
     pricingNote: 'One-time purchase | No subscription',
     features: [
@@ -113,8 +111,7 @@ const tiers = [
   {
     title:       'Launch Bundle',
     productType: 'bundle',
-    eyebrow:     'Screening + Underwriting',
-    description: 'Two Screening Reports plus one Underwriting Report at a lower combined price.',
+    description: 'Screen two opportunities and take one finalist through full Underwriting for one fixed price.',
     pricingNote: 'One-time purchase | 3 report credits',
     features: [
       '2 Screening Report credits',
@@ -184,16 +181,6 @@ function PricingTile({ tier, onCheckout, loadingKey, isAuthenticated, pricingAva
       )}
 
       <div className="pricing-card-header">
-        <p style={{
-          fontFamily:   "'DM Mono', monospace",
-          fontSize:     10,
-          letterSpacing:'0.2em',
-          textTransform:'uppercase',
-          color:        T.goldDark,
-          marginBottom: 10,
-        }}>
-          {tier.eyebrow}
-        </p>
 
         <h3 style={{
           fontFamily:   "'Cormorant Garamond', Georgia, serif",
@@ -467,7 +454,7 @@ export default function PricingPage() {
               marginBottom: 16,
               maxWidth:     600,
             }}>
-              Document-driven real estate analysis for investment decisions.
+              Document-driven underwriting for real estate investors.
             </motion.h1>
 
             <motion.p variants={fadeUp} style={{

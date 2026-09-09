@@ -65,8 +65,8 @@ assert.match(strictMigration, /p_report_type\s*=\s*'screening'\s+and\s+v_has_sup
 assert.match(strictMigration, /p_report_type\s*=\s*'underwriting'\s+and\s+not\s+v_has_supporting_docs/i);
 
 // Bundle copy must sell the customer outcome instead of leaking commerce implementation details.
-assert.match(pricing, /Screening \+ Underwriting/);
-assert.match(pricing, /Two Screening Reports plus one Underwriting Report at a lower combined price/i);
+assert.equal(/Acquisition Screening|Institutional Underwriting|Screening \+ Underwriting/i.test(pricing), false);
+assert.match(pricing, /Screen two opportunities and take one finalist through full Underwriting for one fixed price/i);
 assert.match(pricing, /Save \$\$\{Math\.round\(savings \/ 100\)/);
 for (const forbidden of [
   'Frozen Launch Bundle',
@@ -87,7 +87,7 @@ assert.match(pricing, /\.pricing-card-description\s*\{/);
 assert.match(pricing, /@media \(max-width: 760px\)/);
 
 // Pricing and adjacent account surfaces must present both launch report products.
-assert.match(pricing, /Document-driven real estate analysis for investment decisions\./);
+assert.match(pricing, /Document-driven underwriting for real estate investors\./);
 assert.match(pricing, /required document package is incomplete or cannot be verified/i);
 assert.equal(/no usable core source can be verified/i.test(pricing), false);
 assert.match(dashboard, /Upload property documents to generate a Screening or Underwriting Report\./);
@@ -116,7 +116,7 @@ assert.match(indexHtml, /Screening and Underwriting Reports/);
 const customerPhrases = [
   'Fast, document-driven screening for early deal triage and acquisition decisions.',
   'Deeper document-driven underwriting for investment review, financing analysis, and downside testing.',
-  'Two Screening Reports plus one Underwriting Report at a lower combined price.',
+  'Screen two opportunities and take one finalist through full Underwriting for one fixed price.',
   'Screening requires both a Rent Roll and T12. Underwriting requires both core documents plus at least one supporting due diligence document.',
   'Screening accepts only the Rent Roll and T12.',
   'At least one supporting document is required for Underwriting.',
