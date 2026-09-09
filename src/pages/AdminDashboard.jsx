@@ -12,6 +12,7 @@ import { supabase } from "@/lib/customSupabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 import DiagnosticsIntelligence from "@/components/Admin/DiagnosticsIntelligence.jsx";
 import QualityIncidentDashboard from "@/components/Admin/QualityIncidentDashboard.jsx";
+import OwnerEconomicsPanel from "@/components/Admin/OwnerEconomicsPanel.jsx";
 import { resolveReportSurfaceState } from "@/lib/reportSurfaceState";
 import { sortReportRevisions } from "@/lib/reportRevisionAuthority";
 
@@ -374,6 +375,7 @@ export default function AdminDashboard() {
     try {
       const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
       let revMTD = null;
+      let settledCheckoutCount = null;
       if (adminRunKey.trim()) {
         const commerceResponse = await fetch(
           `/api/admin/queue-metrics?include_commerce_summary=true&month_start=${encodeURIComponent(startOfMonth.toISOString())}`,
@@ -382,6 +384,7 @@ export default function AdminDashboard() {
         const commercePayload = await commerceResponse.json().catch(() => ({}));
         if (commerceResponse.ok && commercePayload?.commerce_summary?.currency === 'usd') {
           revMTD = Number(commercePayload.commerce_summary.settled_revenue_minor || 0);
+          settledCheckoutCount = Number(commercePayload.commerce_summary.settled_checkout_count || 0);
         }
       }
 
@@ -415,7 +418,7 @@ export default function AdminDashboard() {
         .order('created_at', { ascending:true });
 
       setStuckJobs(stuck || []);
-      setCmdStats({ revMTD, rptToday: rptToday || 0, totalUsers: totalUsers || 0, openIssues: openIssues || 0, stuckCount: (stuck || []).length });
+      setCmdStats({ revMTD, settledCheckoutCount, rptToday: rptToday || 0, totalUsers: totalUsers || 0, openIssues: openIssues || 0, stuckCount: (stuck || []).length });
     } catch (e) {
       console.error('cmdStats error', e);
     }
@@ -838,6 +841,11 @@ export default function AdminDashboard() {
           </div>
 
           <SystemHealthBanner snapshot={systemHealthSnapshot} />
+
+          <OwnerEconomicsPanel
+            actualRevenueMinor={cmdStats?.revMTD}
+            actualCheckoutCount={cmdStats?.settledCheckoutCount}
+          />
 
           <QualityIncidentDashboard adminRunKey={adminRunKey} />
 
