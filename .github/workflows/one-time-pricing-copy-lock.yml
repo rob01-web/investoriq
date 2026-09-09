@@ -1,0 +1,105 @@
+name: One-time Pricing Copy Lock
+
+on:
+  push:
+    branches:
+      - internal-launch-readiness-customer-journey-20260909-r1
+
+permissions:
+  contents: write
+
+jobs:
+  lock-copy:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: internal-launch-readiness-customer-journey-20260909-r1
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply approved old-confidence new-engineering copy lock
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          pricing_path = Path('src/pages/Pricing.jsx')
+          test_path = Path('tests/qa/launch-readiness-customer-journey-smoke.js')
+          pricing = pricing_path.read_text()
+          test = test_path.read_text()
+
+          replacements = [
+              ("  .pricing-card-header {\n    min-height: 86px;\n", "  .pricing-card-header {\n    min-height: 62px;\n"),
+              ("    eyebrow:     'Acquisition Screening',\n", ""),
+              ("    eyebrow:     'Institutional Underwriting',\n", ""),
+              ("    eyebrow:     'Screening + Underwriting',\n", ""),
+              ("    description: 'Two Screening Reports plus one Underwriting Report at a lower combined price.',\n", "    description: 'Screen two opportunities and take one finalist through full Underwriting for one fixed price.',\n"),
+              ("              Document-driven real estate analysis for investment decisions.\n", "              Document-driven underwriting for real estate investors.\n"),
+          ]
+          for old, new in replacements:
+              count = pricing.count(old)
+              if count != 1:
+                  raise SystemExit(f'Pricing replacement guard failed ({count}): {old!r}')
+              pricing = pricing.replace(old, new)
+
+          eyebrow_pattern = re.compile(r'''\n        <p style=\{\{\n          fontFamily:\s+"'DM Mono', monospace",\n          fontSize:\s+10,\n          letterSpacing:'0\.2em',\n          textTransform:'uppercase',\n          color:\s+T\.goldDark,\n          marginBottom: 10,\n        \}\}>\n          \{tier\.eyebrow\}\n        </p>\n''')
+          pricing, count = eyebrow_pattern.subn('\n', pricing, count=1)
+          if count != 1:
+              raise SystemExit(f'Eyebrow render removal guard failed: {count}')
+
+          test_replacements = [
+              ("assert.match(pricing, /Screening \\+ Underwriting/);\n", "assert.equal(/Acquisition Screening|Institutional Underwriting|Screening \\+ Underwriting/i.test(pricing), false);\n"),
+              ("assert.match(pricing, /Two Screening Reports plus one Underwriting Report at a lower combined price/i);\n", "assert.match(pricing, /Screen two opportunities and take one finalist through full Underwriting for one fixed price/i);\n"),
+              ("assert.match(pricing, /Document-driven real estate analysis for investment decisions\\./);\n", "assert.match(pricing, /Document-driven underwriting for real estate investors\\./);\n"),
+              ("  'Two Screening Reports plus one Underwriting Report at a lower combined price.',\n", "  'Screen two opportunities and take one finalist through full Underwriting for one fixed price.',\n"),
+          ]
+          for old, new in test_replacements:
+              count = test.count(old)
+              if count != 1:
+                  raise SystemExit(f'Test replacement guard failed ({count}): {old!r}')
+              test = test.replace(old, new)
+
+          pricing_path.write_text(pricing)
+          test_path.write_text(test)
+          PY
+
+      - name: Verify exact bounded diff
+        run: |
+          git diff --check
+          changed="$(git diff --name-only | sort)"
+          expected=$'src/pages/Pricing.jsx\ntests/qa/launch-readiness-customer-journey-smoke.js'
+          if [ "$changed" != "$expected" ]; then
+            echo "Unexpected files changed:"
+            printf '%s\n' "$changed"
+            exit 1
+          fi
+
+      - name: Run focused customer journey regression
+        run: node tests/qa/launch-readiness-customer-journey-smoke.js
+
+      - name: Run canonical launch QA
+        run: npm run qa
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit approved pricing copy lock
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Pricing.jsx tests/qa/launch-readiness-customer-journey-smoke.js
+          git commit -m "Lock pricing copy to owner-approved presentation"
+          git push origin HEAD:internal-launch-readiness-customer-journey-20260909-r1
