@@ -1,18 +1,38 @@
-export const OWNER_ECONOMICS_STORAGE_KEY = 'investoriq-owner-economics-v1';
+export const OWNER_ECONOMICS_STORAGE_KEY = 'investoriq-owner-economics-v2';
 
 export const DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS = Object.freeze({
   screeningPurchases: 0,
   underwritingPurchases: 0,
   bundlePurchases: 0,
+
+  // Stripe Canada standard online-card baseline. Additional currency conversion,
+  // international-card or negotiated-rate effects remain editable assumptions.
   stripePercent: 2.9,
   stripeFixedPerCheckout: 0.30,
-  screeningVariableCost: 0,
-  underwritingVariableCost: 0,
-  vercelMonthlyCost: 0,
-  supabaseMonthlyCost: 0,
-  docraptorMonthlyCost: 0,
-  domainEmailMonthlyCost: 0,
+  stripeCurrencyConversionPercent: 0,
+
+  // AI cost remains report-level because actual token use varies materially with
+  // source quality, recovery paths and QA. Replace these zeros with observed costs
+  // from controlled Screening and Underwriting generations.
+  screeningAiCost: 0,
+  underwritingAiCost: 0,
+
+  // InvestorIQ uses Amazon Textract AnalyzeDocument with TABLES. AWS charges per
+  // analyzed page. Enter the average pages actually sent to Textract per report.
+  textractPricePerPage: 0.015,
+  screeningTextractPages: 0,
+  underwritingTextractPages: 0,
+
+  screeningOtherVariableCost: 0,
+  underwritingOtherVariableCost: 0,
+
+  // Launch-planning baseline rather than today's temporary free-tier state.
+  vercelMonthlyCost: 20,
+  supabaseMonthlyCost: 25,
+  docraptorMonthlyCost: 15,
+  domainEmailMonthlyCost: 8.33,
   otherMonthlyCost: 0,
+
   cadPerUsd: 1.40,
 });
 
@@ -31,14 +51,23 @@ export function normalizeOwnerEconomicsAssumptions(value = {}) {
     screeningPurchases: integerNonNegative(value.screeningPurchases),
     underwritingPurchases: integerNonNegative(value.underwritingPurchases),
     bundlePurchases: integerNonNegative(value.bundlePurchases),
+
     stripePercent: finiteNonNegative(value.stripePercent, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.stripePercent),
     stripeFixedPerCheckout: finiteNonNegative(value.stripeFixedPerCheckout, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.stripeFixedPerCheckout),
-    screeningVariableCost: finiteNonNegative(value.screeningVariableCost),
-    underwritingVariableCost: finiteNonNegative(value.underwritingVariableCost),
-    vercelMonthlyCost: finiteNonNegative(value.vercelMonthlyCost),
-    supabaseMonthlyCost: finiteNonNegative(value.supabaseMonthlyCost),
-    docraptorMonthlyCost: finiteNonNegative(value.docraptorMonthlyCost),
-    domainEmailMonthlyCost: finiteNonNegative(value.domainEmailMonthlyCost),
+    stripeCurrencyConversionPercent: finiteNonNegative(value.stripeCurrencyConversionPercent, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.stripeCurrencyConversionPercent),
+
+    screeningAiCost: finiteNonNegative(value.screeningAiCost),
+    underwritingAiCost: finiteNonNegative(value.underwritingAiCost),
+    textractPricePerPage: finiteNonNegative(value.textractPricePerPage, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.textractPricePerPage),
+    screeningTextractPages: finiteNonNegative(value.screeningTextractPages),
+    underwritingTextractPages: finiteNonNegative(value.underwritingTextractPages),
+    screeningOtherVariableCost: finiteNonNegative(value.screeningOtherVariableCost),
+    underwritingOtherVariableCost: finiteNonNegative(value.underwritingOtherVariableCost),
+
+    vercelMonthlyCost: finiteNonNegative(value.vercelMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.vercelMonthlyCost),
+    supabaseMonthlyCost: finiteNonNegative(value.supabaseMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.supabaseMonthlyCost),
+    docraptorMonthlyCost: finiteNonNegative(value.docraptorMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.docraptorMonthlyCost),
+    domainEmailMonthlyCost: finiteNonNegative(value.domainEmailMonthlyCost, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.domainEmailMonthlyCost),
     otherMonthlyCost: finiteNonNegative(value.otherMonthlyCost),
     cadPerUsd: finiteNonNegative(value.cadPerUsd, DEFAULT_OWNER_ECONOMICS_ASSUMPTIONS.cadPerUsd),
   };
@@ -60,13 +89,25 @@ export function deriveOwnerEconomics({ assumptions = {}, prices = {} } = {}) {
     (a.underwritingPurchases * underwritingPrice) +
     (a.bundlePurchases * bundlePrice);
 
-  const stripePercentFees = grossRevenue * (a.stripePercent / 100);
+  const stripeEffectivePercent = a.stripePercent + a.stripeCurrencyConversionPercent;
+  const stripePercentFees = grossRevenue * (stripeEffectivePercent / 100);
   const stripeFixedFees = checkoutCount * a.stripeFixedPerCheckout;
   const stripeFees = stripePercentFees + stripeFixedFees;
 
-  const variableReportCosts =
-    (screeningReports * a.screeningVariableCost) +
-    (underwritingReports * a.underwritingVariableCost);
+  const aiCosts =
+    (screeningReports * a.screeningAiCost) +
+    (underwritingReports * a.underwritingAiCost);
+
+  const screeningTextractPagesTotal = screeningReports * a.screeningTextractPages;
+  const underwritingTextractPagesTotal = underwritingReports * a.underwritingTextractPages;
+  const textractPagesTotal = screeningTextractPagesTotal + underwritingTextractPagesTotal;
+  const textractCosts = textractPagesTotal * a.textractPricePerPage;
+
+  const otherVariableCosts =
+    (screeningReports * a.screeningOtherVariableCost) +
+    (underwritingReports * a.underwritingOtherVariableCost);
+
+  const variableReportCosts = aiCosts + textractCosts + otherVariableCosts;
 
   const fixedMonthlyCosts =
     a.vercelMonthlyCost +
@@ -90,9 +131,16 @@ export function deriveOwnerEconomics({ assumptions = {}, prices = {} } = {}) {
     underwritingReports,
     totalReports,
     grossRevenue,
+    stripeEffectivePercent,
     stripePercentFees,
     stripeFixedFees,
     stripeFees,
+    aiCosts,
+    screeningTextractPagesTotal,
+    underwritingTextractPagesTotal,
+    textractPagesTotal,
+    textractCosts,
+    otherVariableCosts,
     variableReportCosts,
     fixedMonthlyCosts,
     netMonthlyContribution,
