@@ -1,0 +1,94 @@
+name: One-time Owner Economics Cost Model V2
+
+on:
+  push:
+    branches:
+      - internal-owner-economics-cost-model-20260909-r2
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-certify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: internal-owner-economics-cost-model-20260909-r2
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply launch cost model UI
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/components/Admin/OwnerEconomicsPanel.jsx')
+          text = path.read_text()
+
+          def replace_once(old, new, label):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label} guard failed: {count}')
+              text = text.replace(old, new)
+
+          replace_once("            <RefreshCcw size={11} /> Reset assumptions\n", "            <RefreshCcw size={11} /> Reset launch baseline\n", 'reset')
+          replace_once('            body="All cost fields are USD or USD-equivalent. Stripe defaults are planning estimates only until InvestorIQ has enough live transactions to calculate an observed effective fee rate."\n', '            body="Launch planning defaults use the paid infrastructure we expect to operate with, not today&apos;s temporary free tiers. Provider assumptions remain editable and should be replaced with observed production costs as sales accumulate."\n', 'cost-body')
+          replace_once('            <NumberField label="Stripe Percentage" value={assumptions.stripePercent} onChange={update(\'stripePercent\')} suffix="%" step="0.1" helper="Editable planning estimate" />\n', '            <NumberField label="Stripe Base Percentage" value={assumptions.stripePercent} onChange={update(\'stripePercent\')} suffix="%" step="0.1" helper="Canada standard online-card baseline: 2.9%" />\n', 'stripe-percent')
+          replace_once('            <NumberField label="Stripe Fixed Fee / Checkout" value={assumptions.stripeFixedPerCheckout} onChange={update(\'stripeFixedPerCheckout\')} prefix="$" step="0.01" helper="Editable planning estimate" />\n', '            <NumberField label="Stripe Fixed Fee / Checkout" value={assumptions.stripeFixedPerCheckout} onChange={update(\'stripeFixedPerCheckout\')} prefix="$" step="0.01" helper="USD-presented charge baseline: US$0.30" />\n            <NumberField label="Stripe Currency Conversion" value={assumptions.stripeCurrencyConversionPercent} onChange={update(\'stripeCurrencyConversionPercent\')} suffix="%" step="0.1" helper="Leave 0 unless Stripe currency conversion is required; current public add-on is 2%" />\n', 'stripe-fixed')
+          replace_once('            <NumberField label="Screening Variable Cost" value={assumptions.screeningVariableCost} onChange={update(\'screeningVariableCost\')} prefix="$" step="0.01" helper="AI, PDF or other per-Screening cost" />\n', '            <NumberField label="Screening AI / API Cost" value={assumptions.screeningAiCost} onChange={update(\'screeningAiCost\')} prefix="$" step="0.01" helper="Enter observed OpenAI cost from one controlled Screening generation" />\n            <NumberField label="Underwriting AI / API Cost" value={assumptions.underwritingAiCost} onChange={update(\'underwritingAiCost\')} prefix="$" step="0.01" helper="Enter observed OpenAI cost from one controlled Underwriting generation" />\n            <NumberField label="Textract $ / Analyzed Page" value={assumptions.textractPricePerPage} onChange={update(\'textractPricePerPage\')} prefix="$" step="0.001" helper="AnalyzeDocument TABLES launch baseline: $0.015 per analyzed page" />\n            <NumberField label="Screening Textract Pages" value={assumptions.screeningTextractPages} onChange={update(\'screeningTextractPages\')} step="1" helper="Average pages actually sent to Textract per Screening report" />\n            <NumberField label="Underwriting Textract Pages" value={assumptions.underwritingTextractPages} onChange={update(\'underwritingTextractPages\')} step="1" helper="Average pages actually sent to Textract per Underwriting report" />\n            <NumberField label="Screening Other Variable" value={assumptions.screeningOtherVariableCost} onChange={update(\'screeningOtherVariableCost\')} prefix="$" step="0.01" helper="Optional per-Screening cost not modeled above" />\n            <NumberField label="Underwriting Other Variable" value={assumptions.underwritingOtherVariableCost} onChange={update(\'underwritingOtherVariableCost\')} prefix="$" step="0.01" helper="Optional per-Underwriting cost not modeled above" />\n', 'screening-variable')
+          replace_once('            <NumberField label="Underwriting Variable Cost" value={assumptions.underwritingVariableCost} onChange={update(\'underwritingVariableCost\')} prefix="$" step="0.01" helper="AI, PDF or other per-Underwriting cost" />\n', '', 'underwriting-variable')
+          replace_once('            <NumberField label="Vercel Monthly" value={assumptions.vercelMonthlyCost} onChange={update(\'vercelMonthlyCost\')} prefix="$" step="0.01" />\n', '            <NumberField label="Vercel Monthly" value={assumptions.vercelMonthlyCost} onChange={update(\'vercelMonthlyCost\')} prefix="$" step="0.01" helper="Launch baseline: Pro $20/month" />\n', 'vercel')
+          replace_once('            <NumberField label="Supabase Monthly" value={assumptions.supabaseMonthlyCost} onChange={update(\'supabaseMonthlyCost\')} prefix="$" step="0.01" />\n', '            <NumberField label="Supabase Monthly" value={assumptions.supabaseMonthlyCost} onChange={update(\'supabaseMonthlyCost\')} prefix="$" step="0.01" helper="Launch baseline: Pro $25/month" />\n', 'supabase')
+          replace_once('            <NumberField label="DocRaptor Monthly" value={assumptions.docraptorMonthlyCost} onChange={update(\'docraptorMonthlyCost\')} prefix="$" step="0.01" />\n', '            <NumberField label="DocRaptor Monthly" value={assumptions.docraptorMonthlyCost} onChange={update(\'docraptorMonthlyCost\')} prefix="$" step="0.01" helper="Launch baseline: Basic $15/month for 125 documents" />\n', 'docraptor')
+          replace_once('            <NumberField label="Domain + Email Monthly" value={assumptions.domainEmailMonthlyCost} onChange={update(\'domainEmailMonthlyCost\')} prefix="$" step="0.01" />\n', '            <NumberField label="Domain + Email Monthly" value={assumptions.domainEmailMonthlyCost} onChange={update(\'domainEmailMonthlyCost\')} prefix="$" step="0.01" helper="Hostinger planning baseline: about $100/year normalized monthly" />\n', 'domain-email')
+          replace_once('            <MetricCard label="Estimated Stripe Fees" value={usd(economics.stripeFees, 2)} sub={`${usd(economics.stripePercentFees, 2)} percentage + ${usd(economics.stripeFixedFees, 2)} fixed`} tone="warn" />\n', '            <MetricCard label="Estimated Stripe Fees" value={usd(economics.stripeFees, 2)} sub={`${economics.stripeEffectivePercent.toFixed(1)}% effective + ${usd(economics.stripeFixedFees, 2)} fixed`} tone="warn" />\n', 'stripe-metric')
+          replace_once('            <MetricCard label="Variable Report Costs" value={usd(economics.variableReportCosts, 2)} sub="Screening and Underwriting per-report assumptions" tone="warn" />\n', '            <MetricCard label="AI / API Costs" value={usd(economics.aiCosts, 2)} sub="Observed per-report OpenAI assumptions" tone="warn" />\n            <MetricCard label="Textract Costs" value={usd(economics.textractCosts, 2)} sub={`${economics.textractPagesTotal.toLocaleString(\'en-US\')} analyzed pages at ${usd(assumptions.textractPricePerPage, 3)} each`} tone="warn" />\n            <MetricCard label="Other Variable Costs" value={usd(economics.otherVariableCosts, 2)} sub="Optional per-report variable assumptions" tone="warn" />\n            <MetricCard label="Total Variable Report Costs" value={usd(economics.variableReportCosts, 2)} sub="AI + Textract + other variable costs" tone="warn" />\n', 'variable-metric')
+
+          marker = "        <div style={{ borderTop:`1px solid ${T.hairline}`, paddingTop:20 }}>\n"
+          note = "        <div style={{ margin:'4px 0 20px', padding:'11px 13px', background:T.okBg, border:`1px solid ${T.okBorder}`, color:T.okGreen, fontFamily:\"'DM Sans',sans-serif\", fontSize:10.5, lineHeight:1.55 }}>\n          Launch baseline as of September 9, 2026: Vercel Pro $20/month, Supabase Pro $25/month, DocRaptor Basic $15/month, Hostinger domain and email about $100/year, Amazon Textract AnalyzeDocument TABLES $0.015 per analyzed page, and Stripe base card processing 2.9% + US$0.30 for a USD-presented charge. AWS promotional credits are intentionally excluded. OpenAI defaults remain $0 until controlled report-level usage is measured.\n        </div>\n\n"
+          replace_once(marker, note + marker, 'launch-note')
+
+          path.write_text(text)
+          PY
+
+      - name: Verify bounded diff
+        run: |
+          git diff --check
+          changed="$(git diff --name-only | sort)"
+          expected='src/components/Admin/OwnerEconomicsPanel.jsx'
+          if [ "$changed" != "$expected" ]; then
+            echo "Unexpected files changed:"
+            printf '%s\n' "$changed"
+            exit 1
+          fi
+
+      - name: Run owner economics smoke
+        run: node tests/qa/owner-economics-smoke.js
+
+      - name: Run canonical launch QA
+        run: npm run qa
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit launch cost model UI
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/Admin/OwnerEconomicsPanel.jsx
+          git commit -m "Add launch provider cost detail to owner economics"
+          git push origin HEAD:internal-owner-economics-cost-model-20260909-r2
