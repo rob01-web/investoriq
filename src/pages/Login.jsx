@@ -188,7 +188,7 @@ export default function LoginPage() {
               lineHeight:   1.65,
               maxWidth:     320,
             }}>
-              Sign in to access your InvestorIQ dashboard and generate institutional underwriting reports.
+              Sign in to access your InvestorIQ dashboard and generate Screening and Underwriting Reports.
             </p>
           </div>
 

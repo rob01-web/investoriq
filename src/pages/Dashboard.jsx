@@ -1652,7 +1652,7 @@ useEffect(() => {
                 Welcome, {profile?.full_name || 'Investor'}.
               </h1>
               <p style={{ fontFamily:"'DM Sans', sans-serif", fontSize:13, fontWeight:300, color:'rgba(255,255,255,0.45)', lineHeight:1.6 }}>
-                Upload your documents to generate an institutional underwriting report.
+                Upload property documents to generate a Screening or Underwriting Report.
               </p>
             </div>
           </motion.div>
@@ -1743,15 +1743,15 @@ useEffect(() => {
             {/* Report type descriptor */}
             {selectedReportType === 'screening' ? (
               <div style={{ display:'flex', flexDirection:'column', gap:3, marginBottom:20 }}>
-                <span style={{ ...bodySmall, fontSize:12 }}>T12 + Rent Roll only</span>
-                <span style={{ ...bodySmall, fontSize:12 }}>For initial investment review.</span>
-                <span style={{ ...bodySmall, fontSize:12 }}>No charts. No projections.</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Requires T12 + Rent Roll. No additional documents.</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Built for fast acquisition screening and early deal triage.</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Source gaps and inconsistencies are disclosed.</span>
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:3, marginBottom:20 }}>
-                <span style={{ ...bodySmall, fontSize:12 }}>T12 + Rent Roll + at least 1 supporting document</span>
-                <span style={{ ...bodySmall, fontSize:12 }}>Full institutional underwriting report.</span>
-                <span style={{ ...bodySmall, fontSize:12 }}>Investment committee-ready depth.</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Requires T12 + Rent Roll + at least 1 supporting document.</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Built for deeper investment review, financing analysis, and downside testing.</span>
+                <span style={{ ...bodySmall, fontSize:12 }}>Unsupported analysis is limited or omitted rather than invented.</span>
               </div>
             )}
 
@@ -1773,7 +1773,7 @@ useEffect(() => {
                   transition:   'all 0.15s',
                 }}
               >
-                Bundle Purchase
+                Three-Report Bundle
               </button>
               {selectedPurchaseType === 'bundle' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:3, marginTop:12 }}>
@@ -1791,7 +1791,7 @@ useEffect(() => {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:T.okBg, border:`1px solid ${T.okBorder}`, flexWrap:'wrap', gap:10 }}>
                 <div>
                   <span style={{ ...labelMono, color: T.okGreen }}>
-                    Launch bundle selected
+                    Three-report bundle selected
                   </span>
                   <div style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:24, fontWeight:500, color: T.okGreen, lineHeight:1, marginTop:4 }}>
                     2 Screening + 1 Underwriting

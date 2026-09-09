@@ -198,7 +198,7 @@ export default function SignUpPage() {
               lineHeight:   1.65,
               maxWidth:     320,
             }}>
-              Create your InvestorIQ account to generate institutional underwriting reports from your property documents.
+              Create your InvestorIQ account to generate Screening and Underwriting Reports from your property documents.
             </p>
 
             {/* Mini feature list */}

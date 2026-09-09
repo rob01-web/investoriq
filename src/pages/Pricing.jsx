@@ -43,6 +43,7 @@ const PRICING_PAGE_STYLES = `
     margin-top: 6px;
     letter-spacing: 0;
     text-transform: none;
+    min-height: 32px;
   }
 
   .pricing-card-header {
@@ -58,6 +59,7 @@ const PRICING_PAGE_STYLES = `
   }
 
   @media (max-width: 760px) {
+    .pricing-note,
     .pricing-card-header,
     .pricing-card-price,
     .pricing-card-description {
@@ -83,7 +85,7 @@ const tiers = [
     productType: 'screening',
     eyebrow:     'Acquisition Screening',
     description: 'Fast, document-driven screening for early deal triage and acquisition decisions.',
-    pricingNote: 'Founder’s Pricing · Early Member Access',
+    pricingNote: 'One-time purchase | No subscription',
     features: [
       'Requires both a Rent Roll and T12; no additional documents accepted',
       'Core operating, occupancy, rent, and source-risk signals',
@@ -98,12 +100,12 @@ const tiers = [
     productType: 'underwriting',
     eyebrow:     'Institutional Underwriting',
     description: 'Deeper document-driven underwriting for investment review, financing analysis, and downside testing.',
-    pricingNote: 'Founder’s Pricing · Early Member Access',
+    pricingNote: 'One-time purchase | No subscription',
     features: [
       'Requires both a Rent Roll and T12 plus at least one supporting document',
       'Debt, refinance, and sensitivity analysis where supported',
       'Decision-focused risks, source differences, and unresolved items',
-      '1 Underwriting report credit',
+      '1 Underwriting Report credit',
     ],
     cta: 'Start Underwriting',
     highlight: true,
@@ -111,14 +113,14 @@ const tiers = [
   {
     title:       'Launch Bundle',
     productType: 'bundle',
-    eyebrow:     'Three-Report Bundle',
-    description: 'Screen two opportunities and take one finalist through full Underwriting for one fixed price.',
-    pricingNote: 'Three report credits in one purchase',
+    eyebrow:     'Screening + Underwriting',
+    description: 'Two Screening Reports plus one Underwriting Report at a lower combined price.',
+    pricingNote: 'One-time purchase | 3 report credits',
     features: [
-      '2 Screening report credits',
-      '1 Underwriting report credit',
-      'Use the Underwriting credit on the deal that advances',
-      'One purchase, three report credits',
+      '2 Screening Report credits',
+      '1 Underwriting Report credit',
+      'Use the credits on the opportunities you choose',
+      'Lower price than purchasing the same three reports separately',
     ],
     cta: 'Purchase Bundle',
     highlight: false,
@@ -465,7 +467,7 @@ export default function PricingPage() {
               marginBottom: 16,
               maxWidth:     600,
             }}>
-              Document-driven underwriting for real estate investors.
+              Document-driven real estate analysis for investment decisions.
             </motion.h1>
 
             <motion.p variants={fadeUp} style={{
@@ -490,7 +492,7 @@ export default function PricingPage() {
               marginTop:    10,
               marginBottom: isAuthed ? 20 : 0,
             }}>
-              InvestorIQ analyzes only what your uploaded evidence can support. Missing or conflicting inputs are disclosed, and unsupported sections are limited or omitted rather than invented. If no usable core source can be verified, no report is published and the report credit is restored.
+              InvestorIQ analyzes only what your uploaded evidence can support. Missing or conflicting inputs are disclosed, and unsupported sections are limited or omitted rather than invented. If the required document package is incomplete or cannot be verified, generation does not begin and no report credit is consumed.
             </motion.p>
 
             {isAuthed && (
