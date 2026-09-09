@@ -76,24 +76,24 @@ jobs:
               'fixed-cost-sub')
 
           test = repl(test,
-              "    domainEmailMonthlyCost: 5,\n    otherMonthlyCost: 10,\n",
-              "    domainEmailMonthlyCost: 5,\n    resendMonthlyCost: 4,\n    otherMonthlyCost: 10,\n",
+              "    domainEmailMonthlyCost: 8.33,\n    otherMonthlyCost: 10,\n",
+              "    domainEmailMonthlyCost: 8.33,\n    resendMonthlyCost: 4,\n    otherMonthlyCost: 10,\n",
               'test-assumption')
           test = repl(test,
-              "assert.equal(scenario.fixedMonthlyCosts, 75);\n",
-              "assert.equal(scenario.fixedMonthlyCosts, 79);\n",
+              "assert.ok(Math.abs(scenario.fixedMonthlyCosts - 78.33) < 1e-9);\n",
+              "assert.ok(Math.abs(scenario.fixedMonthlyCosts - 82.33) < 1e-9);\n",
               'test-fixed-cost')
           test = repl(test,
-              "assert.ok(Math.abs(scenario.netMonthlyContribution - 2119.674) < 1e-9);\n",
-              "assert.ok(Math.abs(scenario.netMonthlyContribution - 2115.674) < 1e-9);\n",
+              "assert.ok(Math.abs(scenario.netMonthlyContribution - 2078.364) < 1e-9);\n",
+              "assert.ok(Math.abs(scenario.netMonthlyContribution - 2074.364) < 1e-9);\n",
               'test-net')
           test = repl(test,
-              "assert.ok(Math.abs(scenario.annualizedNetContribution - 25436.088) < 1e-9);\n",
-              "assert.ok(Math.abs(scenario.annualizedNetContribution - 25388.088) < 1e-9);\n",
+              "assert.ok(Math.abs(scenario.annualizedNetContribution - 24940.368) < 1e-9);\n",
+              "assert.ok(Math.abs(scenario.annualizedNetContribution - 24892.368) < 1e-9);\n",
               'test-annual-net')
           test = repl(test,
-              "assert.ok(Math.abs(scenario.netMonthlyContributionCad - 2967.5436) < 1e-9);\n",
-              "assert.ok(Math.abs(scenario.netMonthlyContributionCad - 2961.9436) < 1e-9);\n",
+              "assert.ok(Math.abs(scenario.netMonthlyContributionCad - 2909.7096) < 1e-9);\n",
+              "assert.ok(Math.abs(scenario.netMonthlyContributionCad - 2904.1096) < 1e-9);\n",
               'test-cad-net')
 
           econ_path.write_text(econ)
