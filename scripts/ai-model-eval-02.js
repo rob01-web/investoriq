@@ -91,6 +91,8 @@ for (const candidate of MODELS) {
         field_total: 0,
         field_accuracy: 0,
         elapsed_ms: null,
+        provider_status: null,
+        provider_error: null,
         worker_status: child.signal ? `signal:${child.signal}` : `exit:${child.status}`,
         worker_stderr: String(child.stderr || '').slice(0, 2000),
         error: 'worker_result_missing',
@@ -106,10 +108,12 @@ for (const candidate of MODELS) {
   }
 }
 
+const providerSucceeded = (row) => Number(row?.provider_status) >= 200 && Number(row?.provider_status) < 300;
 const groupByModel = (model) => results.filter((result) => result.model === model);
 const summarizeModel = (candidate) => {
   const rows = groupByModel(candidate.model);
   const completed = rows.filter((row) => row.field_total > 0).length;
+  const providerFailures = rows.filter((row) => !providerSucceeded(row)).length;
   const passed = rows.filter((row) => row.pass).length;
   const fieldHits = rows.reduce((sum, row) => sum + Number(row.field_hits || 0), 0);
   const fieldTotal = rows.reduce((sum, row) => sum + Number(row.field_total || 0), 0);
@@ -121,6 +125,7 @@ const summarizeModel = (candidate) => {
     label: candidate.label,
     model: candidate.model,
     jobs_completed: completed,
+    provider_failures: providerFailures,
     jobs_passed: passed,
     jobs_total: JOBS.length,
     field_hits: fieldHits,
@@ -138,9 +143,13 @@ const byJob = JOBS.map((job) => {
   const baseline = results.find((result) => result.job === job && result.model === MODELS[0].model);
   const terra = results.find((result) => result.job === job && result.model === MODELS[1].model);
   let quality_winner = 'tie';
-  if (Boolean(terra?.pass) !== Boolean(baseline?.pass)) quality_winner = terra?.pass ? 'terra_candidate' : 'gpt4o_baseline';
-  else if (Number(terra?.field_accuracy || 0) !== Number(baseline?.field_accuracy || 0)) {
-    quality_winner = Number(terra?.field_accuracy || 0) > Number(baseline?.field_accuracy || 0) ? 'terra_candidate' : 'gpt4o_baseline';
+  if (providerSucceeded(baseline) && providerSucceeded(terra)) {
+    if (Boolean(terra?.pass) !== Boolean(baseline?.pass)) quality_winner = terra?.pass ? 'terra_candidate' : 'gpt4o_baseline';
+    else if (Number(terra?.field_accuracy || 0) !== Number(baseline?.field_accuracy || 0)) {
+      quality_winner = Number(terra?.field_accuracy || 0) > Number(baseline?.field_accuracy || 0) ? 'terra_candidate' : 'gpt4o_baseline';
+    }
+  } else {
+    quality_winner = 'provider_error';
   }
   return {
     job,
@@ -150,14 +159,29 @@ const byJob = JOBS.map((job) => {
   };
 });
 
-const complete = modelSummaries.every((summary) => summary.jobs_completed === JOBS.length);
+const executionComplete = modelSummaries.every((summary) => summary.jobs_completed === JOBS.length);
+const providerComplete = modelSummaries.every((summary) => summary.provider_failures === 0);
+const complete = executionComplete && providerComplete;
+const providerErrors = results
+  .filter((row) => !providerSucceeded(row))
+  .map((row) => ({
+    job: row.job,
+    model: row.model,
+    status: row.provider_status ?? null,
+    error: row.provider_error ?? null,
+    request_id: row.provider_request_id ?? null,
+  }));
+
 const artifact = {
   eval: 'AI_MODEL_EVAL_02',
   doctrine: 'LLM intelligence increases recoverability; deterministic contracts preserve truth.',
   quality_priority: 'pass/fail and deterministic field fidelity outrank latency and token cost',
   compared_models: MODELS,
   recovery_jobs: JOBS,
+  execution_complete: executionComplete,
+  provider_complete: providerComplete,
   complete,
+  provider_errors: providerErrors,
   model_summaries: modelSummaries,
   by_job: byJob,
   generated_at: new Date().toISOString(),
@@ -173,15 +197,17 @@ const markdown = [
   '',
   'Quality-first comparison of GPT-4o versus GPT-5.6 Terra on all seven InvestorIQ recovery jobs.',
   '',
-  '| Model | Jobs Passed | Field Accuracy | Elapsed | Input Tokens | Output Tokens | Est. Cost |',
-  '| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
-  ...modelSummaries.map((summary) => `| ${summary.model} | ${summary.jobs_passed}/${summary.jobs_total} | ${percent(summary.field_accuracy)} | ${(summary.elapsed_ms / 1000).toFixed(1)}s | ${summary.input_tokens} | ${summary.output_tokens} | ${dollars(summary.estimated_cost_usd)} |`),
+  '| Model | Provider Failures | Jobs Passed | Field Accuracy | Elapsed | Input Tokens | Output Tokens | Est. Cost |',
+  '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+  ...modelSummaries.map((summary) => `| ${summary.model} | ${summary.provider_failures} | ${summary.jobs_passed}/${summary.jobs_total} | ${percent(summary.field_accuracy)} | ${(summary.elapsed_ms / 1000).toFixed(1)}s | ${summary.input_tokens} | ${summary.output_tokens} | ${dollars(summary.estimated_cost_usd)} |`),
   '',
   '| Recovery Job | Quality Winner | GPT-4o | Terra |',
   '| --- | --- | --- | --- |',
   ...byJob.map((entry) => `| ${entry.job} | ${entry.quality_winner} | ${entry.gpt4o?.field_hits || 0}/${entry.gpt4o?.field_total || 0} fields, ${entry.gpt4o?.pass ? 'PASS' : 'FAIL'} | ${entry.terra?.field_hits || 0}/${entry.terra?.field_total || 0} fields, ${entry.terra?.pass ? 'PASS' : 'FAIL'} |`),
   '',
-  `Complete: ${complete ? 'YES' : 'NO'}`,
+  `Execution complete: ${executionComplete ? 'YES' : 'NO'}`,
+  `Provider complete: ${providerComplete ? 'YES' : 'NO'}`,
+  `Benchmark complete: ${complete ? 'YES' : 'NO'}`,
   '',
 ].join('\n');
 fs.writeFileSync(path.join(outputDir, 'results.md'), markdown, 'utf8');
@@ -190,6 +216,6 @@ console.log('\n' + markdown);
 console.log(`[AI MODEL EVAL 02] JSON: ${path.join(outputDir, 'results.json')}`);
 
 if (!complete) {
-  console.error('AI MODEL EVAL 02 is incomplete. All seven recovery jobs must execute for both models.');
+  console.error('AI MODEL EVAL 02 is incomplete. Every recovery job must receive a successful provider response for both models.');
   process.exitCode = 1;
 }
