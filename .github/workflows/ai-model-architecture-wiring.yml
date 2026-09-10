@@ -6,6 +6,8 @@ on:
       - internal-ai-model-architecture-20260910-r1
     paths:
       - 'scripts/apply-ai-model-runtime-wiring.js'
+      - 'scripts/ai-model-eval-02.js'
+      - 'scripts/ai-model-eval-02-worker.js'
       - '.github/workflows/ai-model-architecture-wiring.yml'
 
 permissions:
@@ -43,6 +45,8 @@ jobs:
           node --check api/_lib/source-package-qa.js
           node --check api/_lib/qa-manager-review.js
           node --check scripts/ai-model-eval-01.js
+          node --check scripts/ai-model-eval-02.js
+          node --check scripts/ai-model-eval-02-worker.js
           node --check tests/qa/ai-model-architecture-smoke.js
 
       - name: AI architecture and QA manager regression checks
@@ -57,6 +61,20 @@ jobs:
 
       - name: Diff integrity
         run: git diff --check
+
+      - name: AI MODEL EVAL 02 - GPT-4o versus Terra on all seven recovery jobs
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node scripts/ai-model-eval-02.js
+
+      - name: Upload AI MODEL EVAL 02 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-model-eval-02
+          path: .artifacts/ai-model-eval-02/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Commit certified runtime wiring
         run: |
