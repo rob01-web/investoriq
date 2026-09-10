@@ -40,12 +40,39 @@ jobs:
         run: node tests/qa/launch-e2e-contract-reconciliation-smoke.js
 
       - name: Canonical launch QA
+        id: canonical_qa
+        continue-on-error: true
         run: npm run qa
 
+      - name: Diagnose canonical QA runtime guard
+        if: steps.canonical_qa.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HEAD=$(git rev-parse HEAD)"
+          echo "--- git status ---"
+          git status --short
+          echo "--- dashboard/direct-query test files after qa ---"
+          find tests/qa -maxdepth 1 -type f \( -iname '*dashboard*' -o -iname '*phase5*' \) -print | sort
+          echo "--- exact assertion origin after qa ---"
+          grep -RFn --exclude-dir=node_modules "Dashboard must keep direct analysis_jobs reads removed" . || true
+          echo "--- exact npm script origin after qa ---"
+          grep -RFn --exclude-dir=node_modules "qa:component:dashboard-cutover-direct-query" . || true
+          echo "--- child-process/npm invocation references in launch tests ---"
+          grep -RFn --exclude-dir=node_modules -E "spawnSync|execSync|npm run qa:component:dashboard-cutover-direct-query|dashboard-direct-query-cutover-smoke" tests scripts package.json || true
+          echo "--- canonical package qa scripts after qa ---"
+          node -e "const p=require('./package.json'); console.log(JSON.stringify(Object.fromEntries(Object.entries(p.scripts||{}).filter(([k])=>k==='qa'||k.includes('dashboard')||k.includes('phase5'))),null,2))"
+
+      - name: Enforce canonical launch QA result
+        if: steps.canonical_qa.outcome == 'failure'
+        run: exit 1
+
       - name: Production build
+        if: steps.canonical_qa.outcome == 'success'
         run: npm run build
 
       - name: Diff integrity and allowlist
+        if: steps.canonical_qa.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
@@ -68,6 +95,7 @@ jobs:
           done
 
       - name: Commit certified hotfix
+        if: steps.canonical_qa.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
