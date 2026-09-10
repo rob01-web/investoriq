@@ -189,6 +189,9 @@ if (!testCase) {
 const originalFetch = globalThis.fetch;
 let providerUsage = null;
 let providerModel = null;
+let providerStatus = null;
+let providerError = null;
+let providerRequestId = null;
 let requestEnvelope = null;
 globalThis.fetch = async (...args) => {
   const options = args[1] || {};
@@ -199,10 +202,21 @@ globalThis.fetch = async (...args) => {
     requestEnvelope = null;
   }
   const response = await originalFetch(...args);
+  providerStatus = response.status;
+  providerRequestId = response.headers?.get?.('x-request-id') || null;
   try {
     const copy = response.clone();
     const body = await copy.json();
     providerUsage = body?.usage || null;
+    const error = body?.error;
+    if (error) {
+      providerError = {
+        type: error.type || null,
+        code: error.code || null,
+        message: error.message || null,
+        param: error.param || null,
+      };
+    }
   } catch {
     providerUsage = null;
   }
@@ -252,6 +266,9 @@ try {
     error: error instanceof Error ? error.message : String(error),
     elapsed_ms: Math.round(performance.now() - startedAt),
     provider_model: providerModel,
+    provider_status: providerStatus,
+    provider_error: providerError,
+    provider_request_id: providerRequestId,
     usage: providerUsage,
   }));
   process.exit(1);
@@ -280,6 +297,9 @@ console.log(JSON.stringify({
   field_accuracy: checks.length ? fieldHits / checks.length : 0,
   elapsed_ms: elapsedMs,
   provider_model: providerModel,
+  provider_status: providerStatus,
+  provider_error: providerError,
+  provider_request_id: providerRequestId,
   usage: providerUsage,
   diagnostics: diagnostics
     ? {
