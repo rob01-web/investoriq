@@ -1,0 +1,61 @@
+name: InvestorIQ AI Architecture Lock Certification
+
+on:
+  push:
+    branches:
+      - internal-ai-model-architecture-20260910-r1
+    paths:
+      - '.github/workflows/ai-model-architecture-lock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  lock-and-certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout isolated AI architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal-ai-model-architecture-20260910-r1
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply evidence-locked architecture decisions
+        run: node scripts/lock-ai-model-architecture-20260910.js
+
+      - name: Syntax and architecture checks
+        run: |
+          node --check lib/ai-model-architecture.js
+          node --check scripts/ai-model-eval-01.js
+          node --check tests/qa/ai-model-architecture-smoke.js
+          node tests/qa/ai-model-architecture-smoke.js
+
+      - name: Canonical launch QA
+        run: npm run qa
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff integrity
+        run: git diff --check
+
+      - name: Commit certified architecture lock
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/ai-model-architecture.js tests/qa/ai-model-architecture-smoke.js scripts/ai-model-eval-01.js
+          if git diff --cached --quiet; then
+            echo 'No architecture lock changes required.'
+            exit 0
+          fi
+          git commit -m 'Lock launch AI model authority to GPT-4o [skip ci]'
+          git push origin HEAD:internal-ai-model-architecture-20260910-r1
