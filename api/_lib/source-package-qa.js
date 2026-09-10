@@ -7,6 +7,11 @@ import {
 } from "./investoriq-qa-doctrine.js";
 import { classifyOpenAiError } from "../../lib/openai-error-classifier.js";
 import {
+  AI_MODEL_STAGES,
+  buildChatCompletionModelControls,
+  resolveAiStageConfig,
+} from "../../lib/ai-model-architecture.js";
+import {
   buildAcquisitionAssumptionState,
   hasCurrentDebtSemanticState,
 } from "./report-surface-contracts.js";
@@ -16,11 +21,9 @@ import {
 } from "./support-doc-taxonomy.js";
 
 const SOURCE_PACKAGE_QA_VERSION = "2026.05.07.1";
-const DEFAULT_MODEL =
-  process.env.QA_SOURCE_PACKAGE_MODEL ||
-  process.env.QA_REVIEW_MODEL ||
-  process.env.OPENAI_REPORT_QA_MODEL ||
-  "gpt-4o-mini";
+const DEFAULT_STAGE_CONFIG = resolveAiStageConfig(AI_MODEL_STAGES.SOURCE_PACKAGE_QA);
+const DEFAULT_MODEL = DEFAULT_STAGE_CONFIG.model;
+const DEFAULT_REASONING_EFFORT = DEFAULT_STAGE_CONFIG.reasoning_effort;
 const DEFAULT_TIMEOUT_MS = Number.parseInt(process.env.QA_SOURCE_PACKAGE_TIMEOUT_MS || "15000", 10);
 const MAX_RENDERED_TEXT_CHARS = 60000;
 
@@ -539,7 +542,7 @@ const RESPONSE_SCHEMA = {
   },
 };
 
-async function callSourcePackageReviewModel({ apiKey, model, userContent, timeoutMs }) {
+async function callSourcePackageReviewModel({ apiKey, model, reasoningEffort, userContent, timeoutMs }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -552,7 +555,7 @@ async function callSourcePackageReviewModel({ apiKey, model, userContent, timeou
       signal: controller.signal,
       body: JSON.stringify({
         model,
-        temperature: 0,
+        ...buildChatCompletionModelControls({ model, reasoningEffort }),
         messages: [
           { role: "system", content: SOURCE_PACKAGE_QA_PROMPT },
           { role: "user", content: userContent },
@@ -613,6 +616,7 @@ export async function runSourcePackageQaAdvisory({
   context = {},
   apiKey = process.env.OPENAI_API_KEY,
   model = DEFAULT_MODEL,
+  reasoningEffort = DEFAULT_REASONING_EFFORT,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 } = {}) {
   if (!apiKey) {
@@ -655,6 +659,7 @@ export async function runSourcePackageQaAdvisory({
   const { review, model: usedModel, usage } = await callSourcePackageReviewModel({
     apiKey,
     model,
+    reasoningEffort,
     timeoutMs,
     userContent: JSON.stringify(compactPayload),
   });
@@ -684,6 +689,9 @@ export async function runSourcePackageQaAdvisory({
     counts,
     highest_severity: highestSeverity,
     model: usedModel,
+    reasoning_effort: reasoningEffort || null,
+    model_architecture_version: DEFAULT_STAGE_CONFIG.version,
+    model_architecture_enabled: DEFAULT_STAGE_CONFIG.architecture_enabled,
     usage,
     timeout_ms: timeoutMs,
     timestamp: new Date().toISOString(),

@@ -4,13 +4,16 @@ import {
   isAllowedMethodologyOnlyText,
 } from "./investoriq-qa-doctrine.js";
 import { classifyOpenAiError } from "../../lib/openai-error-classifier.js";
+import {
+  AI_MODEL_STAGES,
+  buildChatCompletionModelControls,
+  resolveAiStageConfig,
+} from "../../lib/ai-model-architecture.js";
 
 const REVIEW_VERSION = "2026.05.05.1";
-// Fallback follows the existing project convention used by extraction-recovery helpers.
-const DEFAULT_MODEL =
-  process.env.QA_REVIEW_MODEL ||
-  process.env.OPENAI_REPORT_QA_MODEL ||
-  "gpt-4o-mini";
+const DEFAULT_STAGE_CONFIG = resolveAiStageConfig(AI_MODEL_STAGES.RENDERED_REPORT_QA);
+const DEFAULT_MODEL = DEFAULT_STAGE_CONFIG.model;
+const DEFAULT_REASONING_EFFORT = DEFAULT_STAGE_CONFIG.reasoning_effort;
 const DEFAULT_TIMEOUT_MS = Number.parseInt(process.env.QA_REVIEW_TIMEOUT_MS || "15000", 10);
 const MAX_REVIEW_CHARS = 180000;
 
@@ -211,7 +214,7 @@ function filterAdvisoryFalsePositives(findings) {
   ));
 }
 
-async function callReviewModel({ apiKey, model, userContent, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+async function callReviewModel({ apiKey, model, reasoningEffort, userContent, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -224,7 +227,7 @@ async function callReviewModel({ apiKey, model, userContent, timeoutMs = DEFAULT
       signal: controller.signal,
       body: JSON.stringify({
         model,
-        temperature: 0,
+        ...buildChatCompletionModelControls({ model, reasoningEffort }),
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userContent },
@@ -291,6 +294,7 @@ export async function runRenderedReportQaAdvisory({
   context = {},
   apiKey = process.env.OPENAI_API_KEY,
   model = DEFAULT_MODEL,
+  reasoningEffort = DEFAULT_REASONING_EFFORT,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 } = {}) {
   if (!apiKey) {
@@ -319,6 +323,7 @@ export async function runRenderedReportQaAdvisory({
   const { review, model: usedModel, usage } = await callReviewModel({
     apiKey,
     model,
+    reasoningEffort,
     userContent,
     timeoutMs,
   });
@@ -345,6 +350,9 @@ export async function runRenderedReportQaAdvisory({
     counts,
     removed_false_positive_count: removedFindingCount,
     model: usedModel,
+    reasoning_effort: reasoningEffort || null,
+    model_architecture_version: DEFAULT_STAGE_CONFIG.version,
+    model_architecture_enabled: DEFAULT_STAGE_CONFIG.architecture_enabled,
     usage,
     version: REVIEW_VERSION,
     timeout_ms: timeoutMs,
