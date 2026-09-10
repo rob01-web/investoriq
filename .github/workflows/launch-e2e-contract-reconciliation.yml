@@ -1,0 +1,82 @@
+name: Launch E2E Contract Reconciliation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - hotfix-launch-e2e-20260910-r1
+    paths:
+      - scripts/apply-launch-e2e-hotfix.js
+      - tests/qa/launch-e2e-contract-reconciliation-smoke.js
+      - .github/workflows/launch-e2e-contract-reconciliation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout isolated hotfix branch
+        uses: actions/checkout@v4
+        with:
+          ref: hotfix-launch-e2e-20260910-r1
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate bounded launch hotfix
+        run: node scripts/apply-launch-e2e-hotfix.js
+
+      - name: Launch E2E contract regression guard
+        run: node tests/qa/launch-e2e-contract-reconciliation-smoke.js
+
+      - name: Canonical launch QA
+        run: npm run qa
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff integrity and allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          mapfile -t changed < <(git diff --name-only | sort)
+          printf '%s\n' "${changed[@]}"
+          expected=(
+            "src/pages/Dashboard.jsx"
+            "supabase/migrations/20260910193000_launch_e2e_contract_reconciliation.sql"
+          )
+          if [[ "${#changed[@]}" -ne "${#expected[@]}" ]]; then
+            echo "Unexpected number of generated files"
+            exit 1
+          fi
+          for i in "${!expected[@]}"; do
+            if [[ "${changed[$i]}" != "${expected[$i]}" ]]; then
+              echo "Unexpected generated file: ${changed[$i]}"
+              exit 1
+            fi
+          done
+
+      - name: Commit certified hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Dashboard.jsx supabase/migrations/20260910193000_launch_e2e_contract_reconciliation.sql
+          if git diff --cached --quiet; then
+            echo "No generated hotfix changes to commit"
+            exit 1
+          fi
+          git commit -m "Repair launch E2E production contracts [skip ci]"
+          git push origin HEAD:hotfix-launch-e2e-20260910-r1
