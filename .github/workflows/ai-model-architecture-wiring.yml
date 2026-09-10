@@ -1,0 +1,71 @@
+name: InvestorIQ AI Model Architecture Wiring
+
+on:
+  push:
+    branches:
+      - internal-ai-model-architecture-20260910-r1
+    paths:
+      - 'scripts/apply-ai-model-runtime-wiring.js'
+      - '.github/workflows/ai-model-architecture-wiring.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-and-certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout isolated AI architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal-ai-model-architecture-20260910-r1
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply gated runtime wiring
+        run: node scripts/apply-ai-model-runtime-wiring.js
+
+      - name: Syntax checks
+        run: |
+          node --check lib/ai-model-architecture.js
+          node --check lib/ai-t12-recovery.js
+          node --check lib/ai-rent-roll-recovery.js
+          node --check lib/ai-support-doc-recovery.js
+          node --check api/_lib/qa-review.js
+          node --check api/_lib/source-package-qa.js
+          node --check api/_lib/qa-manager-review.js
+          node --check scripts/ai-model-eval-01.js
+          node --check tests/qa/ai-model-architecture-smoke.js
+
+      - name: AI architecture and QA manager regression checks
+        run: |
+          node tests/qa/ai-model-architecture-smoke.js
+          node tests/qa/qa-manager-review-smoke.js
+          node tests/qa/qa-doctrine-smoke.js
+          node tests/qa/supporting-doc-recovery-smoke.js
+
+      - name: Canonical launch QA
+        run: npm run qa
+
+      - name: Diff integrity
+        run: git diff --check
+
+      - name: Commit certified runtime wiring
+        run: |
+          if git diff --quiet; then
+            echo 'No runtime wiring changes were required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add api/_lib/qa-review.js api/_lib/source-package-qa.js api/_lib/qa-manager-review.js lib/ai-t12-recovery.js lib/ai-rent-roll-recovery.js lib/ai-support-doc-recovery.js package.json tests/qa/run-all.js
+          git commit -m 'Wire gated AI model architecture into runtime [skip ci]'
+          git push origin HEAD:internal-ai-model-architecture-20260910-r1
