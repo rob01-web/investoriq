@@ -6,6 +6,7 @@ on:
       - internal-ai-model-architecture-20260910-r1
     paths:
       - '.github/workflows/ai-model-architecture-lock.yml'
+      - 'scripts/lock-ai-model-qa-launch-defaults.js'
 
 permissions:
   contents: write
@@ -30,12 +31,15 @@ jobs:
         run: npm ci
 
       - name: Apply evidence-locked architecture decisions
-        run: node scripts/lock-ai-model-architecture-20260910.js
+        run: |
+          node scripts/lock-ai-model-architecture-20260910.js
+          node scripts/lock-ai-model-qa-launch-defaults.js
 
       - name: Syntax and architecture checks
         run: |
           node --check lib/ai-model-architecture.js
           node --check scripts/ai-model-eval-01.js
+          node --check scripts/lock-ai-model-qa-launch-defaults.js
           node --check tests/qa/ai-model-architecture-smoke.js
           node tests/qa/ai-model-architecture-smoke.js
 
@@ -57,5 +61,5 @@ jobs:
             echo 'No architecture lock changes required.'
             exit 0
           fi
-          git commit -m 'Lock launch AI model authority to GPT-4o [skip ci]'
+          git commit -m 'Lock GPT-4o as launch QA fallback authority [skip ci]'
           git push origin HEAD:internal-ai-model-architecture-20260910-r1
