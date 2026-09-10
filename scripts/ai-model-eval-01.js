@@ -466,8 +466,14 @@ function evaluateCase(testCase, reviewResult) {
   }));
   const evidenceGroundingFailures = riskEvidence.filter((row) => !row.excerpt || row.overlap < 0.2).length;
 
-  const decisionText = JSON.stringify(decisions).toLowerCase();
-  const replacementValueViolation = /(?:replace|change|set|use|should be)[^$]{0,40}\$\s*\d/.test(decisionText);
+  const replacementDirectiveText = decisions
+    .map((decision) => [decision.recommended_action_type, decision.rationale].join(' '))
+    .join(' ')
+    .toLowerCase();
+  const replacementValueViolation =
+    /(?:replace|change|set)\b[^$]{0,60}\b(?:with|to|at)\s*\$\s*\d/.test(replacementDirectiveText) ||
+    /\bshould\s+be\s+\$\s*\d/.test(replacementDirectiveText) ||
+    /\buse\s+\$\s*\d[^.]{0,40}\b(?:instead|replacement|substitute)\b/.test(replacementDirectiveText);
   const authorityViolation = expectation.kind === 'safe' && (realRisks.length > 0 || blockingDecisions.length > 0);
 
   return {

@@ -18,10 +18,10 @@ assert.equal(OPENAI_MODEL_IDS.GPT_56_TERRA, 'gpt-5.6-terra');
 assert.equal(OPENAI_MODEL_IDS.GPT_56_SOL, 'gpt-5.6-sol');
 assert.equal(OPENAI_MODEL_IDS.GPT_6_ASTRA, 'gpt-6-astra');
 
-assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.RENDERED_REPORT_QA].model, OPENAI_MODEL_IDS.GPT_56_TERRA);
-assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.SOURCE_PACKAGE_QA].model, OPENAI_MODEL_IDS.GPT_56_TERRA);
-assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.QA_MANAGER].model, OPENAI_MODEL_IDS.GPT_56_SOL);
-assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.QA_MANAGER].reasoning_effort, 'high');
+assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.RENDERED_REPORT_QA].model, OPENAI_MODEL_IDS.GPT_4O);
+assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.SOURCE_PACKAGE_QA].model, OPENAI_MODEL_IDS.GPT_4O);
+assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.QA_MANAGER].model, OPENAI_MODEL_IDS.GPT_4O);
+assert.equal(AI_MODEL_TARGET_ARCHITECTURE[AI_MODEL_STAGES.QA_MANAGER].reasoning_effort, null);
 
 for (const stage of [AI_MODEL_STAGES.T12_RECOVERY, AI_MODEL_STAGES.RENT_ROLL_RECOVERY, AI_MODEL_STAGES.SUPPORT_DOC_RECOVERY]) {
   const target = AI_MODEL_TARGET_ARCHITECTURE[stage];
@@ -42,14 +42,14 @@ assert.deepEqual(
     model: resolveAiStageConfig(AI_MODEL_STAGES.RENDERED_REPORT_QA, targetEnv).model,
     reasoning: resolveAiStageConfig(AI_MODEL_STAGES.RENDERED_REPORT_QA, targetEnv).reasoning_effort,
   },
-  { model: OPENAI_MODEL_IDS.GPT_56_TERRA, reasoning: 'medium' }
+  { model: OPENAI_MODEL_IDS.GPT_4O, reasoning: null }
 );
 assert.deepEqual(
   {
     model: resolveAiStageConfig(AI_MODEL_STAGES.QA_MANAGER, targetEnv).model,
     reasoning: resolveAiStageConfig(AI_MODEL_STAGES.QA_MANAGER, targetEnv).reasoning_effort,
   },
-  { model: OPENAI_MODEL_IDS.GPT_56_SOL, reasoning: 'high' }
+  { model: OPENAI_MODEL_IDS.GPT_4O, reasoning: null }
 );
 assert.equal(resolveAiStageConfig(AI_MODEL_STAGES.T12_RECOVERY, targetEnv).model, OPENAI_MODEL_IDS.GPT_4O);
 
