@@ -228,7 +228,8 @@ function patchPackageJson() {
   const pkg = JSON.parse(read(path));
   pkg.scripts ||= {};
   pkg.scripts['qa:diagnostic:ai-model-architecture'] = 'node tests/qa/ai-model-architecture-smoke.js';
-  pkg.scripts['qa:eval:ai-model-01'] = 'node scripts/ai-model-eval-01.js';
+  delete pkg.scripts['qa:eval:ai-model-01'];
+  pkg.scripts['qa:diagnostic:ai-model-eval-01'] = 'node scripts/ai-model-eval-01.js';
   write(path, `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
