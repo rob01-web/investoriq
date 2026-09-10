@@ -32,8 +32,9 @@ for (const stage of [AI_MODEL_STAGES.T12_RECOVERY, AI_MODEL_STAGES.RENT_ROLL_REC
 
 const legacyEnv = {};
 assert.equal(isTargetArchitectureEnabled(legacyEnv), false);
-assert.equal(resolveAiStageConfig(AI_MODEL_STAGES.QA_MANAGER, legacyEnv).model, OPENAI_MODEL_IDS.GPT_4O_MINI);
-assert.equal(resolveAiStageConfig(AI_MODEL_STAGES.RENDERED_REPORT_QA, legacyEnv).model, OPENAI_MODEL_IDS.GPT_4O_MINI);
+assert.equal(resolveAiStageConfig(AI_MODEL_STAGES.QA_MANAGER, legacyEnv).model, OPENAI_MODEL_IDS.GPT_4O);
+assert.equal(resolveAiStageConfig(AI_MODEL_STAGES.RENDERED_REPORT_QA, legacyEnv).model, OPENAI_MODEL_IDS.GPT_4O);
+assert.equal(resolveAiStageConfig(AI_MODEL_STAGES.SOURCE_PACKAGE_QA, legacyEnv).model, OPENAI_MODEL_IDS.GPT_4O);
 
 const targetEnv = { [AI_MODEL_ARCHITECTURE_FLAG]: 'true' };
 assert.equal(isTargetArchitectureEnabled(targetEnv), true);
