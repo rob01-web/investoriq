@@ -1,0 +1,54 @@
+name: InvestorIQ AI MODEL EVAL 01
+
+on:
+  push:
+    branches:
+      - internal-ai-model-architecture-20260910-r1
+    paths:
+      - '.github/workflows/ai-model-eval-01.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qa-manager-shadow-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout isolated AI architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal-ai-model-architecture-20260910-r1
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Preflight syntax and canonical QA
+        run: |
+          node --check scripts/ai-model-eval-01.js
+          node --check lib/ai-model-architecture.js
+          npm run qa
+
+      - name: AI MODEL EVAL 01 - QA Manager shadow benchmark
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_MODEL_EVAL_REPEATS: '1'
+          AI_MODEL_EVAL_OUTPUT: '.artifacts/ai-model-eval-01/results.json'
+        run: |
+          mkdir -p .artifacts/ai-model-eval-01
+          node scripts/ai-model-eval-01.js | tee .artifacts/ai-model-eval-01/summary.txt
+
+      - name: Upload AI MODEL EVAL 01 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-model-eval-01
+          path: .artifacts/ai-model-eval-01/
+          if-no-files-found: warn
+          retention-days: 14
