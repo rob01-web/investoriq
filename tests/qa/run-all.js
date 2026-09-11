@@ -43,6 +43,7 @@ const launchCriticalSuite = [
   ['artifact compensation runtime', 'phase2-artifact-compensation-regression.js'],
   ['atomic publication delivery', 'phase2-atomic-publication-delivery-contract-smoke.js'],
   ['customer boundary runtime', 'phase5-customer-boundary-runtime-smoke.js'],
+  ['Dashboard governed job-status boundary', 'dashboard-direct-query-cutover-smoke.js'],
   ['worker and renderer recovery', 'phase3-worker-render-recovery-contract-smoke.js'],
   ['bounded PDF provider request', 'docraptor-request-timeout-smoke.js'],
   ['Vercel function budget', 'vercel-function-budget-smoke.js'],

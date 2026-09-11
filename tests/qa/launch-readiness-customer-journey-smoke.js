@@ -91,7 +91,15 @@ assert.match(pricing, /Document-driven underwriting for real estate investors\./
 assert.match(pricing, /required document package is incomplete or cannot be verified/i);
 assert.equal(/no usable core source can be verified/i.test(pricing), false);
 assert.match(dashboard, /Upload property documents to generate a Screening or Underwriting Report\./);
-assert.match(dashboard, /Three-report bundle selected/);
+// Bundle purchase remains separate from report selection and credit consumption.
+assert.match(dashboard, /Buy Three-Report Bundle/);
+assert.match(dashboard, /aria-pressed=\{selectedPurchaseType === 'bundle'\}/);
+assert.match(dashboard, /onClick=\{\(\) => setSelectedPurchaseType\(\(current\) => current === 'bundle' \? selectedReportType : 'bundle'\)\}/);
+assert.match(dashboard, /Purchasing the bundle does not change the report type selected above\./);
+assert.match(dashboard, /Adds 2 Screening credits and 1 Underwriting credit\./);
+assert.match(dashboard, /onClick=\{\(\) => handleCheckout\('bundle'\)\}/);
+assert.match(dashboard, /onClick=\{\(\) => handleCheckout\(selectedReportType\)\}/);
+assert.match(dashboard, /Generating this report uses 1 \{selectedReportType === 'screening' \? 'Screening' : 'Underwriting'\} credit\./);
 assert.match(login, /generate Screening and Underwriting Reports/);
 assert.match(signup, /generate Screening and Underwriting Reports/);
 
