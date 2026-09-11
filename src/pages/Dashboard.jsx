@@ -456,8 +456,11 @@ const DASHBOARD_DIAG_MINIMAL = false;
   ), [recentJobs, dismissedJobIds]);
 
   const failedJobsForHistory = useMemo(() => (
-    recentJobs.filter((job) => job.status === 'failed')
-  ), [recentJobs]);
+    recentJobs.filter((job) => {
+      const dismissed = dismissedJobIds.has(String(job.id));
+      return job.status === 'failed' && !dismissed;
+    })
+  ), [recentJobs, dismissedJobIds]);
 
   const hasActiveProcessingJob = useMemo(() => (
     inProgressJobs.some((job) =>
@@ -1279,17 +1282,6 @@ useEffect(() => {
       }
       setJobId(newJobId);
 
-      const { data: queueData, error: queueErr } = await supabase.rpc('queue_job_for_processing', { p_job_id: newJobId });
-      if (queueErr && !String(queueErr.message || '').includes('status=queued')) {
-        const gateMessage = formatReportUploadGateErrorMessage(queueErr.message, selectedReportType);
-        toast({
-          title: 'Unable to start analysis',
-          description: gateMessage || `queue_job_for_processing: ${queueErr.message}`,
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
       toast({ title: 'Report queued', description: 'Your report has started. You may safely close this page and return later.' });
       if (!DASHBOARD_DIAG_MINIMAL) {
         propertyNameRef.current = '';
@@ -1756,9 +1748,11 @@ useEffect(() => {
             )}
 
             <div style={{ marginBottom: 16 }}>
+              <div style={{ ...labelMono, marginBottom:8, color:T.ink4 }}>Purchase more credits</div>
               <button
                 type="button"
-                onClick={() => setSelectedPurchaseType('bundle')}
+                aria-pressed={selectedPurchaseType === 'bundle'}
+                onClick={() => setSelectedPurchaseType((current) => current === 'bundle' ? selectedReportType : 'bundle')}
                 style={{
                   fontFamily:   "'DM Mono', monospace",
                   fontSize:     10,
@@ -1766,19 +1760,21 @@ useEffect(() => {
                   textTransform:'uppercase',
                   fontWeight:   500,
                   padding:      '9px 20px',
-                  background:   selectedPurchaseType === 'bundle' ? T.green : T.white,
-                  color:        selectedPurchaseType === 'bundle' ? T.gold : T.ink3,
-                  border:       `1px solid ${selectedPurchaseType === 'bundle' ? T.green : T.hairlineMid}`,
+                  background:   T.white,
+                  color:        selectedPurchaseType === 'bundle' ? T.goldDark : T.ink3,
+                  border:       `1px solid ${selectedPurchaseType === 'bundle' ? T.gold : T.hairlineMid}`,
                   cursor:       'pointer',
                   transition:   'all 0.15s',
                 }}
               >
-                Three-Report Bundle
+                Buy Three-Report Bundle
               </button>
               {selectedPurchaseType === 'bundle' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:3, marginTop:12 }}>
-                  <span style={{ ...bodySmall, fontSize:12 }}>2 Screening reports</span>
-                  <span style={{ ...bodySmall, fontSize:12 }}>1 Underwriting report</span>
+                  <span style={{ ...bodySmall, fontSize:12 }}>Adds 2 Screening credits and 1 Underwriting credit.</span>
+                  <span style={{ ...bodySmall, fontSize:12 }}>
+                    Purchasing the bundle does not change the report type selected above.
+                  </span>
                   <span style={{ ...bodySmall, fontSize:12 }}>
                     {commerceCatalog?.products?.bundle?.displayPrice || 'Pricing unavailable'} flat fee bundle.
                   </span>
@@ -1787,17 +1783,40 @@ useEffect(() => {
             </div>
 
             {/* Entitlement status */}
-            {selectedPurchaseType === 'bundle' ? (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:T.okBg, border:`1px solid ${T.okBorder}`, flexWrap:'wrap', gap:10 }}>
+            {entitlements.error ? (
+              <NoticeBox type="error">Unable to confirm report availability. Refresh to retry.</NoticeBox>
+            ) : (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:hasAvailableReport ? T.okBg : T.errorBg, border:`1px solid ${hasAvailableReport ? T.okBorder : T.errorBorder}`, flexWrap:'wrap', gap:10 }}>
                 <div>
-                  <span style={{ ...labelMono, color: T.okGreen }}>
-                    Three-report bundle selected
+                  <span style={{ ...labelMono, color: hasAvailableReport ? T.okGreen : T.errorRed }}>
+                    {selectedReportType === 'screening' ? 'Screening' : 'Underwriting'} credits available
                   </span>
-                  <div style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:24, fontWeight:500, color: T.okGreen, lineHeight:1, marginTop:4 }}>
+                  <div style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:24, fontWeight:500, color: hasAvailableReport ? T.okGreen : T.errorRed, lineHeight:1, marginTop:4 }}>
+                    {selectedReportType === 'screening' ? (entitlements.screening ?? 0) : (entitlements.underwriting ?? 0)}
+                  </div>
+                  <div style={{ ...bodySmall, fontSize:12, color:hasAvailableReport ? T.okGreen : T.errorRed, marginTop:4 }}>
+                    Generating this report uses 1 {selectedReportType === 'screening' ? 'Screening' : 'Underwriting'} credit.
+                  </div>
+                </div>
+                <PrimaryBtn
+                  onClick={() => handleCheckout(selectedReportType)}
+                  loading={checkoutLoading}
+                  disabled={!commerceCatalog?.products?.[selectedReportType]}
+                >
+                  Purchase {selectedReportType === 'screening' ? 'Screening' : 'Underwriting'} Report
+                </PrimaryBtn>
+              </div>
+            )}
+
+            {selectedPurchaseType === 'bundle' && (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:T.warm, border:`1px solid ${T.hairlineMid}`, flexWrap:'wrap', gap:10, marginTop:12 }}>
+                <div>
+                  <span style={{ ...labelMono, color:T.ink3 }}>Bundle purchase option</span>
+                  <div style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:22, fontWeight:500, color:T.ink2, lineHeight:1.1, marginTop:4 }}>
                     2 Screening + 1 Underwriting
                   </div>
-                  <div style={{ ...bodySmall, fontSize:12, color:T.okGreen, marginTop:4 }}>
-                    {commerceCatalog?.products?.bundle?.displayPrice || 'Pricing unavailable'} flat fee bundle.
+                  <div style={{ ...bodySmall, fontSize:12, color:T.ink3, marginTop:4 }}>
+                    This purchase adds credits only. Your selected report remains {selectedReportType === 'screening' ? 'Screening' : 'Underwriting'}.
                   </div>
                 </div>
                 <PrimaryBtn
@@ -1806,26 +1825,6 @@ useEffect(() => {
                   disabled={!commerceCatalog?.products?.bundle}
                 >
                   Purchase Bundle
-                </PrimaryBtn>
-              </div>
-            ) : entitlements.error ? (
-              <NoticeBox type="error">Unable to confirm report availability. Refresh to retry.</NoticeBox>
-            ) : (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:hasAvailableReport ? T.okBg : T.errorBg, border:`1px solid ${hasAvailableReport ? T.okBorder : T.errorBorder}`, flexWrap:'wrap', gap:10 }}>
-                <div>
-                  <span style={{ ...labelMono, color: hasAvailableReport ? T.okGreen : T.errorRed }}>
-                    {selectedPurchaseType === 'screening' ? 'Screening' : 'Underwriting'} credits available
-                  </span>
-                  <div style={{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontSize:24, fontWeight:500, color: hasAvailableReport ? T.okGreen : T.errorRed, lineHeight:1, marginTop:4 }}>
-                    {selectedPurchaseType === 'screening' ? (entitlements.screening ?? 0) : (entitlements.underwriting ?? 0)}
-                  </div>
-                </div>
-                <PrimaryBtn
-                  onClick={() => handleCheckout(selectedPurchaseType)}
-                  loading={checkoutLoading}
-                  disabled={!commerceCatalog?.products?.[selectedPurchaseType]}
-                >
-                  Purchase Report
                 </PrimaryBtn>
               </div>
             )}
