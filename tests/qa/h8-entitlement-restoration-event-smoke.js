@@ -42,6 +42,7 @@ function patchWorkerSource(source, { exposeRestoreHelper = false, throwAfterExpo
       "const crypto = { randomUUID: () => 'h8-test-invocation' };"
     )
     .replaceAll("../lib/email-resend.js", toFileUrl('lib/email-resend.js'))
+    .replaceAll("./_lib/worker-queue-scan.js", toFileUrl('api/_lib/worker-queue-scan.js'))
     .replaceAll("./_lib/validator-diagnostics-rollup.js", toFileUrl('api/_lib/validator-diagnostics-rollup.js'))
     .replaceAll("../lib/terminal-failure-taxonomy.js", toFileUrl('lib/terminal-failure-taxonomy.js'))
     .replaceAll("./_lib/report-delivery-output.js", toFileUrl('api/_lib/report-delivery-output.js'))

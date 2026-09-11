@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
+import { applyWorkerQueueCursor, createWorkerQueueScan } from './_lib/worker-queue-scan.js';
 import { sendEmailResend } from '../lib/email-resend.js';
 import { buildValidatorDiagnosticsRollup } from './_lib/validator-diagnostics-rollup.js';
 import { classifyTerminalFailureCode } from '../lib/terminal-failure-taxonomy.js';
@@ -2117,29 +2118,44 @@ export default async function handler(req, res) {
     const maxSeconds = WORKER_RUNTIME_BUDGET_SECONDS;
     const startTime = Date.now();
     const baseUrl = (process.env.PUBLIC_SITE_URL || 'https://investoriq.tech').replace(/\/$/, '');
+    const queueScan = createWorkerQueueScan({
+      deadlineMs: startTime + maxSeconds * 1000,
+      fetchPage: async (cursor, limit) => {
+        // Exact-job mode never scans the queue or claims any other job.
+        if (exactJobMode) return { data: [], error: null };
+        const query = supabaseAdmin
+          .from('analysis_jobs')
+          .select('id, user_id, status, started_at, created_at, report_type')
+          .eq('status', 'queued')
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          // Legacy rows are preserved, but cannot monopolize the candidate limit.
+          // The claim RPC still validates the matching receipt and all other gates.
+          .not('admission_receipt_id', 'is', null)
+          .in('product_identity', ['screening', 'full_underwriting'])
+          .in('report_family', ['screening', 'full_underwriting'])
+          .limit(limit);
+        return applyWorkerQueueCursor(query, cursor);
+      },
+    });
 
     while (passesRun < maxPasses && (Date.now() - startTime) / 1000 < maxSeconds) {
       nowIso = new Date().toISOString();
       let passTransitions = 0;
 
-      // Pull a small batch of queued jobs
-      // Exact-job mode never scans the queue or claims any other job.
-      const { data: queuedJobs, error: queuedErr } = exactJobMode
-        ? { data: [], error: null }
-        : await supabaseAdmin
-            .from('analysis_jobs')
-            .select('id, user_id, status, started_at, created_at, report_type')
-            .eq('status', 'queued')
-            .order('created_at', { ascending: true })
-            .limit(jobLimit);
-
-      if (queuedErr) {
-        return res.status(500).json({ error: 'Failed to fetch queued jobs', details: queuedErr.message });
-      }
-
-      if (queuedJobs && queuedJobs.length > 0) {
-        const eligibleQueuedJobs = queuedJobs.filter((job) => !deferredJobIds.has(job.id));
-        for (const job of eligibleQueuedJobs) {
+      // A rejected candidate does not consume the successful-claim batch limit.
+      // Keep the cursor across stage passes so yielded jobs are not reclaimed here.
+      let claimedThisPass = 0;
+      if (!exactJobMode) {
+        while (claimedThisPass < jobLimit) {
+          let job;
+          try {
+            job = await queueScan.next();
+          } catch (err) {
+            return res.status(500).json({ error: 'Failed to fetch queued jobs', details: err.message });
+          }
+          if (!job) break;
+          if (deferredJobIds.has(job.id)) continue;
           let claimedJob = null;
           try {
             const { data: claimRows, error: claimErr } = await supabaseAdmin
@@ -2149,7 +2165,9 @@ export default async function handler(req, res) {
             claimedJob = Array.isArray(claimRows) ? claimRows[0] : claimRows;
 
             if (claimErr || !claimedJob?.id) {
-              await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_skipped', {
+              queueScan.stats.skipped += 1;
+              if (claimErr) queueScan.stats.claimErrors += 1;
+              const skipEventError = await writeWorkerEventArtifact(job.id, job.user_id, 'worker_job_skipped', {
                 invocation_id: workerInvocationId,
                 stage: 'queued_claim',
                 prior_status: 'queued',
@@ -2157,8 +2175,12 @@ export default async function handler(req, res) {
                 error_message: claimErr?.message || null,
                 timestamp: nowIso,
               });
+              if (skipEventError) console.error('[worker] queue skip audit write failed', { job_id: job.id });
               continue;
             }
+
+            claimedThisPass += 1;
+            queueScan.stats.claimed += 1;
 
             await writeWorkerAttemptEvent({
               job: claimedJob,
@@ -4213,8 +4235,12 @@ export default async function handler(req, res) {
     }
 
     const advancedJobIds = Array.from(new Set(transitions.map((t) => t.job_id)));
+    const queueNeedsAttention = queueScan.stats.scanBudgetExhausted ||
+      queueScan.stats.claimErrors > 0 || (queueScan.stats.scanned > 0 && queueScan.stats.claimed === 0);
+    if (queueNeedsAttention) console.warn('[worker] queue_requires_attention', queueScan.stats);
     return res.status(200).json({
       ok: true,
+      queue: { ...queueScan.stats, needsAttention: queueNeedsAttention },
       advancedCount: transitions.length,
       blockedNeedsDocumentsCount: blockedJobIds.length,
       failedCount: failedJobIds.length,

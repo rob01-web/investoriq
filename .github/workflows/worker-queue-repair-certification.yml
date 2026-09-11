@@ -1,0 +1,30 @@
+name: Worker Queue Repair Certification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - hotfix-worker-queue-starvation-20260911-r1
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node tests/qa/worker-queue-starvation-regression.js
+      - run: node tests/qa/launch-e2e-contract-reconciliation-smoke.js
+      - run: npm run qa
+      - run: npm run build
+      - name: Verify source remains unchanged
+        run: |
+          git diff --check
+          git diff --exit-code

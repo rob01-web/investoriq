@@ -17,6 +17,7 @@ const launchCriticalSuite = [
   ['immutable staged source registration', 'h5-staged-source-registration-guard-smoke.js'],
   ['current disclosure enforcement', 'legal-disclosure-authority-smoke.js'],
   ['exact worker claim', 'exact-job-worker-claim-smoke.js'],
+  ['worker queue starvation regression', 'worker-queue-starvation-regression.js'],
   ['retry/dead-letter boundary', 'dead-letter-status-constraint-smoke.js'],
   ['governed requeue boundary', 'governed-requeue-worker-job-smoke.js'],
   ['canonical source authority', 'source-authority-smoke.js'],
