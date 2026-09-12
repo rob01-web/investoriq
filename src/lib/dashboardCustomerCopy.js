@@ -69,9 +69,9 @@ export function resolveDashboardCustomerStatus(job = {}, deliveryGateDecisionPay
   return {
     hasCanonicalDeliveryDecision: false,
     delivery_gate_status: null,
-    customer_status_label: job?.status === 'failed' ? 'failed' : null,
+    customer_status_label: job?.status === 'dead_letter'\n      ? 'paused'\n      : job?.status === 'failed' ? 'failed' : null,
     customer_status_reason_code: null,
-    customer_message: job?.status === 'failed' ? DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE : null,
+    customer_message: ['failed', 'dead_letter'].includes(String(job?.status || '').toLowerCase())\n      ? DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE\n      : null,
     customer_delivery_allowed: null,
     hold_delivery: true,
     credit_restore_required: null,
