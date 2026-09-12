@@ -53,11 +53,16 @@ function classifyMissingDocumentCategory(job = {}) {
 function buildNeutralSystemFailureCopy({
   creditRestored = false,
   referenceCode = 'REPORT_GENERATION_FAILED',
+  pausedBeforePublication = false,
 } = {}) {
   return {
-    title: pausedBeforePublication\n      ? (creditRestored ? 'Generation paused - credit restored' : 'Generation paused before publication')\n      : (creditRestored ? 'Generation failed - credit restored' : 'Generation failed'),
+    title: pausedBeforePublication
+      ? (creditRestored ? 'Generation paused - credit restored' : 'Generation paused before publication')
+      : (creditRestored ? 'Generation failed - credit restored' : 'Generation failed'),
     body:
-      (pausedBeforePublication\n        ? 'InvestorIQ paused this report before publication after exhausting its safe processing attempts. No completed report was published.'\n        : 'InvestorIQ encountered a system error while processing your report. Your uploaded documents do not need to be changed.') +
+      (pausedBeforePublication
+        ? 'InvestorIQ paused this report before publication after exhausting its safe processing attempts. No completed report was published.'
+        : 'InvestorIQ encountered a system error while processing your report. Your uploaded documents do not need to be changed.') +
       (creditRestored
         ? ' Your report credit has been restored.'
         : ' If a report credit was consumed, it will be restored automatically.'),
@@ -147,6 +152,8 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
   const creditRestored = options.creditRestored === true;
   const errorCode = String(job?.error_code || '').trim().toUpperCase();
   const referenceCode = classification.referenceCode;
+  const deadLettered = String(job?.status || '').toLowerCase() === 'dead_letter' ||
+    ['WORKER_RETRY_BUDGET_EXHAUSTED', 'RECOVERY_EPISODE_EXHAUSTED'].includes(errorCode);
   const creditLine = creditRestored
     ? 'Your report credit has been returned to your account.'
     : null;
@@ -154,7 +161,15 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     return buildNeutralSystemFailureCopy({ creditRestored, referenceCode });
   }
 
-  if (deadLettered) {\n    return buildNeutralSystemFailureCopy({\n      creditRestored,\n      referenceCode: 'REPORT_GENERATION_FAILED',\n      pausedBeforePublication: true,\n    });\n  }\n\n  if (classification.kind === 'missing_documents') {
+  if (deadLettered) {
+    return buildNeutralSystemFailureCopy({
+      creditRestored,
+      referenceCode: 'REPORT_GENERATION_FAILED',
+      pausedBeforePublication: true,
+    });
+  }
+
+  if (classification.kind === 'missing_documents') {
     if (errorCode === 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS') {
       return {
         title: creditRestored ? 'Rent roll could not be verified - credit restored' : 'Rent roll could not be verified',
