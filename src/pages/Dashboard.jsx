@@ -451,14 +451,14 @@ const DASHBOARD_DIAG_MINIMAL = false;
   const failedJobsForDisplay = useMemo(() => (
     recentJobs.filter((job) => {
       const dismissed = dismissedJobIds.has(String(job.id));
-      return job.status === 'failed' && !dismissed;
+      return ['failed', 'dead_letter'].includes(String(job.status || '').toLowerCase()) && !dismissed;
     })
   ), [recentJobs, dismissedJobIds]);
 
   const failedJobsForHistory = useMemo(() => (
     recentJobs.filter((job) => {
       const dismissed = dismissedJobIds.has(String(job.id));
-      return job.status === 'failed' && !dismissed;
+      return ['failed', 'dead_letter'].includes(String(job.status || '').toLowerCase()) && !dismissed;
     })
   ), [recentJobs, dismissedJobIds]);
 
@@ -634,7 +634,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
     recentJobsFetchRef.current = true;
     try {
       const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id)
-        .in('status', ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','published','failed'])
+        .in('status', ['queued','extracting','underwriting','scoring','rendering','pdf_generating','publishing','published','failed','dead_letter'])
         .order('created_at', { ascending: false }).limit(25);
       if (error) { console.error('Failed to fetch recent jobs:', error); return []; }
       const rows = data || [];
@@ -654,7 +654,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
     if (!profile?.id) return () => { cancelled = true; };
 
     const failedJobIds = recentJobs
-      .filter((job) => job?.status === 'failed' && job?.id)
+      .filter((job) => ['failed', 'dead_letter'].includes(String(job?.status || '').toLowerCase()) && job?.id)
       .map((job) => String(job.id));
 
     if (failedJobIds.length === 0) {
@@ -701,7 +701,7 @@ const DASHBOARD_DIAG_MINIMAL = false;
     if (latestFailedFetchRef.current) return;
     latestFailedFetchRef.current = true;
     try {
-      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id).eq('status', 'failed').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      const { data, error } = await supabase.from('analysis_jobs').select('id, property_name, report_type, status, created_at, failure_reason, error_message, error_code').eq('user_id', profile.id).in('status', ['failed', 'dead_letter']).order('created_at', { ascending: false }).limit(1).maybeSingle();
       if (error) { console.error('Failed to fetch failed job:', error); return; }
       setLatestFailedJob((prev) => {
         if (!prev && !data) return prev;
@@ -988,7 +988,7 @@ useEffect(() => {
     latestFailedJob?.id ? deliveryGateDecisionEventsByJobId[String(latestFailedJob.id)]?.payload : null
   );
   const showNeedsDocsWarning = false;
-  const activeFailureCopy = activeJobForRuns?.status === 'failed'
+  const activeFailureCopy = ['failed', 'dead_letter'].includes(String(activeJobForRuns?.status || '').toLowerCase())
     ? buildCustomerFailureMessage(activeJobForRuns, {
         creditRestored: failedJobCreditRestoredById[String(activeJobForRuns?.id)] === true,
       coreValidRequiredCoverage: Boolean(activeDeliveryDecision?.core_valid_required_coverage),
@@ -2066,14 +2066,14 @@ useEffect(() => {
                     ? activeDeliveryDecision.customer_message
                     : activeJobForRuns?.status === 'queued' ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
                     : ['extracting','underwriting','scoring','rendering','pdf_generating','publishing'].includes(activeJobForRuns?.status) ? 'Report generation may take up to 24 business hours. You will be notified when your report is ready.'
-                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
+                    : ['failed', 'dead_letter'].includes(String(activeJobForRuns?.status || '').toLowerCase()) ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
                     : activeJobForRuns?.status === 'published' ? 'Report complete. Available below.'
-                    : activeJobForRuns?.status === 'failed' ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
+                    : ['failed', 'dead_letter'].includes(String(activeJobForRuns?.status || '').toLowerCase()) ? (activeFailureCopy?.body || 'Generation paused before publication. No completed report was published.')
                     : !reportUploadGate.canGenerate
                     ? (reportUploadGate.blockedMessage || 'Upload both a Rent Roll and a T12 to generate.')
                     : 'Complete steps 1 and 2 to generate your report.'}
                 </span>
-                {activeJobForRuns?.status === 'failed' && !activeDeliveryDecision?.customer_message && activeFailureCopy?.nextStep && (
+                {['failed', 'dead_letter'].includes(String(activeJobForRuns?.status || '').toLowerCase()) && !activeDeliveryDecision?.customer_message && activeFailureCopy?.nextStep && (
                   <span style={step03FailureSupportStyle}>
                     {activeFailureCopy.nextStep}
                   </span>
@@ -2090,7 +2090,7 @@ useEffect(() => {
                 )}
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-                {activeJobForRuns?.status === 'failed' && activeJobForRuns?.id && (
+                {['failed', 'dead_letter'].includes(String(activeJobForRuns?.status || '').toLowerCase()) && activeJobForRuns?.id && (
                   <button
                     type="button"
                     onClick={() => dismissJob(activeJobForRuns.id)}
@@ -2265,7 +2265,7 @@ useEffect(() => {
                   return (
                     <div
                       key={`failed-${job.id}`}
-                      data-report-history-status="failed"
+                      data-report-history-status={job.status === 'dead_letter' ? 'dead_letter' : 'failed'}
                       style={{ border:`1px solid ${T.errorBorder}`, background:T.errorBg, padding:'14px 16px' }}
                     >
                       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
