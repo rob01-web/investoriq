@@ -69,9 +69,13 @@ export function resolveDashboardCustomerStatus(job = {}, deliveryGateDecisionPay
   return {
     hasCanonicalDeliveryDecision: false,
     delivery_gate_status: null,
-    customer_status_label: job?.status === 'dead_letter'\n      ? 'paused'\n      : job?.status === 'failed' ? 'failed' : null,
+    customer_status_label: job?.status === 'dead_letter'
+      ? 'paused'
+      : job?.status === 'failed' ? 'failed' : null,
     customer_status_reason_code: null,
-    customer_message: ['failed', 'dead_letter'].includes(String(job?.status || '').toLowerCase())\n      ? DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE\n      : null,
+    customer_message: ['failed', 'dead_letter'].includes(String(job?.status || '').toLowerCase())
+      ? DASHBOARD_NEUTRAL_SYSTEM_FAILURE_MESSAGE
+      : null,
     customer_delivery_allowed: null,
     hold_delivery: true,
     credit_restore_required: null,
@@ -81,11 +85,13 @@ export function resolveDashboardCustomerStatus(job = {}, deliveryGateDecisionPay
 }
 
 export function getCustomerFacingJobStatus(job, deliveryGateDecisionPayload = null) {
+  if (String(job?.status || '').toLowerCase() === 'dead_letter') return 'paused';
   const decision = resolveDashboardCustomerStatus(job, deliveryGateDecisionPayload);
   if (decision.customer_status_label) {
     const normalized = normalizeDashboardCustomerStatusLabel(decision.customer_status_label);
     if (normalized === 'ready') return 'ready';
     if (normalized === 'failed') return 'failed';
+    if (normalized === 'paused') return 'paused';
     return normalized.replace(/_/g, ' ');
   }
   return String(job?.status || '').toLowerCase();
