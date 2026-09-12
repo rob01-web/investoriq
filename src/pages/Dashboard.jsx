@@ -258,6 +258,7 @@ function StatusBadge({ status, errorCode, deliveryDecision = null }) {
     pdf_generating:{ bg: T.warnBg,    border: T.warnBorder,  color: T.warnAmber, label: 'Preparing'    },
     publishing:    { bg: T.warnBg, border: T.warnBorder, color: T.warnAmber, label: 'Preparing' },
     failed:        { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Failed' },
+    dead_letter:   { bg: T.errorBg,   border: T.errorBorder, color: T.errorRed,  label: 'Paused' },
   };
   const s = map[status] || { bg: T.warm, border: T.hairline, color: T.ink4, label: status };
   return (
