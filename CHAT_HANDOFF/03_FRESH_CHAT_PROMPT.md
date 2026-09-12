@@ -167,4 +167,30 @@ Root cause first. One bounded repair group at a time. Preserve rollback points. 
 Goal: make the actual reusable InvestorIQ Underwriting product feel and read like a **$5K institutional underwriting deliverable**, not make one test report cosmetically pass.
 
 BOOOOOOOOOOOOOOOOOOOOOOOOOOM.
+## FRESH CHAT PROMPT — 2026-09-12 MORNING CONTINUATION
 
+Continue InvestorIQ from the exact post-deployment checkpoint below. Do not restart the audit, AI architecture work, launch E2E certification, or any closed phase.
+
+Current production:
+
+- Branch: `hotfix-worker-queue-starvation-20260911-r1`
+- Certified/deployed commit: `2005e6361e348b87a61d9470759819c5f000c5d`
+- Vercel deployment: `BkmA44RAR9aCJCE6EHEm2L5yhn9f`
+- Live alias: `https://investoriq.tech`
+- Verified: canonical QA `38/38 PASS`; p0b deterministic smoke PASS; Dashboard customer-copy smoke PASS; build PASS; production deployment Ready.
+
+Repairs already deployed:
+
+- worker queue starvation repair;
+- deterministic legacy false-blocker normalization while retaining genuine canonical QA blocking;
+- screening financing-language leakage repair;
+- Dashboard dead-letter/paused visibility and customer-safe explanation;
+- governed customer job-status boundary remains enforced.
+
+Your first move is verification, not redesign: run one fresh controlled customer report flow against the live alias, confirm Dashboard visibility, observe worker progression and the event timeline, and capture the final report-contract result. If a new defect reproduces, diagnose it from this deployed commit before proposing a narrowly scoped repair. Do not replay old queued/dead-letter jobs, apply migrations, activate schedulers, merge main, mutate Supabase/Stripe, or redeploy without explicit approval. GPT-4o remains launch authority and AI architecture is CLOSED.
+
+Read the five handoff files in order: `README.md`, `00_CURRENT_HANDOFF.md`, `01_MASTER_PLAN.md`, `02_ELITE_REPORT_BLUEPRINT.md`, `03_FRESH_CHAT_PROMPT.md`. Preserve historical sections; this current block controls conflicts.
+
+---
+
+## 2026-09-11 production promotion continuation - HISTORICAL RECORD
