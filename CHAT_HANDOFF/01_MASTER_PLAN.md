@@ -1,5 +1,11 @@
 # InvestorIQ Master Plan
 
+## 2026-09-12 CURRENT HANDOFF STATE
+
+The implementation is now at the post-deployment verification checkpoint. The certified production source is `2005e6361e348b87a61d9470759819c5f000c5d` on `hotfix-worker-queue-starvation-20260911-r1`, deployed as Vercel deployment `BkmA44RAR9aCJCE6EHEm2L5yhn9f` and aliased to [investoriq.tech](https://investoriq.tech). Canonical QA, deterministic smoke checks, Dashboard copy checks, build, and deployment completed successfully.
+
+The next plan step is a single fresh controlled customer journey on the live alias: create a new report, verify it remains visible in Dashboard, observe worker progression and event history, and confirm an explicit customer-safe explanation for any block/dead-letter outcome. Do not use historical rows as a replay queue. Do not reopen closed audit/AI phases, change GPT-4o authority, merge main, apply migrations, activate schedulers, or mutate Supabase/Stripe without separate explicit authorization.
+
 
 ## Customer admission constitution - GOVERNING OWNER AUTHORITY
 
@@ -194,4 +200,3 @@ Never:
 - treat DocRaptor TEST watermarks as a product defect;
 - loosen regression tests merely to accommodate broken behavior;
 - call the product accepted without the final editorial gate.
-
