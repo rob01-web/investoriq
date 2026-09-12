@@ -117,8 +117,46 @@ function validateOperatingCostCoverage(html = "", breakEven = null) {
   return issues;
 }
 
+function normalizeUpstreamSeal(upstreamSeal = null) {
+  if (!upstreamSeal || typeof upstreamSeal !== "object" || Array.isArray(upstreamSeal)) return upstreamSeal;
+
+  const sourceIssues = Array.isArray(upstreamSeal.issues) ? upstreamSeal.issues : [];
+  const retainedIssues = sourceIssues.filter((entry) => {
+    const code = String(entry?.code || "");
+    if (LEGACY_BREAK_EVEN_CODES.has(code)) return false;
+    if (code !== "CANONICAL_QA_DISAGREEMENT") return true;
+
+    const evidence = entry?.evidence && typeof entry.evidence === "object" ? entry.evidence : {};
+    const downstreamCodes = Array.isArray(evidence.downstream_issue_codes)
+      ? evidence.downstream_issue_codes.map((value) => String(value || "")).filter(Boolean)
+      : [];
+    const upstreamCodes = Array.isArray(evidence.upstream_issue_codes)
+      ? evidence.upstream_issue_codes.map((value) => String(value || "")).filter(Boolean)
+      : [];
+    const legacyOnly = downstreamCodes.length > 0 &&
+      downstreamCodes.every((value) => LEGACY_BREAK_EVEN_CODES.has(value)) &&
+      upstreamCodes.every((value) => LEGACY_BREAK_EVEN_CODES.has(value));
+    return !legacyOnly;
+  });
+
+  return {
+    ...upstreamSeal,
+    ok: retainedIssues.length === 0 ? true : Boolean(upstreamSeal.ok),
+    issues: retainedIssues,
+    canonical_qa_agreement: !retainedIssues.some((entry) => entry?.code === "CANONICAL_QA_DISAGREEMENT"),
+  };
+}
+
 export function buildDeterministicReportContractQaSeal(args = {}) {
-  const base = buildBaseDeterministicReportContractQaSeal(args);
+  // The base validator owns the historical Break-Even Occupancy contract. The
+  // current customer contract is Operating Cost Coverage Ratio, so do not let
+  // the historical validator manufacture a disagreement before the current
+  // validator evaluates the governed surface.
+  const base = buildBaseDeterministicReportContractQaSeal({
+    ...args,
+    breakEven: null,
+    upstreamSeal: normalizeUpstreamSeal(args?.upstreamSeal),
+  });
   const retainedIssues = (Array.isArray(base?.issues) ? base.issues : [])
     .filter((entry) => !LEGACY_BREAK_EVEN_CODES.has(String(entry?.code || "")));
   const coverageIssues = validateOperatingCostCoverage(args?.html, args?.breakEven);
