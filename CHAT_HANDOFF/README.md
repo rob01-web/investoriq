@@ -1,5 +1,24 @@
 # InvestorIQ CHAT_HANDOFF
 
+## 2026-09-12 CURRENT AUTHORITY — post-deployment handoff
+
+This is the controlling handoff state for the next chat. Preserve all historical sections below; this section supersedes stale deployment identifiers and pending-promotion instructions where they conflict.
+
+- Current phase: post-deployment launch-readiness verification. The September audit, AI architecture work, and closed certification phases are complete; do not restart them.
+- Certified production source: `2005e6361e348b87a61d9470759819c5f000c5d` on `hotfix-worker-queue-starvation-20260911-r1`.
+- Production deployment: Vercel deployment `BkmA44RAR9aCJCE6EHEm2L5yhn9f`; live alias [investoriq.tech](https://investoriq.tech). The deployment completed successfully and is Ready.
+- Verified local gates before promotion: canonical QA `38/38 PASS`, p0b deterministic smoke PASS, Dashboard customer-copy smoke PASS, and production build PASS. The final deployment also completed successfully after correcting the dashboard-copy syntax defect.
+- Included repairs: governed Dashboard job-status boundary; worker queue starvation repair; deterministic legacy false-blocker normalization; screening financing-language leakage repair; visible dead-letter/paused customer status and explanation.
+- No production migration, scheduler activation, main merge, historical replay, Supabase mutation, Stripe mutation, or other production change is authorized by this handoff.
+- GPT-4o remains launch authority. AI architecture is closed; do not reopen model R&D. Advisory-model rate limits are not a reason to alter the core launch architecture.
+
+### Next chat — first move
+
+1. Verify the live alias and deployment identity, then run one fresh, controlled customer report flow end-to-end.
+2. Confirm the new job is visible in Dashboard, advances through worker processing, and remains visible with an explicit terminal explanation if it blocks or dead-letters.
+3. Capture the job status/event timeline and report-contract result before making any further code decision. Treat older queued/dead-letter jobs as historical evidence, not as a reason to replay or mutate data.
+4. Only then address any newly reproduced runtime or report-contract defect. Keep all production changes separately approved.
+
 
 ## Customer admission constitution - GOVERNING OWNER AUTHORITY
 
