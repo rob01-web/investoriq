@@ -1,5 +1,11 @@
 # InvestorIQ ELITE Report Blueprint
 
+## 2026-09-12 CURRENT DELIVERY CHECKPOINT
+
+The report blueprint remains governed and closed; this document is not being reopened for model R&D. Production now runs certified commit `2005e6361e348b87a61d9470759819c5f000c5d` (`hotfix-worker-queue-starvation-20260911-r1`) at [investoriq.tech](https://investoriq.tech). The final repair makes worker and Dashboard outcomes customer-visible, including paused/dead-letter explanations, while preserving the canonical report-contract and security boundaries.
+
+Before any additional blueprint change, run one fresh live customer journey and capture the resulting artifact contract, visible classification, and event timeline. Historical dead-letter artifacts and the earlier canonical QA disagreement are evidence for diagnosis only; do not manufacture lineage or replay them. GPT-4o remains the launch authority.
+
 
 ## Customer admission constitution - GOVERNING OWNER AUTHORITY
 
@@ -316,4 +322,3 @@ Both gates must pass before calling the product customer-ready.
 This blueprint authorizes no production mutation.
 
 No `main` merge, deployment, migration, scheduler activation, Storage mutation, Stripe/pricing change, or other production change without separate owner authorization.
-
