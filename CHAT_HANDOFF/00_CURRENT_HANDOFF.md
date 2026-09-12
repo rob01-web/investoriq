@@ -1,3 +1,15 @@
+## 2026-09-12 CURRENT AUTHORITY — final deployment checkpoint
+
+- The final repaired production deployment is complete. Certified source is commit `2005e6361e348b87a61d9470759819c5f000c5d` on `hotfix-worker-queue-starvation-20260911-r1`.
+- Vercel deployment `BkmA44RAR9aCJCE6EHEm2L5yhn9f` is Ready and aliased to [https://investoriq.tech](https://investoriq.tech).
+- Verified gates: canonical QA `38/38 PASS`, p0b deterministic smoke PASS, Dashboard customer-copy smoke PASS, local production build PASS, and successful production deployment.
+- The deployed repairs cover queue starvation, deterministic legacy QA false-blocking, screening financing-language leakage, and customer-visible dead-letter/paused status messaging. Raw browser access to governed data remains forbidden.
+- This is a handoff checkpoint, not a reopening of the audit or AI architecture. GPT-4o remains launch authority; closed phases stay closed.
+- Tomorrow’s first action is a fresh controlled customer E2E verification against the live alias. Verify job admission, Dashboard visibility, worker progression, event timeline, and terminal explanation. Do not replay old jobs or infer current behavior from historical queued/dead-letter rows.
+- No further production change is authorized by this note: do not merge main, apply migrations, activate schedulers, mutate Supabase/Stripe, or redeploy unless separately approved after fresh evidence.
+
+## 2026-09-11 production promotion continuation - HISTORICAL RECORD
+
 # InvestorIQ Current Handoff
 
 
@@ -172,14 +184,3 @@ A provider-render PASS alone is not enough.
 ## 9. Remaining production holds
 
 No merge to `main`, migration, scheduler activation, Storage mutation, Stripe/pricing change, or other production mutation is authorized without a new explicit owner decision. The single authorized deployment recorded above is complete.
-## 2026-09-12 CURRENT AUTHORITY — final deployment checkpoint
-
-- The final repaired production deployment is complete. Certified source is commit `2005e6361e348b87a61d9470759819c5f000c5d` on `hotfix-worker-queue-starvation-20260911-r1`.
-- Vercel deployment `BkmA44RAR9aCJCE6EHEm2L5yhn9f` is Ready and aliased to [https://investoriq.tech](https://investoriq.tech).
-- Verified gates: canonical QA `38/38 PASS`, p0b deterministic smoke PASS, Dashboard customer-copy smoke PASS, local production build PASS, and successful production deployment.
-- The deployed repairs cover queue starvation, deterministic legacy QA false-blocking, screening financing-language leakage, and customer-visible dead-letter/paused status messaging. Raw browser access to governed data remains forbidden.
-- This is a handoff checkpoint, not a reopening of the audit or AI architecture. GPT-4o remains launch authority; closed phases stay closed.
-- Tomorrow’s first action is a fresh controlled customer E2E verification against the live alias. Verify job admission, Dashboard visibility, worker progression, event timeline, and terminal explanation. Do not replay old jobs or infer current behavior from historical queued/dead-letter rows.
-- No further production change is authorized by this note: do not merge main, apply migrations, activate schedulers, mutate Supabase/Stripe, or redeploy unless separately approved after fresh evidence.
-
-## 2026-09-11 production promotion continuation - HISTORICAL RECORD
