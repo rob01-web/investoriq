@@ -102,5 +102,6 @@ export function formatDashboardCustomerStatusLabel(label, reportType = null) {
   void reportType;
   if (normalized === 'ready') return 'Ready';
   if (normalized === 'failed') return 'Failed';
+  if (normalized === 'paused') return 'Paused';
   return null;
 }
