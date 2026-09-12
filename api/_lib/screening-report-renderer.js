@@ -152,7 +152,7 @@ function buildScreeningExecVerdictExpansion({
     sourceReconciliationNarrativePolicy?.data_coverage_required === true && hasSourceReconciliationVariance
       ? "Source reconciliation disclosure remains active. Variance-sensitive conclusions should be treated as constrained until T12 and rent roll evidence reconcile."
       : "Signals are derived deterministically from uploaded operating evidence only. No financing, debt sizing, or return projection modules are included.";
-  const frameworkCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Framework Note</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(frameworkNote)}</p><p class="small" style="color:#64748b;font-style:italic;">Advanced financing and return-projection modules are outside the Screening Report scope.</p></div>`;
+  const frameworkCard = `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Framework Note</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(frameworkNote)}</p><p class="small" style="color:#64748b;font-style:italic;">Advanced capital and return-projection modules are outside the Screening Report scope.</p></div>`;
   const thesisCard = thesisText
     ? `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Summary</p><p style="font-size:11px;line-height:1.6;color:#374151;margin:0 0 6px 0;">${escapeHtml(thesisText)}</p><p class="small" style="color:#64748b;font-style:italic;">All statements derive from reported metrics and standardized classification thresholds. No forward-looking projections.</p></div>`
     : "";
@@ -304,7 +304,7 @@ export function buildScreeningRefiSufficiencyTable({
   const title =
     currentDebtAssessmentState?.has_true_current_debt_balance === true ||
     String(loanTermSheetTermsPayload?.debt_basis || "").toLowerCase().includes("acquisition")
-      ? "Advanced financing sufficiency not produced due to insufficient inputs."
+      ? "Advanced capital sufficiency not produced due to insufficient inputs."
       : "Current debt and refinance capacity were not assessed because no verified current outstanding debt balance was provided.";
   return `<p>${title}</p><table><thead><tr><th>Input</th><th>Status</th><th>Provided Value</th></tr></thead><tbody>${rowsHtml}</tbody></table><p class="small">This sufficiency check verifies whether required inputs are present in uploaded documents. Missing required inputs prevent advanced financing analysis.</p>`;
 }
@@ -450,8 +450,8 @@ export function buildScreeningDataCoverageSummary({
       : `<tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">Unsupported inputs</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Omitted</td><td style="padding:4px 8px;border:1px solid #E5E7EB;">Missing or unsupported items are not inferred</td></tr>`,
   ].join("");
   const sourceReliabilityFooter = effectiveReportMode === "screening_v1"
-    ? "Advanced financing and return-projection modules are outside the Screening Report scope."
-    : "Advanced financing and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.";
+    ? "Advanced capital and return-projection modules are outside the Screening Report scope."
+    : "Advanced capital and return-projection modules remain deferred unless explicitly supported by the report family and verified source basis.";
   const sourceReliabilityHtml = `<div style="margin-top:10px;"><p class="subsection-title">Data Coverage / Source Reliability</p><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Source</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Treatment</th><th style="text-align:left;padding:4px 8px;background:#F1F5F9;color:#1e293b;border:1px solid #E5E7EB;">Use</th></tr></thead><tbody>${sourceReliabilityRows}</tbody></table><p class="small" style="margin:6px 0 0 0;color:#64748b;">${escapeHtml(sourceReliabilityFooter)}</p></div>`;
   if (allPresent) {
     if (effectiveReportMode === "screening_v1") {
@@ -639,7 +639,7 @@ export function buildScreeningNoiStabilityHtml({
   const rows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && egi > 0) rows.push(`<tr><td>NOI Margin</td><td>${formatPercent1(noi / egi)}</td></tr>`);
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) rows.push(`<tr><td>Expense Sensitivity</td><td>${formatPercent1(1 - opex / egi)}</td></tr>`);
-  if (Number.isFinite(opex) && Number.isFinite(grossPotentialRent) && grossPotentialRent > 0) rows.push(`<tr><td>Break-Even Occupancy</td><td>${formatPercent1(opex / grossPotentialRent)}</td></tr>`);
+  if (Number.isFinite(opex) && Number.isFinite(grossPotentialRent) && grossPotentialRent > 0) rows.push(`<tr><td>Operating Cost Coverage Ratio</td><td>${formatPercent1(opex / grossPotentialRent)}</td></tr>`);
   const sourceReconciliationRenderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
   const rrVsGprDisplay = sourceReconciliationRenderState?.variance_display ?? null;
   if (sourceReconciliationRenderState?.renderable) rows.push(`<tr><td>Rent Roll vs T12 GPR Variance</td><td>${rrVsGprDisplay}</td></tr>`);
