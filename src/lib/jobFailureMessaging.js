@@ -55,9 +55,9 @@ function buildNeutralSystemFailureCopy({
   referenceCode = 'REPORT_GENERATION_FAILED',
 } = {}) {
   return {
-    title: creditRestored ? 'Generation failed - credit restored' : 'Generation failed',
+    title: pausedBeforePublication\n      ? (creditRestored ? 'Generation paused - credit restored' : 'Generation paused before publication')\n      : (creditRestored ? 'Generation failed - credit restored' : 'Generation failed'),
     body:
-      'InvestorIQ encountered a system error while processing your report. Your uploaded documents do not need to be changed.' +
+      (pausedBeforePublication\n        ? 'InvestorIQ paused this report before publication after exhausting its safe processing attempts. No completed report was published.'\n        : 'InvestorIQ encountered a system error while processing your report. Your uploaded documents do not need to be changed.') +
       (creditRestored
         ? ' Your report credit has been restored.'
         : ' If a report credit was consumed, it will be restored automatically.'),
@@ -154,7 +154,7 @@ export function buildCustomerFailureMessage(job = {}, options = {}) {
     return buildNeutralSystemFailureCopy({ creditRestored, referenceCode });
   }
 
-  if (classification.kind === 'missing_documents') {
+  if (deadLettered) {\n    return buildNeutralSystemFailureCopy({\n      creditRestored,\n      referenceCode: 'REPORT_GENERATION_FAILED',\n      pausedBeforePublication: true,\n    });\n  }\n\n  if (classification.kind === 'missing_documents') {
     if (errorCode === 'MISSING_STRUCTURED_FINANCIAL_ARTIFACTS') {
       return {
         title: creditRestored ? 'Rent roll could not be verified - credit restored' : 'Rent roll could not be verified',
