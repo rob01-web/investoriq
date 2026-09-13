@@ -39,6 +39,21 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Install native canvas build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libjpeg-dev \
+            libgif-dev \
+            librsvg2-dev \
+            libpixman-1-dev
+
       - name: Install dependencies
         run: npm ci
 
