@@ -2,13 +2,16 @@ name: InvestorIQ Launch QA
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - launch-certification-20260913
     paths:
       - 'api/**'
       - 'lib/**'
       - 'src/**'
       - 'supabase/**'
-      - 'tests/qa/**'
+      - 'scripts/**'
+      - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
       - 'vercel.json'
@@ -25,7 +28,7 @@ concurrency:
 jobs:
   launch-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,3 +44,13 @@ jobs:
 
       - name: Run canonical launch QA
         run: npm run qa
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Verify certification did not mutate source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --exit-code

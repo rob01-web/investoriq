@@ -44,3 +44,7 @@ credentials.json
 *.pem
 *.key
 .credentials
+# Local agent / tool state
+.claude/settings.local.json
+.emergent/
+.gitconfig
