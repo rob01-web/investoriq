@@ -1,0 +1,1039 @@
+﻿# InvestorIQ Repository Tracked-File Census
+
+**Generated:** 2026-09-13
+**Authority branch:** `launch-certification-20260913`
+**Starting checkpoint:** `aa48d88544df3d7f87a50ecbeecd7025a10de368`
+**Purpose:** Exact deterministic tracked-file inventory for final repository certification.
+
+**Tracked file count after this census file is committed:** 1028
+
+## Deterministic path list
+
+- `!Fictitious Property Documents to Upload/ForestCityManor_BrokerEmail.pdf`
+- `!Fictitious Property Documents to Upload/ForestCityManor_PurchaseAssumptions.pdf`
+- `!Fictitious Property Documents to Upload/ForestCityManor_RenovationBudget.docx`
+- `!Fictitious Property Documents to Upload/ForestCityManor_RentRoll.xlsx`
+- `!Fictitious Property Documents to Upload/ForestCityManor_T12_2024-2025.pdf`
+- `"nce Vercel function env init fail-closed\357\200\242"`
+- `.claude/settings.local.json`
+- `.emergent/emergent.yml`
+- `.gitconfig`
+- `.github/workflows/launch-e2e-contract-reconciliation.yml`
+- `.github/workflows/launch-qa.yml`
+- `.github/workflows/launch-readiness-customer-journey.yml`
+- `.github/workflows/phase6-lifecycle-certification.yml`
+- `.github/workflows/phase7-elite-report-certification.yml`
+- `.github/workflows/phase8a-slice-a-certification.yml`
+- `.github/workflows/phase8a-slice-b-certification.yml`
+- `.github/workflows/phase8a-slice-c-certification.yml`
+- `.github/workflows/phase8a-slice-c-certification-r2.yml`
+- `.github/workflows/phase8a-slice-c-certification-r3.yml`
+- `.github/workflows/phase8a-slice-c-certification-r4.yml`
+- `.github/workflows/phase8a-slice-c-certification-r5.yml`
+- `.github/workflows/phase8a-slice-c-certification-r6.yml`
+- `.github/workflows/phase8a-slice-c-certification-r7.yml`
+- `.github/workflows/phase8a-slice-c-certification-r8.yml`
+- `.github/workflows/phase8a-slice-c-dscr-diagnostic.yml`
+- `.github/workflows/phase8a-slice-d-final-owner-certification-r1.yml`
+- `.github/workflows/phase8a-slice-d-pagination-trial-r1.yml`
+- `.github/workflows/phase8-elite-customer-facing-certification.yml`
+- `.github/workflows/production-ai-architecture-release.yml`
+- `.github/workflows/underwriting-final-certification.yml`
+- `.github/workflows/worker-kick.yml`
+- `.github/workflows/worker-queue-repair-certification.yml`
+- `.gitignore`
+- `124 Richmond Clean Underwriting 5.pdf`
+- `124 Richmond Messy Underwriting 5.pdf`
+- `124 Richmond Street (MESSY Underwriting Test 32).pdf`
+- `124 Richmond Street Screening 5.pdf`
+- `124 Richmond Street, London, ON/!Rent_Roll_124_Richmond_St_London_ON.xlsx`
+- `124 Richmond Street, London, ON/!T12_124_Richmond_St_London_ON.xlsx`
+- `124 Richmond Street, London, ON/CLEAN_Debt_Term_Sheet_124_Richmond.pdf`
+- `AGENTS.md`
+- `api/_lib/acquisition-financing-display-contract.js`
+- `api/_lib/acquisition-memo-boss-contract.js`
+- `api/_lib/acquisition-memo-projection.js`
+- `api/_lib/acquisition-memo-renderer.js`
+- `api/_lib/acquisition-memo-v2-boss-repair.js`
+- `api/_lib/acquisition-memo-v2-customer-surface-model.js`
+- `api/_lib/acquisition-memo-v2-customer-surface-model-base.js`
+- `api/_lib/acquisition-memo-v2-document.js`
+- `api/_lib/acquisition-memo-v2-document-base.js`
+- `api/_lib/acquisition-memo-v2-final-decision.js`
+- `api/_lib/acquisition-memo-v2-orchestrator.js`
+- `api/_lib/acquisition-memo-v2-pipeline.js`
+- `api/_lib/acquisition-memo-v2-role-reconciler.js`
+- `api/_lib/acquisition-memo-v2-surface-copy.js`
+- `api/_lib/admin-quality-incidents-handler.js`
+- `api/_lib/authenticated-actor.js`
+- `api/_lib/canonical-delivery-action.js`
+- `api/_lib/canonical-operating-metrics.js`
+- `api/_lib/capital-plan-input-contract.js`
+- `api/_lib/commerce-catalog.js`
+- `api/_lib/core-publication-constitution.js`
+- `api/_lib/core-reconciliation-input-contract.js`
+- `api/_lib/customer-boundary-handler.js`
+- `api/_lib/customer-report-download-handler.js`
+- `api/_lib/customer-reports-handler.js`
+- `api/_lib/debt-service-input-contract.js`
+- `api/_lib/delivery-gate-constitution.js`
+- `api/_lib/deterministic-acquisition-capital-structure-analysis.js`
+- `api/_lib/deterministic-acquisition-valuation-analysis.js`
+- `api/_lib/deterministic-capital-plan-analysis.js`
+- `api/_lib/deterministic-core-reconciliation-analysis.js`
+- `api/_lib/deterministic-debt-risk-analysis.js`
+- `api/_lib/deterministic-debt-service-calculation.js`
+- `api/_lib/deterministic-dscr-analysis.js`
+- `api/_lib/deterministic-report-contract-qa-seal.js`
+- `api/_lib/deterministic-report-contract-qa-seal-base.js`
+- `api/_lib/deterministic-source-case-underwriting-analysis.js`
+- `api/_lib/docraptor-mode-governance.js`
+- `api/_lib/docraptor-provider-diagnostics.js`
+- `api/_lib/docraptor-request.js`
+- `api/_lib/document-treatment-authority.js`
+- `api/_lib/expense-source-reconciliation.js`
+- `api/_lib/final-pdf-publication-quality-boss.js`
+- `api/_lib/full-underwriting-chapter1-elite-contract.js`
+- `api/_lib/full-underwriting-chapter1-elite-contract-base.js`
+- `api/_lib/full-underwriting-chapter1-elite-renderer.js`
+- `api/_lib/full-underwriting-chapter1-elite-renderer-base.js`
+- `api/_lib/full-underwriting-debt-intelligence-renderer.js`
+- `api/_lib/full-underwriting-debt-intelligence-v1.js`
+- `api/_lib/full-underwriting-debt-intelligence-v1-base.js`
+- `api/_lib/full-underwriting-driver-analysis-renderer.js`
+- `api/_lib/full-underwriting-driver-analysis-v1.js`
+- `api/_lib/full-underwriting-final-surgical-polish.js`
+- `api/_lib/full-underwriting-operating-intelligence-contract.js`
+- `api/_lib/full-underwriting-operating-intelligence-contract-base.js`
+- `api/_lib/full-underwriting-operating-intelligence-renderer.js`
+- `api/_lib/full-underwriting-pipeline.js`
+- `api/_lib/full-underwriting-quality-manifest-renderer.js`
+- `api/_lib/full-underwriting-quality-manifest-v1.js`
+- `api/_lib/full-underwriting-scenario-engine-v1.js`
+- `api/_lib/full-underwriting-scenario-renderer.js`
+- `api/_lib/full-underwriting-state.js`
+- `api/_lib/full-underwriting-transaction-diligence-renderer.js`
+- `api/_lib/full-underwriting-transaction-diligence-v1.js`
+- `api/_lib/full-underwriting-valuation-reconciliation-renderer.js`
+- `api/_lib/full-underwriting-valuation-reconciliation-v1.js`
+- `api/_lib/generate-client-report-handler.js`
+- `api/_lib/generate-client-report-impl.js`
+- `api/_lib/institutional-due-diligence-completion-handoff-contract.js`
+- `api/_lib/institutional-due-diligence-coverage-classification-contract.js`
+- `api/_lib/institutional-due-diligence-evidence-inventory-contract.js`
+- `api/_lib/institutional-due-diligence-priority-eligibility-contract.js`
+- `api/_lib/institutional-financial-intelligence.js`
+- `api/_lib/institutional-investment-committee-memo-authority-contract.js`
+- `api/_lib/institutional-investment-committee-memo-component-evidence-contract.js`
+- `api/_lib/institutional-investment-committee-memo-dependency-sequencing-contract.js`
+- `api/_lib/institutional-investment-committee-memo-methodology-contract.js`
+- `api/_lib/institutional-pdf-constitution.js`
+- `api/_lib/institutional-pdf-recovery.js`
+- `api/_lib/institutional-pdf-repair-plan.js`
+- `api/_lib/institutional-scenario-engine-completion-handoff-contract.js`
+- `api/_lib/institutional-scenario-engine-execution-contract.js`
+- `api/_lib/institutional-scenario-engine-formula-eligibility-contract.js`
+- `api/_lib/institutional-scenario-engine-input-authority-contract.js`
+- `api/_lib/institutional-scenario-engine-stress-set-authority-contract.js`
+- `api/_lib/institutional-scoring-completion-handoff-contract.js`
+- `api/_lib/institutional-scoring-execution-contract.js`
+- `api/_lib/institutional-scoring-input-lineage-contract.js`
+- `api/_lib/institutional-scoring-methodology-authority-contract.js`
+- `api/_lib/institutional-underwriting-input-contract.js`
+- `api/_lib/institutional-underwriting-return-readiness-contract.js`
+- `api/_lib/institutional-underwriting-scenario-policy-contract.js`
+- `api/_lib/investoriq-final-human-publication-authority.js`
+- `api/_lib/investoriq-publication-base-css.js`
+- `api/_lib/investoriq-publication-base-css-base.js`
+- `api/_lib/investoriq-publication-design-system.js`
+- `api/_lib/investoriq-publication-parity-css.js`
+- `api/_lib/investoriq-qa-doctrine.js`
+- `api/_lib/investoriq-visual-elite-css.js`
+- `api/_lib/investoriq-visual-elite-exhibits.js`
+- `api/_lib/investoriq-visual-elite-prince-layout-css.js`
+- `api/_lib/investoriq-visual-elite-typography-css.js`
+- `api/_lib/legacy-report-surface-render-helpers.js`
+- `api/_lib/legacy-source-package-fixture.js`
+- `api/_lib/phase7-decision-support.js`
+- `api/_lib/phase7-elite-report-presentation.js`
+- `api/_lib/phase8a-owner-acceptance-authority.js`
+- `api/_lib/phase8b-cross-product-publication-authority.js`
+- `api/_lib/phase8-customer-facing-visual-authority.js`
+- `api/_lib/premium-acquisition-underwriting-v1-deterministic-analysis.js`
+- `api/_lib/premium-acquisition-underwriting-v1-external-certification.js`
+- `api/_lib/premium-acquisition-underwriting-v1-external-generation.js`
+- `api/_lib/premium-acquisition-underwriting-v1-internal-certification.js`
+- `api/_lib/premium-acquisition-underwriting-v1-job-start-surface-receipt.js`
+- `api/_lib/premium-acquisition-underwriting-v1-job-surface-authority.js`
+- `api/_lib/premium-acquisition-underwriting-v1-model.js`
+- `api/_lib/premium-acquisition-underwriting-v1-quality-observer.js`
+- `api/_lib/premium-acquisition-underwriting-v1-receipt-map.js`
+- `api/_lib/premium-acquisition-underwriting-v1-renderer.js`
+- `api/_lib/premium-acquisition-underwriting-v1-validated-model.js`
+- `api/_lib/publication-format.js`
+- `api/_lib/qa-action-plan.js`
+- `api/_lib/qa-director-review.js`
+- `api/_lib/qa-fix-routing.js`
+- `api/_lib/qa-manager-review.js`
+- `api/_lib/qa-review.js`
+- `api/_lib/recovery-content-hash-cache.js`
+- `api/_lib/report-analysis-context.js`
+- `api/_lib/report-contract-qa.js`
+- `api/_lib/report-delivery-output.js`
+- `api/_lib/report-formatting-helpers.js`
+- `api/_lib/report-html-helpers.js`
+- `api/_lib/report-identity-authority.js`
+- `api/_lib/report-number-helpers.js`
+- `api/_lib/report-quality-incident-projection.js`
+- `api/_lib/report-quality-manifest.js`
+- `api/_lib/report-request-context.js`
+- `api/_lib/report-surface-contracts.js`
+- `api/_lib/request-revision-handler.js`
+- `api/_lib/screening-report-pipeline.js`
+- `api/_lib/screening-report-renderer.js`
+- `api/_lib/section-disposition-contract.js`
+- `api/_lib/section-disposition-runtime.js`
+- `api/_lib/source-package-qa.js`
+- `api/_lib/source-report-coverage-qa.js`
+- `api/_lib/source-truth-package.js`
+- `api/_lib/support-doc-semantic-evidence.js`
+- `api/_lib/support-doc-taxonomy.js`
+- `api/_lib/support-document-authority-adjudicator.js`
+- `api/_lib/terminal-failure-section-state-map.js`
+- `api/_lib/terminal-failure-tier-map.js`
+- `api/_lib/validator-diagnostics-rollup.js`
+- `api/_lib/worker-constitutional-lifecycle.js`
+- `api/_lib/worker-queue-scan.js`
+- `api/admin/queue-metrics.js`
+- `api/admin/report-projection.js`
+- `api/admin/run-eligible-jobs-once.js`
+- `api/admin-run-worker.js`
+- `api/checkout-session.js`
+- `api/create-checkout-session.js`
+- `api/generate-client-report.js`
+- `api/html/sample-report.html`
+- `api/legal-acceptance.js`
+- `api/parse/classify-documents.js`
+- `api/parse/extract-job-text.js`
+- `api/parse/parse-doc.js`
+- `api/report-template-runtime.html`
+- `api/webhook.js`
+- `CHAT_HANDOFF/00_CURRENT_HANDOFF.md`
+- `CHAT_HANDOFF/00_CURRENT_HANDOFF_2026-09-13.md`
+- `CHAT_HANDOFF/01_MASTER_PLAN.md`
+- `CHAT_HANDOFF/01_MASTER_PLAN_2026-09-13.md`
+- `CHAT_HANDOFF/02_ELITE_REPORT_BLUEPRINT.md`
+- `CHAT_HANDOFF/02_ELITE_REPORT_BLUEPRINT_2026-09-13.md`
+- `CHAT_HANDOFF/03_FRESH_CHAT_PROMPT.md`
+- `CHAT_HANDOFF/04_PRODUCT_CONSTITUTION.md`
+- `CHAT_HANDOFF/05_REPOSITORY_CERTIFICATION_PLAN.md`
+- `CHAT_HANDOFF/06_REPOSITORY_CERTIFICATION_LEDGER.md`
+- `CHAT_HANDOFF/07_REPOSITORY_TRACKED_FILE_CENSUS.md`
+- `CHAT_HANDOFF/2026-09-13_NEXT_SESSION.md`
+- `CHAT_HANDOFF/2026-09-13_SLICE1_CONTINUATION.md`
+- `CHAT_HANDOFF/588059378-Work-Sample-Blackstone.pdf`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF.md`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF_UPDATED_2026-08-18_DEPLOYED_CI_LOCK_PENDING.md`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF_UPDATED_2026-08-19_ELITE07_CLOSED_LOCAL.md`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF_UPDATED_2026-08-19_ELITE08_CLOSED_LOCAL.md`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF_UPDATED_2026-08-20_ELITE09_CLOSED_LOCAL_ELITE10_NEXT.md`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF_UPDATED_2026-08-20_ELITE10A_CLOSED_LOCAL_ELITE10B1_VISUAL_PASS_CERT_PENDING.md`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF_UPDATED_2026-08-21_ELITE10B1_COVER_LOCKED_PUBLICATION_AUTHORITY_TEST_REPAIR_PENDING.md`
+- `CHAT_HANDOFF/archived/00_CURRENT_HANDOFF_UPDATED_2026-08-24_ELITE10B1_CLOSED_ELITE10B2_NEXT.md`
+- `CHAT_HANDOFF/archived/01_MASTER_PLAN.md`
+- `CHAT_HANDOFF/archived/01_MASTER_PLAN_UPDATED_2026-08-18_DEPLOYED_CI_LOCK_PENDING.md`
+- `CHAT_HANDOFF/archived/01_MASTER_PLAN_UPDATED_2026-08-19_ELITE07_CLOSED_LOCAL.md`
+- `CHAT_HANDOFF/archived/01_MASTER_PLAN_UPDATED_2026-08-19_ELITE08_CLOSED_LOCAL.md`
+- `CHAT_HANDOFF/archived/01_MASTER_PLAN_UPDATED_2026-08-20_ELITE09_CLOSED_LOCAL_ELITE10_NEXT.md`
+- `CHAT_HANDOFF/archived/01_MASTER_PLAN_UPDATED_2026-08-20_ELITE10A_CLOSED_LOCAL_ELITE10B1_VISUAL_PASS_CERT_PENDING.md`
+- `CHAT_HANDOFF/archived/01_MASTER_PLAN_UPDATED_2026-08-21_ELITE10B1_COVER_LOCKED_PUBLICATION_AUTHORITY_TEST_REPAIR_PENDING.md`
+- `CHAT_HANDOFF/archived/02_ELITE_FULL_UNDERWRITING_BLUEPRINT.md`
+- `CHAT_HANDOFF/archived/02_ELITE_FULL_UNDERWRITING_BLUEPRINT_UPDATED_2026-08-19_ELITE07_CLOSED_LOCAL.md`
+- `CHAT_HANDOFF/archived/02_ELITE_FULL_UNDERWRITING_BLUEPRINT_UPDATED_2026-08-19_ELITE08_CLOSED_LOCAL.md`
+- `CHAT_HANDOFF/archived/02_ELITE_FULL_UNDERWRITING_BLUEPRINT_UPDATED_2026-08-20_ELITE09_CLOSED_LOCAL_ELITE10_NEXT.md`
+- `CHAT_HANDOFF/archived/02_ELITE_FULL_UNDERWRITING_BLUEPRINT_UPDATED_2026-08-20_ELITE10A_CLOSED_LOCAL_ELITE10B1_VISUAL_PASS_CERT_PENDING.md`
+- `CHAT_HANDOFF/archived/02_ELITE_FULL_UNDERWRITING_BLUEPRINT_UPDATED_2026-08-21_ELITE10B1_COVER_LOCKED_PUBLICATION_AUTHORITY_TEST_REPAIR_PENDING.md`
+- `CHAT_HANDOFF/archived/03_FRESH_CHAT_PROMPT_ELITE10B1_PUBLICATION_AUTHORITY_TEST_REPAIR_2026-08-21.md`
+- `CHAT_HANDOFF/archived/2026-08-24_25-root-snapshot/00_CURRENT_HANDOFF_UPDATED_2026-08-25_STONEBRIDGE_REAL_INPUT_PASS_FINAL_POLISH_NEXT.md`
+- `CHAT_HANDOFF/archived/2026-08-24_25-root-snapshot/01_MASTER_PLAN_UPDATED_2026-08-24_ELITE10B1_CLOSED_ELITE10B2_NEXT.md`
+- `CHAT_HANDOFF/archived/2026-08-24_25-root-snapshot/02_ELITE_FULL_UNDERWRITING_BLUEPRINT_UPDATED_2026-08-24_ELITE10B1_CLOSED_ELITE10B2_NEXT.md`
+- `CHAT_HANDOFF/archived/2026-08-24_25-root-snapshot/03_FRESH_CHAT_PROMPT_ELITE10B2_2026-08-24.md`
+- `CHAT_HANDOFF/archived/2026-09-02_PHASE8_CLOSEOUT.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-decision-snapshot-doctrine/00_CURRENT_HANDOFF.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-decision-snapshot-doctrine/01_MASTER_PLAN.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-decision-snapshot-doctrine/02_ELITE_REPORT_BLUEPRINT.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-decision-snapshot-doctrine/03_FRESH_CHAT_PROMPT.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-phase8b-closeout-consolidation/00_CURRENT_HANDOFF.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-phase8b-closeout-consolidation/01_MASTER_PLAN.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-phase8b-closeout-consolidation/02_ELITE_REPORT_BLUEPRINT.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-phase8b-closeout-consolidation/03_FRESH_CHAT_PROMPT.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-phase8b-closeout-consolidation/README.md`
+- `CHAT_HANDOFF/archived/2026-09-04-pre-phase8b-closeout-consolidation/SNAPSHOT_MANIFEST.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/AUDIT_CHECKPOINT.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/authority-before/00_CURRENT_HANDOFF.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/authority-before/01_MASTER_PLAN.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/authority-before/02_ELITE_REPORT_BLUEPRINT.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/authority-before/03_FRESH_CHAT_PROMPT.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/authority-before/README.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/authority-before-sha256.json`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/VISUAL_APPROVAL_AND_IMPLEMENTATION.md`
+- `CHAT_HANDOFF/archived/2026-09-05-owner-rejection-audit/VISUAL_DIRECTION_BRIEF.md`
+- `CHAT_HANDOFF/archived/2026-09-05-visual-elite-implementation/IMPLEMENTATION_CHECKPOINT.md`
+- `CHAT_HANDOFF/archived/2026-09-06-underwriting-editorial-analytical-audit/AUDIT_PRIORITY_REGISTER.md`
+- `CHAT_HANDOFF/archived/2026-09-06-underwriting-editorial-analytical-audit/FULL_AUDIT_LOCATION.md`
+- `CHAT_HANDOFF/archived/2026-09-06-underwriting-editorial-analytical-audit/README.md`
+- `CHAT_HANDOFF/archived/2026-09-06-underwriting-editorial-analytical-audit/ROOT_CAUSE_REPAIR_AUTHORITY.md`
+- `CHAT_HANDOFF/archived/2026-09-06-visual-elite-step6-provider-certification/STEP6_PROVIDER_CERTIFICATION.md`
+- `CHAT_HANDOFF/archived/README.md`
+- `CHAT_HANDOFF/InvestorIQ_2026-09-05_Recovery.zip`
+- `CHAT_HANDOFF/INVESTORIQ_PRELAUNCH_ARCHITECTURE_AUDIT_2026-09-12.md`
+- `CHAT_HANDOFF/InvestorIQ_Underwriting_Editorial_Visual_Audit_2026-09-06.md`
+- `CHAT_HANDOFF/InvestorIQ_Visual_Prototype.pdf`
+- `CHAT_HANDOFF/README.md`
+- `CHAT_HANDOFF/README_2026-09-13.md`
+- `CLAUDE.md`
+- `codex_write_test.txt`
+- `design/publication-prototype-20260905/.gitignore`
+- `design/publication-prototype-20260905/approved-font-verification.json`
+- `design/publication-prototype-20260905/build.py`
+- `design/publication-prototype-20260905/earnings-bridge.svg`
+- `design/publication-prototype-20260905/README.md`
+- `design/publication-prototype-20260905/source-facts.json`
+- `design/publication-prototype-20260905/verification.json`
+- `docs/archive/audit-evidence/!!INVESTORIQ_FULL_PIPELINE_AUDIT_WORKING_LEDGER_2026-08-17_PRODUCTION_PROOF(2).md`
+- `docs/archive/legacy-tracking/docs-archived/ROADMAP.md`
+- `docs/archive/legacy-tracking/docs-archived/ROADMAP_UPDATED_2026-08-06_GATE3_ACTIVE.md`
+- `docs/archive/legacy-tracking/docs-archived/ROADMAP_UPDATED_2026-08-11_INSTITUTIONAL_REDESIGN.md`
+- `docs/archive/legacy-tracking/docs-archived/STATUS.md`
+- `docs/archive/legacy-tracking/docs-archived/STATUS_UPDATED_2026-08-06_GATE3_ACTIVE.md`
+- `docs/archive/legacy-tracking/docs-archived/STATUS_UPDATED_2026-08-11_INSTITUTIONAL_REDESIGN.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!!!!!INVESTORIQ_SIMULTANEOUS_LAUNCH_CANONICAL_GAME_PLAN_UPDATED_JULY27_2026_H0_NEXT.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY27_RETEST38_FULL_REPO_AUDIT_P0A_HOLD_NEXT.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY27_RETEST38_FULL_REPO_AUDIT_P0A_HOLD_NEXT.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY27_RETEST38_FULL_REPO_AUDIT_P0A_HOLD_NEXT.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!!INVESTORIQ_ADMIN_QUALITY_INCIDENT_AND_CUSTOMER_REMEDY_DOCTRINE_UPDATED_JULY27_RETEST38_UI_VERIFIED_FULL_REPO_AUDIT_HOLD_NEXT.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-07-31.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-08-04.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-08-06_GATE3_ACTIVE.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!INVESTORIQ_CANONICAL_HANDOFF_UPDATED_2026-08-11_INSTITUTIONAL_REDESIGN.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!INVESTORIQ_CURRENT_GAMEPLAN_HANDOFF_UPDATED_2026-07-28.md`
+- `docs/archive/legacy-tracking/root-pre-h0/!INVESTORIQ_FULL_UNDERWRITING_LAUNCH_BLOCKER_CHECKLIST_2026-08-08.md`
+- `docs/archive/legacy-tracking/root-pre-h0/ELITE_ROADMAP.md`
+- `docs/archive/legacy-tracking/root-pre-h0/investoriq-audit-v3-2026-07-28.md`
+- `docs/archive/legacy-tracking/root-pre-p1/INVESTORIQ_FULL_REPOSITORY_UNDERWRITING_LAUNCH_INVESTIGATION.md`
+- `docs/archive/legacy-tracking/root-pre-p1/INVESTORIQ_SIMULTANEOUS_LAUNCH_MASTER_GAME_PLAN.md`
+- `docs/archive/legacy-tracking/root-pre-p1/PIPELINE_MAP.md`
+- `docs/archive/legacy-tracking/root-pre-p1/UNDERWRITING_GAMEPLAN_v2.md`
+- `docs/certification/2026-09-08/RENDERED_REVIEW.md`
+- `docs/future-premium/LEVEL_UP_EXECUTION_SUMMARY.md`
+- `docs/future-premium/PREMIUM_ACQUISITION_UNDERWRITING_V1_ACTIVATION_RUNBOOK.md`
+- `docs/future-premium/PREMIUM_ACQUISITION_UNDERWRITING_V1_DOCTRINE.md`
+- `docs/future-premium/README.md`
+- `docs/INVESTORIQ_H0_OWNER_AND_AUTHORITY_FREEZE.md`
+- `docs/INVESTORIQ_PRODUCT_DOCTRINE.md`
+- `docs/LAUNCH_CERTIFICATION_CHECKLIST.md`
+- `docs/OPERATIONS_RECOVERY_RUNBOOK.md`
+- `docs/PHASE1_ADMISSION_UPLOAD_CORE_MODE_CONTRACT_2026-08-28.md`
+- `docs/PHASE2_ATOMIC_PUBLICATION_DELIVERY_AUTHORITY_2026-08-30.md`
+- `docs/PHASE3_WORKER_RENDER_RUNTIME_RECOVERY_AUTHORITY_2026-08-30.md`
+- `docs/PHASE4_COMMERCE_STRIPE_ENTITLEMENT_AUTHORITY_2026-08-31.md`
+- `docs/PHASE6_LIFECYCLE_CERTIFICATION_AUTHORITY_2026-09-01.md`
+- `docs/PHASE7_ELITE_REPORT_DESIGN_AUTHORITY_2026-09-01.md`
+- `docs/PHASE8B_CROSS_PRODUCT_PUBLICATION_CERTIFICATION_2026-09-04.md`
+- `docs/PRODUCTION_PIPELINE_ARCHITECTURE.md`
+- `docs/README.md`
+- `docs/slice1-20260913/ACTIVE_PATH_AUDIT.md`
+- `docs/slice1-20260913/pre-edit-hit-register.json`
+- `docs/WORKER_QUEUE_REPAIR_20260911.md`
+- `eslint.renderer-scope.cjs`
+- `Final Attack Test 8 RETEST 5.pdf`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/broker_email_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/capex_budget_unstructured_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/loan_terms_simple_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/MANUAL_EXPORT.md`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/market_rent_survey_unstructured_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/property_tax_bill_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/purchase_assumptions_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/README.md`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/rent_roll_ai_recovery_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/t12_ai_recovery_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/unsupported_appraisal_summary_source.txt`
+- `Final_Testing/SYNTH-QA-MOTHERLOAD-UNDERWRITING-01/unsupported_phase_i_esa_source.txt`
+- `FRESH_CHAT_PROMPT.md`
+- `Hero_Image.png`
+- `index.html`
+- `investigation/STAGE-03-WORKER-QUEUE-AND-REVISION-PATHS.md`
+- `investigation/STAGE-04-UNDERWRITING-CORE-CONTRACT-LAYER.md`
+- `investigation/STAGE-05-DETERMINISTIC-ANALYSIS-LAYER.md`
+- `investigation/STAGE-06-MEMO-V1-V2-LANE-RESOLUTION.md`
+- `investigation/STAGE-07-DOCUMENT-INGEST-AND-PARSING.md`
+- `investigation/STAGE-08-DATABASE-MIGRATIONS-RLS-AND-STORAGE.md`
+- `investigation/STAGE-09-FRONTEND-AND-CUSTOMER-SURFACES.md`
+- `investigation/STAGE-10-DOCTRINE-AND-ARCHIVE-RECONCILIATION.md`
+- `investigation/STAGE-11-FINAL-UNDERWRITING-LAUNCH-SYNTHESIS.md`
+- `INVESTORIQ_GIT_STATUS_CLOSEOUT_JULY27.txt`
+- `InvestorIQ-Sample-IRR-FIXED-v25.pdf`
+- `lib/ai-model-architecture.js`
+- `lib/ai-rent-roll-recovery.js`
+- `lib/ai-support-doc-recovery.js`
+- `lib/ai-t12-recovery.js`
+- `lib/email-resend.js`
+- `lib/investoriqMasterPromptV71.js`
+- `lib/openai-error-classifier.js`
+- `lib/terminal-failure-taxonomy.js`
+- `lib/textractClient.js`
+- `lib/textractTablesToMatrix.js`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY1_CVF24_ACQ_MEMO_FINAL_BOSS_PIPELINE_RESET_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY11_FINAL_COMPLETION_GATE_PUBLISH_CONSTITUTION_SCREENING_FIX_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY11_HANDOFF8_DELIVERY_GATE_ACTIVE_SOL_TRIAL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY11_PROTECTED_FINAL_BOSSMAN_AUTHORITY_LOCK_RETEST_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY12_COMMIT_6C15DE1_FINAL_ACCEPTANCE_LIVE_RETEST_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY13_MORNING_SIX_PATCH_AUTHORITY_UNITMIX_PROVENANCE_HOLD_ADMIN_DASHBOARD_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY6_CVF25_AUTH001_AUTH105_AUDIT_COMPLETE_CODEX_MICROPROMPTS_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY6_CVF25_SEMANTIC_AUTHORITY_POLLUTION_MANUAL_FILE_REVIEW_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY7_NIGHT_CLOSE_HANDOFFS1_3_PASS_CUSTOMER_SURFACE_MODEL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY7_STEP4_CHECKPOINT_COMMITTED_REPAIR_INDUCED_TRUTH_DESTRUCTION_HOLD_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY7_STEP4_QA_GATE_PASS_REPAIR_TRUTH_DESTRUCTION_CLOSED_STEP5_UNLOCKED_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY7_STEP5_PASS_STEP6_FIRST_GATE_FIX_COMMITTED_FD80BB7_DINNER_BREAK_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY7_STEP6_PASS_FINAL_ANTI_WHACK_A_MOLE_GATE1_PASS_BOSS_CONTRACT_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY7_STEPS1_3_STEP3_COMPLETION_GATE_ACTIVE.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY7_STEPS1_4_STEP4_PASS_STALE_QA_REFRESH_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JULY8_HANDOFF4_DUPFACT4_GROUP_RESOLVER_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE16_LATE_NIGHT_SMOKE_GREEN_NEXT_STEPS.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE16_LATE_V2_SPLIT_CHECKPOINT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE16_ROOT_CUTOVER_REQUIRED.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE17_AFTERNOON_RETEST6_PATCH_CANDIDATE.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE20_EVENING_RETEST13_CVF16_BOSS_CONTRACT_ACTIVE.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE20_MORNING_RETEST11_READY_ARCHIVE_AFTER_PASS.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE22_CVF16_BOSS_CONTRACT_LOCAL_PROOF_FIREWALL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE22_LATE_ORCHESTRATOR_T12_PROPAGATION_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE23_CUSTOMER_SURFACE_MODEL_HARDCODING_FIREWALL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE23_LATE_DUAL_LANE_SEALED_PIPELINES_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE24_LATE_CVF21_FULL_PIPELINE_INVESTIGATION_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE24_STEP5_PASS_READY_FOR_AUTHORITY_AUDIT_AND_LAUNCH_HYGIENE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE25_CVF22_ROUTE_SLEEPER_CUTOVER_PASS5_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE25_LATE_CVF22_ROLE_RECONCILER_IDENTITY_SCOPE_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE28_CVF23_ROUTE_HELPER_CLEANUP_AUDIT_REPLY_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE28_FULL_PIPELINE_AUDIT_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_UPDATED_JUNE28_NIGHT_CVF23_FULL_PIPELINE_PASS_QA_GREEN_MORNING_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY1_ACQ_MEMO_FINAL_BOSS_PIPELINE_RESET_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY11_FINAL_COMPLETION_GATE_PUBLISH_CONSTITUTION_SCREENING_FIX_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY11_HANDOFF8_DELIVERY_GATE_ACTIVE_SOL_TRIAL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY11_PROTECTED_FINAL_BOSSMAN_AUTHORITY_LOCK_RETEST_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY12_COMMIT_6C15DE1_FINAL_ACCEPTANCE_LIVE_RETEST_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY13_MORNING_SIX_PATCH_AUTHORITY_UNITMIX_PROVENANCE_HOLD_ADMIN_DASHBOARD_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY15_RETEST24_INSTITUTIONAL_HOLD_ACQUISITION_UNDERWRITING_MEMO_ROADMAP_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY6_AUTH001_AUTH105_AUDIT_COMPLETE_CODEX_MICROPROMPTS_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY6_RETEST20_SEMANTIC_AUTHORITY_PURGE_MANUAL_FILE_REVIEW_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY7_NIGHT_CLOSE_HANDOFFS1_3_PASS_CUSTOMER_SURFACE_MODEL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY7_STEP4_CHECKPOINT_COMMITTED_REPAIR_INDUCED_TRUTH_DESTRUCTION_HOLD_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY7_STEP4_QA_GATE_PASS_REPAIR_TRUTH_DESTRUCTION_CLOSED_STEP5_UNLOCKED_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY7_STEP5_PASS_STEP6_FIRST_GATE_FIX_COMMITTED_FD80BB7_DINNER_BREAK_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY7_STEP6_PASS_FINAL_ANTI_WHACK_A_MOLE_GATE1_PASS_BOSS_CONTRACT_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY7_STEPS1_3_STEP3_COMPLETION_GATE_ACTIVE.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY7_STEPS1_4_STEP4_PASS_STALE_QA_REFRESH_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JULY8_HANDOFF4_DUPFACT4_GROUP_RESOLVER_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE16_LATE_NIGHT_SMOKE_GREEN_NEXT_STEPS.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE16_LATE_V2_SPLIT_CHECKPOINT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE16_ROOT_CUTOVER_REQUIRED.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE17_AFTERNOON_RETEST6_PATCH_CANDIDATE.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE20_EVENING_RETEST13_BOSS_CONTRACT_INVESTIGATION.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE20_MORNING_RETEST11_READY.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE22_BOSS_CONTRACT_LOCAL_PROOF_FIREWALL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE22_LATE_ORCHESTRATOR_T12_PROPAGATION_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE23_CUSTOMER_SURFACE_MODEL_HARDCODING_FIREWALL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE23_LATE_DUAL_LANE_SEALED_PIPELINES_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE24_LATE_FULL_PIPELINE_INVESTIGATION_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE24_STEP5_PASS_READY_FOR_AUTHORITY_AUDIT_AND_LAUNCH_HYGIENE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE25_LATE_RENT_ROLL_ROLE_RECONCILER_IDENTITY_SCOPE_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE25_SLEEPER_CUTOVER_PASS5_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE28_FULL_PIPELINE_AUDIT_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE28_NIGHT_FULL_PIPELINE_PASS_QA_GREEN_MORNING_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_MASTER_CONTEXT_CURRENT_DOCTRINE_COMPLETION_CHECKLIST_UPDATED_JUNE28_ROUTE_HELPER_CLEANUP_AUDIT_REPLY_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_AUTH001_AUTH105_JULY6_2026.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY11_FINAL_COMPLETION_GATE_PUBLISH_CONSTITUTION_SCREENING_FIX_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY11_HANDOFF8_DELIVERY_GATE_ACTIVE_SOL_TRIAL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY11_PROTECTED_FINAL_BOSSMAN_AUTHORITY_LOCK_RETEST_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY12_COMMIT_6C15DE1_FINAL_ACCEPTANCE_LIVE_RETEST_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY13_MORNING_SIX_PATCH_AUTHORITY_UNITMIX_PROVENANCE_HOLD_ADMIN_DASHBOARD_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY7_NIGHT_CLOSE_HANDOFFS1_3_PASS_CUSTOMER_SURFACE_MODEL_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY7_STEP4_CHECKPOINT_COMMITTED_REPAIR_INDUCED_TRUTH_DESTRUCTION_HOLD_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY7_STEP4_QA_GATE_PASS_REPAIR_TRUTH_DESTRUCTION_CLOSED_STEP5_UNLOCKED_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY7_STEP5_PASS_STEP6_FIRST_GATE_FIX_COMMITTED_FD80BB7_DINNER_BREAK_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY7_STEP6_PASS_FINAL_ANTI_WHACK_A_MOLE_GATE1_PASS_BOSS_CONTRACT_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY7_STEPS1_3_STEP3_COMPLETION_GATE_ACTIVE.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY7_STEPS1_4_STEP4_PASS_STALE_QA_REFRESH_NEXT.md`
+- `Older and Archived MD Files/!!!INVESTORIQ_SEMANTIC_AUTHORITY_EVIDENCE_LEDGER_UPDATED_JULY8_HANDOFF4_DUPFACT4_GROUP_RESOLVER_ACTIVE_NEXT.md`
+- `Older and Archived MD Files/!!INVESTORIQ_ADMIN_QUALITY_INCIDENT_AND_CUSTOMER_REMEDY_DOCTRINE.md`
+- `Older and Archived MD Files/!!INVESTORIQ_ADMIN_QUALITY_INCIDENT_AND_CUSTOMER_REMEDY_DOCTRINE_UPDATED_JULY13_MORNING_UNITMIX_HOLD_DASHBOARD_NEXT.md`
+- `Older and Archived MD Files/!INVESTORIQ_BRAND_AND_PRODUCT_ONE_PAGER_CURRENT.md`
+- `Older and Archived MD Files/!INVESTORIQ_CORE_VALID_FAILURE_PATH_FAMILY_LEDGER_ARCHIVED.md`
+- `Older and Archived MD Files/!INVESTORIQ_DECISION_SOURCE_ELIMINATION_LEDGER_ARCHIVED.md`
+- `Older and Archived MD Files/!INVESTORIQ_MASTER_CONTEXT_ARCHIVED.md`
+- `Older and Archived MD Files/!INVESTORIQ_MASTER_CONTEXT_UPDATED_ARCHIVED.md`
+- `Older and Archived MD Files/!InvestorIQ_One_Page_Info_Package_Screening_Full_Underwriting.md`
+- `Older and Archived MD Files/ROADMAP_UPDATED_2026-07-31_SUPERSEDED.md`
+- `Older and Archived MD Files/STATUS_UPDATED_2026-07-31_SUPERSEDED.md`
+- `package.json`
+- `package-lock.json`
+- `PHASE5_SECURITY_DATA_HYGIENE_HARDENING_AUTHORITY_2026-09-01.md`
+- `PHASE8A_DIAGNOSTICS/dscr-patch-step-isolation.txt`
+- `PHASE8A_DIAGNOSTICS/dscr-removal-candidates.txt`
+- `PHASE8A_DIAGNOSTICS/stonebridge-dscr-surface.txt`
+- `PHASE8A_DIAGNOSTICS/valuation-label-surface.txt`
+- `postcss.config.js`
+- `public/assets/logo.png`
+- `public/brand/icon-32.svg`
+- `public/brand/icon-64.svg`
+- `public/brand/investoriq-wordmark.svg`
+- `public/brand/investoriq-wordmark-inverse.svg`
+- `public/brand/logo-inverse.svg`
+- `public/brand/logo-mark.svg`
+- `public/brand/logo-primary.jpg`
+- `public/brand/logo-primary.svg`
+- `public/brand/logo-wordmark.jpg`
+- `public/brand/logo-wordmark.svg`
+- `public/charts/break_even_occupancy.png`
+- `public/charts/breakeven_dscr.png`
+- `public/charts/cash_flow.png`
+- `public/charts/cashflow_5yr.png`
+- `public/charts/cashflow_waterfall.png`
+- `public/charts/deal_score_bar.png`
+- `public/charts/deal_score_radar.png`
+- `public/charts/expense_ratio.png`
+- `public/charts/institutional/break_even_occupancy.png`
+- `public/charts/institutional/breakeven_dscr.png`
+- `public/charts/institutional/cash_flow.png`
+- `public/charts/institutional/cashflow_5yr.png`
+- `public/charts/institutional/cashflow_waterfall.png`
+- `public/charts/institutional/deal_score_bar.png`
+- `public/charts/institutional/deal_score_radar.png`
+- `public/charts/institutional/equity_return_components.png`
+- `public/charts/institutional/expense_ratio.png`
+- `public/charts/institutional/irr_scenario.png`
+- `public/charts/institutional/noi_waterfall.png`
+- `public/charts/institutional/renovation_roi.png`
+- `public/charts/institutional/risk_radar.png`
+- `public/charts/irr_scenario.png`
+- `public/charts/noi_waterfall.png`
+- `public/charts/renovation_roi.png`
+- `public/charts/risk_radar.png`
+- `public/favicon.svg`
+- `public/favicon-16.png`
+- `public/favicon-32.png`
+- `public/hero-dashboard.jpg`
+- `public/hero-image.png`
+- `public/hero-sample-report.jpg`
+- `public/llms.txt`
+- `public/reports/print.css`
+- `public/reports/sample-report.html`
+- `public/reports/screen.css`
+- `public/test-checkout.html`
+- `scripts/apply-launch-e2e-hotfix.js`
+- `scripts/apply-phase2-local-integration.ps1`
+- `scripts/generateCharts.js`
+- `scripts/generate-sample-pdf.js`
+- `scripts/maintenance/consolidate-chat-handoff.ps1`
+- `scripts/maintenance/install-chat-handoff-cleanup-package.ps1`
+- `scripts/phase2-finalize-local.mjs`
+- `scripts/phase2-finalize-local-v2.mjs`
+- `scripts/phase2-repair-atomicity-regression.mjs`
+- `scripts/phase2-repair-atomicity-regression-v2.mjs`
+- `scripts/phase2-repair-manifest-regression.mjs`
+- `scripts/phase7-generate-visual-artifacts.js`
+- `scripts/phase8a-diagnose-stonebridge-financial-intelligence.mjs`
+- `scripts/phase8-artifact-identity-fingerprint.js`
+- `scripts/phase8a-slice-a-patch.mjs`
+- `scripts/phase8a-slice-b-patch.mjs`
+- `scripts/phase8a-slice-c-closed-slice-compat-patch.mjs`
+- `scripts/phase8a-slice-c-decision-patch-normalize.mjs`
+- `scripts/phase8a-slice-c-decision-snapshot-patch.mjs`
+- `scripts/phase8a-slice-c-decision-support-compat-patch.mjs`
+- `scripts/phase8a-slice-c-dscr-display-compat-patch.mjs`
+- `scripts/phase8a-slice-c-hold-dscr-authority-patch.mjs`
+- `scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs`
+- `scripts/phase8a-slice-c-patch.mjs`
+- `scripts/phase8a-slice-c-source-bound-dscr-fallback-patch.mjs`
+- `scripts/phase8a-slice-c-test-alignment-patch.mjs`
+- `scripts/phase8a-slice-c-valuation-bridge-label-patch.mjs`
+- `scripts/phase8a-slice-d-editorial-polish-patch.mjs`
+- `scripts/phase8a-slice-d-generator-alignment-patch.mjs`
+- `scripts/phase8a-slice-d-pagination-authority-patch.mjs`
+- `scripts/phase8a-slice-d-test-alignment-patch.mjs`
+- `scripts/phase8a-validate-decision-snapshots.js`
+- `scripts/phase8a-validate-pdf-page-continuity.js`
+- `scripts/phase8a-validate-slice-a-artifacts.js`
+- `scripts/phase8a-validate-slice-b-artifacts.js`
+- `scripts/phase8a-validate-slice-c-artifacts.js`
+- `scripts/phase8a-validate-slice-d-artifacts.js`
+- `scripts/phase8b-render-certification-pdfs.mjs`
+- `scripts/phase8b-weasyprint-certification.css`
+- `scripts/phase8-reconciliation-artifact-contract.js`
+- `scripts/phase8-validate-rendered-pdfs.js`
+- `scripts/phase8-validate-visual-artifacts.js`
+- `scripts/phase8-visual-certification-fixtures.js`
+- `scripts/publication-same-property-review.js`
+- `scripts/run-phase2-final-local-cert.ps1`
+- `scripts/run-phase2-final-local-cert-v2.ps1`
+- `scripts/run-phase2-final-local-cert-v3.ps1`
+- `scripts/run-phase2-final-local-cert-v4.ps1`
+- `scripts/run-phase2-final-local-cert-v5.ps1`
+- `smoke-output.txt`
+- `src/App.jsx`
+- `src/components/Admin/DiagnosticsIntelligence.jsx`
+- `src/components/Admin/OwnerEconomicsPanel.jsx`
+- `src/components/Admin/QualityIncidentDashboard.jsx`
+- `src/components/AnalysisScopePreview.jsx`
+- `src/components/BackButton.jsx`
+- `src/components/CallToAction.jsx`
+- `src/components/HeroImage.jsx`
+- `src/components/InvestorIQHeader.jsx`
+- `src/components/PageShell.jsx`
+- `src/components/ui/button.jsx`
+- `src/components/ui/calendar.jsx`
+- `src/components/ui/command.jsx`
+- `src/components/ui/dialog.jsx`
+- `src/components/ui/label.jsx`
+- `src/components/ui/popover.jsx`
+- `src/components/ui/toast.jsx`
+- `src/components/ui/toaster.jsx`
+- `src/components/ui/use-toast.js`
+- `src/components/WelcomeMessage.jsx`
+- `src/contexts/SupabaseAuthContext.jsx`
+- `src/index.css`
+- `src/layouts/MainLayout.jsx`
+- `src/lib/authReturnPath.js`
+- `src/lib/customerBoundarySupabase.js`
+- `src/lib/customSupabaseClient.js`
+- `src/lib/dashboardCustomerCopy.js`
+- `src/lib/investoriq-disclosure-authority.js`
+- `src/lib/jobFailureMessaging.js`
+- `src/lib/ownerEconomics.js`
+- `src/lib/pricingConfig.js`
+- `src/lib/reportRevisionAuthority.js`
+- `src/lib/reportSurfaceState.js`
+- `src/lib/reportUploadGate.js`
+- `src/lib/sentenceIntegrity.js`
+- `src/lib/sessionDisclosureAck.js`
+- `src/lib/utils.js`
+- `src/main.jsx`
+- `src/pages/About.jsx`
+- `src/pages/AdminDashboard.jsx`
+- `src/pages/Contact.jsx`
+- `src/pages/Dashboard.jsx`
+- `src/pages/LandingPage.jsx`
+- `src/pages/Login.jsx`
+- `src/pages/Pricing.jsx`
+- `src/pages/SignUp.jsx`
+- `src/postcss.config.js`
+- `supabase/local-bootstrap.sql`
+- `supabase/migrations/20260210100140_consume_purchase_and_create_job.sql`
+- `supabase/migrations/20260213XXXXXX_queue_job_for_processing.sql`
+- `supabase/migrations/20260214_0930_queue_job_for_processing.sql`
+- `supabase/migrations/20260216_0001_claim_and_consume_job.sql`
+- `supabase/migrations/20260302_0001_allow_multiple_files_per_doc_type.sql`
+- `supabase/migrations/20260328_0001_sync_rls_policies_for_analysis_and_reports.sql`
+- `supabase/migrations/20260728000100_h2b1_staged_uploads_private.sql`
+- `supabase/migrations/20260728000200_h2b2_report_purchases_update_policy_cleanup.sql`
+- `supabase/migrations/20260729000100_h5b_staged_source_registration_guard.sql`
+- `supabase/migrations/20260729000200_h6_worker_claim_lease_fencing.sql`
+- `supabase/migrations/20260730000100_h9_h10_report_revision_lineage.sql`
+- `supabase/migrations/20260803000100_governed_requeue_worker_job.sql`
+- `supabase/migrations/20260805000100_analysis_jobs_status_check_dead_letter.sql`
+- `supabase/migrations/20260814000100_disclosure_session_ack_events.sql`
+- `supabase/migrations/20260814000100_transition_worker_job_release_queued_ownership.sql`
+- `supabase/migrations/20260818090000_p0_a2_customer_safe_read_report_removal.sql`
+- `supabase/migrations/20260818110000_p0_b_job_provenance_lifecycle.sql`
+- `supabase/migrations/20260818120000_p0_c_publication_finalization.sql`
+- `supabase/migrations/20260818130000_p0_d_recovery_observability_legacy_quarantine.sql`
+- `supabase/migrations/20260828233000_phase1_admission_core_modes_and_upload_policy.sql`
+- `supabase/migrations/20260830121500_phase2_atomic_publication_delivery_authority.sql`
+- `supabase/migrations/20260830183000_phase3_worker_runtime_recovery_authority.sql`
+- `supabase/migrations/20260831100000_phase4_atomic_commerce_entitlement_authority.sql`
+- `supabase/migrations/20260901100000_phase5_security_data_hygiene_hardening.sql`
+- `supabase/migrations/20260908233000_strict_customer_admission_doctrine.sql`
+- `supabase/migrations/20260910193000_launch_e2e_contract_reconciliation.sql`
+- `tailwind.config.js`
+- `tatus`
+- `tests/e2e/assert-report-output.js`
+- `tests/e2e/fake-supabase.js`
+- `tests/e2e/fixtures/jobs/wave2-job-lifecycle.json`
+- `tests/e2e/fixtures/parser/wave4-parser-adversarial.json`
+- `tests/e2e/parser-adversarial.js`
+- `tests/e2e/README.md`
+- `tests/e2e/results/latest-e2e-results.json`
+- `tests/e2e/run-e2e.js`
+- `tests/e2e/worker-state-scenarios.js`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/01_true_current_debt_underwriting/Debt_Summary_Maplewell_Court.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/01_true_current_debt_underwriting/Property_Tax_Bill_Maplewell.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/01_true_current_debt_underwriting/README.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/01_true_current_debt_underwriting/Rent_Roll_Maplewell_Court.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/01_true_current_debt_underwriting/T12_Maplewell_Court.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/Broker_Email_Silvergate.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/Historical_CapEx_Note.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/README.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/Rent_Roll_Silvergate_Manor.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/T12_Silvergate_Manor.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/UNSUPPORTED_Appraisal_Summary.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/UNSUPPORTED_Market_Survey.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/02_messy_unsupported_support_docs/UNSUPPORTED_Phase_I_ESA.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/03_structured_reno_no_roi_inputs/Offering_Summary_Northbank.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/03_structured_reno_no_roi_inputs/README.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/03_structured_reno_no_roi_inputs/Reno_Budget_Northbank.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/03_structured_reno_no_roi_inputs/Rent_Roll_Northbank_Terrace.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/03_structured_reno_no_roi_inputs/T12_Northbank_Terrace.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/04_structured_reno_with_rent_lift/README.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/04_structured_reno_with_rent_lift/Reno_Plan_Willowmere.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/04_structured_reno_with_rent_lift/Rent_Roll_Willowmere_Place.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/04_structured_reno_with_rent_lift/T12_Willowmere_Place.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/05_bad_core_missing_rent_roll/BAD_Rent_Roll_Riverside.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/05_bad_core_missing_rent_roll/README.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/05_bad_core_missing_rent_roll/T12_Riverside_WalkUp.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/06_cross_document_financial_mismatch/README.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/06_cross_document_financial_mismatch/Rent_Roll_Elmstone_Gardens.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/06_cross_document_financial_mismatch/T12_Elmstone_Gardens.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/Current_Debt_Stonebridge.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/FINAL_ATTACK_TEST_8_expected_result.txt`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/Rent_Roll_Stonebridge_Lofts_Attack_Test_8.xlsx`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/Stonebridge_Appraisal_Summary.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/Stonebridge_Assumptions.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/Stonebridge_Market_Survey.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/Stonebridge_Phase_I_ESA.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/Stonebridge_Reno_Plan.pdf`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/T12_Stonebridge_Lofts_Attack_Test_8.xlsx`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/FINAL TEST 7 - CONTROLLED SOURCE RECONCILIATION DISCLOSURE/FINAL_TEST_7_expected_result.txt`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/FINAL TEST 7 - CONTROLLED SOURCE RECONCILIATION DISCLOSURE/Rent_Roll_Final_Test_7_Controlled_Source_Reconciliation.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/FINAL TEST 7 - CONTROLLED SOURCE RECONCILIATION DISCLOSURE/T12_Final_Test_7_Controlled_Source_Reconciliation.csv`
+- `tests/investoriq_validation_fixtures_UPLOADABLE/UPLOAD_GUIDE.txt`
+- `tests/qa/acquisition-financing-field-limited-smoke.js`
+- `tests/qa/acquisition-memo-authority-boundary-smoke.js`
+- `tests/qa/acquisition-memo-boss-contract-edge-smoke.js`
+- `tests/qa/acquisition-memo-boss-contract-smoke.js`
+- `tests/qa/acquisition-memo-current-debt-role-reconciliation-smoke.js`
+- `tests/qa/acquisition-memo-final-render-smoke.js`
+- `tests/qa/acquisition-memo-source-package-smoke.js`
+- `tests/qa/acquisition-memo-v2-boss-contract-handler-smoke.js`
+- `tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js`
+- `tests/qa/acquisition-memo-v2-boss-contract-render-smoke.js`
+- `tests/qa/acquisition-memo-v2-boss-repair-collapse-smoke.js`
+- `tests/qa/acquisition-memo-v2-boss-repair-provenance-smoke.js`
+- `tests/qa/acquisition-memo-v2-boss-violation-routing-smoke.js`
+- `tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js`
+- `tests/qa/acquisition-memo-v2-document-smoke.js`
+- `tests/qa/acquisition-memo-v2-final-boss-compliance-collapse-smoke.js`
+- `tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js`
+- `tests/qa/acquisition-memo-v2-normal-path-local-smoke.js`
+- `tests/qa/acquisition-memo-v2-orchestrator-initial-repair-provenance-smoke.js`
+- `tests/qa/acquisition-memo-v2-orchestrator-later-repair-provenance-smoke.js`
+- `tests/qa/acquisition-memo-v2-phase1-final-decision-smoke.js`
+- `tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js`
+- `tests/qa/acquisition-memo-v2-retest15-regression-smoke.js`
+- `tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js`
+- `tests/qa/acquisition-memo-v2-retest19-artifact-replay-smoke.js`
+- `tests/qa/acquisition-memo-v2-role-reconciler-smoke.js`
+- `tests/qa/acquisition-memo-v2-sealed-lane-authority-smoke.js`
+- `tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js`
+- `tests/qa/admin-quality-incidents-smoke.js`
+- `tests/qa/admin-run-worker-gate-smoke.js`
+- `tests/qa/admin-run-worker-publish-contract-smoke.js`
+- `tests/qa/ai-model-architecture-smoke.js`
+- `tests/qa/appraisal-support-recovery-smoke.js`
+- `tests/qa/canonical-operating-cost-coverage-ratio-smoke.js`
+- `tests/qa/canonical-operating-metric-continuity-smoke.js`
+- `tests/qa/classification-visible-authority-smoke.js`
+- `tests/qa/core-doc-routing-rescue-smoke.js`
+- `tests/qa/core-parser-rejection-audit-smoke.js`
+- `tests/qa/core-publication-constitution-smoke.js`
+- `tests/qa/core-publication-recovery-smoke.js`
+- `tests/qa/current-debt-support-routing-smoke.js`
+- `tests/qa/customer-route-dispatch-runtime-smoke.js`
+- `tests/qa/dashboard-customer-copy-smoke.js`
+- `tests/qa/dashboard-direct-query-cutover-smoke.js`
+- `tests/qa/dead-letter-status-constraint-smoke.js`
+- `tests/qa/debt-service-input-contract-smoke.js`
+- `tests/qa/delivery-decision-state-smoke.js`
+- `tests/qa/deterministic-acquisition-capital-structure-analysis-smoke.js`
+- `tests/qa/deterministic-acquisition-valuation-analysis-smoke.js`
+- `tests/qa/deterministic-capital-plan-analysis-smoke.js`
+- `tests/qa/deterministic-core-reconciliation-analysis-smoke.js`
+- `tests/qa/deterministic-debt-risk-analysis-smoke.js`
+- `tests/qa/deterministic-debt-service-calculation-smoke.js`
+- `tests/qa/deterministic-dscr-analysis-smoke.js`
+- `tests/qa/deterministic-source-case-underwriting-analysis-smoke.js`
+- `tests/qa/docraptor-provider-error-observability-smoke.js`
+- `tests/qa/docraptor-request-timeout-smoke.js`
+- `tests/qa/doctrine-admission-authority-smoke.js`
+- `tests/qa/empty-table-collapse-smoke.js`
+- `tests/qa/exact-job-worker-claim-smoke.js`
+- `tests/qa/fail-exact-expired-worker-job-smoke.js`
+- `tests/qa/fixtures/acquisition-memo-v2-retest19-analysis-artifacts-rows.json`
+- `tests/qa/fixtures/institutional-gate-10-report.js`
+- `tests/qa/fixtures/institutional-gate-7-chain.js`
+- `tests/qa/fixtures/institutional-gate-8-chain.js`
+- `tests/qa/fixtures/institutional-gate-9-chain.js`
+- `tests/qa/fixtures/retest24-sanitized-permanent-replay.json`
+- `tests/qa/fixtures/stonebridge-retest21-source-authority.json`
+- `tests/qa/full-underwriting-chapter1-elite-contract-smoke.js`
+- `tests/qa/full-underwriting-chapter1-elite-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-chapter1-elite-renderer-integration-smoke.js`
+- `tests/qa/full-underwriting-chapter1-reconciliation-separation-smoke.js`
+- `tests/qa/full-underwriting-debt-intelligence-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-debt-intelligence-institutional-regression.js`
+- `tests/qa/full-underwriting-debt-intelligence-renderer-smoke.js`
+- `tests/qa/full-underwriting-debt-intelligence-v1-smoke.js`
+- `tests/qa/full-underwriting-driver-analysis-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-driver-analysis-renderer-smoke.js`
+- `tests/qa/full-underwriting-driver-analysis-v1-smoke.js`
+- `tests/qa/full-underwriting-elite-02-08-pipeline-regression.js`
+- `tests/qa/full-underwriting-elite-02-09-pipeline-regression.js`
+- `tests/qa/full-underwriting-elite10a-global-design-system-smoke.js`
+- `tests/qa/full-underwriting-elite10b1-cover-system-smoke.js`
+- `tests/qa/full-underwriting-elite10b2-committee-opening-system-smoke.js`
+- `tests/qa/full-underwriting-elite10-full-report-polish-smoke.js`
+- `tests/qa/full-underwriting-elite-stack-pipeline-regression.js`
+- `tests/qa/full-underwriting-final-human-publication-authority-smoke.js`
+- `tests/qa/full-underwriting-final-surgical-polish-smoke.js`
+- `tests/qa/full-underwriting-gates-full-render-smoke.js`
+- `tests/qa/full-underwriting-launch-certification-matrix-smoke.js`
+- `tests/qa/full-underwriting-operating-intelligence-contract-smoke.js`
+- `tests/qa/full-underwriting-operating-intelligence-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-operating-intelligence-renderer-smoke.js`
+- `tests/qa/full-underwriting-phase8-reconciliation-validator-smoke.js`
+- `tests/qa/full-underwriting-precision-provenance-smoke.js`
+- `tests/qa/full-underwriting-publication-atomicity-regression.js`
+- `tests/qa/full-underwriting-quality-manifest-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-quality-manifest-institutional-regression.js`
+- `tests/qa/full-underwriting-quality-manifest-machine-regression.js`
+- `tests/qa/full-underwriting-quality-manifest-renderer-smoke.js`
+- `tests/qa/full-underwriting-quality-manifest-v1-smoke.js`
+- `tests/qa/full-underwriting-scenario-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-scenario-engine-v1-smoke.js`
+- `tests/qa/full-underwriting-scenario-renderer-smoke.js`
+- `tests/qa/full-underwriting-transaction-diligence-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-transaction-diligence-institutional-regression.js`
+- `tests/qa/full-underwriting-transaction-diligence-renderer-smoke.js`
+- `tests/qa/full-underwriting-transaction-diligence-v1-smoke.js`
+- `tests/qa/full-underwriting-valuation-reconciliation-appraisal-surface-contract-smoke.js`
+- `tests/qa/full-underwriting-valuation-reconciliation-customer-language-smoke.js`
+- `tests/qa/full-underwriting-valuation-reconciliation-document-wiring-smoke.js`
+- `tests/qa/full-underwriting-valuation-reconciliation-institutional-regression.js`
+- `tests/qa/full-underwriting-valuation-reconciliation-renderer-smoke.js`
+- `tests/qa/full-underwriting-valuation-reconciliation-v1-smoke.js`
+- `tests/qa/gate10v-elite-underwriting-report-smoke.js`
+- `tests/qa/generate-client-report-import-smoke.js`
+- `tests/qa/generate-client-report-rent-roll-smoke.js`
+- `tests/qa/generate-client-report-sealed-dispatcher-smoke.js`
+- `tests/qa/generate-client-report-zero-authority-sealed-output-smoke.js`
+- `tests/qa/governed-requeue-worker-job-smoke.js`
+- `tests/qa/governed-retry-parser-resume-smoke.js`
+- `tests/qa/h0-5-content-hash-cache-smoke.js`
+- `tests/qa/h0-5-deterministic-recovery-3x-repro-smoke.js`
+- `tests/qa/h0-5-deterministic-recovery-envelope-smoke.js`
+- `tests/qa/h0-75-failure-tier-map-smoke.js`
+- `tests/qa/h0-75-section-state-map-smoke.js`
+- `tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js`
+- `tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js`
+- `tests/qa/h16-h17-manifest-pdf-certification-controlled-replay-smoke.js`
+- `tests/qa/h18-h19-governed-canary-simultaneous-launch-smoke.js`
+- `tests/qa/h1-authenticated-identity-boundary-smoke.js`
+- `tests/qa/h4-bundle-entitlement-creation-smoke.js`
+- `tests/qa/h5-staged-source-registration-guard-smoke.js`
+- `tests/qa/h6-worker-claim-lease-fencing-smoke.js`
+- `tests/qa/h7-support-taxonomy-contract-smoke.js`
+- `tests/qa/h8-entitlement-restoration-event-smoke.js`
+- `tests/qa/institutional-due-diligence-completion-handoff-contract-smoke.js`
+- `tests/qa/institutional-due-diligence-coverage-classification-contract-smoke.js`
+- `tests/qa/institutional-due-diligence-evidence-inventory-contract-smoke.js`
+- `tests/qa/institutional-due-diligence-priority-eligibility-contract-smoke.js`
+- `tests/qa/institutional-financial-intelligence-integration-smoke.js`
+- `tests/qa/institutional-investment-committee-memo-authority-contract-smoke.js`
+- `tests/qa/institutional-investment-committee-memo-component-evidence-contract-smoke.js`
+- `tests/qa/institutional-investment-committee-memo-dependency-sequencing-contract-smoke.js`
+- `tests/qa/institutional-investment-committee-memo-methodology-contract-smoke.js`
+- `tests/qa/institutional-pdf-composition-repair-contract-smoke.js`
+- `tests/qa/institutional-pdf-constitution-contract-smoke.js`
+- `tests/qa/institutional-pdf-elite-certification-smoke.js`
+- `tests/qa/institutional-pdf-information-architecture-smoke.js`
+- `tests/qa/institutional-pdf-page-certification-smoke.js`
+- `tests/qa/institutional-pdf-real-extraction-regression-smoke.js`
+- `tests/qa/institutional-pdf-recovery-contract-smoke.js`
+- `tests/qa/institutional-pdf-visual-system-smoke.js`
+- `tests/qa/institutional-scenario-engine-completion-handoff-contract-smoke.js`
+- `tests/qa/institutional-scenario-engine-execution-contract-smoke.js`
+- `tests/qa/institutional-scenario-engine-formula-eligibility-contract-smoke.js`
+- `tests/qa/institutional-scenario-engine-input-authority-contract-smoke.js`
+- `tests/qa/institutional-scenario-engine-stress-set-authority-contract-smoke.js`
+- `tests/qa/institutional-scoring-completion-handoff-contract-smoke.js`
+- `tests/qa/institutional-scoring-execution-contract-smoke.js`
+- `tests/qa/institutional-scoring-input-lineage-contract-smoke.js`
+- `tests/qa/institutional-scoring-methodology-authority-contract-smoke.js`
+- `tests/qa/institutional-underwriting-input-contract-smoke.js`
+- `tests/qa/institutional-underwriting-return-readiness-contract-smoke.js`
+- `tests/qa/investoriq-cross-product-publication-system-smoke.js`
+- `tests/qa/investoriq-publication-design-system-extraction-smoke.js`
+- `tests/qa/investoriq-visual-elite-analysis-exhibit-smoke.js`
+- `tests/qa/investoriq-visual-elite-content-length-smoke.js`
+- `tests/qa/investoriq-visual-elite-decision-pagination-smoke.js`
+- `tests/qa/investoriq-visual-elite-decision-pair-smoke.js`
+- `tests/qa/investoriq-visual-elite-font-foundation-smoke.js`
+- `tests/qa/investoriq-visual-elite-noi-page-balance-smoke.js`
+- `tests/qa/investoriq-visual-elite-pagination-governance-smoke.js`
+- `tests/qa/investoriq-visual-elite-prince-grid-normalization-smoke.js`
+- `tests/qa/investoriq-visual-elite-shared-shell-smoke.js`
+- `tests/qa/investoriq-visual-elite-typography-spacing-smoke.js`
+- `tests/qa/job-failure-messaging-smoke.js`
+- `tests/qa/launch-critical-architecture-smoke.js`
+- `tests/qa/launch-e2e-contract-reconciliation-smoke.js`
+- `tests/qa/launch-readiness-customer-journey-smoke.js`
+- `tests/qa/legal-disclosure-authority-smoke.js`
+- `tests/qa/openai-provider-diagnostics-smoke.js`
+- `tests/qa/owner-economics-smoke.js`
+- `tests/qa/p0-a2-customer-boundary-smoke.js`
+- `tests/qa/p0a-financial-truth-egress-smoke.js`
+- `tests/qa/p0b-deterministic-contract-qa-seal-smoke.js`
+- `tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js`
+- `tests/qa/p0d-retest24-permanent-regression-replay-smoke.js`
+- `tests/qa/phase1-admission-core-mode-contract-smoke.js`
+- `tests/qa/phase2-artifact-compensation-regression.js`
+- `tests/qa/phase2-atomic-publication-delivery-contract-smoke.js`
+- `tests/qa/phase3-worker-render-recovery-contract-smoke.js`
+- `tests/qa/phase4-checkout-runtime-smoke.js`
+- `tests/qa/phase4-checkout-status-runtime-smoke.js`
+- `tests/qa/phase4-commerce-stripe-entitlement-contract-smoke.js`
+- `tests/qa/phase4-webhook-runtime-smoke.js`
+- `tests/qa/phase5-customer-boundary-runtime-smoke.js`
+- `tests/qa/phase5-security-data-hygiene-contract-smoke.js`
+- `tests/qa/phase6-lifecycle-certification-contract-smoke.js`
+- `tests/qa/phase7-decision-support-smoke.js`
+- `tests/qa/phase7-elite-report-design-contract-smoke.js`
+- `tests/qa/phase8a-hold-dscr-authority-smoke.js`
+- `tests/qa/phase8a-owner-acceptance-authority-smoke.js`
+- `tests/qa/phase8-artifact-identity-fingerprint-smoke.js`
+- `tests/qa/phase8a-underwriting-executive-summary-smoke.js`
+- `tests/qa/phase8-customer-facing-visual-authority-smoke.js`
+- `tests/qa/phase8-source-reconciliation-authority-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-deterministic-analysis-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-external-certification-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-internal-certification-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-job-start-surface-receipt-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-job-surface-authority-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-job-surface-integration-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-model-skeleton-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-pdf-composition-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-phase0-characterization-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-receipt-map-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-renderer-integration-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-validated-model-smoke.js`
+- `tests/qa/premium-acquisition-underwriting-v1-worker-generation-integration-smoke.js`
+- `tests/qa/property-tax-binding-finalhtml-smoke.js`
+- `tests/qa/property-tax-parser-smoke.js`
+- `tests/qa/publication-math-continuity-smoke.js`
+- `tests/qa/qa-action-plan-smoke.js`
+- `tests/qa/qa-director-review-smoke.js`
+- `tests/qa/qa-doctrine-smoke.js`
+- `tests/qa/qa-fix-routing-smoke.js`
+- `tests/qa/qa-manager-review-smoke.js`
+- `tests/qa/README.md`
+- `tests/qa/refi-gate-not-assessed-finalhtml-smoke.js`
+- `tests/qa/renovation-rendering-smoke.js`
+- `tests/qa/renovation-rent-lift-regression.js`
+- `tests/qa/rent-roll-alias-smoke.js`
+- `tests/qa/rent-roll-text-summary-fallback-smoke.js`
+- `tests/qa/report-contract-qa-smoke.js`
+- `tests/qa/report-publication-authority-boundary-smoke.js`
+- `tests/qa/report-publication-authority-class-smoke.js`
+- `tests/qa/report-quality-incident-projection-smoke.js`
+- `tests/qa/report-quality-manifest-smoke.js`
+- `tests/qa/report-surface-convergence-smoke.js`
+- `tests/qa/report-type-normalization-smoke.js`
+- `tests/qa/report-type-section-leak-smoke.js`
+- `tests/qa/report-upload-gate-smoke.js`
+- `tests/qa/retest29-publish-or-collapse-regression-smoke.js`
+- `tests/qa/retest32-pdf-publication-authority-regression-smoke.js`
+- `tests/qa/retest34-report-identity-authority-regression-smoke.js`
+- `tests/qa/run-all.js`
+- `tests/qa/screening-report-sealed-lane-authority-smoke.js`
+- `tests/qa/screening-report-smoke.js`
+- `tests/qa/section-disposition-contract-smoke.js`
+- `tests/qa/source-authority-smoke.js`
+- `tests/qa/source-package-cap-rate-rounding-smoke.js`
+- `tests/qa/source-report-coverage-qa-smoke.js`
+- `tests/qa/source-truth-constitutional-matrix-smoke.js`
+- `tests/qa/source-truth-phase7-8-smoke.js`
+- `tests/qa/source-truth-pipeline-authority-smoke.js`
+- `tests/qa/stonebridge-retest21-source-authority-smoke.js`
+- `tests/qa/support-doc-diagnostics-regression.js`
+- `tests/qa/support-document-ai-evidence-binding-smoke.js`
+- `tests/qa/support-document-authority-adversarial-matrix-smoke.js`
+- `tests/qa/support-document-authority-cutover-smoke.js`
+- `tests/qa/support-document-authority-shadow-smoke.js`
+- `tests/qa/supporting-doc-classification-smoke.js`
+- `tests/qa/supporting-doc-recovery-smoke.js`
+- `tests/qa/t12-core-summary-smoke.js`
+- `tests/qa/t12-line-items-smoke.js`
+- `tests/qa/t12-rent-roll-diagnostics-regression.js`
+- `tests/qa/validator-diagnostics-rollup-regression.js`
+- `tests/qa/vercel-function-budget-smoke.js`
+- `tests/qa/worker-queue-starvation-regression.js`
+- `test-sentence-integrity.js`
+- `tmp/final_regression_node_20260428/forest_screening_final.pdf`
+- `tmp/final_regression_node_20260428/forest_screening_final.txt`
+- `tmp/final_regression_node_20260428/forest_underwriting_final.pdf`
+- `tmp/final_regression_node_20260428/forest_underwriting_final.txt`
+- `tmp/final_regression_node_20260428/richmond_screening_final.pdf`
+- `tmp/final_regression_node_20260428/richmond_screening_final.txt`
+- `tmp/final_regression_node_20260428/richmond_underwriting_final.pdf`
+- `tmp/final_regression_node_20260428/richmond_underwriting_final.txt`
+- `tmp/forest_screening_test21.pdf`
+- `tmp/forest_screening_test21.txt`
+- `tmp/forest_screening_test22.pdf`
+- `tmp/forest_screening_test22.txt`
+- `tmp/forest_underwriting_test21.pdf`
+- `tmp/forest_underwriting_test21.txt`
+- `tmp/forest_underwriting_test22.pdf`
+- `tmp/forest_underwriting_test22.txt`
+- `tmp/forest_underwriting_test23.pdf`
+- `tmp/forest_underwriting_test23.txt`
+- `tmp/forest_underwriting_test24.pdf`
+- `tmp/forest_underwriting_test24.txt`
+- `tmp/forest-city-manor-5.pdf`
+- `tmp/forest-city-manor-5.txt`
+- `tmp/harbourstone-test5.pdf`
+- `tmp/harbourstone-test5.txt`
+- `tmp/layout_retest_20260428/forest_underwriting_26.pdf`
+- `tmp/layout_retest_20260428/forest_underwriting_26.txt`
+- `tmp/layout_retest_20260428/richmond_underwriting_21.pdf`
+- `tmp/layout_retest_20260428/richmond_underwriting_21.txt`
+- `tmp/layout_retest_round2_20260428/forest_underwriting_27.pdf`
+- `tmp/layout_retest_round2_20260428/forest_underwriting_27.txt`
+- `tmp/layout_retest_round2_20260428/richmond_underwriting_22.pdf`
+- `tmp/layout_retest_round2_20260428/richmond_underwriting_22.txt`
+- `tmp/motherload_pdf_pages/page-01.png`
+- `tmp/motherload_pdf_pages/page-02.png`
+- `tmp/motherload_pdf_pages/page-03.png`
+- `tmp/motherload_pdf_pages/page-04.png`
+- `tmp/motherload_pdf_pages/page-05.png`
+- `tmp/motherload_pdf_pages/page-06.png`
+- `tmp/motherload_pdf_pages/page-07.png`
+- `tmp/motherload_pdf_pages/page-08.png`
+- `tmp/motherload_pdf_pages/page-09.png`
+- `tmp/motherload_pdf_pages/page-10.png`
+- `tmp/motherload_pdf_pages/page-11.png`
+- `tmp/motherload_pdf_pages/page-12.png`
+- `tmp/motherload_pdf_pages/page-13.png`
+- `tmp/richmond-messy-underwriting.pdf`
+- `tmp/richmond-messy-underwriting.txt`
+- `tmp_clean_test11.txt`
+- `tmp_debt_terms32.txt`
+- `tmp_messy32.txt`
+- `tmp_mojibake_test.txt`
+- `tmp_offer32.txt`
+- `tmp_segment.txt`
+- `tmp_tax32.txt`
+- `tmp_unsup_app32.txt`
+- `tmp_unsup_esa32.txt`
+- `tmp_unsup_rent32.txt`
+- `tmp_unsup_zone32.txt`
+- `vercel.json`
+- `vite.config.js`
+- `workspace.code-workspace`
