@@ -35,7 +35,7 @@ assert.ok(signalCodes.includes("T12_EXPENSE_LINE_RECONCILIATION_REQUIRED"), "sep
 
 const metricKeys = [...chapter1.matchAll(/data-iq-elite-metric="([^"]+)"/g)].map((match) => match[1]);
 assert.equal(new Set(metricKeys).size, metricKeys.length, "display-ready committee metrics must not be duplicated");
-for (const key of ["units", "occupancy", "noi", "purchasePrice", "goingInCapRate", "breakEvenOccupancy"]) {
+for (const key of ["units", "occupancy", "noi", "purchasePrice", "goingInCapRate", "operatingCostCoverageRatio"]) {
   assert.ok(metricKeys.includes(key), `missing committee metric: ${key}`);
 }
 assert.equal(metricKeys.includes("occupancyBreakEvenSpread"), false, "cross-basis occupancy spread must not render");
@@ -86,7 +86,9 @@ assert.equal(chapter1Contract.authority.publicationAuthority, false);
 assert.equal(chapter1Contract.authority.revisionAuthority, false);
 assert.equal(chapter1Contract.authority.investmentRecommendationAllowed, false);
 assert.equal(chapter1Contract.authority.downstreamConsumeOnly, true);
-assert.equal(chapter1Contract.metrics.occupancyBreakEvenSpread.displayReady, false);
+assert.equal(chapter1Contract.metrics.breakEvenOccupancy, undefined);
+assert.equal(chapter1Contract.metrics.occupancyBreakEvenSpread, undefined);
+assert.equal(chapter1Contract.metrics.operatingCostCoverageRatio.value, 555000 / 1612800);
 assert.ok(chapter1Contract.principalRisksAndConstraints.items.some((item) => item.code === "T12_EXPENSE_LINE_RECONCILIATION_REQUIRED"));
 
 const visible = chapter1.replace(/<[^>]+>/g, " ");

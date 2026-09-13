@@ -1,8 +1,24 @@
-import { buildDeterministicReportContractQaSeal as buildBaseDeterministicReportContractQaSeal } from "./deterministic-report-contract-qa-seal-base.js";
+import {
+  buildDeterministicReportContractQaSeal as buildBaseDeterministicReportContractQaSeal,
+  DETERMINISTIC_REPORT_CONTRACT as BASE_DETERMINISTIC_REPORT_CONTRACT,
+} from "./deterministic-report-contract-qa-seal-base.js";
+import { OPERATING_COST_COVERAGE_RATIO, calculateOperatingCostCoverageRatio } from "./canonical-operating-metrics.js";
 
 export * from "./deterministic-report-contract-qa-seal-base.js";
 
-const OPERATING_COST_COVERAGE_FORMULA = "total_operating_expenses / gross_potential_rent";
+const {
+  breakEvenLabel: _legacyBreakEvenLabel,
+  breakEvenFormula: _legacyBreakEvenFormula,
+  ...CURRENT_BASE_DETERMINISTIC_REPORT_CONTRACT
+} = BASE_DETERMINISTIC_REPORT_CONTRACT;
+
+export const DETERMINISTIC_REPORT_CONTRACT = Object.freeze({
+  ...CURRENT_BASE_DETERMINISTIC_REPORT_CONTRACT,
+  operatingCostCoverageRatioLabel: OPERATING_COST_COVERAGE_RATIO.label,
+  operatingCostCoverageRatioFormula: OPERATING_COST_COVERAGE_RATIO.formula,
+});
+
+const OPERATING_COST_COVERAGE_FORMULA = OPERATING_COST_COVERAGE_RATIO.formula;
 const LEGACY_BREAK_EVEN_CODES = new Set([
   "BREAK_EVEN_CONTRACT_IDENTITY_MISMATCH",
   "BREAK_EVEN_CANONICAL_MATH_MISMATCH",
@@ -24,6 +40,8 @@ function stripCustomerHtml(html = "") {
     .replace(/<!--([\s\S]*?)-->/g, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
+    .replace(/&(?:ndash|mdash);|&#(?:8211|8212);|&#x(?:2013|2014);/gi, "-")
+    .replace(/[\u2010-\u2015]/g, "-")
     .replace(/&amp;/gi, "&")
     .replace(/\s+/g, " ")
     .trim();
@@ -43,9 +61,17 @@ function issue(code, message, evidence = {}, path = "html.operatingCostCoverageR
   };
 }
 
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function extractOperatingCostCoveragePercentages(text = "") {
   const values = [];
-  const pattern = /Operating Cost Coverage Ratio\s*(?::|\|)?\s*([+\-]?\d+(?:\.\d+)?)\s*%/gi;
+  const labelPattern = escapeRegExp(OPERATING_COST_COVERAGE_RATIO.label);
+  const pattern = new RegExp(
+    `${labelPattern}\\s*(?::|\\|)?\\s*([+\\-]?\\d+(?:\\.\\d+)?)\\s*%`,
+    "gi"
+  );
   let match;
   while ((match = pattern.exec(String(text || ""))) !== null) {
     const value = Number(match[1]);
@@ -54,25 +80,65 @@ function extractOperatingCostCoveragePercentages(text = "") {
   return values;
 }
 
-function validateOperatingCostCoverage(html = "", breakEven = null) {
-  if (!breakEven || typeof breakEven !== "object" || Array.isArray(breakEven)) return [];
-
+export function validateOperatingCostCoverage(html = "", operatingCostCoverageRatio = null) {
   const issues = [];
-  const numerator = finite(breakEven.numerator);
-  const denominator = finite(breakEven.denominator);
-  const result = finite(breakEven.result);
-  const upstreamResult = finite(breakEven.upstreamResult);
-  const expected = Number.isFinite(numerator) && Number.isFinite(denominator) && denominator > 0
-    ? numerator / denominator
-    : null;
-  if (!Number.isFinite(expected)) return issues;
+  const visibleText = stripCustomerHtml(html);
+  if (/\bBreak(?:[-\u2010-\u2015 ]+)Even\s+Occupancy\b/i.test(visibleText)) {
+    issues.push(issue(
+      "MISLEADING_BREAK_EVEN_OCCUPANCY_LABEL_VISIBLE",
+      "Customer output must not present the OpEx divided by GPR ratio as a physical occupancy break-even threshold.",
+      {},
+      "html.operatingCostCoverageRatio.label"
+    ));
+  }
 
-  if (String(breakEven.formula || "").trim() !== OPERATING_COST_COVERAGE_FORMULA) {
+  if (!operatingCostCoverageRatio || typeof operatingCostCoverageRatio !== "object" || Array.isArray(operatingCostCoverageRatio)) return issues;
+
+  const numerator = finite(operatingCostCoverageRatio.numerator);
+  const denominator = finite(operatingCostCoverageRatio.denominator);
+  const result = finite(operatingCostCoverageRatio.result);
+  const upstreamResult = finite(operatingCostCoverageRatio.upstreamResult);
+  const expected = calculateOperatingCostCoverageRatio({ operatingExpenses: numerator, grossPotentialRent: denominator });
+  if (operatingCostCoverageRatio.displayReady === false && expected === null && result === null && upstreamResult === null) {
+    if (extractOperatingCostCoveragePercentages(visibleText).length) {
+      issues.push(issue("OPERATING_COST_COVERAGE_UNAVAILABLE_VALUE_VISIBLE", "Unavailable Operating Cost Coverage Ratio must not expose a numeric result."));
+    }
+    return issues;
+  }
+  if (operatingCostCoverageRatio.displayReady === false && expected !== null) {
+    issues.push(issue("OPERATING_COST_COVERAGE_VALID_INPUTS_SUPPRESSED", "Available accepted inputs require their canonical Operating Cost Coverage Ratio."));
+  }
+  if (operatingCostCoverageRatio.units !== undefined && operatingCostCoverageRatio.units !== "ratio") {
+    issues.push(issue("OPERATING_COST_COVERAGE_UNITS_INVALID", "Operating Cost Coverage Ratio uses explicit ratio units."));
+  }
+  if (!Number.isFinite(expected)) {
+    issues.push(issue(
+      "OPERATING_COST_COVERAGE_INPUTS_INVALID",
+      "Operating Cost Coverage Ratio requires a non-negative operating-expense numerator and a positive Gross Potential Rent denominator.",
+      { numerator, denominator },
+      "contract.operatingCostCoverageRatio.inputs"
+    ));
+    return issues;
+  }
+
+  if (String(operatingCostCoverageRatio.label || "").trim() !== OPERATING_COST_COVERAGE_RATIO.label) {
+    issues.push(issue(
+      "OPERATING_COST_COVERAGE_LABEL_MISMATCH",
+      "Operating Cost Coverage Ratio must preserve the canonical customer label.",
+      {
+        label: operatingCostCoverageRatio.label || null,
+        expected_label: OPERATING_COST_COVERAGE_RATIO.label,
+      },
+      "contract.operatingCostCoverageRatio.label"
+    ));
+  }
+
+  if (String(operatingCostCoverageRatio.formula || "").trim() !== OPERATING_COST_COVERAGE_FORMULA) {
     issues.push(issue(
       "OPERATING_COST_COVERAGE_FORMULA_MISMATCH",
       "Operating Cost Coverage Ratio must preserve the accepted operating-expense divided by T12 Gross Potential Rent formula.",
-      { formula: breakEven.formula || null, expected_formula: OPERATING_COST_COVERAGE_FORMULA },
-      "contract.breakEvenOccupancy.formula"
+      { formula: operatingCostCoverageRatio.formula || null, expected_formula: OPERATING_COST_COVERAGE_FORMULA },
+      "contract.operatingCostCoverageRatio.formula"
     ));
   }
 
@@ -81,7 +147,7 @@ function validateOperatingCostCoverage(html = "", breakEven = null) {
       "OPERATING_COST_COVERAGE_CANONICAL_MATH_MISMATCH",
       "Operating Cost Coverage Ratio disagrees with accepted OpEx divided by T12 Gross Potential Rent.",
       { numerator, denominator, expected_result: expected, canonical_result: result },
-      "contract.breakEvenOccupancy.result"
+      "contract.operatingCostCoverageRatio.result"
     ));
   }
 
@@ -90,17 +156,7 @@ function validateOperatingCostCoverage(html = "", breakEven = null) {
       "OPERATING_COST_COVERAGE_UPSTREAM_RESULT_MISMATCH",
       "Upstream Operating Cost Coverage Ratio disagrees with the accepted formula inputs.",
       { numerator, denominator, expected_result: expected, upstream_result: upstreamResult },
-      "contract.breakEvenOccupancy.upstreamResult"
-    ));
-  }
-
-  const visibleText = stripCustomerHtml(html);
-  if (/\bBreak[- ]Even Occupancy\b/i.test(visibleText)) {
-    issues.push(issue(
-      "MISLEADING_BREAK_EVEN_OCCUPANCY_LABEL_VISIBLE",
-      "Customer output must not present the OpEx divided by GPR ratio as a physical Break-Even Occupancy threshold.",
-      {},
-      "html.operatingCostCoverageRatio.label"
+      "contract.operatingCostCoverageRatio.upstreamResult"
     ));
   }
 
@@ -148,10 +204,9 @@ function normalizeUpstreamSeal(upstreamSeal = null) {
 }
 
 export function buildDeterministicReportContractQaSeal(args = {}) {
-  // The base validator owns the historical Break-Even Occupancy contract. The
-  // current customer contract is Operating Cost Coverage Ratio, so do not let
-  // the historical validator manufacture a disagreement before the current
-  // validator evaluates the governed surface.
+  // The base validator still carries a legacy operating-ratio adapter. Suppress
+  // that historical input so the canonical OCCR validator below is the only
+  // active external operating-ratio authority.
   const base = buildBaseDeterministicReportContractQaSeal({
     ...args,
     breakEven: null,
@@ -159,7 +214,8 @@ export function buildDeterministicReportContractQaSeal(args = {}) {
   });
   const retainedIssues = (Array.isArray(base?.issues) ? base.issues : [])
     .filter((entry) => !LEGACY_BREAK_EVEN_CODES.has(String(entry?.code || "")));
-  const coverageIssues = validateOperatingCostCoverage(args?.html, args?.breakEven);
+  const operatingCostCoverageRatio = args?.operatingCostCoverageRatio ?? null;
+  const coverageIssues = validateOperatingCostCoverage(args?.html, operatingCostCoverageRatio);
   const issues = [...retainedIssues, ...coverageIssues];
   const ok = issues.length === 0;
 

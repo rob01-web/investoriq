@@ -4,6 +4,9 @@ import {
   buildDeterministicReportContractQaSeal,
   DETERMINISTIC_REPORT_CONTRACT,
 } from "../../api/_lib/deterministic-report-contract-qa-seal.js";
+import {
+  OPERATING_COST_COVERAGE_RATIO,
+} from "../../api/_lib/canonical-operating-metrics.js";
 import { buildAcquisitionMemoV2FinalDeliveryDecision } from "../../api/_lib/acquisition-memo-v2-final-decision.js";
 import { buildReportContractQa } from "../../api/_lib/report-contract-qa.js";
 import { runScreeningReportPipeline } from "../../api/_lib/screening-report-pipeline.js";
@@ -23,14 +26,20 @@ const reconciliationState = {
   variance_pct: -180000 / 1612800,
   source_reconciliation_disclosure: disclosure,
 };
-const breakEven = {
-  label: DETERMINISTIC_REPORT_CONTRACT.breakEvenLabel,
-  formula: DETERMINISTIC_REPORT_CONTRACT.breakEvenFormula,
+const operatingCostCoverageRatio = {
+  label: OPERATING_COST_COVERAGE_RATIO.label,
+  formula: OPERATING_COST_COVERAGE_RATIO.formula,
   numerator: 555000,
   denominator: 1612800,
   result: 555000 / 1612800,
   upstreamResult: 555000 / 1612800,
 };
+assert.equal(DETERMINISTIC_REPORT_CONTRACT.operatingCostCoverageRatioLabel, OPERATING_COST_COVERAGE_RATIO.label);
+assert.equal(DETERMINISTIC_REPORT_CONTRACT.operatingCostCoverageRatioFormula, OPERATING_COST_COVERAGE_RATIO.formula);
+assert.equal(
+  DETERMINISTIC_REPORT_CONTRACT.operatingCostCoverageRatioLabel,
+  OPERATING_COST_COVERAGE_RATIO.label
+);
 const identity = {
   reportMode: "v1_core",
   reportType: "underwriting",
@@ -44,7 +53,7 @@ const validAcquisitionHtml = `
       <tr><td>Rent Roll Annual In-Place Rent</td><td>$1,432,800</td></tr>
       <tr><td>Rent Roll less T12</td><td>($180,000)</td></tr>
       <tr><td>Variance</td><td>-11.16%</td></tr>
-      <tr><td>Break-Even Occupancy</td><td>34.4%</td></tr>
+      <tr><td>Operating Cost Coverage Ratio</td><td>34.4%</td></tr>
       <tr><td>Current debt context</td><td>Source-backed fact bundle complete</td></tr>
     </table>
     <p>${disclosure}</p>
@@ -55,7 +64,7 @@ const validSeal = buildDeterministicReportContractQaSeal({
   html: validAcquisitionHtml,
   reportIdentity: identity,
   sourceReconciliation: { state: reconciliationState, sourceBacked: true },
-  breakEven,
+  operatingCostCoverageRatio,
   supportSections: {
     currentDebtContext: {
       facts: {
@@ -79,7 +88,7 @@ const expectFailure = (html, code, overrides = {}) => {
     html,
     reportIdentity: identity,
     sourceReconciliation: { state: reconciliationState, sourceBacked: true },
-    breakEven,
+    operatingCostCoverageRatio,
     ...overrides,
   });
   assert.equal(result.ok, false, `${code} must fail the deterministic seal`);
@@ -99,13 +108,72 @@ expectFailure(
 );
 expectFailure(
   validAcquisitionHtml.replace("34.4%", "37.0%"),
-  "BREAK_EVEN_RENDERED_RESULT_MISMATCH"
+  "OPERATING_COST_COVERAGE_RENDERED_RESULT_MISMATCH"
 );
 expectFailure(
   validAcquisitionHtml,
-  "BREAK_EVEN_UPSTREAM_RESULT_MISMATCH",
-  { breakEven: { ...breakEven, upstreamResult: 0.37 } }
+  "OPERATING_COST_COVERAGE_UPSTREAM_RESULT_MISMATCH",
+  { operatingCostCoverageRatio: { ...operatingCostCoverageRatio, upstreamResult: 0.37 } }
 );
+expectFailure(
+  validAcquisitionHtml,
+  "OPERATING_COST_COVERAGE_LABEL_MISMATCH",
+  { operatingCostCoverageRatio: { ...operatingCostCoverageRatio, label: "Break-Even Occupancy" } }
+);
+expectFailure(
+  validAcquisitionHtml,
+  "OPERATING_COST_COVERAGE_INPUTS_INVALID",
+  { operatingCostCoverageRatio: { ...operatingCostCoverageRatio, numerator: -1 } }
+);
+
+const legacyLabelWithoutReceiptSeal = buildDeterministicReportContractQaSeal({
+  html: validAcquisitionHtml.replace(
+    "Operating Cost Coverage Ratio",
+    "Break&ndash;Even Occupancy"
+  ),
+  reportIdentity: identity,
+  sourceReconciliation: { state: reconciliationState, sourceBacked: true },
+  operatingCostCoverageRatio: null,
+});
+assert.equal(legacyLabelWithoutReceiptSeal.ok, false);
+assert.ok(
+  legacyLabelWithoutReceiptSeal.issues.some(
+    (entry) => entry?.code === "MISLEADING_BREAK_EVEN_OCCUPANCY_LABEL_VISIBLE"
+  ),
+  JSON.stringify(legacyLabelWithoutReceiptSeal.issues)
+);
+
+const legacyUnicodeDashWithoutReceiptSeal = buildDeterministicReportContractQaSeal({
+  html: validAcquisitionHtml.replace(
+    "Operating Cost Coverage Ratio",
+    "Break–Even Occupancy"
+  ),
+  reportIdentity: identity,
+  sourceReconciliation: { state: reconciliationState, sourceBacked: true },
+  operatingCostCoverageRatio: null,
+});
+assert.equal(legacyUnicodeDashWithoutReceiptSeal.ok, false);
+assert.ok(
+  legacyUnicodeDashWithoutReceiptSeal.issues.some(
+    (entry) => entry?.code === "MISLEADING_BREAK_EVEN_OCCUPANCY_LABEL_VISIBLE"
+  ),
+  JSON.stringify(legacyUnicodeDashWithoutReceiptSeal.issues)
+);
+
+const highOccrSeal = buildDeterministicReportContractQaSeal({
+  html: validAcquisitionHtml.replace("34.4%", "200.0%"),
+  reportIdentity: identity,
+  sourceReconciliation: { state: reconciliationState, sourceBacked: true },
+  operatingCostCoverageRatio: {
+    label: OPERATING_COST_COVERAGE_RATIO.label,
+    formula: OPERATING_COST_COVERAGE_RATIO.formula,
+    numerator: 200,
+    denominator: 100,
+    result: 2,
+    upstreamResult: 2,
+  },
+});
+assert.equal(highOccrSeal.ok, true, JSON.stringify(highOccrSeal.issues));
 expectFailure(
   `${validAcquisitionHtml}<p>Implied Incremental Value</p>`,
   "UNAUTHORIZED_GROSS_RENT_CAPITALIZATION"
@@ -194,12 +262,13 @@ const screeningSeal = buildDeterministicReportContractQaSeal({
   html: screeningHtml,
   reportIdentity: { reportMode: "screening_v1", reportType: "screening", reportTier: 1 },
   sourceReconciliation: reconciliationState,
-  breakEven,
+  operatingCostCoverageRatio,
 });
 assert.equal(screeningSeal.ok, true, JSON.stringify(screeningSeal.issues));
 assert.match(screeningHtml, /T12 Gross Potential Rent[\s\S]*?\$1,612,800/i);
-assert.match(screeningHtml, /Break-Even Occupancy[\s\S]*?34\.4%/i);
-assert.equal(/Break-Even Occupancy[\s\S]{0,80}37\.0%/i.test(screeningHtml), false);
+assert.match(screeningHtml, /Operating Cost Coverage Ratio[\s\S]*?34\.4%/i);
+assert.equal(/break[- ]even occupancy/i.test(screeningHtml), false);
+assert.equal(/Operating Cost Coverage Ratio[\s\S]{0,80}37\.0%/i.test(screeningHtml), false);
 
 const reportContractQa = buildReportContractQa({
   reportType: "screening",

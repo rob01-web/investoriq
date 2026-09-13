@@ -153,7 +153,7 @@ for (const key of ["rent", "interestRate", "purchasePrice", "debtAmount", "major
   check(deferredKeys.has(key), `deferred driver ${key}`);
 }
 check(contract.unsupportedTargetOutputs.some((row) => row.key === "dscr"), "DSCR target deferred");
-check(contract.unsupportedTargetOutputs.some((row) => row.key === "breakEvenOccupancy"), "break-even target deferred");
+check(contract.unsupportedTargetOutputs.some((row) => row.key === "operatingCostCoverageRatio"), "OCCR target deferred");
 check(contract.unsupportedTargetOutputs.some((row) => row.key === "annualCashBurden"), "cash burden target deferred");
 
 equal(contract.sectionDispositions.underwritingDriverAnalysis.disposition, "include", "driver section included");

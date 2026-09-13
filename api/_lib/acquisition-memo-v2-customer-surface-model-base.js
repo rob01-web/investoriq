@@ -1,5 +1,6 @@
 import { formatInterestRatePercent } from "./report-formatting-helpers.js";
 import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
+import { buildCanonicalOperatingMetricSet, resolveCanonicalOperatingMetricSet } from "./canonical-operating-metrics.js";
 import { UNDERWRITING_REPORT_IDENTITY } from "./report-identity-authority.js";
 import { applyDispositionsToCustomerSurfaceSections } from "./section-disposition-runtime.js";
 
@@ -1446,6 +1447,7 @@ function buildSectionRoleModel(section, supportDocsByRole, coreSources, valueSem
 }
 
 function buildAcquisitionMemoV2CustomerSurfaceModel({
+  sourceTruthPackage = null,
   canonicalSourcePackage = null,
   acquisitionMemoProjection = null,
   bossContract = null,
@@ -1502,21 +1504,27 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
   ).trim();
   const reportTitle = String(reportMeta?.reportTitle || reportMeta?.report_title || `${propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle}`.trim()).trim();
 
-  const units = normalizeMoney(coreMetrics?.units ?? coreRentRoll?.extractedFacts?.total_units);
-  const occupancy = normalizeCapRatio(coreMetrics?.occupancy ?? coreRentRoll?.extractedFacts?.occupancy);
-  const annualInPlaceRent = normalizeMoney(coreMetrics?.annualInPlaceRent ?? coreRentRoll?.extractedFacts?.annual_in_place_rent);
-  const annualMarketRent = normalizeMoney(coreMetrics?.annualMarketRent ?? coreRentRoll?.extractedFacts?.annual_market_rent);
-  const annualRentUpside = normalizeMoney(coreMetrics?.annualRentUpside ?? (Number.isFinite(annualInPlaceRent) && Number.isFinite(annualMarketRent) ? annualMarketRent - annualInPlaceRent : null));
-  const egi = normalizeMoney(coreMetrics?.egi ?? coreT12?.extractedFacts?.effective_gross_income);
-  const opEx = normalizeMoney(coreMetrics?.opEx ?? coreT12?.extractedFacts?.total_operating_expenses);
-  const noi = normalizeMoney(coreMetrics?.noi ?? coreT12?.extractedFacts?.net_operating_income);
-  const expenseRatio = normalizeCapRatio(coreMetrics?.expenseRatio);
-  const noiMargin = normalizeCapRatio(coreMetrics?.noiMargin);
-  const providedBreakEvenOccupancy = normalizeCapRatio(coreMetrics?.breakEvenOccupancy);
-  const grossPotentialRent = normalizeMoney(coreT12?.extractedFacts?.gross_potential_rent);
-  const breakEvenOccupancy = Number.isFinite(opEx) && Number.isFinite(grossPotentialRent) && grossPotentialRent > 0
-    ? opEx / grossPotentialRent
-    : null;
+  const sharedOperatingMetrics = sourceTruthPackage
+    ? resolveCanonicalOperatingMetricSet(sourceTruthPackage)
+    : buildCanonicalOperatingMetricSet({
+        t12Facts: coreT12?.extractedFacts || {},
+        rentRollFacts: coreRentRoll?.extractedFacts || {},
+        t12AuthorityBase: "coreSources.coreT12.extractedFacts",
+        rentRollAuthorityBase: "coreSources.coreRentRoll.extractedFacts",
+      });
+  const accepted = sharedOperatingMetrics.metrics;
+  const units = accepted.units.value;
+  const occupancy = accepted.rentRollOccupancy.value;
+  const annualInPlaceRent = accepted.annualInPlaceRent.value;
+  const annualMarketRent = accepted.annualMarketRent.value;
+  const annualRentUpside = accepted.annualGrossRentDifference.value;
+  const egi = accepted.effectiveGrossIncome.value;
+  const opEx = accepted.operatingExpenses.value;
+  const noi = accepted.netOperatingIncome.value;
+  const expenseRatio = accepted.expenseRatio.value;
+  const noiMargin = accepted.noiMargin.value;
+  const grossPotentialRent = accepted.grossPotentialRent.value;
+  const operatingCostCoverageRatioReceipt = accepted.operatingCostCoverageRatio;
   const purchasePrice = normalizeMoney(coreMetrics?.purchasePrice ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.purchase_price);
   const goingInCapRate = normalizeCapRatio(coreMetrics?.goingInCapRate ?? acquisitionMemoProjection?.proposedFinancingContext?.extractedFacts?.going_in_cap_rate);
   const impliedValueAtGoingInCapRate = Number.isFinite(noi) && Number.isFinite(goingInCapRate) && goingInCapRate > 0 ? noi / goingInCapRate : null;
@@ -1720,13 +1728,13 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       denominatorProvenance: [],
     },
     breakEvenMetrics: {
-      label: "Debt-Inclusive Break-Even Metrics",
+      label: "Debt-Inclusive Coverage Metrics",
       formula: "governed_break_even_metric_group",
       numeratorFact: null,
       denominatorFact: null,
       numerator: null,
       denominator: null,
-      result: breakEvenMetricCount > 0 ? `${breakEvenMetricCount} governed break-even metrics available` : null,
+      result: breakEvenMetricCount > 0 ? `${breakEvenMetricCount} debt-inclusive coverage metrics available` : null,
       displayReady: breakEvenMetricCount > 0,
       units: "text",
       sourceFamily: "T12 / Rent Roll / debt context",
@@ -1735,7 +1743,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       denominatorProvenance: [],
     },
     currentDebtInclusiveBreakEvenOccupancy: {
-      label: "Current Debt-Inclusive Operating Break-Even Ratio",
+      label: "Current Debt-Inclusive Cost Coverage Ratio",
       formula: "accepted_t12_total_operating_expenses_plus_accepted_current_annual_debt_service_divided_by_accepted_t12_gross_potential_rent",
       numeratorFact: "total_operating_expenses_plus_current_annual_debt_service",
       denominatorFact: "gross_potential_rent",
@@ -1750,7 +1758,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       denominatorProvenance: coreSources.coreT12?.sourceIdentityKey ? [coreSources.coreT12.sourceIdentityKey] : [],
     },
     proposedDebtInclusiveBreakEvenOccupancy: {
-      label: "Proposed Acquisition Debt-Inclusive Operating Break-Even Ratio",
+      label: "Proposed Debt-Inclusive Cost Coverage Ratio",
       formula: "accepted_t12_total_operating_expenses_plus_accepted_proposed_annual_debt_service_divided_by_accepted_t12_gross_potential_rent",
       numeratorFact: "total_operating_expenses_plus_proposed_annual_debt_service",
       denominatorFact: "gross_potential_rent",
@@ -1765,7 +1773,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       denominatorProvenance: coreSources.coreT12?.sourceIdentityKey ? [coreSources.coreT12.sourceIdentityKey] : [],
     },
     currentDebtInclusiveBreakEvenMonthlyRentPerUnit: {
-      label: "Current Debt-Inclusive Break-Even Monthly Rent per Unit",
+      label: "Current Debt-Inclusive Monthly Rent / Unit Coverage Reference",
       formula: "accepted_t12_total_operating_expenses_plus_accepted_current_annual_debt_service_divided_by_accepted_total_units_divided_by_12",
       numeratorFact: "total_operating_expenses_plus_current_annual_debt_service",
       denominatorFact: "total_units_times_12",
@@ -1780,7 +1788,7 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
       denominatorProvenance: coreSources.coreRentRoll?.sourceIdentityKey ? [coreSources.coreRentRoll.sourceIdentityKey] : [],
     },
     proposedDebtInclusiveBreakEvenMonthlyRentPerUnit: {
-      label: "Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit",
+      label: "Proposed Debt-Inclusive Monthly Rent / Unit Coverage Reference",
       formula: "accepted_t12_total_operating_expenses_plus_accepted_proposed_annual_debt_service_divided_by_accepted_total_units_divided_by_12",
       numeratorFact: "total_operating_expenses_plus_proposed_annual_debt_service",
       denominatorFact: "total_units_times_12",
@@ -1911,17 +1919,23 @@ function buildAcquisitionMemoV2CustomerSurfaceModel({
     },
     financialIntelligence: clone(canonicalFinancialIntelligence),
     valueSemantics,
+    sharedOperatingMetrics,
     financialTruth: {
-      breakEvenOccupancy: {
-        label: "Break-Even Occupancy",
-        formula: "total_operating_expenses / gross_potential_rent",
+      operatingCostCoverageRatio: {
+        label: operatingCostCoverageRatioReceipt.label,
+        formula: operatingCostCoverageRatioReceipt.formula,
         numeratorFact: "total_operating_expenses",
         denominatorFact: "gross_potential_rent",
-        numerator: opEx,
-        denominator: grossPotentialRent,
-        result: breakEvenOccupancy,
-        upstreamResult: providedBreakEvenOccupancy,
-        displayReady: Number.isFinite(breakEvenOccupancy),
+        numerator: operatingCostCoverageRatioReceipt.inputs?.operatingExpenses ?? null,
+        denominator: operatingCostCoverageRatioReceipt.inputs?.grossPotentialRent ?? null,
+        result: operatingCostCoverageRatioReceipt.value,
+        provenance: operatingCostCoverageRatioReceipt.provenance,
+        inputProvenance: operatingCostCoverageRatioReceipt.authorityPaths,
+        sourceIdentityKeys: [sourceTruthPackage?.core?.t12?.file_id
+          ? `core:${sourceTruthPackage.core.t12.file_id}:${sourceTruthPackage.core.t12.artifact_id || ""}`
+          : null].filter(Boolean),
+        displayReady: operatingCostCoverageRatioReceipt.displayReady,
+        units: operatingCostCoverageRatioReceipt.units,
       },
       ...Object.fromEntries(
         Object.entries(debtCapacityTruth).map(([key, receipt]) => [

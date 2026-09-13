@@ -51,10 +51,11 @@ const SYSTEM_PROMPT = [
   "Only flag issues that a human reviewer should inspect before using the report as a public or investor-facing sample.",
   "",
   "Important metric guidance:",
-  "Do not flag break-even occupancy as contradictory merely because it differs from current occupancy.",
-  "Current occupancy and break-even occupancy are distinct metrics.",
-  "A lower break-even occupancy than current occupancy is generally an operating cushion, not a contradiction.",
-  "Only flag occupancy math if the formula, label, or displayed relationship is internally inconsistent, impossible, or unsupported by the shown data.",
+  "Operating Cost Coverage Ratio (OCCR) equals accepted operating expenses divided by accepted T12 Gross Potential Rent.",
+  "OCCR is a GPR-basis operating-cost ratio, not a physical occupancy threshold.",
+  "Physical occupancy and OCCR must not be subtracted from or directly compared with one another.",
+  "Flag any customer-visible label that describes OpEx divided by GPR as an occupancy break-even threshold.",
+  "Only flag occupancy math when displayed physical occupancy itself is internally inconsistent, impossible, or unsupported by shown data.",
   "",
   "Important compliance guidance:",
   "Do not request, recommend, or suggest adding BUY, SELL, HOLD, or investment recommendation language.",
@@ -143,26 +144,13 @@ function textOfFinding(finding) {
   ].filter(Boolean).join(" ").toLowerCase();
 }
 
-function isOnlyBreakEvenOccupancyFalsePositive(finding) {
-  const text = textOfFinding(finding);
-  const exactKnownFalsePositive =
-    text.includes("break-even occupancy is stated as 31.5%, which is inconsistent with the reported current occupancy of 96.0%.") ||
-    text.includes("verify the calculation of break-even occupancy to ensure it aligns with the current occupancy.");
-  if (exactKnownFalsePositive) {
-    return true;
-  }
-  if (
-    /break[- ]?even occupancy/.test(text) &&
-    /(?:expense ratio|opex|operating expense|egi|effective gross income)/.test(text) &&
-    !/debt service|current debt|mortgage payment/.test(text)
-  ) {
-    return true;
-  }
-  const mentionsBreakEven = /break[- ]?even occupancy/.test(text);
-  const mentionsCurrentOccupancy = /current occupancy|occupancy rate/.test(text);
-  const contradictionOnly = /contradict|inconsistent|differs|different|mismatch/.test(text);
-  const mathConcern = /formula|calculation|impossible|unsupported|greater than 100|less than 0|negative/.test(text);
-  return mentionsBreakEven && mentionsCurrentOccupancy && contradictionOnly && !mathConcern;
+function isOnlyOccrOccupancyComparisonFalsePositive(finding) {
+  const findingText = textOfFinding(finding);
+  const mentionsOccr = /operating cost coverage ratio|\boccr\b/.test(findingText);
+  const claimsEquality = /should (?:equal|match|align with)|must (?:equal|match)|inconsistent with (?:the )?(?:current )?occupancy/.test(findingText);
+  const legitimateMathConcern = /formula|operating expense|gross potential rent|gpr|greater than 100|negative|unsupported/.test(findingText);
+  const legacyLabelConcern = /break[- ]?even occupancy/.test(findingText);
+  return mentionsOccr && claimsEquality && !legitimateMathConcern && !legacyLabelConcern;
 }
 
 function isOnlyRecommendationAbsenceFalsePositive(finding) {
@@ -207,7 +195,7 @@ function isClearLimitationDisclosureFalsePositive(finding) {
 function filterAdvisoryFalsePositives(findings) {
   const rows = Array.isArray(findings) ? findings : [];
   return rows.filter((finding) => (
-    !isOnlyBreakEvenOccupancyFalsePositive(finding) &&
+    !isOnlyOccrOccupancyComparisonFalsePositive(finding) &&
     !isOnlyRecommendationAbsenceFalsePositive(finding) &&
     !isOnlyAllowedMethodologyLanguageFalsePositive(finding) &&
     !isClearLimitationDisclosureFalsePositive(finding)

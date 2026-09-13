@@ -1,3 +1,5 @@
+import { publicationNumber } from "./publication-format.js";
+import { calculateOperatingCostCoverageRatio, OPERATING_COST_COVERAGE_RATIO } from "./canonical-operating-metrics.js";
 const MANIFEST_SCHEMA_VERSION = 2;
 const MANIFEST_CONTRACT_VERSION = "report_quality_manifest_v2";
 const ALLOWED_CORE_SOURCE_MODES = new Set([
@@ -579,9 +581,9 @@ function buildCalculationReceipts(customerSurfaceModel) {
     sourceIdentityKey("core", coreRentRoll.fileId || coreRentRoll.file_id, coreRentRoll.artifactId || coreRentRoll.artifact_id),
   ]);
   const existingReceipts = Object.entries(asObject(customerSurfaceModel?.financialTruth)).map(([calculationKey, receipt]) => {
-    const numerator = Number(receipt?.numerator);
-    const denominator = Number(receipt?.denominator);
-    const result = Number(receipt?.result);
+    const numerator = publicationNumber(receipt?.numerator);
+    const denominator = publicationNumber(receipt?.denominator);
+    const result = publicationNumber(receipt?.result);
     const eligible = receipt?.displayReady === true && Number.isFinite(result);
     return {
       calculationKey,
@@ -592,7 +594,9 @@ function buildCalculationReceipts(customerSurfaceModel) {
       inputProvenance: unique([
         ...asArray(receipt?.provenance),
         ...asArray(receipt?.inputProvenance),
-        ...coreIdentityKeys,
+        ...(calculationKey === "operatingCostCoverageRatio"
+          ? (asArray(receipt?.sourceIdentityKeys).length ? receipt.sourceIdentityKeys : coreIdentityKeys.slice(0, 1))
+          : coreIdentityKeys),
       ]),
       units: text(receipt?.units) || (calculationKey.toLowerCase().includes("occupancy") ? "ratio" : null),
       inputs: {
@@ -694,17 +698,20 @@ export function validateReportQualityManifest(manifest, { requireFinal = false }
     if (calculation?.eligible !== true && calculation?.result !== null) {
       push("MANIFEST_INELIGIBLE_CALCULATION_RESULT", `${path}.result`, "Ineligible calculations must not expose a result.");
     }
-    if (calculation?.eligible === true && !Number.isFinite(Number(calculation?.result))) {
+    if (calculation?.eligible === true && !Number.isFinite(publicationNumber(calculation?.result))) {
       push("MANIFEST_ELIGIBLE_CALCULATION_RESULT_MISSING", `${path}.result`, "Eligible calculations require a finite result.");
     }
-    if (calculation?.calculationKey === "breakEvenOccupancy" && calculation?.eligible === true) {
-      const numerator = Number(calculation?.inputs?.numerator);
-      const denominator = Number(calculation?.inputs?.denominator);
-      const result = Number(calculation?.result);
-      if (!(Number.isFinite(numerator) && Number.isFinite(denominator) && denominator > 0)) {
-        push("MANIFEST_BREAK_EVEN_INPUTS_INVALID", `${path}.inputs`, "Break-even occupancy requires finite inputs and a positive denominator.");
-      } else if (Math.abs(numerator / denominator - result) > 1e-9) {
-        push("MANIFEST_BREAK_EVEN_RESULT_MISMATCH", `${path}.result`, "Break-even occupancy does not reconcile to its recorded inputs.");
+    if (calculation?.calculationKey === "operatingCostCoverageRatio" && calculation?.eligible === true) {
+      if (calculation.label !== OPERATING_COST_COVERAGE_RATIO.label || calculation.formula !== OPERATING_COST_COVERAGE_RATIO.formula || calculation.units !== "ratio") {
+        push("MANIFEST_OCCR_IDENTITY_INVALID", path, "Operating Cost Coverage Ratio must preserve its label, formula and ratio units.");
+      }
+      const numerator = publicationNumber(calculation?.inputs?.numerator);
+      const denominator = publicationNumber(calculation?.inputs?.denominator);
+      const result = publicationNumber(calculation?.result);
+      if (!(Number.isFinite(numerator) && numerator >= 0 && Number.isFinite(denominator) && denominator > 0)) {
+        push("MANIFEST_OCCR_INPUTS_INVALID", `${path}.inputs`, "Operating Cost Coverage Ratio requires a non-negative operating-expense numerator and positive GPR denominator.");
+      } else if (Math.abs(calculateOperatingCostCoverageRatio({ operatingExpenses: numerator, grossPotentialRent: denominator }) - result) > 1e-9) {
+        push("MANIFEST_OCCR_RESULT_MISMATCH", `${path}.result`, "Operating Cost Coverage Ratio does not reconcile to its recorded inputs.");
       }
     }
   }

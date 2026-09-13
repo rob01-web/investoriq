@@ -1,5 +1,16 @@
 # InvestorIQ ELITE Report Blueprint
 
+## 2026-09-13 BLUEPRINT CONTROL NOTE - REPOSITORY CERTIFICATION
+
+The report blueprint below remains preserved. During repository certification, implementation must conform to `04_PRODUCT_CONSTITUTION.md`.
+
+Do not allow stale report-polish code, archived tests, or prior handoff wording to silently override product admission, Source Truth, calculation ownership, content-driven pagination, customer-copy punctuation, or cross-product continuity.
+
+The older handoff history contains conflicting instructions about the Underwriting title and cover gold dot. Those are now explicit owner-controlled open decisions. They must not be toggled by legacy code or tests during certification.
+
+---
+
+
 ## 2026-09-12 CURRENT DELIVERY CHECKPOINT
 
 The report blueprint remains governed and closed; this document is not being reopened for model R&D. Production now runs certified commit `2005e6361e348b87a61d9470759819c5f000c5d` (`hotfix-worker-queue-starvation-20260911-r1`) at [investoriq.tech](https://investoriq.tech). The final repair makes worker and Dashboard outcomes customer-visible, including paused/dead-letter explanations, while preserving the canonical report-contract and security boundaries.

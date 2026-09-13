@@ -126,13 +126,13 @@ assert.equal(baseline.sourceTruthReceipt.coreSourceMode, "dual_source_core");
 assert.equal(baseline.metrics.noi.value, 792000);
 assert.equal(baseline.metrics.expenseRatio.value, 0.4);
 assert.equal(baseline.metrics.noiMargin.value, 0.6);
-assert.equal(baseline.metrics.breakEvenOccupancy.value, 528000 / 1440000, "underlying formula remains unchanged");
-assert.equal(baseline.metrics.breakEvenOccupancy.label, "Operating Cost Coverage Ratio");
-assert.match(baseline.metrics.breakEvenOccupancy.qualification, /operating expenses \/ accepted T12 gross potential rent/i);
-assert.equal(baseline.metrics.occupancyBreakEvenSpread.displayReady, false);
-assert.equal(baseline.metrics.occupancyBreakEvenSpread.value, null);
-assert.equal((baseline.investmentCase.opportunitySignals || []).some((item) => item.code === "OCCUPANCY_ABOVE_BREAK_EVEN"), false);
-assert.equal((baseline.principalRisksAndConstraints.items || []).some((item) => item.code === "OCCUPANCY_BELOW_BREAK_EVEN"), false);
+assert.equal(baseline.metrics.operatingCostCoverageRatio.value, 528000 / 1440000);
+assert.equal(baseline.metrics.operatingCostCoverageRatio.label, "Operating Cost Coverage Ratio");
+assert.equal(baseline.metrics.operatingCostCoverageRatio.formula, "total_operating_expenses / gross_potential_rent");
+assert.equal(baseline.metrics.breakEvenOccupancy, undefined);
+assert.equal(baseline.metrics.occupancyBreakEvenSpread, undefined);
+assert.equal((baseline.investmentCase.opportunitySignals || []).some((item) => /BREAK_EVEN/.test(item.code || "")), false);
+assert.equal((baseline.principalRisksAndConstraints.items || []).some((item) => /BREAK_EVEN/.test(item.code || "")), false);
 
 const reconciled = build({ sourceTruth: { source_reconciliation_state: {
   status: "source_reconciliation_required",

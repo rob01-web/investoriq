@@ -266,7 +266,7 @@ export function buildInstitutionalGate10ReportFixture(jobId = 'gate-10-report-jo
     noi: 945000,
     expenseRatio: 0.37,
     noiMargin: 0.63,
-    breakEvenOccupancy: 555000 / 1612800,
+    operatingCostCoverageRatio: 555000 / 1612800,
     purchasePrice: 13500000,
     goingInCapRate: 0.07,
   };
@@ -297,6 +297,7 @@ export function buildInstitutionalGate10ReportFixture(jobId = 'gate-10-report-jo
     reportMode: 'v1_core',
   });
   const customerSurfaceModel = buildAcquisitionMemoV2CustomerSurfaceModel({
+    sourceTruthPackage,
     canonicalSourcePackage: sourcePackage,
     acquisitionMemoProjection,
     bossContract,

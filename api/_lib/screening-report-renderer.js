@@ -23,6 +23,12 @@ import {
   SCREENING_REPORT_IDENTITY,
   UNDERWRITING_REPORT_IDENTITY,
 } from "./report-identity-authority.js";
+import {
+  OPERATING_COST_COVERAGE_RATIO,
+  buildOperatingCostCoverageRatioReceipt,
+  classifyOperatingCostCoverageRatio,
+  formatOperatingCostCoverageRatio,
+} from "./canonical-operating-metrics.js";
 
 const DATA_NOT_AVAILABLE = "Not assessed";
 
@@ -123,7 +129,6 @@ function buildScreeningExecVerdictExpansion({
   screeningVisibleClassificationForConsumers = "",
   expenseRatioR = null,
   noiMarginR = null,
-  breakEvenOccR = null,
   sourceReconciliationNarrativePolicy = null,
   hasSourceReconciliationVariance = false,
   screeningExplanation = "",
@@ -164,19 +169,29 @@ function buildScreeningExecClassificationRationale({
   screeningVisibleClassificationForConsumers = "",
   expenseRatioR = null,
   noiMarginR = null,
-  breakEvenOccR = null,
+  operatingCostCoverageRatioR = null,
   screeningExplanation = "",
   screeningClass = "",
 } = {}) {
   if (reportMode !== "screening_v1") return "";
   const erStr = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
   const nmStr = Number.isFinite(noiMarginR) ? formatPercent1(noiMarginR) : null;
-  const beoStr = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
+  const occrStr = Number.isFinite(operatingCostCoverageRatioR)
+    ? formatOperatingCostCoverageRatio(operatingCostCoverageRatioR)
+    : null;
+  const occrBand = classifyOperatingCostCoverageRatio(operatingCostCoverageRatioR);
+  const occrLabel = OPERATING_COST_COVERAGE_RATIO.label;
+  const sensitizedThresholdText = formatOperatingCostCoverageRatio(
+    OPERATING_COST_COVERAGE_RATIO.thresholds.sensitized
+  );
+  const fragileThresholdText = formatOperatingCostCoverageRatio(
+    OPERATING_COST_COVERAGE_RATIO.thresholds.fragile
+  );
   if (screeningVisibleClassificationForConsumers === "Stable") {
     const parts = [];
     if (erStr) parts.push(`expense ratio of ${erStr}`);
     if (nmStr) parts.push(`NOI margin of ${nmStr}`);
-    if (beoStr) parts.push(`break-even occupancy of ${beoStr}`);
+    if (occrStr) parts.push(`${occrLabel} of ${occrStr}`);
     return parts.length > 0
       ? `Classified STABLE: ${parts.join(", ")} are within institutional operating thresholds.`
       : "Classified STABLE: operating metrics remain within defined screening thresholds.";
@@ -185,7 +200,7 @@ function buildScreeningExecClassificationRationale({
     const breaches = [];
     if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55 && erStr) breaches.push(`elevated operating expense burden (${erStr}) breaches the sensitized threshold`);
     if (Number.isFinite(noiMarginR) && noiMarginR < 0.45 && nmStr) breaches.push(`compressed NOI margin (${nmStr}) breaches the sensitized threshold`);
-    if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75 && beoStr) breaches.push(`break-even occupancy of ${beoStr} exceeds the 75.0% sensitized threshold`);
+    if (occrBand === "Sensitized" && occrStr) breaches.push(`${occrLabel} of ${occrStr} exceeds the ${sensitizedThresholdText} sensitized threshold`);
     return breaches.length > 0
       ? `Operating profile classified as SENSITIZED: ${breaches.join("; ")}.`
       : `Operating profile classified as SENSITIZED: ${screeningExplanation}`;
@@ -194,7 +209,7 @@ function buildScreeningExecClassificationRationale({
     const breaches = [];
     if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65 && erStr) breaches.push(`expense ratio of ${erStr} breaches the 65.0% fragile threshold`);
     if (Number.isFinite(noiMarginR) && noiMarginR < 0.35 && nmStr) breaches.push(`NOI margin of ${nmStr} is critically compressed`);
-    if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85 && beoStr) breaches.push(`break-even occupancy of ${beoStr} breaches the 85.0% fragile threshold`);
+    if (occrBand === "Fragile" && occrStr) breaches.push(`${occrLabel} of ${occrStr} breaches the ${fragileThresholdText} fragile threshold`);
     return breaches.length > 0
       ? `Classified FRAGILE: ${breaches.join("; ")}.`
       : `Classified FRAGILE: ${screeningExplanation}`;
@@ -631,15 +646,26 @@ export function buildScreeningNoiStabilityHtml({
   rentRollPayload,
   formatCurrency,
   sourceReconciliationState = null,
+  operatingCostCoverageRatioReceipt = null,
 } = {}) {
   const egi = coerceNumber(t12Payload?.effective_gross_income);
   const opex = coerceNumber(t12Payload?.total_operating_expenses);
   const noi = coerceNumber(t12Payload?.net_operating_income);
   const grossPotentialRent = resolveCanonicalT12GprValue(t12Payload);
+  const canonicalOccrReceipt =
+    operatingCostCoverageRatioReceipt?.key === OPERATING_COST_COVERAGE_RATIO.key &&
+    operatingCostCoverageRatioReceipt?.displayReady === true
+      ? operatingCostCoverageRatioReceipt
+      : buildOperatingCostCoverageRatioReceipt({
+          operatingExpenses: opex,
+          grossPotentialRent,
+          operatingExpensesAuthorityPath: "accepted_t12.total_operating_expenses",
+          grossPotentialRentAuthorityPath: "accepted_t12.gross_potential_rent",
+        });
   const rows = [];
   if (Number.isFinite(egi) && Number.isFinite(noi) && egi > 0) rows.push(`<tr><td>NOI Margin</td><td>${formatPercent1(noi / egi)}</td></tr>`);
   if (Number.isFinite(egi) && Number.isFinite(opex) && egi > 0) rows.push(`<tr><td>Expense Sensitivity</td><td>${formatPercent1(1 - opex / egi)}</td></tr>`);
-  if (Number.isFinite(opex) && Number.isFinite(grossPotentialRent) && grossPotentialRent > 0) rows.push(`<tr><td>Operating Cost Coverage Ratio</td><td>${formatPercent1(opex / grossPotentialRent)}</td></tr>`);
+  if (canonicalOccrReceipt.displayReady) rows.push(`<tr><td>${escapeHtml(canonicalOccrReceipt.label)}</td><td>${formatOperatingCostCoverageRatio(canonicalOccrReceipt.value)}</td></tr>`);
   const sourceReconciliationRenderState = buildSourceReconciliationRenderState({ sourceReconciliationState });
   const rrVsGprDisplay = sourceReconciliationRenderState?.variance_display ?? null;
   if (sourceReconciliationRenderState?.renderable) rows.push(`<tr><td>Rent Roll vs T12 GPR Variance</td><td>${rrVsGprDisplay}</td></tr>`);
@@ -728,11 +754,12 @@ export function buildScreeningCustomerOutput({
   execOpexText = DATA_NOT_AVAILABLE,
   execOpexRatioText = DATA_NOT_AVAILABLE,
   execNoiMarginText = DATA_NOT_AVAILABLE,
-  execBreakEvenText = DATA_NOT_AVAILABLE,
+  execOperatingCostCoverageText = DATA_NOT_AVAILABLE,
   execOccupancy = null,
   expenseRatioR = null,
   noiMarginR = null,
-  breakEvenOccR = null,
+  operatingCostCoverageRatioR = null,
+  operatingCostCoverageRatioReceipt = null,
   marketRentPremiumRatio = null,
   currentDebtDscrForDisplay = null,
   screeningHasSufficientData = true,
@@ -897,6 +924,7 @@ export function buildScreeningCustomerOutput({
     rentRollPayload,
     formatCurrency,
     sourceReconciliationState,
+    operatingCostCoverageRatioReceipt,
   });
   html = replaceAll(html, "{{SCREENING_EXPENSE_STRUCTURE_BLOCK}}", screeningExpenseHtml);
   html = replaceAll(html, "{{SCREENING_NOI_STABILITY_BLOCK}}", screeningNoiHtml);
@@ -1049,7 +1077,6 @@ export function buildScreeningCustomerOutput({
       screeningVisibleClassificationForConsumers,
       expenseRatioR,
       noiMarginR,
-      breakEvenOccR,
       sourceReconciliationNarrativePolicy,
       hasSourceReconciliationVariance,
       screeningExplanation,
@@ -1059,7 +1086,7 @@ export function buildScreeningCustomerOutput({
       screeningVisibleClassificationForConsumers,
       expenseRatioR,
       noiMarginR,
-      breakEvenOccR,
+      operatingCostCoverageRatioR,
       screeningExplanation,
       screeningClass,
     });

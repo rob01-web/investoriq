@@ -1,0 +1,2792 @@
+[
+  {
+    "path": "scripts/phase8a-slice-c-decision-snapshot-patch.mjs",
+    "line": 56,
+    "classification": "historical/static fixture evidence",
+    "code": "    (d.breakEvenOccupancy !== null && d.breakEvenOccupancy >= 0.95)"
+  },
+  {
+    "path": "scripts/phase8a-slice-c-decision-snapshot-patch.mjs",
+    "line": 93,
+    "classification": "historical/static fixture evidence",
+    "code": "  const cushion = d.occupancy !== null && d.breakEvenOccupancy !== null"
+  },
+  {
+    "path": "scripts/phase8a-slice-c-decision-snapshot-patch.mjs",
+    "line": 94,
+    "classification": "historical/static fixture evidence",
+    "code": "    ? \\`${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} pp\\`"
+  },
+  {
+    "path": "scripts/phase8a-slice-c-decision-snapshot-patch.mjs",
+    "line": 127,
+    "classification": "historical/static fixture evidence",
+    "code": "      screeningSnapshotCell(\"Break-Even Occupancy\", formatPercent(d.breakEvenOccupancy)),"
+  },
+  {
+    "path": "scripts/phase8a-slice-c-decision-snapshot-patch.mjs",
+    "line": 308,
+    "classification": "historical/static fixture evidence",
+    "code": "    strategyFit = budgetToPurchasePrice !== null && budgetToPurchasePrice <= 0.15 && plannedUnitShare !== null && plannedUnitShare <= 0.70"
+  },
+  {
+    "path": "scripts/phase8-visual-certification-fixtures.js",
+    "line": 206,
+    "classification": "historical/static fixture evidence",
+    "code": "Lender / Origination Fee 0.85%"
+  },
+  {
+    "path": "scripts/phase8-visual-certification-fixtures.js",
+    "line": 334,
+    "classification": "historical/static fixture evidence",
+    "code": "        ltv: 0.70,"
+  },
+  {
+    "path": "scripts/phase8-visual-certification-fixtures.js",
+    "line": 443,
+    "classification": "historical/static fixture evidence",
+    "code": "          ltv: 0.70,"
+  },
+  {
+    "path": "api/html/sample-report.html",
+    "line": 1172,
+    "classification": "historical/static fixture evidence",
+    "code": "          alt=\"Break-Even Occupancy Analysis\""
+  },
+  {
+    "path": "api/html/sample-report.html",
+    "line": 1177,
+    "classification": "historical/static fixture evidence",
+    "code": "        <strong>InvestorIQ Estimate:</strong> Under the Base Case, the asset remains comfortably above break-even occupancy and DSCR thresholds. In downside scenarios, DSCR approaches lender minimums but does not fall materially below break-even, reinforcing the importance of conservative leverage and disciplined operating management."
+  },
+  {
+    "path": "api/html/sample-report.html",
+    "line": 1290,
+    "classification": "historical/static fixture evidence",
+    "code": "          <td>0.75</td>"
+  },
+  {
+    "path": "api/html/sample-report.html",
+    "line": 1318,
+    "classification": "historical/static fixture evidence",
+    "code": "          <td>0.80</td>"
+  },
+  {
+    "path": "api/html/sample-report.html",
+    "line": 1383,
+    "classification": "historical/static fixture evidence",
+    "code": "        <tr><td>Year 3</td><td>$35,830</td><td>0.75</td><td>$26,870</td></tr>"
+  },
+  {
+    "path": "scripts/phase8a-slice-c-patch.mjs",
+    "line": 239,
+    "classification": "historical/static fixture evidence",
+    "code": "  if (d.occupancy !== null && d.breakEvenOccupancy !== null) strengths.push(\\`Operating occupancy cushion is \\${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} percentage points.\\`);"
+  },
+  {
+    "path": "scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs",
+    "line": 5,
+    "classification": "historical/static fixture evidence",
+    "code": "const before = `  const cushion = d.occupancy !== null && d.breakEvenOccupancy !== null\\n    ? \\`${'${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)}'} pp\\`\\n    : \"Not available\";`;"
+  },
+  {
+    "path": "scripts/phase8a-slice-c-operating-cushion-compat-patch.mjs",
+    "line": 6,
+    "classification": "historical/static fixture evidence",
+    "code": "const after = `  const cushion = d.occupancy !== null && d.breakEvenOccupancy !== null\\n    ? \\`${'${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)}'} pp above break-even\\`\\n    : \"Not available\";`;"
+  },
+  {
+    "path": "scripts/generateCharts.js",
+    "line": 130,
+    "classification": "historical/static fixture evidence",
+    "code": "            \"rgba(15, 35, 24, 0.80)\","
+  },
+  {
+    "path": "scripts/generateCharts.js",
+    "line": 131,
+    "classification": "historical/static fixture evidence",
+    "code": "            \"rgba(201, 168, 76, 0.85)\","
+  },
+  {
+    "path": "scripts/generateCharts.js",
+    "line": 345,
+    "classification": "historical/static fixture evidence",
+    "code": "            \"rgba(201, 168, 76, 0.85)\","
+  },
+  {
+    "path": "scripts/generateCharts.js",
+    "line": 465,
+    "classification": "historical/static fixture evidence",
+    "code": "            \"rgba(15, 35, 24, 0.75)\""
+  },
+  {
+    "path": "scripts/generateCharts.js",
+    "line": 527,
+    "classification": "historical/static fixture evidence",
+    "code": "    v >= 0 ? \"rgba(201, 168, 76, 0.90)\" : \"rgba(15, 35, 24, 0.85)\""
+  },
+  {
+    "path": "scripts/generateCharts.js",
+    "line": 884,
+    "classification": "historical/static fixture evidence",
+    "code": "    v >= 0 ? \"rgba(201, 168, 76, 0.90)\" : \"rgba(15, 35, 24, 0.85)\""
+  },
+  {
+    "path": "tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/FINAL_ATTACK_TEST_8_expected_result.txt",
+    "line": 16,
+    "classification": "historical/static fixture evidence",
+    "code": "- Break-Even Occupancy: 34.4% (T12 Operating Expenses / T12 Gross Potential Rent)"
+  },
+  {
+    "path": "tests/investoriq_validation_fixtures_UPLOADABLE/Final Attack Test 8/FINAL_ATTACK_TEST_8_expected_result.txt",
+    "line": 30,
+    "classification": "historical/static fixture evidence",
+    "code": "- Lender fee: 0.85%"
+  },
+  {
+    "path": "tests/qa/institutional-investment-committee-memo-component-evidence-contract-smoke.js",
+    "line": 67,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          'Lender Fee 0.85%',"
+  },
+  {
+    "path": "api/_lib/publication-format.js",
+    "line": 36,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "export function publicationCushion(occupancy, breakEven) {"
+  },
+  {
+    "path": "api/_lib/report-quality-manifest.js",
+    "line": 700,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    if (calculation?.calculationKey === \"breakEvenOccupancy\" && calculation?.eligible === true) {"
+  },
+  {
+    "path": "api/_lib/qa-review.js",
+    "line": 54,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  \"Do not flag break-even occupancy as contradictory merely because it differs from current occupancy.\","
+  },
+  {
+    "path": "api/_lib/qa-review.js",
+    "line": 55,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  \"Current occupancy and break-even occupancy are distinct metrics.\","
+  },
+  {
+    "path": "api/_lib/qa-review.js",
+    "line": 56,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  \"A lower break-even occupancy than current occupancy is generally an operating cushion, not a contradiction.\","
+  },
+  {
+    "path": "api/_lib/qa-review.js",
+    "line": 149,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    text.includes(\"break-even occupancy is stated as 31.5%, which is inconsistent with the reported current occupancy of 96.0%.\") ||"
+  },
+  {
+    "path": "api/_lib/qa-review.js",
+    "line": 150,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    text.includes(\"verify the calculation of break-even occupancy to ensure it aligns with the current occupancy.\");"
+  },
+  {
+    "path": "tests/qa/source-authority-smoke.js",
+    "line": 22,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    { fileId: \"assumptions-file\", semantic_doc_role: \"purchase_assumptions\", debt_basis: \"proposed_acquisition\", payload: { text: \"Purchase Assumptions / Proposed Acquisition Financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Loan Amount $9,450,000\\nLTV 70%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\\nThis is not existing/current debt.\" } },"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract.js",
+    "line": 26,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  for (const receipt of [contract?.metrics?.breakEvenOccupancy, contract?.noiAnalysis?.breakEvenOccupancy]) {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract.js",
+    "line": 33,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  for (const receipt of [contract?.metrics?.occupancyBreakEvenSpread, contract?.noiAnalysis?.occupancyBreakEvenSpread]) {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract.js",
+    "line": 48,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      (item) => item?.code !== \"OCCUPANCY_BREAK_EVEN_POSITION\""
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract.js",
+    "line": 54,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      (key) => key !== \"occupancyBreakEvenSpread\""
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-renderer-base.js",
+    "line": 319,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  \"breakEvenOccupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-renderer-base.js",
+    "line": 320,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  \"occupancyBreakEvenSpread\","
+  },
+  {
+    "path": "tests/qa/source-report-coverage-qa-smoke.js",
+    "line": 144,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        occupancy: 0.75,"
+  },
+  {
+    "path": "tests/qa/source-report-coverage-qa-smoke.js",
+    "line": 1099,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/source-report-coverage-qa-smoke.js",
+    "line": 1132,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/full-underwriting-quality-manifest-machine-regression.js",
+    "line": 81,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: {"
+  },
+  {
+    "path": "tests/qa/full-underwriting-quality-manifest-machine-regression.js",
+    "line": 82,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      label: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "tests/qa/full-underwriting-quality-manifest-machine-regression.js",
+    "line": 83,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      formula: \"total_operating_expenses / gross_potential_rent\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-driver-analysis-v1.js",
+    "line": 474,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        key: \"breakEvenOccupancy\","
+  },
+  {
+    "path": "tests/qa/institutional-investment-committee-memo-authority-contract-smoke.js",
+    "line": 65,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          'Lender Fee 0.85%',"
+  },
+  {
+    "path": "api/_lib/full-underwriting-debt-intelligence-v1.js",
+    "line": 38,
+    "classification": "separate debt-inclusive contract; preserve formula/keys",
+    "code": "    receipt.formula = \"(accepted_t12_operating_expenses + annual_debt_service) / accepted_t12_gross_potential_rent\";"
+  },
+  {
+    "path": "tests/qa/full-underwriting-operating-intelligence-contract-smoke.js",
+    "line": 70,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.breakEvenOccupancy.value, 555000 / 1612800);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-operating-intelligence-contract-smoke.js",
+    "line": 71,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.breakEvenOccupancy.label, \"Operating Cost Coverage Ratio\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-operating-intelligence-contract-smoke.js",
+    "line": 72,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(contract.metrics.breakEvenOccupancy.qualification, /operating expenses \\/ accepted T12 gross potential rent/i);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-operating-intelligence-contract-smoke.js",
+    "line": 73,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.occupancyBreakEvenSpread.displayReady, false);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-operating-intelligence-contract-smoke.js",
+    "line": 74,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.occupancyBreakEvenSpread.value, null);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-operating-intelligence-contract-smoke.js",
+    "line": 87,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.operatingInterpretation.items.some((item) => item.code === \"OCCUPANCY_BREAK_EVEN_POSITION\"), false);"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-role-reconciler-smoke.js",
+    "line": 104,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.82,"
+  },
+  {
+    "path": "tests/qa/institutional-scenario-engine-input-authority-contract-smoke.js",
+    "line": 69,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          'Lender Fee 0.85%',"
+  },
+  {
+    "path": "tests/qa/full-underwriting-gates-full-render-smoke.js",
+    "line": 217,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/full-underwriting-gates-full-render-smoke.js",
+    "line": 251,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/full-underwriting-gates-full-render-smoke.js",
+    "line": 333,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js",
+    "line": 123,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    (purchaseAssumptionsPartial ? \"\" : \"\\nLender Fee 0.85%\");"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js",
+    "line": 291,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "            \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-retest18-local-artifact-replay-smoke.js",
+    "line": 355,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/h7-support-taxonomy-contract-smoke.js",
+    "line": 154,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/report-contract-qa-smoke.js",
+    "line": 1220,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    \"<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr><tr><td>Lender Fee</td><td>0.85%</td></tr></table>\","
+  },
+  {
+    "path": "tests/qa/report-contract-qa-smoke.js",
+    "line": 1252,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    \"<table><tr><td>Purchase Price</td><td>$2,840,000</td></tr><tr><td>Stated Acquisition Loan Amount</td><td>$2,130,000</td></tr><tr><td>Lender Fee</td><td>0.85%</td></tr></table>\","
+  },
+  {
+    "path": "tests/qa/report-contract-qa-smoke.js",
+    "line": 1623,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    \"<p>Lender Fee 0.85%</p>\","
+  },
+  {
+    "path": "tests/qa/report-contract-qa-smoke.js",
+    "line": 3480,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/report-quality-manifest-smoke.js",
+    "line": 37,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    lender_fee_percent: { excerpt: \"Lender Fee 0.85%\" },"
+  },
+  {
+    "path": "tests/qa/report-quality-manifest-smoke.js",
+    "line": 229,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: {"
+  },
+  {
+    "path": "tests/qa/report-quality-manifest-smoke.js",
+    "line": 230,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      label: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "tests/qa/report-quality-manifest-smoke.js",
+    "line": 231,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      formula: \"total_operating_expenses / gross_potential_rent\","
+  },
+  {
+    "path": "tests/qa/report-quality-manifest-smoke.js",
+    "line": 358,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "const breakEven = candidate.calculations.find((calculation) => calculation.calculationKey === \"breakEvenOccupancy\");"
+  },
+  {
+    "path": "tests/qa/report-quality-manifest-smoke.js",
+    "line": 361,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(breakEven.formula, \"total_operating_expenses / gross_potential_rent\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-debt-intelligence-renderer-smoke.js",
+    "line": 15,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    proposedFinancingContext: { factAvailability: { sourceBacked: true }, facts: { proposed_loan_amount: 9450000, ltv: 0.70, interest_rate: 0.0595, amortization_years: 30, lender_fee_percent: 0.0085 } },"
+  },
+  {
+    "path": "tests/qa/full-underwriting-debt-intelligence-renderer-smoke.js",
+    "line": 77,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "check(!/\\bBreak[- ]Even Occupancy\\b/i.test(html), \"debt customer surface does not collide with historical Break-Even Occupancy label\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-elite10b2-committee-opening-system-smoke.js",
+    "line": 38,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "for (const key of [\"units\", \"occupancy\", \"noi\", \"purchasePrice\", \"goingInCapRate\", \"breakEvenOccupancy\"]) {"
+  },
+  {
+    "path": "tests/qa/full-underwriting-elite10b2-committee-opening-system-smoke.js",
+    "line": 41,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(metricKeys.includes(\"occupancyBreakEvenSpread\"), false, \"cross-basis occupancy spread must not render\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-elite10b2-committee-opening-system-smoke.js",
+    "line": 89,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(chapter1Contract.metrics.occupancyBreakEvenSpread.displayReady, false);"
+  },
+  {
+    "path": "tests/qa/acquisition-triangle-collapse-finalhtml-smoke.js",
+    "line": 15,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/institutional-investment-committee-memo-methodology-contract-smoke.js",
+    "line": 66,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          'Lender Fee 0.85%',"
+  },
+  {
+    "path": "tests/qa/deterministic-debt-service-calculation-smoke.js",
+    "line": 91,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    lender_fee_percent: evidence(0.85, 'Lender Fee: 0.85%', 0.0085),"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-boss-contract-edge-smoke.js",
+    "line": 194,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/support-document-authority-cutover-smoke.js",
+    "line": 25,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/support-document-authority-cutover-smoke.js",
+    "line": 85,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        lender_fee_percent: 0.85,"
+  },
+  {
+    "path": "tests/qa/support-document-authority-cutover-smoke.js",
+    "line": 140,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-elite-contract-smoke.js",
+    "line": 129,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(baseline.metrics.breakEvenOccupancy.value, 528000 / 1440000, \"underlying formula remains unchanged\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-elite-contract-smoke.js",
+    "line": 130,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(baseline.metrics.breakEvenOccupancy.label, \"Operating Cost Coverage Ratio\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-elite-contract-smoke.js",
+    "line": 131,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(baseline.metrics.breakEvenOccupancy.qualification, /operating expenses \\/ accepted T12 gross potential rent/i);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-elite-contract-smoke.js",
+    "line": 132,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(baseline.metrics.occupancyBreakEvenSpread.displayReady, false);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-elite-contract-smoke.js",
+    "line": 133,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(baseline.metrics.occupancyBreakEvenSpread.value, null);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-driver-analysis-v1-smoke.js",
+    "line": 118,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "close(occupancy.stressInput.value, 0.85, 1e-12, \"occupancy stress\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-driver-analysis-v1-smoke.js",
+    "line": 148,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "close(contract.decisionInterpretation.combinedDownsideContext.scenarioOccupancy, 0.85, 1e-12, \"compound occupancy\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-driver-analysis-v1-smoke.js",
+    "line": 156,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "check(contract.unsupportedTargetOutputs.some((row) => row.key === \"breakEvenOccupancy\"), \"break-even target deferred\");"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-handler-smoke.js",
+    "line": 101,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-handler-smoke.js",
+    "line": 176,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-handler-smoke.js",
+    "line": 278,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        { id: \"artifact-assumptions\", file_id: \"assumptions-file\", type: \"document_text_extracted\", payload: { source_file_id: \"assumptions-file\", source_original_filename: \"Stonebridge_Assumptions.pdf\", document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\" } },"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-source-package-smoke.js",
+    "line": 22,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    { fileId: \"assumptions-file\", semantic_doc_role: \"purchase_assumptions\", debt_basis: \"proposed_acquisition\", payload: { text: \"Purchase Assumptions / Proposed Acquisition Financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Loan Amount $9,450,000\\nLTV 70%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\\nThis is not existing/current debt.\" } },"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-source-package-smoke.js",
+    "line": 93,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      [{ fileId: \"assumptions-file\", semantic_doc_role: \"current_debt\", debt_basis: \"current_debt\", payload: { text: \"Purchase Assumptions / Proposed Acquisition Financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Loan Amount $9,450,000\\nLTV 70%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\\nThis is not existing/current debt.\" } }]"
+  },
+  {
+    "path": "tests/qa/publication-math-continuity-smoke.js",
+    "line": 6,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "import { publicationMoney, publicationPercent, publicationCushion } from '../../api/_lib/publication-format.js';"
+  },
+  {
+    "path": "tests/qa/publication-math-continuity-smoke.js",
+    "line": 36,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.breakEvenOccupancy.value, 555000 / 1612800);"
+  },
+  {
+    "path": "tests/qa/publication-math-continuity-smoke.js",
+    "line": 64,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(publicationCushion(0.3, 0.4), '10.0 pp below break-even');"
+  },
+  {
+    "path": "tests/qa/premium-acquisition-underwriting-v1-receipt-map-smoke.js",
+    "line": 83,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      lender_fee_percent: evidence(0.85, 'Lender Fee 0.85%', 0.0085),"
+  },
+  {
+    "path": "tests/qa/canonical-operating-cost-coverage-ratio-smoke.js",
+    "line": 26,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  \"total_operating_expenses / gross_potential_rent\""
+  },
+  {
+    "path": "tests/qa/canonical-operating-cost-coverage-ratio-smoke.js",
+    "line": 28,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(classifyOperatingCostCoverageRatio(0.75), \"Stable\");"
+  },
+  {
+    "path": "tests/qa/canonical-operating-cost-coverage-ratio-smoke.js",
+    "line": 30,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(classifyOperatingCostCoverageRatio(0.85), \"Sensitized\");"
+  },
+  {
+    "path": "tests/qa/canonical-operating-cost-coverage-ratio-smoke.js",
+    "line": 57,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(formatOperatingCostCoverageRatio(0.75), \"75.0%\");"
+  },
+  {
+    "path": "tests/qa/canonical-operating-cost-coverage-ratio-smoke.js",
+    "line": 150,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  /const\\s+breakEvenOccupancy\\s*=/.test(implSource),"
+  },
+  {
+    "path": "tests/qa/canonical-operating-cost-coverage-ratio-smoke.js",
+    "line": 155,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  implSource.includes(\"operatingCushionPct\"),"
+  },
+  {
+    "path": "api/_lib/screening-report-renderer.js",
+    "line": 595,
+    "classification": "unrelated threshold; preserve",
+    "code": "  if (Number.isFinite(topIncomeLineConcentration) && topIncomeLineConcentration >= 0.85) bullets.push(`Top income line concentration is ${formatPercent1(topIncomeLineConcentration)} of EGI${topIncomeLineConcentration > 1 ? \" (EGI net of vacancy / credit-loss offsets)\" : \"\"} (concentration flag).`);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-reconciliation-separation-smoke.js",
+    "line": 71,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.breakEvenOccupancy.label, \"Operating Cost Coverage Ratio\");"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-reconciliation-separation-smoke.js",
+    "line": 72,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(contract.metrics.breakEvenOccupancy.qualification, /operating expenses \\/ accepted T12 gross potential rent/i);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-reconciliation-separation-smoke.js",
+    "line": 73,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.occupancyBreakEvenSpread.displayReady, false);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-reconciliation-separation-smoke.js",
+    "line": 74,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(contract.metrics.occupancyBreakEvenSpread.value, null);"
+  },
+  {
+    "path": "tests/qa/institutional-investment-committee-memo-dependency-sequencing-contract-smoke.js",
+    "line": 68,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          'Lender Fee 0.85%',"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-final-render-smoke.js",
+    "line": 23,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    { fileId: \"assumptions-file\", semantic_doc_role: \"purchase_assumptions\", debt_basis: \"proposed_acquisition\", payload: { text: \"Purchase Assumptions / Proposed Acquisition Financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Loan Amount $9,450,000\\nLTV 70%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\\nThis is not existing/current debt.\" } },"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-violation-routing-smoke.js",
+    "line": 92,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nRate 5.95%\\nAmortization 30 years\\nFee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-violation-routing-smoke.js",
+    "line": 158,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-violation-routing-smoke.js",
+    "line": 195,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/deterministic-debt-risk-analysis-smoke.js",
+    "line": 117,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    lender_fee_percent: evidence(0.85, 'Lender Fee 0.85%', 0.0085),"
+  },
+  {
+    "path": "tests/qa/retest29-publish-or-collapse-regression-smoke.js",
+    "line": 97,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 555000 / 1612800,"
+  },
+  {
+    "path": "tests/qa/retest29-publish-or-collapse-regression-smoke.js",
+    "line": 165,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEven: customerSurfaceModel.financialTruth.breakEvenOccupancy,"
+  },
+  {
+    "path": "tests/qa/support-document-authority-adversarial-matrix-smoke.js",
+    "line": 19,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/institutional-financial-intelligence-integration-smoke.js",
+    "line": 86,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    lender_fee_percent: evidence(0.85, 'Lender Fee 0.85%', 0.0085),"
+  },
+  {
+    "path": "tests/qa/institutional-financial-intelligence-integration-smoke.js",
+    "line": 280,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 555000 / 1718400,"
+  },
+  {
+    "path": "tests/qa/institutional-financial-intelligence-integration-smoke.js",
+    "line": 352,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEven: customerSurfaceModel.financialTruth.breakEvenOccupancy,"
+  },
+  {
+    "path": "tests/qa/institutional-financial-intelligence-integration-smoke.js",
+    "line": 362,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEven: customerSurfaceModel.financialTruth.breakEvenOccupancy,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-retest15-regression-smoke.js",
+    "line": 178,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "              \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-retest15-regression-smoke.js",
+    "line": 224,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js",
+    "line": 56,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    <tr><td>Break-Even Occupancy</td><td>34.4%</td></tr>"
+  },
+  {
+    "path": "tests/qa/p0c-final-pdf-publication-quality-boss-smoke.js",
+    "line": 132,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  \"Break-Even Occupancy 34.4%\","
+  },
+  {
+    "path": "tests/qa/full-underwriting-elite10-full-report-polish-smoke.js",
+    "line": 70,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "noMatch(text, /Occupancy less Break-Even Occupancy/i, \"mechanical occupancy spread label is removed\");"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 83,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.numerator, 555000);"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 84,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.denominator, 1612800);"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 85,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.result, 555000 / 1612800);"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 86,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.displayReady, true);"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 105,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEven: fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy,"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 121,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEven: fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy,"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 159,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === \"breakEvenOccupancy\").inputs.numerator, 555000);"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 160,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === \"breakEvenOccupancy\").inputs.denominator, 1612800);"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 161,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === \"breakEvenOccupancy\").result, 555000 / 1612800);"
+  },
+  {
+    "path": "tests/qa/h12-h13-full-underwriting-identity-source-binding-smoke.js",
+    "line": 163,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  [...manifestCandidate.calculations.find((calculation) => calculation.calculationKey === \"breakEvenOccupancy\").inputProvenance].sort(),"
+  },
+  {
+    "path": "tests/qa/refi-gate-not-assessed-finalhtml-smoke.js",
+    "line": 24,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/p0a-financial-truth-egress-smoke.js",
+    "line": 98,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 555000 / 1612800,"
+  },
+  {
+    "path": "tests/qa/p0a-financial-truth-egress-smoke.js",
+    "line": 156,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(finalHtml, /Break-Even Occupancy<\\/td><td style=\"font-weight:600;\">34\\.4%<\\/td>/i);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-quality-manifest-v1-smoke.js",
+    "line": 57,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: { result: 0.38, displayReady: true },"
+  },
+  {
+    "path": "tests/qa/debt-service-input-contract-smoke.js",
+    "line": 86,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    lender_fee_percent: evidence(0.85, 'Lender Fee: 0.85%', 0.0085),"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-repair-collapse-smoke.js",
+    "line": 92,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-repair-collapse-smoke.js",
+    "line": 110,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.62,"
+  },
+  {
+    "path": "tests/qa/full-underwriting-debt-intelligence-v1-smoke.js",
+    "line": 34,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: 0.70,"
+  },
+  {
+    "path": "tests/qa/full-underwriting-debt-intelligence-v1-smoke.js",
+    "line": 42,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      facts: { purchase_price: 13500000, proposed_loan_amount: 9450000, ltv: 0.70 },"
+  },
+  {
+    "path": "tests/qa/full-underwriting-debt-intelligence-v1-smoke.js",
+    "line": 89,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: { result: 0.70, displayReady: true },"
+  },
+  {
+    "path": "tests/qa/institutional-underwriting-input-contract-smoke.js",
+    "line": 74,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    lender_fee_percent: evidence(0.85, 'Lender Fee 0.85%', 0.0085),"
+  },
+  {
+    "path": "tests/qa/institutional-underwriting-input-contract-smoke.js",
+    "line": 263,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  maximumLtv: 0.75,"
+  },
+  {
+    "path": "tests/qa/institutional-underwriting-input-contract-smoke.js",
+    "line": 270,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "counterfeitPolicy.constraintPolicies.maximumLtv.value = 0.75;"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 496,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const breakEvenOccupancy ="
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 499,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          key: \"breakEvenOccupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 500,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          label: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 501,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          value: operatingExpenses.value / grossPotentialRent.value,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 511,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          key: \"breakEvenOccupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 512,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          label: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 513,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          value: coreMetrics?.breakEvenOccupancy,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 515,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          authorityPath: \"coreMetrics.breakEvenOccupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 518,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const occupancyBreakEvenSpread ="
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 519,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    occupancy.displayReady && breakEvenOccupancy.displayReady"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 521,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          key: \"occupancyBreakEvenSpread\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 523,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          value: occupancy.value - breakEvenOccupancy.value,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 526,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          inputs: { occupancy: occupancy.value, breakEvenOccupancy: breakEvenOccupancy.value },"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 527,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          provenance: [occupancy.authorityPath, breakEvenOccupancy.authorityPath].filter(Boolean),"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 529,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      : metricReceipt({ key: \"occupancyBreakEvenSpread\", label: \"Occupancy Above Break-Even\", units: \"ratio_delta\" });"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 768,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    breakEvenOccupancy,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 769,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    occupancyBreakEvenSpread,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 902,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (metrics.occupancyBreakEvenSpread.displayReady) {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 903,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    const spread = metrics.occupancyBreakEvenSpread.value;"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 909,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          statement: \"Current occupancy is above deterministic break-even occupancy.\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 911,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          metrics: [\"occupancy\", \"breakEvenOccupancy\", \"occupancyBreakEvenSpread\"],"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 912,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          provenance: metrics.occupancyBreakEvenSpread.provenance,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 918,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        title: \"Occupancy below break-even occupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 919,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        statement: \"Current occupancy is below deterministic break-even occupancy.\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 923,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        metrics: [\"occupancy\", \"breakEvenOccupancy\", \"occupancyBreakEvenSpread\"],"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 924,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        provenance: metrics.occupancyBreakEvenSpread.provenance,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract-base.js",
+    "line": 1363,
+    "classification": "unrelated threshold; preserve",
+    "code": "    strategyFit = budgetToPurchasePrice !== null && budgetToPurchasePrice <= 0.15 && plannedUnitShare !== null && plannedUnitShare <= 0.70"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js",
+    "line": 91,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nRate 5.95%\\nAmortization 30 years\\nFee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js",
+    "line": 178,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js",
+    "line": 216,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js",
+    "line": 253,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js",
+    "line": 280,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-publish-or-collapse-smoke.js",
+    "line": 493,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "              \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 82,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 304,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 339,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 464,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    <div>Lender / Origination Fee 0.85%</div>"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 530,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 564,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 700,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 734,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 787,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 821,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 870,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 904,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 945,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: null,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 979,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: null,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 1016,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 1050,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 1105,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-customer-surface-model-smoke.js",
+    "line": 1139,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.4959,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-orchestrator-initial-repair-provenance-smoke.js",
+    "line": 163,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nRate 5.95%\\nAmortization 30 years\\nFee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-orchestrator-initial-repair-provenance-smoke.js",
+    "line": 222,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-orchestrator-initial-repair-provenance-smoke.js",
+    "line": 268,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/p0b-deterministic-contract-qa-seal-smoke.js",
+    "line": 121,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  { breakEven: { ...breakEven, label: \"Break-Even Occupancy\" } }"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-boss-contract-smoke.js",
+    "line": 92,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-boss-contract-smoke.js",
+    "line": 156,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 301,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.70,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 445,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: 0.70,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 463,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: 0.70,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 597,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 606,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 665,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "            ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 1919,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    occupancy: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2059,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2096,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2117,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2184,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2200,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2274,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2348,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2428,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2473,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2541,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2627,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2646,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2669,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2707,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2732,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2741,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2759,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2778,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2799,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2818,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2828,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2834,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2877,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2894,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2918,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 2955,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3042,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3053,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3060,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3069,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3077,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "            ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3089,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3112,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3123,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      refi_ltv_max: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3161,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3198,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3230,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3275,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3285,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3299,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3335,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3360,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3376,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccR: 0.369,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3386,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3400,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3800,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 3854,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4506,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 0.4,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4512,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(operatingSnapshotCardHtml, /Break-Even Occupancy/);"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4600,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4624,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4656,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4680,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4702,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4743,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4762,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4791,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4835,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(Number(normalizedAcquisitionLabeledPayload.ltv.toFixed(4)), 0.75);"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4842,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  source_text: \"Asking Price: $2,840,000 / Proposed Loan: $2,130,000 / Loan-to-Value 75% / AMORT 25 years / Interest rate 6.1% / Financing fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 4848,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(Number(normalizedAcquisitionGenericVariant.ltv.toFixed(4)), 0.75);"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 5201,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 5634,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      ltv: 0.75,"
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 5785,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      \"Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.\","
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 5815,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      text: \"Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.\","
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 5931,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    source_text: \"Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.\","
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 6025,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  rawText: \"Purchase Assumptions / Proposed Acquisition Financing. Purchase Price $13,500,000. NOI Basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%. Going-In Cap Reference 7.00%.\","
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 6247,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    source_text: \"Purchase Assumptions / Proposed Acquisition Financing. Purchase price $13,500,000. NOI basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%.\","
+  },
+  {
+    "path": "tests/qa/generate-client-report-rent-roll-smoke.js",
+    "line": 6457,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  rawText: \"Purchase Assumptions / Proposed Acquisition Financing. Purchase Price $13,500,000. NOI Basis $945,000. Proposed loan $9,450,000. LTV 70%. Interest rate 5.95%. Amortization 30 years. Lender fee 0.85%. Going-In Cap Reference 7.00%.\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js",
+    "line": 235,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "              \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js",
+    "line": 273,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  const breakEvenOccupancy = overrides.breakEvenOccupancy ?? 0.37;"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js",
+    "line": 291,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      breakEvenOccupancy,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js",
+    "line": 433,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $4,200,000\\nNOI Basis $188,800\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $2,940,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\";"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js",
+    "line": 680,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(finalPdfHandoffHtml.includes(\"0.85%\"), true);"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js",
+    "line": 740,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 0.3948717948717949,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-final-pdf-handoff-smoke.js",
+    "line": 758,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 0.3948717948717949,"
+  },
+  {
+    "path": "tests/qa/h16-h17-manifest-pdf-certification-controlled-replay-smoke.js",
+    "line": 166,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: {"
+  },
+  {
+    "path": "tests/qa/h16-h17-manifest-pdf-certification-controlled-replay-smoke.js",
+    "line": 167,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      label: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "tests/qa/h16-h17-manifest-pdf-certification-controlled-replay-smoke.js",
+    "line": 168,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      formula: \"total_operating_expenses / gross_potential_rent\","
+  },
+  {
+    "path": "tests/qa/full-underwriting-final-human-publication-authority-smoke.js",
+    "line": 25,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "<div>Break-Even Occupancy</div>"
+  },
+  {
+    "path": "tests/qa/full-underwriting-final-human-publication-authority-smoke.js",
+    "line": 42,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.doesNotMatch(screening, /Break-Even Occupancy|pp above break-even|Source Reconciliation Required/);"
+  },
+  {
+    "path": "tests/qa/full-underwriting-chapter1-elite-renderer-integration-smoke.js",
+    "line": 77,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.doesNotMatch(baselineHtml, /data-iq-elite-metric=\"occupancyBreakEvenSpread\"/);"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 4,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "import { publicationMoney as formatMoney, publicationPercent as formatPercent, publicationDate, publicationCushion } from \"./publication-format.js\";"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 68,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const operatingCushion = Number.isFinite(d.occupancy) && Number.isFinite(d.breakEvenOccupancy)"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 69,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    ? publicationCushion(d.occupancy, d.breakEvenOccupancy)"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 91,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        { label: \"Break-Even Occupancy\", value: formatPercent(d.breakEvenOccupancy) },"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 117,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    [\"Operating Cushion\", operatingCushion],"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 173,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const operatingCushion = Number.isFinite(d.occupancy) && Number.isFinite(d.breakEvenOccupancy)"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 174,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    ? `${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} pp`"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 182,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      { domain: \"Operating Cushion\", coverage: Number.isFinite(d.occupancy) && Number.isFinite(d.breakEvenOccupancy) ? \"Presented\" : \"Not available\", sections: \"Key Metrics Snapshot\" },"
+  },
+  {
+    "path": "api/_lib/phase8b-cross-product-publication-authority.js",
+    "line": 225,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        { code: \"CUSHION_SIGNAL\", statement: Number.isFinite(d.occupancy) && Number.isFinite(d.breakEvenOccupancy) ? `Occupancy is ${publicationCushion(d.occupancy, d.breakEvenOccupancy)}.` : null },"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-render-smoke.js",
+    "line": 94,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-render-smoke.js",
+    "line": 155,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 555000 / 1612800,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-render-smoke.js",
+    "line": 229,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(finalHtml, /<td>Break-Even Occupancy<\\/td><td style=\"font-weight:600;\">34\\.4%<\\/td>/i);"
+  },
+  {
+    "path": "tests/qa/rent-roll-alias-smoke.js",
+    "line": 20,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(suiteHeaders.occupancy, 0.75);"
+  },
+  {
+    "path": "tests/qa/rent-roll-alias-smoke.js",
+    "line": 34,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(unitNumberHeaders.occupancy, 0.75);"
+  },
+  {
+    "path": "tests/qa/rent-roll-alias-smoke.js",
+    "line": 48,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(aptHeaders.occupancy, 0.75);"
+  },
+  {
+    "path": "api/_lib/qa-manager-review.js",
+    "line": 323,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  \"Do not classify institutional classification terms such as Sensitized, Stable, Fragile, or Refinance Shortfall Under Stress as public-language risk when nearby report context includes Capital Risk Profile, Primary Pressure Point, DSCR/refi explanations, threshold language, expense ratio, NOI margin, or break-even occupancy.\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-orchestrator-later-repair-provenance-smoke.js",
+    "line": 171,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nRate 5.95%\\nAmortization 30 years\\nFee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-orchestrator-later-repair-provenance-smoke.js",
+    "line": 230,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-orchestrator-later-repair-provenance-smoke.js",
+    "line": 285,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/fixtures/acquisition-memo-v2-retest19-analysis-artifacts-rows.json",
+    "line": 139,
+    "classification": "historical/static fixture evidence",
+    "code": "        \"document_text_extracted\": \"Purchase Assumptions / Proposed Acquisition Financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\""
+  },
+  {
+    "path": "tests/qa/fixtures/institutional-gate-10-report.js",
+    "line": 65,
+    "classification": "historical/static fixture evidence",
+    "code": "      lender_fee_percent: evidence(0.85, 'Lender Fee 0.85%', 0.0085),"
+  },
+  {
+    "path": "tests/qa/fixtures/institutional-gate-10-report.js",
+    "line": 269,
+    "classification": "historical/static fixture evidence",
+    "code": "    breakEvenOccupancy: 555000 / 1612800,"
+  },
+  {
+    "path": "tests/qa/full-underwriting-quality-manifest-renderer-smoke.js",
+    "line": 31,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    financialTruth: { breakEvenOccupancy: { result: 0.38, displayReady: true } },"
+  },
+  {
+    "path": "api/_lib/premium-acquisition-underwriting-v1-renderer.js",
+    "line": 126,
+    "classification": "separate debt-inclusive contract; preserve formula/keys",
+    "code": "      .replace(/Debt-Inclusive Break-Even Occupancy/gi, 'Debt-Inclusive Operating Break-Even Ratio');"
+  },
+  {
+    "path": "tests/qa/fixtures/retest24-sanitized-permanent-replay.json",
+    "line": 113,
+    "classification": "historical/static fixture evidence",
+    "code": "      \"source_text\": \"Harbourview Court. Purchase Assumptions / Proposed Acquisition Financing. Document Role: This document represents purchase assumptions and proposed acquisition financing only. It is not a current mortgage statement and does not represent existing debt. Purchase Price $13,500,000. NOI Basis $945,000. Going-In Cap Reference 7.00%. Proposed Acquisition Loan $9,450,000. Proposed LTV 70.0%. Proposed Interest Rate 5.95%. Proposed Amortization 30 years. Lender / Origination Fee 0.85%. These are proposed acquisition financing assumptions for lender discussion only. Do not treat the proposed acquisition loan as current outstanding debt.\""
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 705,
+    "classification": "unrelated threshold; preserve",
+    "code": "    const pts = execOccupancy > 0.95 ? 10 : execOccupancy >= 0.85 ? 7 : 4;"
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 713,
+    "classification": "unrelated threshold; preserve",
+    "code": "      band: execOccupancy > 0.95 ? \"Above 95%\" : execOccupancy >= 0.85 ? \"85\\u201395%\" : \"Below 85%\","
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 5006,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      breakEvenOccupancy: operatingCostCoverageRatioR,"
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 5139,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      if (Number.isFinite(acquisitionMemoRenderContext.breakEvenOccupancy)) summaryRows.push(`<tr><td>${OPERATING_COST_COVERAGE_RATIO.label}</td><td style=\"font-weight:600;\">${formatOperatingCostCoverageRatio(acquisitionMemoRenderContext.breakEvenOccupancy)}</td></tr>`);"
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 5167,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        breakEvenOccupancy: acquisitionMemoRenderContext.breakEvenOccupancy,"
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 5312,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        breakEvenOccupancy: operatingCostCoverageRatioR,"
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 6305,
+    "classification": "unrelated threshold; preserve",
+    "code": "        const LTV = 0.75;"
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 7061,
+    "classification": "unrelated threshold; preserve",
+    "code": "          const flag = execOccupancy < 0.85 ? \"LOW\" : execOccupancy < 0.95 ? \"WATCH\" : \"CLEAR\";"
+  },
+  {
+    "path": "api/_lib/generate-client-report-impl.js",
+    "line": 7062,
+    "classification": "unrelated threshold; preserve",
+    "code": "          const color = execOccupancy < 0.85 ? \"#dc2626\" : execOccupancy < 0.95 ? \"#d97706\" : \"#16a34a\";"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 81,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(visibleText(fixture.html), /Break-Even Occupancy/);"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 144,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(modelMetrics.breakEvenOccupancy.label, \"Break-Even Occupancy\");"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 145,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(modelMetrics.breakEvenOccupancy.formula, \"total_operating_expenses / gross_potential_rent\");"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 146,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(modelMetrics.breakEvenOccupancy.numerator, 555000);"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 147,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(modelMetrics.breakEvenOccupancy.denominator, 1612800);"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 148,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(modelMetrics.breakEvenOccupancy.result, 555000 / 1612800);"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 149,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(modelMetrics.breakEvenOccupancy.displayReady, true);"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 325,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "const manifestBreakEven = manifestCandidate.calculations.find((calculation) => calculation.calculationKey === \"breakEvenOccupancy\");"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 326,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(manifestBreakEven.result, modelMetrics.breakEvenOccupancy.result);"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 328,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(manifestBreakEven.formula, \"total_operating_expenses / gross_potential_rent\");"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 427,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "invalidDenominatorModel.financialTruth.breakEvenOccupancy = {"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 428,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  ...invalidDenominatorModel.financialTruth.breakEvenOccupancy,"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 457,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(calcByKey(invalidDenominatorCandidate, \"breakEvenOccupancy\").eligible, false);"
+  },
+  {
+    "path": "tests/qa/h14-h15-full-underwriting-calculation-renderer-contract-smoke.js",
+    "line": 458,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(calcByKey(invalidDenominatorCandidate, \"breakEvenOccupancy\").result, null);"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-document-smoke.js",
+    "line": 24,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    { fileId: \"assumptions-file\", semantic_doc_role: \"purchase_assumptions\", debt_basis: \"proposed_acquisition\", payload: { text: \"Purchase Assumptions / Proposed Acquisition Financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Loan Amount $9,450,000\\nLTV 70%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\\nThis is not existing/current debt.\" } },"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-document-smoke.js",
+    "line": 70,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nRate 5.95%\\nAmortization 30 years\\nFee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-document-smoke.js",
+    "line": 196,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "        document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nRate 5.95%\\nAmortization 30 years\\nFee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-document-smoke.js",
+    "line": 398,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 555000 / 1612800,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-document-smoke.js",
+    "line": 451,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.match(retest6FinalHtml, /Break-Even Occupancy<\\/td><td style=\"font-weight:600;\">34\\.4%<\\/td>/i);"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-document-smoke.js",
+    "line": 583,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 555000 / 1612800,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-document-smoke.js",
+    "line": 879,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 555000 / 1612800,"
+  },
+  {
+    "path": "tests/qa/p0d-retest24-permanent-regression-replay-smoke.js",
+    "line": 621,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: fixture.expected.break_even_occupancy,"
+  },
+  {
+    "path": "tests/qa/p0d-retest24-permanent-regression-replay-smoke.js",
+    "line": 704,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  [\"Lender / Origination Fee\", \"0.85%\"],"
+  },
+  {
+    "path": "tests/qa/p0d-retest24-permanent-regression-replay-smoke.js",
+    "line": 723,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assertContainsLabelValue(html, \"Break-Even Occupancy\", \"34.4%\");"
+  },
+  {
+    "path": "tests/qa/p0d-retest24-permanent-regression-replay-smoke.js",
+    "line": 724,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "assert.equal(/Break-Even Occupancy[\\s\\S]{0,120}37\\.0%/i.test(html), false);"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-orchestrator.js",
+    "line": 193,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      breakEven: customerSurfaceModel?.financialTruth?.breakEvenOccupancy || null,"
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 402,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "  breakEvenOccR = null,"
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 440,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "    const pts = execOccupancy > 0.95 ? 10 : execOccupancy >= 0.85 ? 7 : 4;"
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 448,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "      band: execOccupancy > 0.95 ? \"Above 95%\" : execOccupancy >= 0.85 ? \"85-95%\" : \"Below 85%\","
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 451,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "  if (Number.isFinite(breakEvenOccR)) {"
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 452,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "    const pts = breakEvenOccR < 0.70 ? 10 : breakEvenOccR <= 0.80 ? 6 : 2;"
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 456,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "      label: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 457,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "      value: formatPercent1(breakEvenOccR),"
+  },
+  {
+    "path": "api/_lib/legacy-report-surface-render-helpers.js",
+    "line": 460,
+    "classification": "test-only legacy helper; no active runtime import",
+    "code": "      band: breakEvenOccR < 0.70 ? \"Below 70%\" : breakEvenOccR <= 0.80 ? \"70-80%\" : \"Above 80%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-normal-path-local-smoke.js",
+    "line": 128,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "      { id: \"artifact-assumptions-file\", file_id: \"assumptions-file\", type: \"document_text_extracted\", created_at: \"2026-06-20T00:02:00.000Z\", payload: { source_file_id: \"assumptions-file\", source_original_filename: \"Stonebridge_Assumptions.pdf\", document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\" } },"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-normal-path-local-smoke.js",
+    "line": 193,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js",
+    "line": 103,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          \"Lender Fee 0.85%\","
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js",
+    "line": 178,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "  breakEvenOccupancy: 0.37,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-boss-contract-legacy-firewall-smoke.js",
+    "line": 303,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "          { id: \"artifact-assumptions-file\", file_id: \"assumptions-file\", type: \"document_text_extracted\", created_at: \"2026-06-20T00:02:00.000Z\", payload: { source_file_id: \"assumptions-file\", source_original_filename: \"Stonebridge_Assumptions.pdf\", semantic_doc_role: \"purchase_assumptions\", semantic_doc_display_label: \"Purchase Assumptions / Proposed Acquisition Financing Context\", debt_basis: \"acquisition_financing_assumption\", document_text_extracted: \"Purchase assumptions / proposed acquisition financing\\nPurchase Price $13,500,000\\nNOI Basis $945,000\\nGoing-In Cap Reference 7.00%\\nProposed Acquisition Loan $9,450,000\\nLTV 70.0%\\nInterest Rate 5.95%\\nAmortization 30 years\\nLender Fee 0.85%\" } },"
+  },
+  {
+    "path": "api/parse/parse-doc.js",
+    "line": 4657,
+    "classification": "unrelated threshold; preserve",
+    "code": "            if (acceptedCoreSummaryRows) confidence = Math.min(confidence, 0.85);"
+  },
+  {
+    "path": "api/parse/parse-doc.js",
+    "line": 4734,
+    "classification": "unrelated threshold; preserve",
+    "code": "            if (acceptedCoreSummaryRows) confidence = Math.min(confidence, 0.85);"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract.js",
+    "line": 82,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (result?.metrics?.breakEvenOccupancy?.displayReady === true) {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract.js",
+    "line": 83,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    result.metrics.breakEvenOccupancy.label = \"Operating Cost Coverage Ratio\";"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract.js",
+    "line": 84,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    result.metrics.breakEvenOccupancy.qualification = \"Formula: accepted operating expenses / accepted T12 gross potential rent. This is a GPR-basis operating-cost ratio, not a physical occupancy threshold.\";"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract.js",
+    "line": 86,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (result?.metrics?.occupancyBreakEvenSpread) {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract.js",
+    "line": 87,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    result.metrics.occupancyBreakEvenSpread = {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-chapter1-elite-contract.js",
+    "line": 88,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      ...result.metrics.occupancyBreakEvenSpread,"
+  },
+  {
+    "path": "api/_lib/investoriq-final-human-publication-authority.js",
+    "line": 19,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  return opex / gpr;"
+  },
+  {
+    "path": "api/_lib/investoriq-final-human-publication-authority.js",
+    "line": 60,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    .replace(/operating break-even occupancy/gi, \"operating cost coverage ratio\")"
+  },
+  {
+    "path": "api/_lib/investoriq-final-human-publication-authority.js",
+    "line": 61,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    .replace(/Break-Even Occupancy/gi, \"Operating Cost Coverage Ratio\")"
+  },
+  {
+    "path": "api/_lib/investoriq-final-human-publication-authority.js",
+    "line": 62,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    .replace(/break-even occupancy/gi, \"operating cost coverage ratio\")"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-renderer.js",
+    "line": 130,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    s.breakEvenOccupancy.displayReady ? noteRow(\"Operating Cost Coverage Ratio\", percent(s.breakEvenOccupancy.value), \"Operating expenses / T12 gross potential rent\") : \"\","
+  },
+  {
+    "path": "api/_lib/premium-acquisition-underwriting-v1-deterministic-analysis.js",
+    "line": 418,
+    "classification": "separate debt-inclusive contract; preserve formula/keys",
+    "code": "      label: `${label} Debt-Inclusive Break-Even Occupancy`,"
+  },
+  {
+    "path": "api/_lib/premium-acquisition-underwriting-v1-deterministic-analysis.js",
+    "line": 443,
+    "classification": "separate debt-inclusive contract; preserve formula/keys",
+    "code": "      qualification: `Debt-inclusive break-even occupancy equals accepted T12 operating expenses plus ${label.toLowerCase()} annual debt service, divided by accepted T12 Gross Potential Rent. It is a deterministic source-case coverage reference, not an economic-vacancy forecast.`,"
+  },
+  {
+    "path": "tests/qa/acquisition-memo-v2-retest19-artifact-replay-smoke.js",
+    "line": 104,
+    "classification": "test contract: migrate positive retired expectations; retain negative/replay evidence",
+    "code": "    breakEvenOccupancy: 0.5,"
+  },
+  {
+    "path": "api/_lib/support-doc-taxonomy.js",
+    "line": 265,
+    "classification": "unrelated threshold; preserve",
+    "code": "  if (semanticDocRole && Number.isFinite(confidence) && confidence >= 0.75) {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 510,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const breakEvenOccupancy ="
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 513,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          key: \"breakEvenOccupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 514,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          label: \"Operating Break-Even Occupancy\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 515,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          value: operatingExpenses.value / grossPotentialRent.value,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 521,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      : metric({ key: \"breakEvenOccupancy\", label: \"Operating Break-Even Occupancy\", value: coreMetrics?.breakEvenOccupancy, units: \"ratio\", evidenceClass: EVIDENCE_CLASSES.DETERMINISTIC_CALCULATED, authorityPath: \"coreMetrics.breakEvenOccupancy\" });"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 522,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const occupancyBreakEvenSpread ="
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 523,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    occupancy.displayReady && breakEvenOccupancy.displayReady"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 525,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          key: \"occupancyBreakEvenSpread\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 527,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          value: occupancy.value - breakEvenOccupancy.value,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 530,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          inputs: { occupancy: occupancy.value, breakEvenOccupancy: breakEvenOccupancy.value },"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 531,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "          provenance: [occupancy.authorityPath, breakEvenOccupancy.authorityPath],"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 533,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      : metric({ key: \"occupancyBreakEvenSpread\", label: \"Occupancy less Operating Break-Even\", units: \"ratio_delta\" });"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 563,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    breakEvenOccupancy,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 564,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    occupancyBreakEvenSpread,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 636,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (metrics.occupancyBreakEvenSpread.displayReady) {"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 637,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    const direction = metrics.occupancyBreakEvenSpread.value >= 0 ? \"above\" : \"below\";"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 639,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      code: \"OCCUPANCY_BREAK_EVEN_POSITION\","
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 640,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      statement: `Accepted occupancy is ${Math.abs(metrics.occupancyBreakEvenSpread.value * 100).toFixed(1)} percentage points ${direction} deterministic operating break-even occupancy.`,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 641,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      metrics: [\"occupancy\", \"breakEvenOccupancy\", \"occupancyBreakEvenSpread\"],"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 642,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      provenance: [metrics.occupancyBreakEvenSpread.authorityPath],"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 765,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      surviving: [\"noi\", \"noiMargin\", \"noiPerUnit\", \"breakEvenOccupancy\", \"occupancyBreakEvenSpread\"].filter((key) => metrics[key]?.displayReady),"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 862,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      breakEvenOccupancy: metrics.breakEvenOccupancy,"
+  },
+  {
+    "path": "api/_lib/full-underwriting-operating-intelligence-contract-base.js",
+    "line": 864,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      occupancyBreakEvenSpread: metrics.occupancyBreakEvenSpread,"
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal.js",
+    "line": 85,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      \"Customer output must not present the OpEx divided by GPR ratio as a physical Break-Even Occupancy threshold.\","
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal.js",
+    "line": 131,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      \"contract.breakEvenOccupancy.formula\""
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal.js",
+    "line": 140,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      \"contract.breakEvenOccupancy.result\""
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal.js",
+    "line": 149,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      \"contract.breakEvenOccupancy.upstreamResult\""
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal.js",
+    "line": 197,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  // The base validator owns the historical Break-Even Occupancy contract. The"
+  },
+  {
+    "path": "api/_lib/canonical-operating-metrics.js",
+    "line": 7,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  formula: \"total_operating_expenses / gross_potential_rent\","
+  },
+  {
+    "path": "api/_lib/canonical-operating-metrics.js",
+    "line": 9,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    sensitized: 0.75,"
+  },
+  {
+    "path": "api/_lib/canonical-operating-metrics.js",
+    "line": 10,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    fragile: 0.85,"
+  },
+  {
+    "path": "api/_lib/canonical-operating-metrics.js",
+    "line": 34,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  return operatingExpensesValue / grossPotentialRentValue;"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 2,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "import { publicationCushion } from \"./publication-format.js\";"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 81,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const breakEvenOccupancy = gpr && opex !== null ? opex / gpr : null;"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 99,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    breakEvenOccupancy,"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 114,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (m.breakEvenOccupancy !== null && m.breakEvenOccupancy >= 0.95) hardRisks.push(`operating break-even occupancy is ${formatPercent(m.breakEvenOccupancy)}`);"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 118,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (m.breakEvenOccupancy !== null && m.breakEvenOccupancy >= 0.85 && m.breakEvenOccupancy < 0.95) cautions.push(`operating break-even occupancy is ${formatPercent(m.breakEvenOccupancy)}`);"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 126,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const incompleteDecisionMetrics = [m.expenseRatio, m.noiMargin, m.breakEvenOccupancy, m.occupancy, m.reconciliationVariance].some((value) => value === null);"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 154,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const operatingStrength = hardRisks.length > 0 ? \"Weak\" : cautions.length > 0 ? \"Caution\" : [m.expenseRatio, m.noiMargin, m.breakEvenOccupancy].some((value) => value === null) ? \"Not available\" : \"Strong\";"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 165,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const cushion = m.occupancy !== null && m.breakEvenOccupancy !== null"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 166,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    ? publicationCushion(m.occupancy, m.breakEvenOccupancy)"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 180,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    operatingCushion: cushion,"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 214,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    (d.breakEvenOccupancy !== null && d.breakEvenOccupancy >= 0.95)"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 251,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const cushion = d.occupancy !== null && d.breakEvenOccupancy !== null"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 252,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    ? `${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} pp above break-even`"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 285,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      screeningSnapshotCell(\"Break-Even Occupancy\", formatPercent(d.breakEvenOccupancy)),"
+  },
+  {
+    "path": "api/_lib/phase8a-owner-acceptance-authority.js",
+    "line": 340,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (d.occupancy !== null && d.breakEvenOccupancy !== null) strengths.push(`Operating occupancy cushion is ${((d.occupancy - d.breakEvenOccupancy) * 100).toFixed(1)} percentage points.`);"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1515,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const providedBreakEvenOccupancy = normalizeCapRatio(coreMetrics?.breakEvenOccupancy);"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1517,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const breakEvenOccupancy = Number.isFinite(opEx) && Number.isFinite(grossPotentialRent) && grossPotentialRent > 0"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1518,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    ? opEx / grossPotentialRent"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1569,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    ? (opEx + currentAnnualDebtService) / grossPotentialRent"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1573,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    ? (opEx + proposedAnnualDebtService) / grossPotentialRent"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1915,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "      breakEvenOccupancy: {"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1916,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        label: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1917,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        formula: \"total_operating_expenses / gross_potential_rent\","
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1922,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        result: breakEvenOccupancy,"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-customer-surface-model-base.js",
+    "line": 1924,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        displayReady: Number.isFinite(breakEvenOccupancy),"
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 8,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "const BREAK_EVEN_FORMULA = \"total_operating_expenses / gross_potential_rent\";"
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 283,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "  if (String(breakEven.label || \"\").trim() !== \"Break-Even Occupancy\" || String(breakEven.formula || \"\").trim() !== BREAK_EVEN_FORMULA) {"
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 286,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"Break-Even Occupancy label and formula must use the canonical contract.\","
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 288,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"contract.breakEvenOccupancy\""
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 294,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"Break-Even Occupancy result disagrees with canonical OpEx divided by T12 GPR.\","
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 296,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"contract.breakEvenOccupancy.result\""
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 302,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"Upstream Break-Even Occupancy disagrees with the canonical formula inputs.\","
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 304,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"contract.breakEvenOccupancy.upstreamResult\""
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 312,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"Every rendered Break-Even Occupancy value must agree with canonical OpEx divided by T12 GPR.\","
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 314,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "      \"html.breakEvenOccupancy\""
+  },
+  {
+    "path": "api/_lib/deterministic-report-contract-qa-seal-base.js",
+    "line": 505,
+    "classification": "inactive legacy validator input (wrapper always passes null); retain historical adapter",
+    "code": "  breakEvenLabel: \"Break-Even Occupancy\","
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 251,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  breakEvenOccupancy = null,"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 264,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (Number.isFinite(breakEvenOccupancy)) rows.push(`<tr><td>Break-Even Occupancy</td><td>${formatPercent1(breakEvenOccupancy)}</td></tr>`);"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 1087,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    Number.isFinite(Number(coreMetrics?.breakEvenOccupancy)) ? `<tr><td>Break-Even Occupancy</td><td style=\"font-weight:600;\">${formatPercentDisplay(coreMetrics.breakEvenOccupancy)}</td></tr>` : \"\","
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 1804,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  const breakEvenOccupancy = toFiniteNumber(coreMetrics?.breakEvenOccupancy);"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 1821,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "  if (Number.isFinite(breakEvenOccupancy)) rows.push(`<tr><td>Break-Even Occupancy</td><td style=\"font-weight:600;\">${formatPercentDisplay(breakEvenOccupancy)}</td></tr>`);"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 2056,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    const hasCanonicalBreakEvenContract = Boolean(customerSurfaceModel?.financialTruth?.breakEvenOccupancy);"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 2057,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "    const canonicalBreakEvenRaw = customerSurfaceModel?.financialTruth?.breakEvenOccupancy?.result;"
+  },
+  {
+    "path": "api/_lib/acquisition-memo-v2-document-base.js",
+    "line": 2064,
+    "classification": "active Slice 1 authority/consumer: cut over or verify canonical use",
+    "code": "        breakEvenOccupancy: Number.isFinite(canonicalBreakEvenOccupancy) ? canonicalBreakEvenOccupancy : null,"
+  }
+]

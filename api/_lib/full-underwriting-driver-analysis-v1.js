@@ -471,8 +471,8 @@ export function buildFullUnderwritingDriverAnalysisV1({
         reason: "DSCR driver ranking is deferred until governed debt-service sensitivity is implemented.",
       },
       {
-        key: "breakEvenOccupancy",
-        reason: "Break-even occupancy is not directly shocked by an ELITE-04 v1 single-driver family.",
+        key: "operatingCostCoverageRatio",
+        reason: "Operating Cost Coverage Ratio is not directly shocked by the current single-driver sensitivity families.",
       },
       {
         key: "annualCashBurden",

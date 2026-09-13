@@ -226,8 +226,8 @@ const customerSurfaceModel = {
     },
   },
   financialTruth: {
-    breakEvenOccupancy: {
-      label: "Break-Even Occupancy",
+    operatingCostCoverageRatio: {
+      label: "Operating Cost Coverage Ratio",
       formula: "total_operating_expenses / gross_potential_rent",
       numeratorFact: "total_operating_expenses",
       denominatorFact: "gross_potential_rent",
@@ -235,6 +235,7 @@ const customerSurfaceModel = {
       denominator: 1200000,
       result: 0.38,
       displayReady: true,
+      units: "ratio",
     },
   },
 };
@@ -355,11 +356,11 @@ assert.equal(collapsedCurrentDebt.sourceBacked, false);
 assert.equal(collapsedCurrentDebt.acceptedFacts.current_outstanding_balance, null);
 assert.notEqual(collapsedCurrentDebt.acceptedFacts.current_outstanding_balance, 0);
 
-const breakEven = candidate.calculations.find((calculation) => calculation.calculationKey === "breakEvenOccupancy");
-assert.equal(breakEven.eligible, true);
-assert.equal(breakEven.result, 0.38);
-assert.equal(breakEven.formula, "total_operating_expenses / gross_potential_rent");
-assert.deepEqual([...breakEven.inputProvenance].sort(), ["core:file:file-rent-roll", "core:file:file-t12"]);
+const occr = candidate.calculations.find((calculation) => calculation.calculationKey === "operatingCostCoverageRatio");
+assert.equal(occr.eligible, true);
+assert.equal(occr.result, 0.38);
+assert.equal(occr.formula, "total_operating_expenses / gross_potential_rent");
+assert.deepEqual([...occr.inputProvenance].sort(), ["core:file:file-rent-roll", "core:file:file-t12"]);
 
 assert.throws(
   () => finalizeReportQualityManifest({

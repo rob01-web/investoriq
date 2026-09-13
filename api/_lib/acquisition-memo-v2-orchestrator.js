@@ -142,6 +142,7 @@ export function runAcquisitionMemoV2Orchestrator({
   const initialCustomerSurfaceModel =
     acquisitionMemoV2DocumentArgs?.customerSurfaceModel ||
     buildAcquisitionMemoV2CustomerSurfaceModel({
+      sourceTruthPackage: acquisitionMemoV2DocumentArgs?.sourceTruthPackage || null,
       canonicalSourcePackage: acquisitionMemoV2DocumentArgs?.sourcePackage || null,
       acquisitionMemoProjection: acquisitionMemoV2DocumentArgs?.acquisitionMemoProjection || null,
       bossContract: acquisitionMemoBossContract || acquisitionMemoV2DocumentArgs?.bossContract || null,
@@ -190,7 +191,7 @@ export function runAcquisitionMemoV2Orchestrator({
         reportTier: customerSurfaceModel?.identity?.reportTier ?? acquisitionMemoV2DocumentArgs?.reportMeta?.reportTier ?? null,
       },
       sourceReconciliation: customerSurfaceModel?.sourceTruth?.sourceReconciliation || null,
-      breakEven: customerSurfaceModel?.financialTruth?.breakEvenOccupancy || null,
+      operatingCostCoverageRatio: customerSurfaceModel?.financialTruth?.operatingCostCoverageRatio || null,
       supportSections: customerSurfaceModel?.sections || null,
       financialIntelligence: customerSurfaceModel?.financialIntelligence || null,
       grossRentCapitalizationAuthorized: false,

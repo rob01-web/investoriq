@@ -74,7 +74,9 @@ assert.match(baselineHtml, />94\.0%</);
 assert.match(baselineHtml, /data-iq-elite-metric="noi"/);
 assert.match(baselineHtml, />\$792,000</);
 assert.match(baselineHtml, /Operating Cost Coverage Ratio/);
-assert.doesNotMatch(baselineHtml, /data-iq-elite-metric="occupancyBreakEvenSpread"/);
+assert.match(baselineHtml, /data-iq-elite-metric="operatingCostCoverageRatio"/);
+assert.doesNotMatch(baselineHtml, /break[- ]even occupancy/i);
+assert.doesNotMatch(baselineHtml, /occupancyBreakEvenSpread/);
 assert.doesNotMatch(baselineHtml, /57\.3 pp/);
 assert.doesNotMatch(baselineHtml, /RECONCILIATION REQUIRED/);
 

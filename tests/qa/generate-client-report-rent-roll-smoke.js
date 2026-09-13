@@ -1775,10 +1775,12 @@ assert.match(
   screeningRendererSource,
   /Gross rental income may exceed EGI where vacancy, credit loss, or concessions reduce effective gross income\./
 );
-assert.match(
+assert.doesNotMatch(
   reportSource,
-  /const occupancyInterpretation = `Break-even occupancy is \$\{beoFmt\} versus current occupancy of \$\{currFmt\}, indicating a \$\{bufPts\} percentage-point operating cushion based on reported T12 totals\.`/
+  /Break-even occupancy is[\s\S]{0,220}operating cushion/i
 );
+assert.match(reportSource, /classifyOperatingCostCoverageRatio\(operatingCostCoverageRatioR\)/);
+assert.match(reportSource, /formatOperatingCostCoverageRatio\(operatingCostCoverageRatioR\)/);
 assert.match(
   reportSource,
   /const reconciliationCaution = hasSourceReconciliationCaution[\s\S]{0,260}variance-sensitive conclusions remain constrained when rent roll and T12 income evidence are materially unreconciled\./
@@ -2345,7 +2347,7 @@ const nonComputedWithRawMortgageDealScoreState = generatorTest.buildDealScorecar
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: {
     current_debt_dscr_status: "not_assessed",
@@ -2425,7 +2427,7 @@ const loanTermOnlyDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: loanTermOnlyCurrentDebtState,
   mortgagePayload: null,
@@ -2470,7 +2472,7 @@ const harbourstoneDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: harbourstoneDebtState,
   mortgagePayload: null,
@@ -2643,7 +2645,7 @@ const canonicalLoanDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: canonicalLoanDebtState,
   mortgagePayload: null,
@@ -2666,7 +2668,7 @@ const launchMemoDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: canonicalLoanDebtState,
   mortgagePayload: null,
@@ -3158,7 +3160,7 @@ const retest9DealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: retest9CurrentDebtState,
   mortgagePayload: {
@@ -3195,7 +3197,7 @@ const cleanStrongDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: retest9CurrentDebtState,
   mortgagePayload: {
@@ -3227,7 +3229,7 @@ const constrainedDscrDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: {
     current_debt_dscr_status: "computed",
@@ -3272,7 +3274,7 @@ const constrainedDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: buildCurrentDebtAssessmentState({
     mortgagePayload: {
@@ -3373,7 +3375,7 @@ const acquisitionOnlyDealScoreState = generatorTest.buildDealScorecardState({
   expenseRatioR: 0.369,
   noiMarginR: 0.631,
   execOccupancy: 0.95,
-  breakEvenOccR: 0.369,
+  operatingCostCoverageRatioR: 0.369,
   marketRentPremiumRatio: 0.16,
   currentDebtAssessmentState: buildCurrentDebtAssessmentState({
     mortgagePayload: {
@@ -4503,13 +4505,13 @@ const operatingSnapshotCardHtml = generatorTest.buildOperatingSnapshotCard({
   noi: 900000,
   expenseRatio: 0.4,
   noiMargin: 0.6,
-  breakEvenOccupancy: 0.4,
+  operatingCostCoverageRatio: 0.4,
   formatCurrency,
   formatPercent1,
 });
 assert.match(operatingSnapshotCardHtml, /Operating Snapshot/);
 assert.match(operatingSnapshotCardHtml, /Effective Gross Income/);
-assert.match(operatingSnapshotCardHtml, /Break-Even Occupancy/);
+assert.match(operatingSnapshotCardHtml, /Operating Cost Coverage Ratio/);
 assert.equal(/<table>\s*<\/table>/.test(operatingSnapshotCardHtml), false);
 assert.equal(/<table>\s*<\/table>/.test(operatingSnapshotCardHtml), false);
 const rentUpsideValueSensitivityCardHtml = generatorTest.buildRentUpsideValueSensitivityCard({

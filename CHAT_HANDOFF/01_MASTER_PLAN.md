@@ -1,5 +1,24 @@
 # InvestorIQ Master Plan
 
+## 2026-09-13 MASTER PLAN UPDATE - REPOSITORY CERTIFICATION IS THE LAUNCH GATE
+
+The immediate plan is no longer another isolated patch sequence. InvestorIQ enters one deterministic repository certification on `launch-certification-20260913`.
+
+The certification reviews every production-relevant file line by line, classifies its role, removes proven obsolete runtime pathways, identifies the single owner for each business rule, closes competing authorities, and adds executable invariants for critical owner doctrine.
+
+The eight prelaunch slices remain tracked findings. They are resolved within this repo-wide certification rather than by repeatedly creating disconnected patches.
+
+No material work is allowed to exist only in a model-private worktree. Bounded units are committed and pushed to the authoritative branch before handoff.
+
+Detailed method: `05_REPOSITORY_CERTIFICATION_PLAN.md`
+Governing product rules: `04_PRODUCT_CONSTITUTION.md`
+Live file ledger: `06_REPOSITORY_CERTIFICATION_LEDGER.md`
+
+This is intended to be the final repository-wide audit before launch. Once certified, another repo-wide restart requires concrete evidence that a certified invariant is violated.
+
+---
+
+
 ## 2026-09-12 CURRENT HANDOFF STATE
 
 The implementation is now at the post-deployment verification checkpoint. The certified production source is `2005e6361e348b87a61d9470759819c5f000c5d` on `hotfix-worker-queue-starvation-20260911-r1`, deployed as Vercel deployment `BkmA44RAR9aCJCE6EHEm2L5yhn9f` and aliased to [investoriq.tech](https://investoriq.tech). Canonical QA, deterministic smoke checks, Dashboard copy checks, build, and deployment completed successfully.

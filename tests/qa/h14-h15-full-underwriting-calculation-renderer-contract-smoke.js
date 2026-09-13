@@ -78,11 +78,15 @@ assert.match(visibleText(fixture.html), /DSCR/);
 assert.match(visibleText(fixture.html), /Debt Yield/);
 assert.match(visibleText(fixture.html), /LTV 70\.0%/);
 assert.match(visibleText(fixture.html), /Mortgage Constant/);
-assert.match(visibleText(fixture.html), /Break-Even Occupancy/);
-assert.match(visibleText(fixture.html), /Current Debt-Inclusive Break-Even Monthly Rent \/ Unit/);
-assert.match(visibleText(fixture.html), /Proposed Debt-Inclusive Break-Even Monthly Rent \/ Unit/);
+assert.match(visibleText(fixture.html), /Operating Cost Coverage Ratio/);
+assert.doesNotMatch(visibleText(fixture.html), /\bBreak[- ]Even Occupancy\b/i);
+assert.match(visibleText(fixture.html), /Current Debt-Inclusive Cost Coverage Ratio/);
+assert.match(visibleText(fixture.html), /Proposed Debt-Inclusive Cost Coverage Ratio/);
+assert.match(visibleText(fixture.html), /Current Debt-Inclusive Monthly Rent \/ Unit Coverage Reference/);
+assert.match(visibleText(fixture.html), /Proposed Debt-Inclusive Monthly Rent \/ Unit Coverage Reference/);
+assert.doesNotMatch(visibleText(fixture.html), /Debt-Inclusive Break-Even/i);
 assert.match(visibleText(fixture.html), /Annual Gross Rent Upside \$285,600/);
-assert.match(visibleText(fixture.html), /Going-In Cap Rate 7\.0%/);
+assert.match(visibleText(fixture.html), /Going-In Cap Rate 7\.00%/);
 assert.match(visibleText(fixture.html), /InvestorIQ Implied Value \$13,500,000/);
 
 const debtCapacitySection = fixture.customerSurfaceModel.sections.debtCapacityAndCoverage;
@@ -141,12 +145,12 @@ assert.deepEqual(
 );
 
 const modelMetrics = fixture.customerSurfaceModel.financialTruth;
-assert.equal(modelMetrics.breakEvenOccupancy.label, "Break-Even Occupancy");
-assert.equal(modelMetrics.breakEvenOccupancy.formula, "total_operating_expenses / gross_potential_rent");
-assert.equal(modelMetrics.breakEvenOccupancy.numerator, 555000);
-assert.equal(modelMetrics.breakEvenOccupancy.denominator, 1612800);
-assert.equal(modelMetrics.breakEvenOccupancy.result, 555000 / 1612800);
-assert.equal(modelMetrics.breakEvenOccupancy.displayReady, true);
+assert.equal(modelMetrics.operatingCostCoverageRatio.label, "Operating Cost Coverage Ratio");
+assert.equal(modelMetrics.operatingCostCoverageRatio.formula, "total_operating_expenses / gross_potential_rent");
+assert.equal(modelMetrics.operatingCostCoverageRatio.numerator, 555000);
+assert.equal(modelMetrics.operatingCostCoverageRatio.denominator, 1612800);
+assert.equal(modelMetrics.operatingCostCoverageRatio.result, 555000 / 1612800);
+assert.equal(modelMetrics.operatingCostCoverageRatio.displayReady, true);
 
 assert.equal(modelMetrics.proposedDebtYield.numerator, 945000);
 assert.equal(modelMetrics.proposedDebtYield.denominator, 9450000);
@@ -275,7 +279,7 @@ assert.deepEqual(manifestProposedDebtYield.inputProvenance, ["core:file:t12-file
 const manifestCurrentDebtBreakEven = manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "currentDebtInclusiveBreakEvenOccupancy");
 assert.equal(manifestCurrentDebtBreakEven.result, currentDebtInclusiveBreakEvenOccupancy.result);
 assert.equal(manifestCurrentDebtBreakEven.units, "ratio");
-assert.equal(manifestCurrentDebtBreakEven.label, "Current Debt-Inclusive Operating Break-Even Ratio");
+assert.equal(manifestCurrentDebtBreakEven.label, "Current Debt-Inclusive Cost Coverage Ratio");
 assert.equal(manifestCurrentDebtBreakEven.formula, "accepted_t12_total_operating_expenses_plus_accepted_current_annual_debt_service_divided_by_accepted_t12_gross_potential_rent");
 assert.equal(manifestCurrentDebtBreakEven.inputs.numerator, 1026000);
 assert.equal(manifestCurrentDebtBreakEven.inputs.denominator, 1612800);
@@ -284,7 +288,7 @@ assert.deepEqual(provenanceTokens(manifestCurrentDebtBreakEven.inputProvenance),
 const manifestMonthlyRent = manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "proposedDebtInclusiveBreakEvenMonthlyRentPerUnit");
 assert.equal(manifestMonthlyRent.result, proposedDebtInclusiveBreakEvenMonthlyRentPerUnit.result);
 assert.equal(manifestMonthlyRent.units, "currency_per_unit_per_month");
-assert.equal(manifestMonthlyRent.label, "Proposed Acquisition Debt-Inclusive Break-Even Monthly Rent per Unit");
+assert.equal(manifestMonthlyRent.label, "Proposed Debt-Inclusive Monthly Rent / Unit Coverage Reference");
 assert.equal(manifestMonthlyRent.formula, "accepted_t12_total_operating_expenses_plus_accepted_proposed_annual_debt_service_divided_by_accepted_total_units_divided_by_12");
 assert.equal(manifestMonthlyRent.inputs.numerator, 1231249.2);
 assert.equal(manifestMonthlyRent.inputs.denominator, 768);
@@ -322,13 +326,13 @@ assert.equal(manifestProposedDscr.inputs.annualNetOperatingIncome, 945000);
 assert.equal(manifestProposedDscr.inputs.annualDebtService, 676249.2);
 assert.deepEqual(provenanceTokens(manifestProposedDscr.inputProvenance), ["file:t12-file", "file:purchase-file", "file:purchase-file", "file:purchase-file"]);
 
-const manifestBreakEven = manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "breakEvenOccupancy");
-assert.equal(manifestBreakEven.result, modelMetrics.breakEvenOccupancy.result);
-assert.equal(manifestBreakEven.units, "ratio");
-assert.equal(manifestBreakEven.formula, "total_operating_expenses / gross_potential_rent");
-assert.equal(manifestBreakEven.inputs.numerator, 555000);
-assert.equal(manifestBreakEven.inputs.denominator, 1612800);
-assert.deepEqual(manifestBreakEven.inputProvenance, ["core:file:t12-file", "core:file:rent-roll-file"]);
+const manifestOccr = manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "operatingCostCoverageRatio");
+assert.equal(manifestOccr.result, modelMetrics.operatingCostCoverageRatio.result);
+assert.equal(manifestOccr.units, "ratio");
+assert.equal(manifestOccr.formula, "total_operating_expenses / gross_potential_rent");
+assert.equal(manifestOccr.inputs.numerator, 555000);
+assert.equal(manifestOccr.inputs.denominator, 1612800);
+assert.deepEqual(manifestOccr.inputProvenance, ["core:file:t12-file", "core:file:rent-roll-file"]);
 
 const manifestDebtYield = manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "proposedDebtYield");
 assert.equal(manifestDebtYield.result, modelMetrics.proposedDebtYield.result);
@@ -424,8 +428,8 @@ assert.doesNotMatch(collapsedHtml, /data-iq-elite07-metric="governedBindingConst
 assert.doesNotMatch(visibleText(collapsedHtml), /Proposed Debt Yield/i);
 
 const invalidDenominatorModel = structuredClone(fixture.customerSurfaceModel);
-invalidDenominatorModel.financialTruth.breakEvenOccupancy = {
-  ...invalidDenominatorModel.financialTruth.breakEvenOccupancy,
+invalidDenominatorModel.financialTruth.operatingCostCoverageRatio = {
+  ...invalidDenominatorModel.financialTruth.operatingCostCoverageRatio,
   denominator: 0,
   result: null,
   displayReady: false,
@@ -454,8 +458,8 @@ const invalidDenominatorCandidate = buildReportQualityManifestCandidate({
 });
 const invalidDenominatorValidation = validateReportQualityManifest(invalidDenominatorCandidate);
 assert.equal(invalidDenominatorValidation.ok, true);
-assert.equal(calcByKey(invalidDenominatorCandidate, "breakEvenOccupancy").eligible, false);
-assert.equal(calcByKey(invalidDenominatorCandidate, "breakEvenOccupancy").result, null);
+assert.equal(calcByKey(invalidDenominatorCandidate, "operatingCostCoverageRatio").eligible, false);
+assert.equal(calcByKey(invalidDenominatorCandidate, "operatingCostCoverageRatio").result, null);
 
 assert.doesNotMatch(visibleText(fixture.html), /\bBUY\b/);
 assert.doesNotMatch(visibleText(fixture.html), /\bSELL\b/);

@@ -7,6 +7,7 @@ import {
 import {
   buildCorePublicationConstitution,
 } from "./core-publication-constitution.js";
+import { buildCanonicalOperatingMetricSet } from "./canonical-operating-metrics.js";
 import {
   adjudicateSupportDocumentAuthority,
   buildSupportDocumentAuthorityShadowComparison,
@@ -769,6 +770,15 @@ export function buildCanonicalSourceTruthPackage({
     source_reconciliation_state: sourceReconciliationState,
     core_input_sufficiency_state: coreInputState,
   };
+
+  sourceTruthPackage.shared_operating_metrics = buildCanonicalOperatingMetricSet({
+    t12Facts: sourceTruthPackage?.core?.t12?.accepted_facts || {},
+    rentRollFacts: sourceTruthPackage?.core?.rent_roll?.accepted_facts || {},
+    sourceReconciliationState,
+    t12AuthorityBase: "sourceTruthPackage.core.t12.accepted_facts",
+    rentRollAuthorityBase: "sourceTruthPackage.core.rent_roll.accepted_facts",
+    reconciliationAuthorityBase: "sourceTruthPackage.source_reconciliation_state",
+  });
 
   sourceTruthPackage.core_publication_constitution = buildCorePublicationConstitution({
     sourceTruthPackage,

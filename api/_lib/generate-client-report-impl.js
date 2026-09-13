@@ -117,6 +117,13 @@ import {
   toCapRatio,
 } from "./report-number-helpers.js";
 import {
+  OPERATING_COST_COVERAGE_RATIO,
+  buildOperatingCostCoverageRatioReceipt,
+  classifyOperatingCostCoverageRatio,
+  formatOperatingCostCoverageRatio,
+  operatingCostCoverageRatioToPercent,
+} from "./canonical-operating-metrics.js";
+import {
   stripMarkedSection,
   replaceMarkedSection,
   stripT12DetailSubsection,
@@ -261,6 +268,11 @@ function alignDealScorecardVisibleClassificationHtml(dealScoreTableHtml, visible
 }
 const DATA_NOT_AVAILABLE = "Not assessed";
 const SECTION_OMITTED = "Section intentionally omitted due to insufficient source data.";
+const OCCR_SENSITIZED_THRESHOLD = OPERATING_COST_COVERAGE_RATIO.thresholds.sensitized;
+const OCCR_FRAGILE_THRESHOLD = OPERATING_COST_COVERAGE_RATIO.thresholds.fragile;
+const OCCR_SENSITIZED_THRESHOLD_PCT = operatingCostCoverageRatioToPercent(OCCR_SENSITIZED_THRESHOLD);
+const OCCR_FRAGILE_THRESHOLD_PCT = operatingCostCoverageRatioToPercent(OCCR_FRAGILE_THRESHOLD);
+const OCCR_HARD_DISQUALIFIER_PCT = 95;
 const coerceNumber = (value) => {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -652,7 +664,7 @@ function buildDealScorecardState({
   expenseRatioR = null,
   noiMarginR = null,
   execOccupancy = null,
-  breakEvenOccR = null,
+  operatingCostCoverageRatioR = null,
   marketRentPremiumRatio = null,
   currentDebtAssessmentState = null,
   mortgagePayload = null,
@@ -701,16 +713,21 @@ function buildDealScorecardState({
       band: execOccupancy > 0.95 ? "Above 95%" : execOccupancy >= 0.85 ? "85\u201395%" : "Below 85%",
     });
   }
-  if (Number.isFinite(breakEvenOccR)) {
-    const pts = breakEvenOccR < 0.70 ? 10 : breakEvenOccR <= 0.80 ? 6 : 2;
+  if (Number.isFinite(operatingCostCoverageRatioR)) {
+    const occrBand = classifyOperatingCostCoverageRatio(operatingCostCoverageRatioR);
+    const pts = occrBand === "Stable" ? 10 : occrBand === "Sensitized" ? 6 : 2;
     totalPoints += pts;
     maxPoints += 10;
     scoreRows.push({
-      label: "Break-Even Occupancy",
-      value: formatPercent1(breakEvenOccR),
+      label: OPERATING_COST_COVERAGE_RATIO.label,
+      value: formatOperatingCostCoverageRatio(operatingCostCoverageRatioR),
       pts,
       max: 10,
-      band: breakEvenOccR < 0.70 ? "Below 70%" : breakEvenOccR <= 0.80 ? "70\u201380%" : "Above 80%",
+      band: occrBand === "Stable"
+        ? `${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(0)}% or lower`
+        : occrBand === "Sensitized"
+          ? `Above ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(0)}% through ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(0)}%`
+          : `Above ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(0)}%`,
     });
   }
   if (Number.isFinite(marketRentPremiumRatio) && !Number.isNaN(marketRentPremiumRatio)) {
@@ -3775,12 +3792,15 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         ? coerceNumber(t12Payload?.net_operating_income) /
           coerceNumber(t12Payload?.effective_gross_income)
         : null;
-    const breakEvenOccupancy =
-      Number.isFinite(execOpex) &&
-      Number.isFinite(execGpr) &&
-      execGpr > 0
-        ? execOpex / execGpr
-        : null;
+    const operatingCostCoverageRatioReceipt = buildOperatingCostCoverageRatioReceipt({
+      operatingExpenses: execOpex,
+      grossPotentialRent: execGpr,
+      operatingExpensesAuthorityPath: "accepted_t12.total_operating_expenses",
+      grossPotentialRentAuthorityPath: "accepted_t12.gross_potential_rent",
+    });
+    const operatingCostCoverageRatioR = operatingCostCoverageRatioReceipt.displayReady
+      ? operatingCostCoverageRatioReceipt.value
+      : null;
     const toRatioMetric = (value) => {
       if (value === null || value === undefined || value === "") return null;
       const n = Number(value);
@@ -3789,20 +3809,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     };
     const expenseRatioR = toRatioMetric(expenseRatio);
     const noiMarginR = toRatioMetric(noiMargin);
-    const breakEvenOccR = toRatioMetric(breakEvenOccupancy);
-    const breakEvenOccRatio = breakEvenOccR;
-    const breakEvenOcc = breakEvenOccR;
-    const toPctValue = (value) => {
-      if (value === null || value === undefined || value === "") return null;
-      const n = Number(value);
-      if (!Number.isFinite(n)) return null;
-      return n > 1.5 ? n : n * 100;
-    };
-    const breakEvenOccPct = toPctValue(breakEvenOcc);
-    const operatingCushionPct =
-      Number.isFinite(execOccupancy) && Number.isFinite(breakEvenOccPct)
-        ? (execOccupancy * 100) - breakEvenOccPct
-        : null;
+    // Physical occupancy and OCCR are intentionally separate concepts.
+    // OCCR is never subtracted from physical occupancy.
     const marketRentPremiumPct =
       Number.isFinite(coerceNumber(computedRentRoll?.rent_to_market_gap))
         ? coerceNumber(computedRentRoll?.rent_to_market_gap) * 100
@@ -3853,21 +3861,16 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         ? "Sensitized"
         : "Stable"
       : null;
-    const breakEvenBand = Number.isFinite(breakEvenOccRatio)
-      ? breakEvenOccRatio >= 0.8
-        ? "Fragile"
-        : breakEvenOccRatio >= 0.75
-        ? "Sensitized"
-        : "Stable"
-      : null;
+    const operatingCostCoverageRatioBand =
+      classifyOperatingCostCoverageRatio(operatingCostCoverageRatioR);
     const execOpexRatioText = Number.isFinite(expenseRatioR)
       ? `${formatPercent1(expenseRatioR)}${expenseRatioBand ? ` (${expenseRatioBand})` : ""}`
       : DATA_NOT_AVAILABLE;
     const execNoiMarginText = Number.isFinite(noiMarginR)
       ? `${formatPercent1(noiMarginR)}${noiMarginBand ? ` (${noiMarginBand})` : ""}`
       : DATA_NOT_AVAILABLE;
-    const execBreakEvenText = Number.isFinite(breakEvenOccRatio)
-      ? `${formatPercent1(breakEvenOccRatio)}${breakEvenBand ? ` (${breakEvenBand})` : ""}`
+    const execOperatingCostCoverageText = Number.isFinite(operatingCostCoverageRatioR)
+      ? `${formatOperatingCostCoverageRatio(operatingCostCoverageRatioR)}${operatingCostCoverageRatioBand ? ` (${operatingCostCoverageRatioBand})` : ""}`
       : DATA_NOT_AVAILABLE;
     const rawFinancials = body?.financials || {};
     const canonicalRefiDebtBasis =
@@ -3993,22 +3996,22 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         severity,
       });
     }
-    if (Number.isFinite(breakEvenOccR)) {
+    if (Number.isFinite(operatingCostCoverageRatioR)) {
       const severity =
-        breakEvenOccR > 0.85
-          ? breakEvenOccR - 0.85
-          : breakEvenOccR > 0.75
-          ? breakEvenOccR - 0.75
-          : 0;
+        operatingCostCoverageRatioBand === "Fragile"
+          ? operatingCostCoverageRatioR - OCCR_FRAGILE_THRESHOLD
+          : operatingCostCoverageRatioBand === "Sensitized"
+            ? operatingCostCoverageRatioR - OCCR_SENSITIZED_THRESHOLD
+            : 0;
       const trigger =
-        breakEvenOccR > 0.85
-          ? ">= 85.0% fragile threshold breached"
-          : breakEvenOccR > 0.75
-          ? ">= 75.0% sensitized threshold breached"
-          : "< 75.0% within stable range";
+        operatingCostCoverageRatioBand === "Fragile"
+          ? `> ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(1)}% fragile threshold breached`
+          : operatingCostCoverageRatioBand === "Sensitized"
+            ? `> ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(1)}% sensitized threshold breached`
+            : `<= ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(1)}% within stable range`;
       driverCandidates.push({
-        label: "Break-even Occupancy",
-        value: formatPercent1(breakEvenOccR),
+        label: OPERATING_COST_COVERAGE_RATIO.label,
+        value: formatOperatingCostCoverageRatio(operatingCostCoverageRatioR),
         trigger,
         severity,
       });
@@ -4053,7 +4056,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       Number.isFinite(execOccupancy) &&
       Number.isFinite(expenseRatioR) &&
       Number.isFinite(noiMarginR) &&
-      Number.isFinite(breakEvenOccR);
+      Number.isFinite(operatingCostCoverageRatioR);
     const screeningHasSufficientData =
       effectiveReportMode === "v1_core"
         ? hasCoreUnderwritingOperatingMetrics
@@ -4066,7 +4069,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     } else if (
       (Number.isFinite(expenseRatioR) && expenseRatioR > 0.65) ||
       (Number.isFinite(noiMarginR) && noiMarginR < 0.35) ||
-      (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85)
+      operatingCostCoverageRatioBand === "Fragile"
     ) {
       screeningClass = "Fragile";
       screeningExplanation =
@@ -4074,7 +4077,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     } else if (
       (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) ||
       (Number.isFinite(noiMarginR) && noiMarginR < 0.45) ||
-      (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75)
+      operatingCostCoverageRatioBand === "Sensitized"
     ) {
       screeningClass = "Sensitized";
       screeningExplanation =
@@ -4115,9 +4118,12 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         `compressed NOI Margin (${formatPercent1(noiMarginR)})`
       );
     }
-    if (Number.isFinite(breakEvenOccR) && breakEvenOccR >= 0.75) {
+    if (
+      operatingCostCoverageRatioBand === "Sensitized" ||
+      operatingCostCoverageRatioBand === "Fragile"
+    ) {
       classificationDrivers.push(
-        `high Break-even Occupancy (${formatPercent1(breakEvenOccR)})`
+        `high ${OPERATING_COST_COVERAGE_RATIO.label} (${formatOperatingCostCoverageRatio(operatingCostCoverageRatioR)})`
       );
     }
     const whyLine =
@@ -4131,8 +4137,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     };
     const expenseRatioPct = toPercentMetric(expenseRatioR);
     const noiMarginPct = toPercentMetric(noiMarginR);
-    const breakEvenDecisionPct = toPercentMetric(breakEvenOccR);
-    const decisionContextInputs = [expenseRatioPct, noiMarginPct, breakEvenDecisionPct];
+    const operatingCostCoverageDecisionPct =
+      operatingCostCoverageRatioToPercent(operatingCostCoverageRatioR);
+    const decisionContextInputs = [expenseRatioPct, noiMarginPct, operatingCostCoverageDecisionPct];
     let passChecks = [];
     let disqualifierChecks = [];
     let anyHardDisq = false;
@@ -4155,9 +4162,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           test: (v) => v > 40,
         },
         {
-          label: "Break-even Occupancy < 85%",
-          value: breakEvenDecisionPct,
-          test: (v) => v < 85,
+          label: `${OPERATING_COST_COVERAGE_RATIO.label} < ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(0)}%`,
+          value: operatingCostCoverageDecisionPct,
+          test: (v) => v < OCCR_FRAGILE_THRESHOLD_PCT,
         },
       ];
       disqualifierChecks = [
@@ -4172,9 +4179,9 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           test: (v) => v <= 30,
         },
         {
-          label: "Break-even Occupancy >= 95%",
-          value: breakEvenDecisionPct,
-          test: (v) => v >= 95,
+          label: `${OPERATING_COST_COVERAGE_RATIO.label} >= ${OCCR_HARD_DISQUALIFIER_PCT.toFixed(0)}%`,
+          value: operatingCostCoverageDecisionPct,
+          test: (v) => v >= OCCR_HARD_DISQUALIFIER_PCT,
         },
       ];
       const passLinesHtml = passChecks
@@ -4322,10 +4329,10 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         )}</p>`
       );
     }
-    if (Number.isFinite(Number(breakEvenOcc))) {
+    if (Number.isFinite(operatingCostCoverageRatioR)) {
       execScreeningLines.push(
         `<p class="exec-kpis">${escapeHtml(
-          `Break-even Occupancy: ${formatPercent1(breakEvenOcc)}`
+          `${OPERATING_COST_COVERAGE_RATIO.label}: ${formatOperatingCostCoverageRatio(operatingCostCoverageRatioR)}`
         )}</p>`
       );
     }
@@ -4342,13 +4349,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         `Occupancy is ${formatPercent1(execOccupancy)}, reflecting near-stabilized in-place tenancy.`
       );
     }
-    if (Number.isFinite(operatingCushionPct) && operatingCushionPct >= 25) {
-      upsideBullets.push(
-        `Operating cushion of ${formatPercent1(
-          operatingCushionPct
-        )} above break-even occupancy based on in-place performance.`
-      );
-    }
+
     const riskBullets = [];
     if (Number.isFinite(expenseRatioR) && expenseRatioR > 0.55) {
       riskBullets.push(
@@ -4364,11 +4365,14 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         )}, leaving limited buffer for shocks.`
       );
     }
-    if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75) {
+    if (
+      operatingCostCoverageRatioBand === "Sensitized" ||
+      operatingCostCoverageRatioBand === "Fragile"
+    ) {
       riskBullets.push(
-        `Break-even occupancy is ${formatPercent1(
-          breakEvenOccR
-        )}, increasing sensitivity to vacancy and income disruption.`
+        `${OPERATING_COST_COVERAGE_RATIO.label} is ${formatOperatingCostCoverageRatio(
+          operatingCostCoverageRatioR
+        )}, meaning operating expenses consume that share of accepted T12 Gross Potential Rent.`
       );
     }
     if (effectiveReportMode === "v1_core" && sourceReconciliationNarrativePolicy.data_coverage_required && hasSourceReconciliationVariance) {
@@ -4484,8 +4488,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(finalHtml, "{{EXEC_NOI_MARGIN}}", execNoiMarginText);
     finalHtml = replaceAll(
       finalHtml,
-      "{{EXEC_BREAK_EVEN_OCCUPANCY}}",
-      execBreakEvenText
+      "{{EXEC_OPERATING_COST_COVERAGE_RATIO}}",
+      execOperatingCostCoverageText
     );
     const execSnapshotTokens = [
       "{{EXEC_UNITS}}",
@@ -4496,7 +4500,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       "{{EXEC_NOI}}",
       "{{EXEC_EXPENSE_RATIO}}",
       "{{EXEC_NOI_MARGIN}}",
-      "{{EXEC_BREAK_EVEN_OCCUPANCY}}",
+      "{{EXEC_OPERATING_COST_COVERAGE_RATIO}}",
     ];
     execSnapshotTokens.forEach((token) => {
       if (finalHtml.includes(token)) {
@@ -4512,7 +4516,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       execNoiText,
       execOpexRatioText,
       execNoiMarginText,
-      execBreakEvenText,
+      execOperatingCostCoverageText,
     ];
     if (
       execSnapshotValues.every((value) => value === DATA_NOT_AVAILABLE) &&
@@ -4525,7 +4529,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       expenseRatioR,
       noiMarginR,
       execOccupancy,
-      breakEvenOccR,
+      operatingCostCoverageRatioR,
       marketRentPremiumRatio,
       currentDebtAssessmentState,
       mortgagePayload,
@@ -4638,10 +4642,11 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         execOpexText,
         execOpexRatioText,
         execNoiMarginText,
-        execBreakEvenText,
+        execOperatingCostCoverageText,
         expenseRatioR,
         noiMarginR,
-        breakEvenOccR,
+        operatingCostCoverageRatioR,
+        operatingCostCoverageRatioReceipt,
         marketRentPremiumRatio,
         currentDebtDscrForDisplay,
         screeningHasSufficientData,
@@ -4998,7 +5003,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       noi: execNoi,
       expenseRatio: expenseRatioR,
       noiMargin: noiMarginR,
-      breakEvenOccupancy: breakEvenOccR,
+      operatingCostCoverageRatio: operatingCostCoverageRatioR,
       purchasePrice: Number.isFinite(coerceNumber(renderAcquisitionAuthorityRow?.purchase_price))
         ? coerceNumber(renderAcquisitionAuthorityRow.purchase_price)
         : null,
@@ -5070,21 +5075,21 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     // --- V2 SOURCE AUTHORITY BRIDGE END ---
     if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const tierDefs = [
-        { name: "Stable",     er: "< 55%",   nm: "> 45%",  beo: "< 75%" },
-        { name: "Sensitized", er: "55\u201365%", nm: "35\u201345%", beo: "75\u201385%" },
-        { name: "Fragile",    er: "> 65%",   nm: "< 35%",  beo: "> 85%" },
+        { name: "Stable", er: "< 55%", nm: "> 45%", occr: `<= ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(0)}%` },
+        { name: "Sensitized", er: "55-65%", nm: "35-45%", occr: `> ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(0)}% to ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(0)}%` },
+        { name: "Fragile", er: "> 65%", nm: "< 35%", occr: `> ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(0)}%` },
       ];
       const tierRows = tierDefs.map((t) => {
         const isCurrent = t.name === screeningVisibleClassificationForConsumers;
         const rowStyle = isCurrent ? ` style="font-weight:600;background:#f0f9ff;"` : "";
         const marker = isCurrent ? " \u25B6" : "";
-        return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.beo}</td></tr>`;
+        return `<tr${rowStyle}><td>${escapeHtml(t.name + marker)}</td><td>${t.er}</td><td>${t.nm}</td><td>${t.occr}</td></tr>`;
       }).join("");
       const screeningClassificationDisclosure =
         /^(Stable|Sensitized|Fragile)$/i.test(screeningVisibleClassificationForConsumers)
           ? ""
           : `<p class="small" style="color:#64748b;margin-top:6px;">Current classification: ${escapeHtml(screeningVisibleClassificationForConsumers)}.</p>`;
-      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Break-even Occ.</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p>${screeningClassificationDisclosure}</div>`;
+      const frameworkCard = `<div class="card no-break" style="margin-top:16px;"><p class="subsection-title">Classification Framework</p><table><thead><tr><th>Tier</th><th>Expense Ratio</th><th>NOI Margin</th><th>Operating Cost Coverage Ratio</th></tr></thead><tbody>${tierRows}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Standardized underwriting thresholds. &#9654; = current classification.</p>${screeningClassificationDisclosure}</div>`;
       // Investment thesis: fully deterministic
       const rrOccNow = coerceNumber(resolveOccupancyNoteValue(computedRentRoll, rentRollPayload));
       const rrInPlace = coerceNumber(rentRollAnnualTotals?.in_place?.value);
@@ -5131,7 +5136,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       if (Number.isFinite(acquisitionMemoRenderContext.annualRentUpside)) summaryRows.push(`<tr><td>Annual Rent Upside</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.annualRentUpside)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.expenseRatio)) summaryRows.push(`<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.expenseRatio)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.noiMargin)) summaryRows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.noiMargin)}</td></tr>`);
-      if (Number.isFinite(acquisitionMemoRenderContext.breakEvenOccupancy)) summaryRows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.breakEvenOccupancy)}</td></tr>`);
+      if (Number.isFinite(acquisitionMemoRenderContext.operatingCostCoverageRatio)) summaryRows.push(`<tr><td>${OPERATING_COST_COVERAGE_RATIO.label}</td><td style="font-weight:600;">${formatOperatingCostCoverageRatio(acquisitionMemoRenderContext.operatingCostCoverageRatio)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.purchasePrice)) summaryRows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatCurrency(acquisitionMemoRenderContext.purchasePrice)}</td></tr>`);
       if (Number.isFinite(acquisitionMemoRenderContext.goingInCapRate)) summaryRows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercent1(acquisitionMemoRenderContext.goingInCapRate)}</td></tr>`);
       const summaryNote = "Source-bound underwriting summary using operating metrics, verified acquisition context, and disclosure-only support-doc treatment. Additional modeling remains deferred from the launch underwriting report.";
@@ -5159,7 +5164,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         noi: acquisitionMemoRenderContext.noi,
         expenseRatio: acquisitionMemoRenderContext.expenseRatio,
         noiMargin: acquisitionMemoRenderContext.noiMargin,
-        breakEvenOccupancy: acquisitionMemoRenderContext.breakEvenOccupancy,
+        operatingCostCoverageRatio: acquisitionMemoRenderContext.operatingCostCoverageRatio,
         formatCurrency,
         formatPercent1,
       });
@@ -5304,7 +5309,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         noi: execNoi,
         expenseRatio: expenseRatioR,
         noiMargin: noiMarginR,
-        breakEvenOccupancy: breakEvenOccR,
+        operatingCostCoverageRatio: operatingCostCoverageRatioR,
         purchasePrice: acquisitionMemoRenderContext?.purchasePrice ?? null,
         goingInCapRate: acquisitionMemoRenderContext?.goingInCapRate ?? null,
       },
@@ -5383,7 +5388,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = replaceAll(
       finalHtml,
       "{{OPERATING_CUSHION}}",
-      Number.isFinite(operatingCushionPct) ? `${operatingCushionPct.toFixed(1)}%` : ""
+      ""
     );
     finalHtml = finalHtml.replace(
       "{{UNIT_VALUE_ADD}}",
@@ -6701,7 +6706,7 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     finalHtml = stripChartBlockByAlt(finalHtml, "Renovation ROI and Rent Lift Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "IRR by Scenario");
     finalHtml = stripChartBlockByAlt(finalHtml, "Risk Factor Radar Chart");
-    finalHtml = stripChartBlockByAlt(finalHtml, "Break-Even Occupancy Analysis");
+    finalHtml = stripChartBlockByAlt(finalHtml, `${OPERATING_COST_COVERAGE_RATIO.label} Analysis`);
     finalHtml = stripChartBlockByAlt(finalHtml, "Deal Score Radar Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "Deal Score Factor Breakdown Bar Chart");
     finalHtml = stripChartBlockByAlt(finalHtml, "Operating Expense Ratio Chart");
@@ -6929,10 +6934,11 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
         execOpexText,
         execOpexRatioText,
         execNoiMarginText,
-        execBreakEvenText,
+        execOperatingCostCoverageText,
         expenseRatioR,
         noiMarginR,
-        breakEvenOccR,
+        operatingCostCoverageRatioR,
+        operatingCostCoverageRatioReceipt,
         marketRentPremiumRatio,
         currentDebtDscrForDisplay,
         screeningHasSufficientData,
@@ -7056,10 +7062,17 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           const color = execOccupancy < 0.85 ? "#dc2626" : execOccupancy < 0.95 ? "#d97706" : "#16a34a";
           addRisk("Occupancy Rate", formatPercent1(execOccupancy), "CLEAR > 95% | WATCH 85-95% | LOW < 85%", flag, color);
         }
-        if (Number.isFinite(breakEvenOccR)) {
-          const flag = breakEvenOccR > 0.80 ? "ELEVATED" : breakEvenOccR > 0.70 ? "WATCH" : "CLEAR";
-          const color = breakEvenOccR > 0.80 ? "#dc2626" : breakEvenOccR > 0.70 ? "#d97706" : "#16a34a";
-          addRisk("Break-Even Occupancy", formatPercent1(breakEvenOccR), "CLEAR < 70% | WATCH 70-80% | ELEVATED > 80%", flag, color);
+        if (Number.isFinite(operatingCostCoverageRatioR)) {
+          const occrBand = classifyOperatingCostCoverageRatio(operatingCostCoverageRatioR);
+          const flag = occrBand === "Fragile" ? "ELEVATED" : occrBand === "Sensitized" ? "WATCH" : "CLEAR";
+          const color = occrBand === "Fragile" ? "#dc2626" : occrBand === "Sensitized" ? "#d97706" : "#16a34a";
+          addRisk(
+            OPERATING_COST_COVERAGE_RATIO.label,
+            formatOperatingCostCoverageRatio(operatingCostCoverageRatioR),
+            `CLEAR <= ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(0)}% | WATCH > ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(0)}% through ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(0)}% | ELEVATED > ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(0)}%`,
+            flag,
+            color
+          );
         }
         if (Number.isFinite(marketRentPremiumRatio)) {
           const flag = marketRentPremiumRatio > 0.15 ? "UPSIDE" : marketRentPremiumRatio > 0.05 ? "MODERATE" : "MINIMAL";
@@ -7184,38 +7197,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
       }
       finalHtml = replaceAll(finalHtml, "{{RENT_DISTRIBUTION_CHART}}", html);
     }
-    // Chart 4: Occupancy buffer gauge
-    {
-      let html = "";
-      if (Number.isFinite(breakEvenOccR) && Number.isFinite(execOccupancy) && breakEvenOccR > 0 && execOccupancy > 0) {
-        const beoFmt = formatPercent1(breakEvenOccR);
-        const currFmt = formatPercent1(execOccupancy);
-        const bufPts = ((execOccupancy - breakEvenOccR) * 100).toFixed(1);
-        const beoW = Math.round(breakEvenOccR * 100);
-        const bufColor = "#B8860B";
-        const bufLabel = (execOccupancy - breakEvenOccR) >= 0.20 ? "Strong cushion" : (execOccupancy - breakEvenOccR) >= 0.10 ? "Adequate cushion" : "Limited cushion";
-        const hasSourceReconciliationCaution =
-          sourceReconciliationNarrativePolicy?.data_coverage_required === true &&
-          hasSourceReconciliationVariance;
-        const occupancyInterpretation = `Break-even occupancy is ${beoFmt} versus current occupancy of ${currFmt}, indicating a ${bufPts} percentage-point operating cushion based on reported T12 totals.`;
-        const reconciliationCaution = hasSourceReconciliationCaution
-          ? " Interpret this cushion alongside source reconciliation disclosure, because variance-sensitive conclusions remain constrained when rent roll and T12 income evidence are materially unreconciled."
-          : "";
-        html = `<div class="no-break" style="margin-top:16px;"><p class="subsection-title" style="margin-bottom:6px;">Break-Even Occupancy Buffer</p>` +
-          `<div style="background:#E5E7EB;height:20px;border-radius:4px;overflow:hidden;position:relative;">` +
-          `<div style="background:#B8860B;height:100%;width:${beoW}%;border-radius:4px 0 0 4px;"></div>` +
-          `</div>` +
-          `<div style="display:flex;justify-content:space-between;margin-top:5px;">` +
-          `<span style="font-size:10px;color:#1e293b;font-weight:600;">Break-even: ${beoFmt}</span>` +
-          `<span style="font-size:10px;color:#1e293b;font-weight:600;">Current occupancy: ${currFmt}</span>` +
-          `</div>` +
-          `<p class="small" style="margin-top:4px;color:${bufColor};font-weight:700;">Buffer: ${bufPts} percentage points - ${bufLabel}</p>` +
-          `<div style="margin-top:6px;padding:8px 10px;border:1px solid #E5E7EB;border-left:3px solid #9CA3AF;border-radius:4px;background:#F9FAFB;">` +
-          `<p class="small" style="margin:0;color:#374151;">${escapeHtml(occupancyInterpretation + reconciliationCaution)}</p>` +
-          `</div></div>`;
-      }
-      finalHtml = replaceAll(finalHtml, "{{OCCUPANCY_BUFFER_VISUAL}}", html);
-    }
+    // OCCR is a GPR-basis operating-cost ratio, not a physical occupancy threshold.
+    finalHtml = replaceAll(finalHtml, "{{OCCUPANCY_BUFFER_VISUAL}}", "");
     // Safety: clear chart tokens for screening mode (scenario section is stripped, so token won't be in HTML, but be safe)
     finalHtml = replaceAll(finalHtml, "{{SCENARIO_TRAJECTORY_CHART}}", "");
     // End HTML/CSS Charts
@@ -7228,12 +7211,14 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
     } else if (effectiveReportMode === "screening_v1" && screeningVisibleClassificationForConsumers) {
       const erStr  = Number.isFinite(expenseRatioR) ? formatPercent1(expenseRatioR) : null;
       const nmStr  = Number.isFinite(noiMarginR)    ? formatPercent1(noiMarginR)    : null;
-      const beoStr = Number.isFinite(breakEvenOccR) ? formatPercent1(breakEvenOccR) : null;
+      const occrStr = Number.isFinite(operatingCostCoverageRatioR)
+        ? formatOperatingCostCoverageRatio(operatingCostCoverageRatioR)
+        : null;
       if (screeningVisibleClassificationForConsumers === "Stable") {
         const parts = [];
         if (erStr)  parts.push(`expense ratio of ${erStr}`);
         if (nmStr)  parts.push(`NOI margin of ${nmStr}`);
-        if (beoStr) parts.push(`break-even occupancy of ${beoStr}`);
+        if (occrStr) parts.push(`${OPERATING_COST_COVERAGE_RATIO.label} of ${occrStr}`);
         execRationale = parts.length > 0
           ? `Classified STABLE: ${parts.join(", ")} are within institutional operating thresholds.`
           : "Classified STABLE: operating metrics remain within defined screening thresholds.";
@@ -7243,8 +7228,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           breaches.push(`elevated operating expense burden (${erStr}) breaches the sensitized threshold`);
         if (Number.isFinite(noiMarginR) && noiMarginR < 0.45 && nmStr)
           breaches.push(`compressed NOI margin (${nmStr}) breaches the sensitized threshold`);
-        if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.75 && beoStr)
-          breaches.push(`break-even occupancy of ${beoStr} exceeds the 75.0% sensitized threshold`);
+        if (operatingCostCoverageRatioBand === "Sensitized" && occrStr)
+          breaches.push(`${OPERATING_COST_COVERAGE_RATIO.label} of ${occrStr} exceeds the ${OCCR_SENSITIZED_THRESHOLD_PCT.toFixed(1)}% sensitized threshold`);
         execRationale = breaches.length > 0
           ? `Operating profile classified as SENSITIZED: ${breaches.join("; ")}.`
           : `Operating profile classified as SENSITIZED: ${screeningExplanation}`;
@@ -7254,8 +7239,8 @@ finalHtml = replaceAll(finalHtml, "{{UNIT_POSITIONING_SECTION_SUBTITLE}}", rentP
           breaches.push(`expense ratio of ${erStr} breaches the 65.0% fragile threshold`);
         if (Number.isFinite(noiMarginR) && noiMarginR < 0.35 && nmStr)
           breaches.push(`NOI margin of ${nmStr} is critically compressed`);
-        if (Number.isFinite(breakEvenOccR) && breakEvenOccR > 0.85 && beoStr)
-          breaches.push(`break-even occupancy of ${beoStr} breaches the 85.0% fragile threshold`);
+        if (operatingCostCoverageRatioBand === "Fragile" && occrStr)
+          breaches.push(`${OPERATING_COST_COVERAGE_RATIO.label} of ${occrStr} breaches the ${OCCR_FRAGILE_THRESHOLD_PCT.toFixed(1)}% fragile threshold`);
         execRationale = breaches.length > 0
           ? `Classified FRAGILE: ${breaches.join("; ")}.`
           : `Classified FRAGILE: ${screeningExplanation}`;

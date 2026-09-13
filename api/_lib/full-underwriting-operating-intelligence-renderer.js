@@ -127,7 +127,7 @@ function renderNoiAnalysis(contract) {
     s.noi.displayReady ? noteRow("Net Operating Income", money(s.noi.value)) : "",
     s.noiMargin.displayReady ? noteRow("NOI Margin", percent(s.noiMargin.value)) : "",
     s.noiPerUnit.displayReady ? noteRow("NOI per Unit", money(s.noiPerUnit.value)) : "",
-    s.breakEvenOccupancy.displayReady ? noteRow("Operating Cost Coverage Ratio", percent(s.breakEvenOccupancy.value), "Operating expenses / T12 gross potential rent") : "",
+    s.operatingCostCoverageRatio.displayReady ? noteRow("Operating Cost Coverage Ratio", percent(s.operatingCostCoverageRatio.value), "Operating expenses / T12 gross potential rent") : "",
     s.noiIdentityDifference.displayReady ? noteRow("EGI less OpEx less NOI", money(s.noiIdentityDifference.value), s.noiIdentityReconciles === true ? "Reconciles within deterministic tolerance" : "Review accepted totals") : "",
   ].filter(Boolean).join("");
   const earningsBridge = renderVisualEliteOperatingEarningsBridge(s);

@@ -1,5 +1,28 @@
 # InvestorIQ CHAT_HANDOFF
 
+## 2026-09-13 CURRENT AUTHORITY - REPOSITORY CERTIFICATION RESET
+
+The active certification branch is `launch-certification-20260913`.
+
+Before any engineering work, read:
+
+1. `04_PRODUCT_CONSTITUTION.md`
+2. `00_CURRENT_HANDOFF.md`
+3. `01_MASTER_PLAN.md`
+4. `02_ELITE_REPORT_BLUEPRINT.md`
+5. `05_REPOSITORY_CERTIFICATION_PLAN.md`
+6. `06_REPOSITORY_CERTIFICATION_LEDGER.md`
+7. `03_FRESH_CHAT_PROMPT.md`
+
+The repository is undergoing one final deterministic line-by-line certification before another owner-approved customer report test.
+
+Do not work from `main`. Do not create ad hoc repair branches. Do not leave material work only in a model-private worktree.
+
+Historical material remains preserved. Proven obsolete runtime code, however, should be deleted from the active tree after dependency proof rather than kept around as a competing legacy pathway.
+
+---
+
+
 ## 2026-09-12 CURRENT AUTHORITY — post-deployment handoff
 
 This is the controlling handoff state for the next chat. Preserve all historical sections below; this section supersedes stale deployment identifiers and pending-promotion instructions where they conflict.

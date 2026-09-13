@@ -1,3 +1,30 @@
+## 2026-09-13 CURRENT AUTHORITY - PRE-AUDIT REPOSITORY CERTIFICATION RESET
+
+The owner has ordered a repository-wide line-by-line certification before any further customer report test.
+
+**Single authoritative working branch:** `launch-certification-20260913`
+
+The September 13 paused Slice 1 candidate is being preserved as a WIP checkpoint on that branch so no recovery state remains trapped only in a model-private worktree or ZIP. WIP means preserved, not certified.
+
+New governing process:
+
+- local Windows repo and GitHub must match before certification work begins;
+- no work from `main` during certification;
+- no material work may remain only in a temporary model environment;
+- every bounded change is applied to the authoritative branch, reviewed, committed, pushed, and recorded before a chat handoff;
+- every production-relevant repository file will be inventoried and reviewed line by line;
+- proven obsolete runtime code is deleted from the active tree instead of being kept merely as legacy/archive/deprecated code;
+- canonical handoff files remain cumulative and historical sections are preserved;
+- critical owner doctrine lives in `04_PRODUCT_CONSTITUTION.md` and executable tests where practical;
+- the eight prelaunch slices remain issue registers inside the repository certification, not permission to keep patching isolated symptoms;
+- no new customer Final Attack report is requested until the owner approves it after repository certification gates close.
+
+Read `04_PRODUCT_CONSTITUTION.md` before interpreting any older conflicting handoff text.
+
+Production remains held unless the owner separately authorizes a deployment or other production mutation.
+
+---
+
 ## 2026-09-12 CURRENT AUTHORITY — final deployment checkpoint
 
 - The final repaired production deployment is complete. Certified source is commit `2005e6361e348b87a61d9470759819c5f000c5d` on `hotfix-worker-queue-starvation-20260911-r1`.

@@ -3,6 +3,7 @@ import { publicationDate, publicationMoney } from "./publication-format.js";
 import { toCapRatio, toRateRatio } from "./report-number-helpers.js";
 import { buildDocumentTreatmentSummaryHtml } from "./document-treatment-authority.js";
 import { formatInterestRatePercent } from "./report-formatting-helpers.js";
+import { formatOperatingCostCoverageRatio, resolveCanonicalOperatingMetricSet } from "./canonical-operating-metrics.js";
 import { ACQUISITION_FINANCING_DISPLAY_LABELS } from "./acquisition-financing-display-contract.js";
 import { UNDERWRITING_REPORT_IDENTITY } from "./report-identity-authority.js";
 import { buildFullUnderwritingChapter1EliteContract } from "./full-underwriting-chapter1-elite-contract.js";
@@ -248,7 +249,7 @@ export function buildOperatingSnapshotCard({
   noi = null,
   expenseRatio = null,
   noiMargin = null,
-  breakEvenOccupancy = null,
+  operatingCostCoverageRatio = null,
   formatCurrency,
   formatPercent1,
 } = {}) {
@@ -261,7 +262,7 @@ export function buildOperatingSnapshotCard({
   if (Number.isFinite(noi)) rows.push(`<tr><td>NOI</td><td>${formatCurrency(noi)}</td></tr>`);
   if (Number.isFinite(expenseRatio)) rows.push(`<tr><td>Expense Ratio</td><td>${formatPercent1(expenseRatio)}</td></tr>`);
   if (Number.isFinite(noiMargin)) rows.push(`<tr><td>NOI Margin</td><td>${formatPercent1(noiMargin)}</td></tr>`);
-  if (Number.isFinite(breakEvenOccupancy)) rows.push(`<tr><td>Break-Even Occupancy</td><td>${formatPercent1(breakEvenOccupancy)}</td></tr>`);
+  if (Number.isFinite(operatingCostCoverageRatio)) rows.push(`<tr><td>Operating Cost Coverage Ratio</td><td>${formatOperatingCostCoverageRatio(operatingCostCoverageRatio)}</td></tr>`);
   if (!rows.length) return "";
   return `<div class="card no-break" style="margin-top:6px;"><p class="subsection-title">Operating Snapshot</p><table><tbody>${rows.join("")}</tbody></table><p class="small" style="color:#64748b;font-style:italic;margin-top:8px;">Snapshot is built from verified operating inputs only. No forward projection assumptions are introduced.</p></div>`;
 }
@@ -1084,7 +1085,7 @@ function renderOperatingSupportSection({ coreMetrics = null } = {}) {
     Number.isFinite(Number(coreMetrics?.occupancy)) ? `<tr><td>Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.occupancy)}</td></tr>` : "",
     Number.isFinite(Number(coreMetrics?.expenseRatio)) ? `<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.expenseRatio)}</td></tr>` : "",
     Number.isFinite(Number(coreMetrics?.noiMargin)) ? `<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.noiMargin)}</td></tr>` : "",
-    Number.isFinite(Number(coreMetrics?.breakEvenOccupancy)) ? `<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(coreMetrics.breakEvenOccupancy)}</td></tr>` : "",
+    Number.isFinite(toFiniteNumber(coreMetrics?.operatingCostCoverageRatio)) ? `<tr><td>Operating Cost Coverage Ratio</td><td style="font-weight:600;">${formatOperatingCostCoverageRatio(coreMetrics.operatingCostCoverageRatio)}</td></tr>` : "",
   ].filter(Boolean).join("");
   if (!rows) return "";
   return renderSection("Operating Support", `<table class="detail-table"><tbody>${rows}</tbody></table>`, { pageBreakBefore: true });
@@ -1284,26 +1285,26 @@ function renderDebtCapacityAndCoverageSection(customerSurfaceModel = null) {
     scalar("dscr", "Proposed DSCR", facts.dscr, "multiple"),
     scalar("ltv", "Proposed LTV", facts.ltv, "ratio"),
   ].filter(Boolean);
-  const breakEvenMetrics = [
-    scalar("currentDebtInclusiveBreakEvenOccupancy", "Current Occupancy Coverage Point", facts.currentDebtInclusiveBreakEvenOccupancy, "ratio"),
-    scalar("proposedDebtInclusiveBreakEvenOccupancy", "Proposed Occupancy Coverage Point", facts.proposedDebtInclusiveBreakEvenOccupancy, "ratio"),
-    scalar("currentDebtInclusiveBreakEvenMonthlyRentPerUnit", "Current Break-Even Rent / Unit / Month", facts.currentDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month"),
-    scalar("proposedDebtInclusiveBreakEvenMonthlyRentPerUnit", "Proposed Break-Even Rent / Unit / Month", facts.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month"),
+  const coverageReferenceMetrics = [
+    scalar("currentDebtInclusiveBreakEvenOccupancy", "Current Debt-Inclusive Cost Coverage Ratio", facts.currentDebtInclusiveBreakEvenOccupancy, "ratio"),
+    scalar("proposedDebtInclusiveBreakEvenOccupancy", "Proposed Debt-Inclusive Cost Coverage Ratio", facts.proposedDebtInclusiveBreakEvenOccupancy, "ratio"),
+    scalar("currentDebtInclusiveBreakEvenMonthlyRentPerUnit", "Current Debt-Inclusive Monthly Rent / Unit Coverage Reference", facts.currentDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month"),
+    scalar("proposedDebtInclusiveBreakEvenMonthlyRentPerUnit", "Proposed Debt-Inclusive Monthly Rent / Unit Coverage Reference", facts.proposedDebtInclusiveBreakEvenMonthlyRentPerUnit, "currency_per_unit_per_month"),
   ].filter(Boolean);
-  if (!headlineMetrics.length && !breakEvenMetrics.length) return "";
+  if (!headlineMetrics.length && !coverageReferenceMetrics.length) return "";
   const headlineHtml = headlineMetrics.length
     ? `<div class="summary-strip debt-capacity-strip">${headlineMetrics.map((metric) => `<div data-iq-fact-key="${escapeHtml(metric.key)}"><span>${escapeHtml(metric.label)}</span><strong>${escapeHtml(metric.resultDisplay)}</strong></div>`).join("")}</div>`
     : "";
-  const breakEvenRows = breakEvenMetrics.map((metric) => `<tr data-iq-fact-key="${escapeHtml(metric.key)}"><td>${escapeHtml(metric.label)}</td><td>${escapeHtml(metric.resultDisplay)}</td></tr>`).join("");
-  const breakEvenHtml = breakEvenRows
-    ? `<div class="subsection-block"><p class="subsection-title">Debt-Inclusive Break-Even</p><table class="detail-table debt-break-even-table"><tbody>${breakEvenRows}</tbody></table></div>`
+  const coverageReferenceRows = coverageReferenceMetrics.map((metric) => `<tr data-iq-fact-key="${escapeHtml(metric.key)}"><td>${escapeHtml(metric.label)}</td><td>${escapeHtml(metric.resultDisplay)}</td></tr>`).join("");
+  const coverageReferenceHtml = coverageReferenceRows
+    ? `<div class="subsection-block"><p class="subsection-title">Debt-Inclusive Coverage References</p><table class="detail-table debt-break-even-table"><tbody>${coverageReferenceRows}</tbody></table></div>`
     : "";
   const missing = Array.isArray(section?.missingFacts) && section.missingFacts.length
     ? `<p class="footer-note">Unsupported debt-capacity classifications are omitted rather than rendered as inferred conclusions.</p>`
     : "";
   return renderSection(
     section.visibleLabel || "Debt Capacity and Coverage",
-    `${headlineHtml}${breakEvenHtml}<p class="footer-note">Deterministic lender metrics are shown only from accepted T12, Rent Roll, current debt, and purchase assumptions. Formula detail and source lineage are retained in the report quality record.</p>${missing}`,
+    `${headlineHtml}${coverageReferenceHtml}<p class="footer-note">Deterministic lender metrics are shown only from accepted T12, Rent Roll, current debt, and purchase assumptions. Formula detail and source lineage are retained in the report quality record.</p>${missing}`,
     { pageBreakBefore: true }
   );
 }
@@ -1801,7 +1802,7 @@ function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null, 
   const noi = toFiniteNumber(coreMetrics?.noi);
   const expenseRatio = toFiniteNumber(coreMetrics?.expenseRatio);
   const noiMargin = toFiniteNumber(coreMetrics?.noiMargin);
-  const breakEvenOccupancy = toFiniteNumber(coreMetrics?.breakEvenOccupancy);
+  const operatingCostCoverageRatio = toFiniteNumber(coreMetrics?.operatingCostCoverageRatio);
   const annualUpside = Number.isFinite(annualInPlace) && Number.isFinite(annualMarket) ? annualMarket - annualInPlace : null;
   const rentGapPct = Number.isFinite(annualUpside) && Number.isFinite(annualInPlace) && annualInPlace > 0 ? annualUpside / annualInPlace : null;
   const purchasePrice = toFiniteNumber(coreMetrics?.purchasePrice);
@@ -1818,7 +1819,7 @@ function renderMetricsSnapshotSection(coreMetrics = null, sourcePackage = null, 
   if (Number.isFinite(noi)) rows.push(`<tr><td>NOI</td><td style="font-weight:600;">${formatMoney(noi)}</td></tr>`);
   if (Number.isFinite(expenseRatio)) rows.push(`<tr><td>Expense Ratio</td><td style="font-weight:600;">${formatPercentDisplay(expenseRatio)}</td></tr>`);
   if (Number.isFinite(noiMargin)) rows.push(`<tr><td>NOI Margin</td><td style="font-weight:600;">${formatPercentDisplay(noiMargin)}</td></tr>`);
-  if (Number.isFinite(breakEvenOccupancy)) rows.push(`<tr><td>Break-Even Occupancy</td><td style="font-weight:600;">${formatPercentDisplay(breakEvenOccupancy)}</td></tr>`);
+  if (Number.isFinite(operatingCostCoverageRatio)) rows.push(`<tr><td>Operating Cost Coverage Ratio</td><td style="font-weight:600;">${formatOperatingCostCoverageRatio(operatingCostCoverageRatio)}</td></tr>`);
   if (Number.isFinite(purchasePrice)) rows.push(`<tr><td>Purchase Price</td><td style="font-weight:600;">${formatMoney(purchasePrice)}</td></tr>`);
   const goingInCapRate = resolveValidGoingInCapRate({ coreMetrics, sourcePackage, bossContract });
   if (Number.isFinite(goingInCapRate)) rows.push(`<tr><td>Going-In Cap Rate</td><td style="font-weight:600;">${formatPercentDisplay(goingInCapRate, 2)}</td></tr>`);
@@ -2053,17 +2054,30 @@ export function renderCompleteAcquisitionMemoV2Html({
   financialIntelligence = null,
 } = {}) {
   try {
-    const hasCanonicalBreakEvenContract = Boolean(customerSurfaceModel?.financialTruth?.breakEvenOccupancy);
-    const canonicalBreakEvenRaw = customerSurfaceModel?.financialTruth?.breakEvenOccupancy?.result;
-    const canonicalBreakEvenOccupancy = canonicalBreakEvenRaw === null || canonicalBreakEvenRaw === undefined || canonicalBreakEvenRaw === ""
-      ? null
-      : Number(canonicalBreakEvenRaw);
-    if (hasCanonicalBreakEvenContract) {
-      coreMetrics = {
-        ...(coreMetrics || {}),
-        breakEvenOccupancy: Number.isFinite(canonicalBreakEvenOccupancy) ? canonicalBreakEvenOccupancy : null,
-      };
-    }
+    const shared = sourceTruthPackage
+      ? resolveCanonicalOperatingMetricSet(sourceTruthPackage)
+      : customerSurfaceModel?.sharedOperatingMetrics || null;
+    const financialReceipt = customerSurfaceModel?.financialTruth?.operatingCostCoverageRatio;
+    const canonicalRatio = shared?.metrics?.operatingCostCoverageRatio;
+    coreMetrics = {
+      ...(coreMetrics || {}),
+      ...(shared ? {
+        units: shared.metrics.units.value,
+        occupancy: shared.metrics.rentRollOccupancy.value,
+        egi: shared.metrics.effectiveGrossIncome.value,
+        opEx: shared.metrics.operatingExpenses.value,
+        noi: shared.metrics.netOperatingIncome.value,
+        expenseRatio: shared.metrics.expenseRatio.value,
+        noiMargin: shared.metrics.noiMargin.value,
+        annualInPlaceRent: shared.metrics.annualInPlaceRent.value,
+        annualMarketRent: shared.metrics.annualMarketRent.value,
+      } : {}),
+      operatingCostCoverageRatio: canonicalRatio
+        ? (canonicalRatio.displayReady ? canonicalRatio.value : null)
+        : financialReceipt
+          ? (financialReceipt.displayReady ? toFiniteNumber(financialReceipt.result) : null)
+          : null,
+    };
     const surfaceIdentity = customerSurfaceModel?.identity || {};
     const propertyName = surfaceIdentity?.propertyName || propertyProfile?.propertyName || propertyProfile?.property_name || reportMeta?.propertyName || reportMeta?.property_name || sourcePackage?.propertyName || UNDERWRITING_REPORT_IDENTITY.canonicalTitle;
     const propertyAddress = surfaceIdentity?.propertyAddress || propertyProfile?.propertyAddress || propertyProfile?.property_address || reportMeta?.propertyAddress || reportMeta?.property_address || "";

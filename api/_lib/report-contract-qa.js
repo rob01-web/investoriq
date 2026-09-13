@@ -2,8 +2,10 @@ import { containsProhibitedPublicLanguage } from "./investoriq-qa-doctrine.js";
 import { requiredAcquisitionFinancingDisplayLabels } from "./acquisition-financing-display-contract.js";
 import {
   buildDeterministicReportContractQaSeal,
-  DETERMINISTIC_REPORT_CONTRACT,
 } from "./deterministic-report-contract-qa-seal.js";
+import {
+  buildOperatingCostCoverageRatioReceipt,
+} from "./canonical-operating-metrics.js";
 import { isCanonicalInstitutionalFinancialIntelligence } from "./institutional-financial-intelligence.js";
 
 import {
@@ -3366,9 +3368,12 @@ export function buildReportContractQa({
       : null;
   const p0bGrossPotentialRent = resolveCanonicalT12GprValue(t12Payload);
   const p0bOperatingExpenses = coerceNumber(t12Payload?.total_operating_expenses);
-  const p0bBreakEvenResult = Number.isFinite(p0bOperatingExpenses) && Number.isFinite(p0bGrossPotentialRent) && p0bGrossPotentialRent > 0
-    ? p0bOperatingExpenses / p0bGrossPotentialRent
-    : null;
+  const p0bOperatingCostCoverageReceipt = buildOperatingCostCoverageRatioReceipt({
+    operatingExpenses: p0bOperatingExpenses,
+    grossPotentialRent: p0bGrossPotentialRent,
+    operatingExpensesAuthorityPath: "accepted_t12.total_operating_expenses",
+    grossPotentialRentAuthorityPath: "accepted_t12.gross_potential_rent",
+  });
   const deterministicContractQaSeal = buildDeterministicReportContractQaSeal({
     html: rawHtml,
     reportIdentity: {
@@ -3377,13 +3382,13 @@ export function buildReportContractQa({
       reportTier,
     },
     sourceReconciliation: sourceReportCoverageQa?.source_reconciliation_state || null,
-    breakEven: Number.isFinite(p0bBreakEvenResult)
+    operatingCostCoverageRatio: p0bOperatingCostCoverageReceipt.displayReady
       ? {
-          label: DETERMINISTIC_REPORT_CONTRACT.breakEvenLabel,
-          formula: DETERMINISTIC_REPORT_CONTRACT.breakEvenFormula,
-          numerator: p0bOperatingExpenses,
-          denominator: p0bGrossPotentialRent,
-          result: p0bBreakEvenResult,
+          label: p0bOperatingCostCoverageReceipt.label,
+          formula: p0bOperatingCostCoverageReceipt.formula,
+          numerator: p0bOperatingCostCoverageReceipt.inputs.operatingExpenses,
+          denominator: p0bOperatingCostCoverageReceipt.inputs.grossPotentialRent,
+          result: p0bOperatingCostCoverageReceipt.value,
         }
       : null,
     grossRentCapitalizationAuthorized: false,

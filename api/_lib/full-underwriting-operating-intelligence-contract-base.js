@@ -1,4 +1,5 @@
 import { reconcileExpenseSource } from "./expense-source-reconciliation.js";
+import { buildCanonicalOperatingMetricSet } from "./canonical-operating-metrics.js";
 import {
   applySectionDisposition,
   SECTION_CLASSIFICATIONS,
@@ -112,7 +113,31 @@ function calculatedMetric({ key, label, value, units, formula, inputs, provenanc
     formula,
     inputs,
     provenance,
-    qualification: qualification || "Deterministic calculation from governed accepted operating inputs.",
+    qualification: qualification || "Deterministic calculation from accepted operating inputs.",
+  });
+}
+
+function metricFromCanonicalReceipt(receipt, { key = null, label = null } = {}) {
+  const resolvedKey = key || receipt?.key || null;
+  const resolvedLabel = label || receipt?.label || resolvedKey || "";
+  if (!receipt || receipt.displayReady !== true) {
+    return metric({ key: resolvedKey, label: resolvedLabel, units: receipt?.units || null });
+  }
+  return metric({
+    key: resolvedKey,
+    label: resolvedLabel,
+    value: receipt.value,
+    units: receipt.units,
+    evidenceClass: receipt.evidenceClass === "source_backed"
+      ? EVIDENCE_CLASSES.SOURCE_BACKED
+      : EVIDENCE_CLASSES.DETERMINISTIC_CALCULATED,
+    authorityPath: `sourceTruthPackage.shared_operating_metrics.metrics.${receipt.key}`,
+    formula: receipt.formula,
+    inputs: receipt.inputs,
+    provenance: receipt.authorityPaths || receipt.provenance || [],
+    qualification: receipt.formula
+      ? "Canonical deterministic receipt from shared operating-metric authority."
+      : null,
   });
 }
 
@@ -334,92 +359,31 @@ function disposition({ sectionKey, classification, requestedDisposition, reason 
 }
 
 function buildMetrics({ sourceTruthPackage, coreMetrics }) {
-  const units = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "rent_roll",
-    candidates: ["total_units", "totals.total_units"],
-    fallback: coreMetrics?.units,
-    fallbackPath: "coreMetrics.units",
-    key: "units",
-    label: "Units",
-    units: "count",
-  });
-  const occupancy = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "rent_roll",
-    candidates: ["occupancy", "totals.occupancy", "physical_occupancy"],
-    fallback: coreMetrics?.occupancy,
-    fallbackPath: "coreMetrics.occupancy",
-    key: "occupancy",
-    label: "Occupancy",
-    units: "ratio",
-  });
-  const annualInPlaceRent = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "rent_roll",
-    candidates: [
-      "annual_in_place_rent",
-      "total_in_place_annual",
-      "total_annual_in_place",
-      "totals.in_place_rent_annual",
-      "totals.current_rent_annual",
-    ],
-    fallback: coreMetrics?.annualInPlaceRent,
-    fallbackPath: "coreMetrics.annualInPlaceRent",
-    key: "annualInPlaceRent",
-    label: "Annual In-Place Rent",
-    units: "currency_per_year",
-  });
-  const annualMarketRent = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "rent_roll",
-    candidates: ["annual_market_rent", "total_market_annual", "totals.market_rent_annual"],
-    fallback: coreMetrics?.annualMarketRent,
-    fallbackPath: "coreMetrics.annualMarketRent",
-    key: "annualMarketRent",
-    label: "Annual Market Rent",
-    units: "currency_per_year",
-  });
-  const grossPotentialRent = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "t12",
-    candidates: ["gross_potential_rent", "gross_scheduled_rent"],
-    fallback: null,
-    fallbackPath: null,
-    key: "grossPotentialRent",
-    label: "Gross Potential Rent",
-    units: "currency_per_year",
-  });
-  const egi = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "t12",
-    candidates: ["effective_gross_income", "gross_income"],
-    fallback: coreMetrics?.egi,
-    fallbackPath: "coreMetrics.egi",
-    key: "egi",
-    label: "Effective Gross Income",
-    units: "currency_per_year",
-  });
-  const operatingExpenses = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "t12",
-    candidates: ["total_operating_expenses", "operating_expenses"],
-    fallback: coreMetrics?.opEx,
-    fallbackPath: "coreMetrics.opEx",
-    key: "operatingExpenses",
-    label: "Operating Expenses",
-    units: "currency_per_year",
-  });
-  const noi = coreFactMetric({
-    sourceTruthPackage,
-    coreKey: "t12",
-    candidates: ["net_operating_income", "noi"],
-    fallback: coreMetrics?.noi,
-    fallbackPath: "coreMetrics.noi",
-    key: "noi",
-    label: "Net Operating Income",
-    units: "currency_per_year",
-  });
+  const sharedOperatingMetrics =
+    sourceTruthPackage?.shared_operating_metrics ||
+    buildCanonicalOperatingMetricSet({
+      t12Facts: sourceTruthPackage?.core?.t12?.accepted_facts || {},
+      rentRollFacts: sourceTruthPackage?.core?.rent_roll?.accepted_facts || {},
+      sourceReconciliationState: sourceTruthPackage?.source_reconciliation_state || null,
+    });
+
+  const units = metricFromCanonicalReceipt(sharedOperatingMetrics?.metrics?.units);
+  const occupancy = metricFromCanonicalReceipt(
+    sharedOperatingMetrics?.metrics?.rentRollOccupancy,
+    { key: "occupancy", label: "Occupancy" }
+  );
+  const annualInPlaceRent = metricFromCanonicalReceipt(sharedOperatingMetrics?.metrics?.annualInPlaceRent);
+  const annualMarketRent = metricFromCanonicalReceipt(sharedOperatingMetrics?.metrics?.annualMarketRent);
+  const grossPotentialRent = metricFromCanonicalReceipt(sharedOperatingMetrics?.metrics?.grossPotentialRent);
+  const egi = metricFromCanonicalReceipt(
+    sharedOperatingMetrics?.metrics?.effectiveGrossIncome,
+    { key: "egi", label: "Effective Gross Income" }
+  );
+  const operatingExpenses = metricFromCanonicalReceipt(sharedOperatingMetrics?.metrics?.operatingExpenses);
+  const noi = metricFromCanonicalReceipt(
+    sharedOperatingMetrics?.metrics?.netOperatingIncome,
+    { key: "noi", label: "Net Operating Income" }
+  );
 
   const revenueRealizationGap =
     grossPotentialRent.displayReady && egi.displayReady
@@ -445,56 +409,15 @@ function buildMetrics({ sourceTruthPackage, coreMetrics }) {
           provenance: [egi.authorityPath, grossPotentialRent.authorityPath],
         })
       : metric({ key: "revenueRealizationRatio", label: "EGI / Gross Potential Rent", units: "ratio" });
-  const annualGrossRentDifference =
-    annualMarketRent.displayReady && annualInPlaceRent.displayReady
-      ? calculatedMetric({
-          key: "annualGrossRentDifference",
-          label: "Annual Gross Rent Difference",
-          value: annualMarketRent.value - annualInPlaceRent.value,
-          units: "currency_per_year",
-          formula: "annual_market_rent_minus_annual_in_place_rent",
-          inputs: { annualMarketRent: annualMarketRent.value, annualInPlaceRent: annualInPlaceRent.value },
-          provenance: [annualMarketRent.authorityPath, annualInPlaceRent.authorityPath],
-          qualification: "Gross rent evidence only; not NOI and not capitalized by this contract.",
-        })
-      : metric({ key: "annualGrossRentDifference", label: "Annual Gross Rent Difference", units: "currency_per_year" });
-  const annualGrossRentGapRatio =
-    annualGrossRentDifference.displayReady && annualInPlaceRent.displayReady && annualInPlaceRent.value > 0
-      ? calculatedMetric({
-          key: "annualGrossRentGapRatio",
-          label: "Annual Gross Rent Difference / In-Place Rent",
-          value: annualGrossRentDifference.value / annualInPlaceRent.value,
-          units: "ratio",
-          formula: "annual_gross_rent_difference_divided_by_annual_in_place_rent",
-          inputs: { annualGrossRentDifference: annualGrossRentDifference.value, annualInPlaceRent: annualInPlaceRent.value },
-          provenance: [annualGrossRentDifference.authorityPath, annualInPlaceRent.authorityPath],
-          qualification: "Gross rent evidence only; not NOI and not capitalized by this contract.",
-        })
-      : metric({ key: "annualGrossRentGapRatio", label: "Annual Gross Rent Difference / In-Place Rent", units: "ratio" });
-  const expenseRatio =
-    operatingExpenses.displayReady && egi.displayReady && egi.value !== 0
-      ? calculatedMetric({
-          key: "expenseRatio",
-          label: "Expense Ratio",
-          value: operatingExpenses.value / egi.value,
-          units: "ratio",
-          formula: "operating_expenses_divided_by_effective_gross_income",
-          inputs: { operatingExpenses: operatingExpenses.value, egi: egi.value },
-          provenance: [operatingExpenses.authorityPath, egi.authorityPath],
-        })
-      : metric({ key: "expenseRatio", label: "Expense Ratio", value: coreMetrics?.expenseRatio, units: "ratio", evidenceClass: EVIDENCE_CLASSES.DETERMINISTIC_CALCULATED, authorityPath: "coreMetrics.expenseRatio" });
-  const noiMargin =
-    noi.displayReady && egi.displayReady && egi.value !== 0
-      ? calculatedMetric({
-          key: "noiMargin",
-          label: "NOI Margin",
-          value: noi.value / egi.value,
-          units: "ratio",
-          formula: "net_operating_income_divided_by_effective_gross_income",
-          inputs: { noi: noi.value, egi: egi.value },
-          provenance: [noi.authorityPath, egi.authorityPath],
-        })
-      : metric({ key: "noiMargin", label: "NOI Margin", value: coreMetrics?.noiMargin, units: "ratio", evidenceClass: EVIDENCE_CLASSES.DETERMINISTIC_CALCULATED, authorityPath: "coreMetrics.noiMargin" });
+  const annualGrossRentDifference = metricFromCanonicalReceipt(
+    sharedOperatingMetrics?.metrics?.annualGrossRentDifference
+  );
+  const annualGrossRentGapRatio = metricFromCanonicalReceipt(
+    sharedOperatingMetrics?.metrics?.rentToMarketGapRatio,
+    { key: "annualGrossRentGapRatio", label: "Annual Gross Rent Difference / In-Place Rent" }
+  );
+  const expenseRatio = metricFromCanonicalReceipt(sharedOperatingMetrics?.metrics?.expenseRatio);
+  const noiMargin = metricFromCanonicalReceipt(sharedOperatingMetrics?.metrics?.noiMargin);
   const noiPerUnit =
     noi.displayReady && units.displayReady && units.value > 0
       ? calculatedMetric({
@@ -507,30 +430,9 @@ function buildMetrics({ sourceTruthPackage, coreMetrics }) {
           provenance: [noi.authorityPath, units.authorityPath],
         })
       : metric({ key: "noiPerUnit", label: "NOI per Unit", units: "currency_per_unit_per_year" });
-  const breakEvenOccupancy =
-    operatingExpenses.displayReady && grossPotentialRent.displayReady && grossPotentialRent.value > 0
-      ? calculatedMetric({
-          key: "breakEvenOccupancy",
-          label: "Operating Break-Even Occupancy",
-          value: operatingExpenses.value / grossPotentialRent.value,
-          units: "ratio",
-          formula: "operating_expenses_divided_by_gross_potential_rent",
-          inputs: { operatingExpenses: operatingExpenses.value, grossPotentialRent: grossPotentialRent.value },
-          provenance: [operatingExpenses.authorityPath, grossPotentialRent.authorityPath],
-        })
-      : metric({ key: "breakEvenOccupancy", label: "Operating Break-Even Occupancy", value: coreMetrics?.breakEvenOccupancy, units: "ratio", evidenceClass: EVIDENCE_CLASSES.DETERMINISTIC_CALCULATED, authorityPath: "coreMetrics.breakEvenOccupancy" });
-  const occupancyBreakEvenSpread =
-    occupancy.displayReady && breakEvenOccupancy.displayReady
-      ? calculatedMetric({
-          key: "occupancyBreakEvenSpread",
-          label: "Occupancy less Operating Break-Even",
-          value: occupancy.value - breakEvenOccupancy.value,
-          units: "ratio_delta",
-          formula: "occupancy_minus_operating_break_even_occupancy",
-          inputs: { occupancy: occupancy.value, breakEvenOccupancy: breakEvenOccupancy.value },
-          provenance: [occupancy.authorityPath, breakEvenOccupancy.authorityPath],
-        })
-      : metric({ key: "occupancyBreakEvenSpread", label: "Occupancy less Operating Break-Even", units: "ratio_delta" });
+  const operatingCostCoverageRatio = metricFromCanonicalReceipt(
+    sharedOperatingMetrics?.metrics?.operatingCostCoverageRatio
+  );
   const noiIdentityDifference =
     egi.displayReady && operatingExpenses.displayReady && noi.displayReady
       ? calculatedMetric({
@@ -560,8 +462,7 @@ function buildMetrics({ sourceTruthPackage, coreMetrics }) {
     expenseRatio,
     noiMargin,
     noiPerUnit,
-    breakEvenOccupancy,
-    occupancyBreakEvenSpread,
+    operatingCostCoverageRatio,
     noiIdentityDifference,
   };
 }
@@ -631,16 +532,6 @@ function buildInterpretation({ metrics, expenseStructure, concentration, histori
       statement: `Operating expenses equal ${(metrics.expenseRatio.value * 100).toFixed(1)}% of effective gross income and the resulting NOI margin is ${(metrics.noiMargin.value * 100).toFixed(1)}%.`,
       metrics: ["expenseRatio", "noiMargin"],
       provenance: [metrics.expenseRatio.authorityPath, metrics.noiMargin.authorityPath],
-    }));
-  }
-  if (metrics.occupancyBreakEvenSpread.displayReady) {
-    const direction = metrics.occupancyBreakEvenSpread.value >= 0 ? "above" : "below";
-    items.push(interpretation({
-      code: "OCCUPANCY_BREAK_EVEN_POSITION",
-      statement: `Accepted occupancy is ${Math.abs(metrics.occupancyBreakEvenSpread.value * 100).toFixed(1)} percentage points ${direction} deterministic operating break-even occupancy.`,
-      metrics: ["occupancy", "breakEvenOccupancy", "occupancyBreakEvenSpread"],
-      provenance: [metrics.occupancyBreakEvenSpread.authorityPath],
-      qualification: "This is an operating break-even relationship only; it does not include debt service unless separately modeled elsewhere.",
     }));
   }
   if (metrics.annualGrossRentDifference.displayReady && metrics.annualGrossRentGapRatio.displayReady) {
@@ -762,7 +653,7 @@ export function buildFullUnderwritingOperatingIntelligenceContract({
       reason: metrics.noi.displayReady && metrics.egi.displayReady && metrics.operatingExpenses.displayReady
         ? null
         : "NOI interpretation is limited because one or more operating-statement totals are unavailable.",
-      surviving: ["noi", "noiMargin", "noiPerUnit", "breakEvenOccupancy", "occupancyBreakEvenSpread"].filter((key) => metrics[key]?.displayReady),
+      surviving: ["noi", "noiMargin", "noiPerUnit", "operatingCostCoverageRatio"].filter((key) => metrics[key]?.displayReady),
     }),
     unitRentConcentration: disposition({
       sectionKey: "eliteUnitRentConcentration",
@@ -859,9 +750,8 @@ export function buildFullUnderwritingOperatingIntelligenceContract({
       noi: metrics.noi,
       noiMargin: metrics.noiMargin,
       noiPerUnit: metrics.noiPerUnit,
-      breakEvenOccupancy: metrics.breakEvenOccupancy,
+      operatingCostCoverageRatio: metrics.operatingCostCoverageRatio,
       occupancy: metrics.occupancy,
-      occupancyBreakEvenSpread: metrics.occupancyBreakEvenSpread,
       noiIdentityDifference: metrics.noiIdentityDifference,
       noiIdentityReconciles:
         metrics.noiIdentityDifference.displayReady && metrics.noi.displayReady
@@ -913,6 +803,13 @@ export function validateFullUnderwritingOperatingIntelligenceContract(contract) 
   if (contract?.sourceTruthReceipt?.source !== SOURCE_TRUTH_MARKER) issues.push("SOURCE_TRUTH_RECEIPT_INVALID");
   if (contract?.revenueQuality?.grossRentCapitalizationAuthorized !== false) issues.push("RENT_GAP_CAPITALIZATION_FIREWALL_INVALID");
   if (contract?.unitRentConcentration?.occupancyConcentrationEstablished !== false) issues.push("OCCUPANCY_CONCENTRATION_INFERENCE_FORBIDDEN");
+  if (contract?.metrics?.breakEvenOccupancy !== undefined) issues.push("RETIRED_BREAK_EVEN_OCCUPANCY_METRIC_FORBIDDEN");
+  if (contract?.metrics?.occupancyBreakEvenSpread !== undefined) issues.push("CROSS_BASIS_OCCUPANCY_SPREAD_FORBIDDEN");
+  if (contract?.metrics?.operatingCostCoverageRatio?.displayReady === true) {
+    const receipt = contract.metrics.operatingCostCoverageRatio;
+    if (receipt.label !== "Operating Cost Coverage Ratio") issues.push("OCCR_LABEL_INVALID");
+    if (receipt.formula !== "total_operating_expenses / gross_potential_rent") issues.push("OCCR_FORMULA_INVALID");
+  }
 
   const serialized = JSON.stringify(contract).toUpperCase();
   for (const token of ["\"BUY\"", "\"SELL\"", "\"HOLD\"", "IRR", "MOIC"]) {

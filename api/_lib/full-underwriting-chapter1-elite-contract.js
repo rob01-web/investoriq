@@ -78,42 +78,6 @@ function buildExpenseLineReconciliationIssue(sourceTruthPackage = null) {
   };
 }
 
-function removeCrossBasisOccupancyComparison(result) {
-  if (result?.metrics?.breakEvenOccupancy?.displayReady === true) {
-    result.metrics.breakEvenOccupancy.label = "Operating Cost Coverage Ratio";
-    result.metrics.breakEvenOccupancy.qualification = "Formula: accepted operating expenses / accepted T12 gross potential rent. This is a GPR-basis operating-cost ratio, not a physical occupancy threshold.";
-  }
-  if (result?.metrics?.occupancyBreakEvenSpread) {
-    result.metrics.occupancyBreakEvenSpread = {
-      ...result.metrics.occupancyBreakEvenSpread,
-      label: "Physical Occupancy Comparison Not Applicable",
-      value: null,
-      displayReady: false,
-      evidenceClass: FULL_UNDERWRITING_CHAPTER1_ELITE_EVIDENCE_CLASSES.MISSING_UNSUPPORTED,
-      authorityPath: null,
-      calculationReceiptKey: null,
-      provenance: [],
-      formula: null,
-      inputs: null,
-      qualification: "Physical occupancy is not subtracted from a GPR-basis operating-cost ratio.",
-    };
-  }
-
-  const removedCodes = new Set(["OCCUPANCY_ABOVE_BREAK_EVEN", "OCCUPANCY_BELOW_BREAK_EVEN"]);
-  if (Array.isArray(result?.investmentCase?.opportunitySignals)) {
-    result.investmentCase.opportunitySignals = result.investmentCase.opportunitySignals.filter((item) => !removedCodes.has(item?.code));
-  }
-  if (Array.isArray(result?.investmentCase?.constraintSignals)) {
-    result.investmentCase.constraintSignals = result.investmentCase.constraintSignals.filter((item) => !removedCodes.has(item?.code));
-  }
-  if (Array.isArray(result?.principalRisksAndConstraints?.items)) {
-    result.principalRisksAndConstraints.items = result.principalRisksAndConstraints.items.filter((item) => !removedCodes.has(item?.code));
-  }
-  if (removedCodes.has(result?.executiveInvestmentSummary?.primaryConstraint?.code)) {
-    result.executiveInvestmentSummary.primaryConstraint = result.principalRisksAndConstraints.items?.[0] || null;
-  }
-}
-
 function forceIncludedDisposition(result, key) {
   if (result?.[key] && typeof result[key] === "object") result[key].disposition = "include";
   if (result?.sectionDispositions?.[key] && typeof result.sectionDispositions[key] === "object") {
@@ -171,7 +135,6 @@ function addExpenseLineReconciliationIssue(result, issue) {
 export function buildFullUnderwritingChapter1EliteContract(args = {}) {
   const result = clone(buildBaseFullUnderwritingChapter1EliteContract(args));
   normalizeDecisionLanguage(result);
-  removeCrossBasisOccupancyComparison(result);
   addExpenseLineReconciliationIssue(result, buildExpenseLineReconciliationIssue(args.sourceTruthPackage));
   return deepFreeze(result);
 }

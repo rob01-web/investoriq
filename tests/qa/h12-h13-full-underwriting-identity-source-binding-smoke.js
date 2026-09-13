@@ -80,10 +80,10 @@ assert.equal(fixture.customerSurfaceModel.sourceBackedFacts.acquisitionRequestCo
 assert.equal(fixture.customerSurfaceModel.sourceBackedFacts.currentDebtContext.current_outstanding_balance, 6800000);
 assert.equal(fixture.customerSurfaceModel.sourceBackedFacts.unitMix.total_units, 64);
 assert.equal(fixture.customerSurfaceModel.sourceBackedFacts.capRateValueIndication.going_in_cap_rate, 0.07);
-assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.numerator, 555000);
-assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.denominator, 1612800);
-assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.result, 555000 / 1612800);
-assert.equal(fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy.displayReady, true);
+assert.equal(fixture.customerSurfaceModel.financialTruth.operatingCostCoverageRatio.numerator, 555000);
+assert.equal(fixture.customerSurfaceModel.financialTruth.operatingCostCoverageRatio.denominator, 1612800);
+assert.equal(fixture.customerSurfaceModel.financialTruth.operatingCostCoverageRatio.result, 555000 / 1612800);
+assert.equal(fixture.customerSurfaceModel.financialTruth.operatingCostCoverageRatio.displayReady, true);
 
 const htmlRuns = [
   renderCompleteAcquisitionMemoV2Html(baseArgs),
@@ -102,7 +102,7 @@ const canonicalSeal = buildDeterministicReportContractQaSeal({
   html,
   reportIdentity: canonicalIdentityReceipt,
   sourceReconciliation: fixture.customerSurfaceModel.sourceTruth.sourceReconciliation,
-  breakEven: fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy,
+  operatingCostCoverageRatio: fixture.customerSurfaceModel.financialTruth.operatingCostCoverageRatio,
   supportSections: fixture.customerSurfaceModel.sections,
   financialIntelligence: fixture.customerSurfaceModel.financialIntelligence,
 });
@@ -118,7 +118,7 @@ const screeningSeal = buildDeterministicReportContractQaSeal({
     reportTier: 1,
   },
   sourceReconciliation: fixture.customerSurfaceModel.sourceTruth.sourceReconciliation,
-  breakEven: fixture.customerSurfaceModel.financialTruth.breakEvenOccupancy,
+  operatingCostCoverageRatio: fixture.customerSurfaceModel.financialTruth.operatingCostCoverageRatio,
   supportSections: fixture.customerSurfaceModel.sections,
   financialIntelligence: fixture.customerSurfaceModel.financialIntelligence,
 });
@@ -156,11 +156,11 @@ assert.equal(manifestCandidate.receipts.deterministicContractQaSeal.ok, true);
 assert.equal(manifestCandidate.receipts.deliveryGate.source, "canonical_delivery_decision");
 assert.equal(manifestCandidate.sections.find((section) => section.sectionKey === "unitMix").acceptedFacts.occupancy, 0.9375);
 assert.equal(manifestCandidate.sections.find((section) => section.sectionKey === "capRateValueIndication").acceptedFacts.implied_value_at_going_in_cap_rate, 13499999.999999998);
-assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "breakEvenOccupancy").inputs.numerator, 555000);
-assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "breakEvenOccupancy").inputs.denominator, 1612800);
-assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "breakEvenOccupancy").result, 555000 / 1612800);
+assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "operatingCostCoverageRatio").inputs.numerator, 555000);
+assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "operatingCostCoverageRatio").inputs.denominator, 1612800);
+assert.equal(manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "operatingCostCoverageRatio").result, 555000 / 1612800);
 assert.deepEqual(
-  [...manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "breakEvenOccupancy").inputProvenance].sort(),
+  [...manifestCandidate.calculations.find((calculation) => calculation.calculationKey === "operatingCostCoverageRatio").inputProvenance].sort(),
   ["core:file:rent-roll-file", "core:file:t12-file"],
 );
 
