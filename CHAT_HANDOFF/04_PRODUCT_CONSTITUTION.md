@@ -1,5 +1,19 @@
 # InvestorIQ Product Constitution
 
+## 2026-09-13 CLEAN-ROOM MIGRATION DECISION - CURRENT OWNER AUTHORITY
+
+The owner has approved moving toward a clean-room InvestorIQ runtime rebuild while preserving the existing repository intact as evidence, history, and production reference.
+
+`CHAT_HANDOFF/08_CLEAN_ROOM_MIGRATION_AUTHORITY.md` governs the migration method.
+
+The current repository audit continues, but its primary launch purpose is now to determine what may safely cross into the clean system. Every production-relevant file receives both a legacy classification and one clean-room disposition: `MIGRATE`, `MIGRATE AFTER REPAIR`, `REWRITE`, or `DO NOT MIGRATE`.
+
+Do not bulk-copy the legacy repository into the clean system. Nothing crosses the clean-room border until it has been intentionally reviewed and approved.
+
+The legacy production application remains production authority until the clean system independently certifies and the owner explicitly authorizes cutover. This decision does not authorize deployment, migrations, scheduler activation, Supabase or Storage mutation, Stripe mutation, historical replay, or DocRaptor production-mode activation.
+
+---
+
 **Authority date:** 2026-09-13  
 **Status:** Governing owner doctrine. This file controls where older handoffs, tests, comments, archived notes, or implementation assumptions conflict.
 
